@@ -1,0 +1,162 @@
+require "vnd.dovecot.testsuite";
+
+require "relational";
+require "comparator-i;ascii-numeric";
+
+test "Foreverypart command" {
+	if test_script_compile "errors/foreverypart.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "12" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Break command" {
+	if test_script_compile "errors/break.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "21" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Header test with :mime tag" {
+	if test_script_compile "errors/header-mime-tag.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "10" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Address test with :mime tag" {
+	if test_script_compile "errors/address-mime-tag.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "6" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Exists test with :mime tag" {
+	if test_script_compile "errors/exists-mime-tag.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "6" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Limits" {
+	if test_script_compile "errors/limits.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "2" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test_set "message" text:
+From: Whomever <whoever@example.com>
+To: Someone <someone@example.com>
+Date: Sat, 10 Oct 2009 00:30:04 +0200
+Subject: whatever
+Content-Type: multipart/mixed; boundary=AA
+
+This is a multi-part message in MIME format.
+
+--AA
+Content-Type: multipart/alternative; boundary=BB
+
+This is a multi-part message in MIME format.
+
+--BB
+Content-Type: multipart/alternative; boundary=CC
+
+This is a multi-part message in MIME format.
+
+--CC
+Content-Type: multipart/alternative; boundary=DD
+
+This is a multi-part message in MIME format.
+
+--DD
+Content-Type: multipart/alternative; boundary=EE
+
+This is a nested multi-part message in MIME format.
+
+--EE
+Content-Type: text/plain; charset="us-ascii"
+
+Hello
+
+--EE--
+
+This is the end of the inner MIME multipart.
+
+--DD--
+
+This is the end of the MIME multipart.
+
+--CC--
+
+This is the end of the MIME multipart.
+
+--BB--
+
+This is the end of the MIME multipart.
+
+--AA--
+
+This is the end of the MIME multipart.
+.
+;
+
+test "Limits - include" {
+	if not test_script_compile "errors/limits-include.sieve" {
+		test_fail "script compile failed";
+	}
+
+	if test_script_run {
+		test_fail "script run should have failed";
+	}
+}
+
+test "Extracttext" {
+	if test_script_compile "errors/extracttext.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "11" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Extracttext - without variables" {
+	if test_script_compile "errors/extracttext-novar.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "2" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+test "Extracttext - without foreverypart" {
+	if test_script_compile "errors/extracttext-nofep.sieve" {
+		test_fail "compile should have failed";
+	}
+
+	if test_error :count "ne" :comparator "i;ascii-numeric" "2" {
+		test_fail "incorrect number of compile errors reported";
+	}
+}
+
+

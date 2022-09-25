@@ -1,0 +1,97 @@
+require "vnd.dovecot.testsuite";
+
+require "encoded-character";
+require "variables";
+require "editheader";
+
+test_set "message" text:
+Subject: Frop!
+From: stephan@example.com
+To: stephan@example.com
+
+Frop!
+.
+;
+
+test "UTF8 - add; get" {
+	set "comment" "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test";
+
+	addheader "Comment" "${comment}";
+
+	if not exists "comment" {
+		test_fail "header not added";
+	}
+
+	if not header :is "comment" "${comment}" {
+		test_fail "wrong content added/retrieved";
+	}
+
+	redirect "frop@example.com";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	/* redirected message */
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not exists "comment" {
+		test_fail "header not added in redirected mail";
+	}
+
+	if not header :is "comment" "${comment}" {
+		test_fail "wrong content added/retrieved from redirected mail";
+	}
+}
+
+test_result_reset;
+
+test_set "message" text:
+Subject: Frop!
+Comment: Ein =?utf-8?q?unerh=C3=B6rt_gro=C3=9Fer?= Test
+X-Spam: no
+From: stephan@example.com
+To: stephan@example.com
+
+Frop!
+.
+;
+
+test "UTF8 - existing; delete other; get" {
+	set "comment" "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test";
+
+	deleteheader "x-spam";
+
+	if not exists "comment" {
+		test_fail "header not present";
+	}
+
+	if not header :is "comment" "${comment}" {
+		test_fail "wrong content retrieved";
+	}
+
+	redirect "frop@example.com";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	/* redirected message */
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not exists "comment" {
+		test_fail "header not present in redirected mail";
+	}
+
+	if not header :is "comment" "${comment}" {
+		test_fail "wrong content retrieved from redirected mail";
+	}
+}
+
+

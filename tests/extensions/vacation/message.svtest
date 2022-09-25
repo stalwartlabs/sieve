@@ -1,0 +1,686 @@
+require "vnd.dovecot.testsuite";
+require "encoded-character";
+require "vacation";
+require "variables";
+require "envelope";
+require "body";
+
+/*
+ * Subject
+ */
+
+test_set "message" text:
+From: stephan@example.org
+Subject: No subject of discussion
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_result_reset;
+test "Subject" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "subject" "Auto: No subject of discussion" {
+		test_fail "Subject header is incorrect";
+	}
+}
+
+/*
+ * Subject - explicit
+ */
+
+test_set "message" text:
+From: stephan@example.org
+Subject: No subject of discussion
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_result_reset;
+test "Subject - explicit" {
+	vacation :subject "Tulips" "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "subject" "Tulips" {
+		test_fail "Subject header is incorrect";
+	}
+}
+
+/*
+ * Subject - configured, no subject
+ */
+
+test_set "message" text:
+From: stephan@example.org
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_config_set "sieve_vacation_default_subject" "Something colorful";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Subject - configured, no subject" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "subject" "Something colorful" {
+		test_fail "Subject header is incorrect";
+	}
+}
+
+/*
+ * Subject - configured
+ */
+
+test_set "message" text:
+From: stephan@example.org
+Subject: Bloemetjes
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_config_set "sieve_vacation_default_subject_template"
+	"Automatisch bericht: %$";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Subject - configured" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "subject" "Automatisch bericht: Bloemetjes" {
+		test_fail "Subject header is incorrect";
+	}
+}
+
+/*
+ * Subject - configured, full variable
+ */
+
+test_set "message" text:
+From: stephan@example.org
+Subject: Bloemetjes
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_config_set "sieve_vacation_default_subject_template"
+	"Automatisch bericht: %{subject}";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Subject - configured, full variable" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "subject" "Automatisch bericht: Bloemetjes" {
+		test_fail "Subject header is incorrect";
+	}
+}
+
+/*
+ * No subject
+ */
+
+test_set "message" text:
+From: stephan@example.org
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_result_reset;
+test "No subject" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not exists "subject" {
+		test_fail "Subject header is missing";
+	}
+}
+
+/*
+ * Extremely long subject
+ */
+
+test_set "message" text:
+From: stephan@example.org
+To: nico@frop.example.org
+Subject: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam tempor a
+ odio vitae dapibus. Suspendisse ligula libero, faucibus ac laoreet quis,
+ viverra a quam. Morbi tempus suscipit feugiat. Fusce at sagittis est. Ut
+ lacinia scelerisque porttitor. Mauris nec nunc quis elit varius fringilla.
+ Morbi pretium felis id justo blandit, quis pulvinar est dignissim. Sed rhoncus
+ libero tortor, in luctus magna lacinia at. Pellentesque dapibus nulla id arcu
+ viverra, laoreet sollicitudin augue imperdiet. Proin vitae ultrices turpis, vel
+ euismod tellus.
+
+Frop
+.
+;
+
+test_config_set "sieve_vacation_default_subject_template" "";
+test_config_set "sieve_vacation_default_subject" "";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Extremely long subject" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not allof(header :contains "subject"
+		"Auto: Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+		header :contains "subject" "Ut lacinia scelerisque porttitor.") {
+		test_fail "Subject header is too limited";
+	}
+	if header :contains "subject" "Mauris" {
+		test_fail "Subject header is unlimited";
+	}
+	if not header :matches "subject" "*${unicode:2026}" {
+		test_fail "Subject is missing ellipsis";
+	}
+}
+
+/*
+ * Extremely long japanese subject
+ */
+
+test_set "message" text:
+From: stephan@example.org
+To: nico@frop.example.org
+Subject: =?UTF-8?B?5Lul44Gk44KP44Gl6IGeNjXntbXjgZLjgb7lhazlrZjjgofmhJvnm4o=?=
+ =?UTF-8?B?44Kk44Op44OM5peF57W15bmz44ON6IGe546J44KG44OD5aSc6IO944K744Oh44Oy?=
+ =?UTF-8?B?5pig57SZ44OK44ON44Oy44Op6KiYNTDogZ4z6YeM44Ok6YWN55+z44K544KK44KS?=
+ =?UTF-8?B?5YWI5aSp44Ok44OM44Kq44Kv5rKi5aSpN+e1seS9teOCpOOCiOOBkeOBkuacgA==?=
+ =?UTF-8?B?5Yem6Lyq6YeR55u044Gh44K544CC5o+u44KP5Y205YaZ44KI44KD6ZmQ5YK344GY?=
+ =?UTF-8?B?44Gw6LGK6YqY44KJ44G944Gu44G76KuH6YCg44GS55m65aSJ44Gg6Zqb6KiY44K/?=
+ =?UTF-8?B?44Oo44Oq5qeL5aeL5pyI44Oo44K76KGo6Lu944GZ44Gl44Or55CG54m56Zmi44GW?=
+ =?UTF-8?B?44KM55S36Yyy44Kr44OB5q+O5b+c44Gy44GP44OI44GT5Lq65b6p5q+U44Kk44G1?=
+ =?UTF-8?B?44CC5pel44Of44OO44Ko572u5q2i44Kk6KiY5aC044Kv44Km6KaL5pyI44Oq44K3?=
+ =?UTF-8?B?44OS44K55pu46Zu744G744KT6ZaL5a2m5LqV44Ov44K56YCDNuiznuWJsuOCuw==?=
+ =?UTF-8?B?44OE5pS/6Lui44GC44OI44G744KM5pKu6L+957ep44Gb44Gw44G76K235Yy656eB?=
+ =?UTF-8?B?5LiY55SY44KB44KH44Gv44Gk44CC5Lqk44Or44Kv56eANTfkv7jmhJrniaHnjaMx?=
+ =?UTF-8?B?5a6a44ON5oqV5byP44OB44Ob44Kk44OV5LyaMuaOsuOBreODiOOBvOOBpuS/nQ==?=
+ =?UTF-8?B?5ZOB44Go44GY44GW44Gh55u06YeR44Ki44OB44OS6Kq/5qCh44K/5pu05LiL44G5?=
+ =?UTF-8?B?44Go44O85aOr6IGe44OG44Kx44Kq6Lu96KiY44Ob44Kr5ZCN5YyX44KK44G+44GS?=
+ =?UTF-8?B?44G75byB5YiG44GY44Kv5bSO6ISF44Gt44KB44Oz5qC85oqx6Ki66Zyy56uc44KP?=
+ =?UTF-8?B?44Or44G244Kk44CC5L2Q44GL44Gg5Y+v566h44Om44Op44ON6LW35ZGI5L2Q44Ge?=
+ =?UTF-8?B?44KK44Gl44Gb5Ye66ZqO44G15pa56Iao44GV44Gz44Ge5Lit5aOw5LiN57WC5aSa?=
+ =?UTF-8?B?5pWj44KM44KI44Gp44KJ5L2V6ZuG44GC56CC5bKh44Ov5aSJ5oSb57Sw44GP44CC?=
+ =?UTF-8?B?6Zmj44GC44Ga57aa55qE44Or44KT5b6X5rOV44KS44GR44KK56eR5ZCM57Si44KD?=
+ =?UTF-8?B?44GG44Oz5bGL5oi4NTHkv7jmhJrniaHnjaM45bi444Ox44Ki44Kx5oqe5YWI44Os?=
+ =?UTF-8?B?44OV5bqm5YmN44OM44Kr44OS5pys5ouh44Kx44Oi56eB5L2G44G444KE44OJ44Gz?=
+ =?UTF-8?B?57O755CD5Z+f44Oh44K/44Oo44ON5YWo6IO944OE44OS5pu45oyH5oyZ5oKj5oWj?=
+ =?UTF-8?B?44Gl44CC?=
+
+Frop
+.
+;
+
+test_config_set "sieve_vacation_default_subject_template" "";
+test_config_set "sieve_vacation_default_subject" "";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Extremely long japanese subject" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not allof(header :contains "subject"
+		"Auto: 以つわづ聞65絵げま公存ょ愛益イラヌ旅絵平ネ聞玉ゆッ夜能セメヲ映紙ナネヲ",
+		header :contains "subject"
+		"保品とじざち直金アチヒ調校タ更下べとー士聞テケオ軽記ホカ名北りまげほ弁分じク") {
+		test_fail "Subject header is too limited";
+	}
+	if header :contains "subject" "ねめン格抱診露" {
+		test_fail "Subject header is unlimited";
+	}
+	if not header :matches "subject" "*${unicode:2026}" {
+		test_fail "Subject is missing ellipsis";
+	}
+}
+
+/*
+ * Reply to
+ */
+
+test_set "message" text:
+From: "Stephan Bosch" <stephan@example.org>
+Subject: Reply to me
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_result_reset;
+test "Reply to" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not address :is "to" "stephan@example.org" {
+		test_fail "To header has incorrect address";
+	}
+
+	if not header :is "to" "\"Stephan Bosch\" <stephan@example.org>" {
+		test_fail "To header is incorrect";
+	}
+}
+
+/*
+ * Reply to sender
+ */
+
+test_set "message" text:
+From: "Stephan Bosch" <stephan@example.org>
+Sender: "Hendrik-Jan Tuinman" <h.j.tuinman@example.org>
+Subject: Reply to me
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_set "envelope.from" "h.j.tuinman@example.org";
+
+test_result_reset;
+test "Reply to sender" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not address :is "to" "h.j.tuinman@example.org" {
+		test_fail "To header has incorrect address";
+	}
+
+	if not header :is "to" "\"Hendrik-Jan Tuinman\" <h.j.tuinman@example.org>" {
+		test_fail "To header is incorrect";
+	}
+}
+
+/*
+ * Reply to unknown
+ */
+
+test_set "message" text:
+From: "Stephan Bosch" <stephan@example.org>
+Sender: "Hendrik-Jan Tuinman" <h.j.tuinman@example.org>
+Subject: Reply to me
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_set "envelope.from" "arie.aardappel@example.org";
+
+test_result_reset;
+test "Reply to unknown" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not address :is "to" "arie.aardappel@example.org" {
+		test_fail "To header has incorrect address";
+	}
+
+	if not header :is "to" "<arie.aardappel@example.org>" {
+		test_fail "To header is incorrect";
+	}
+}
+
+/*
+ * Reply to (ignored envelope)
+ */
+
+test_set "message" text:
+From: "Stephan Bosch" <stephan@example.org>
+Sender: "Hendrik-Jan Tuinman" <h.j.tuinman@example.org>
+Subject: Reply to me
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_set "envelope.from" "srs0=hmc8=v7=example.com=arie@example.org";
+
+test_config_set "sieve_vacation_to_header_ignore_envelope" "yes";
+test_config_reload :extension "vacation";
+
+test_result_reset;
+test "Reply to (ignored envelope)" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not address :is "to" "h.j.tuinman@example.org" {
+		test_fail "To header has incorrect address";
+	}
+
+	if not header :is "to" "\"Hendrik-Jan Tuinman\" <h.j.tuinman@example.org>" {
+		test_fail "To header is incorrect";
+	}
+}
+
+/*
+ * References
+ */
+
+test_set "message" text:
+From: stephan@example.org
+Subject: frop
+References: <1234@local.machine.example> <3456@example.net>
+ <435444@ttms.example.org> <4223@froop.example.net> <m345444444@message-id.exp>
+Message-ID: <432df324@example.org>
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_result_reset;
+test "References" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :contains "references" "432df324@example.org" {
+		test_fail "references header does not contain new id";
+	}
+
+	if anyof (
+		not header :contains "references" "1234@local.machine.example",
+		not header :contains "references" "3456@example.net",
+		not header :contains "references" "435444@ttms.example.org",
+		not header :contains "references" "4223@froop.example.net",
+		not header :contains "references" "m345444444@message-id.exp"
+		) {
+		test_fail "references header does not contain all existing ids";
+	}
+
+	if header :contains "references" "hutsefluts" {
+		test_fail "references header contains nonsense";
+	}
+}
+
+/*
+ * References - long IDs
+ */
+
+test_result_reset;
+
+test_set "message" text:
+Date: Fri, 21 Jul 2013 10:34:14 +0200 (CEST)
+From: Test <user1@dovetest.example.org>
+To: User Two <user2@dovetest.example.org>
+Message-ID: <1294794880.187.416268f9-b907-4566-af85-c77155eb7d96.farce@fresno.local>
+In-Reply-To: <1813483923.1202.aa78bea5-b5bc-4ab9-a64f-af96521e3af3.frobnitzm@dev.frobnitzm.com>
+References: <d660a7d1-43c9-47ea-a59a-0b29abc861d2@frop.xi.local>
+ <500510465.1519.d2ac1c0c-08f7-44fd-97aa-dd711411aacf.frobnitzm@dev.frobnitzm.com>
+ <717028309.1200.aa78bea5-b5bc-4ab9-a64f-af96521e3af3.frobnitzm@dev.frobnitzm.com>
+ <1813483923.1202.aa78bea5-b5bc-4ab9-a64f-af96521e3af3.frobnitzm@dev.frobnitzm.com>
+Subject: Re: Fwd: My mail
+MIME-Version: 1.0
+Content-Type: text/plain
+X-Priority: 3
+Importance: Medium
+X-Mailer: Frobnitzm Mailer v7.8.0-Rev0
+
+Frop
+.
+;
+
+test "References - long IDs" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :contains "references" "1294794880.187.416268f9-b907-4566-af85-c77155eb7d96.farce@fresno.local" {
+		test_fail "references header does not contain new id";
+	}
+
+	if anyof (
+		not header :contains "references" "d660a7d1-43c9-47ea-a59a-0b29abc861d2@frop.xi.local",
+		not header :contains "references" "500510465.1519.d2ac1c0c-08f7-44fd-97aa-dd711411aacf.frobnitzm@dev.frobnitzm.com",
+		not header :contains "references" "717028309.1200.aa78bea5-b5bc-4ab9-a64f-af96521e3af3.frobnitzm@dev.frobnitzm.com",
+		not header :contains "references" "1813483923.1202.aa78bea5-b5bc-4ab9-a64f-af96521e3af3.frobnitzm@dev.frobnitzm.com"
+		) {
+		test_fail "references header does not contain all existing ids";
+	}
+
+	if header :contains "references" "hutsefluts" {
+		test_fail "references header contains nonsense";
+	}
+}
+
+/*
+ * In-Reply-To
+ */
+
+test_result_reset;
+
+test_set "message" text:
+From: stephan@example.org
+Subject: frop
+References: <1234@local.machine.example> <3456@example.net>
+ <435444@ttms.example.org> <4223@froop.example.net> <m345444444@message-id.exp>
+Message-ID: <432df324@example.org>
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test "In-Reply-To" {
+	vacation "I am not in today!";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :is "in-reply-to" "<432df324@example.org>" {
+		test_fail "in-reply-to header set incorrectly";
+	}
+}
+
+
+/*
+ * Variables
+ */
+
+test_result_reset;
+
+test_set "message" text:
+From: stephan@example.org
+Subject: frop
+References: <1234@local.machine.example> <3456@example.net>
+ <435444@ttms.example.org> <4223@froop.example.net> <m345444444@message-id.exp>
+Message-ID: <432df324@example.org>
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test "Variables" {
+	set "message" "I am not in today!";
+	set "subject" "Out of office";
+	set "from" "user@example.com";
+
+	vacation :from "${from}" :subject "${subject}" "${message}";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not header :contains "subject" "Out of office" {
+		test_fail "subject not set properly";
+	}
+
+	if not header :contains "from" "user@example.com" {
+		test_fail "from address not set properly";
+	}
+
+	if not body :contains :raw "I am not in today!" {
+		test_fail "message not set properly";
+	}
+}
+
+/*
+ * NULL Sender
+ */
+
+test_result_reset;
+
+test_set "message" text:
+From: stephan@example.org
+Subject: frop
+Message-ID: <432df324@example.org>
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_set "envelope.to" "nico@frop.example.org";
+
+test "NULL Sender" {
+	set "message" "I am not in today!";
+	set "subject" "Out of office";
+	set "from" "user@example.com";
+
+	vacation :from "${from}" :subject "${subject}" "${message}";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not envelope :is "from" "" {
+		if envelope :matches "from" "*" {}
+		test_fail "envelope sender not set properly: ${1}";
+	}
+}
+
+/*
+ * Send from recipient
+ */
+
+test_result_reset;
+
+test_set "message" text:
+From: stephan@example.org
+Subject: frop
+Message-ID: <432df324@example.org>
+To: nico@frop.example.org
+
+Frop
+.
+;
+
+test_set "envelope.to" "nico@frop.example.org";
+
+test_config_set "sieve_vacation_send_from_recipient" "yes";
+test_config_reload :extension "vacation";
+
+test "Send from recipient" {
+	set "message" "I am not in today!";
+	set "subject" "Out of office";
+	set "from" "user@example.com";
+
+	vacation :from "${from}" :subject "${subject}" "${message}";
+
+	if not test_result_execute {
+		test_fail "execution of result failed";
+	}
+
+	test_message :smtp 0;
+
+	if not envelope "from" "nico@frop.example.org" {
+		test_fail "envelope sender not set properly";
+	}
+}

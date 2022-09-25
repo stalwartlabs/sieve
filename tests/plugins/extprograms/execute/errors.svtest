@@ -1,0 +1,53 @@
+require "vnd.dovecot.testsuite";
+
+require "relational";
+require "comparator-i;ascii-numeric";
+
+test_config_set "sieve_execute_bin_dir" "${tst.path}/../bin";
+test_config_reload :extension "vnd.dovecot.execute";
+
+/*
+ * Command syntax
+ */
+
+test "Command syntax" {
+        if test_script_compile "errors/syntax.sieve" {
+                test_fail "compile should have failed";
+        }
+
+        if not test_error :count "eq" :comparator "i;ascii-numeric" "13" {
+                test_fail "wrong number of errors reported";
+        }
+}
+
+/*
+ * Variables
+ */
+
+test "Variables" {
+        if test_script_compile "errors/variables.sieve" {
+                test_fail "compile should have failed";
+        }
+
+        if not test_error :count "eq" :comparator "i;ascii-numeric" "2" {
+                test_fail "wrong number of errors reported";
+        }
+}
+
+/*
+ * Unknown program
+ */
+
+test "Unknown program" {
+        if not test_script_compile "errors/unknown-program.sieve" {
+                test_fail "compile should have succeeded";
+        }
+
+	if test_script_run {
+                test_fail "execution should have failed";
+	}
+
+        if not test_error :count "eq" :comparator "i;ascii-numeric" "1" {
+                test_fail "wrong number of errors reported";
+        }
+}

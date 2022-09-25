@@ -1,0 +1,886 @@
+require "vnd.dovecot.testsuite";
+require "encoded-character";
+require "variables";
+require "fileinto";
+require "mailbox";
+require "body";
+
+require "editheader";
+
+set "message" text:
+From: stephan@example.com
+To: timo@example.com
+Subject: Frop!
+
+Frop!
+
+.
+;
+
+test_set "message" "${message}";
+test "Addheader - first" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header" "Header content";
+
+	if not size :over 76 {
+		test_fail "mail is not larger";
+	}
+
+	if size :over 107 {
+		test_fail "mail is too large";
+	}
+
+	if size :under 107 {
+		test_fail "mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder1";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder1" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 107 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 100 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in stored mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in stored mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in redirected mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in redirected mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - first (two)" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header" "Header content";
+	addheader "X-Some-Other-Header" "More header content";
+
+	if not size :over 76 {
+		test_fail "mail is not larger";
+	}
+
+	if size :over 149 {
+		test_fail "mail is too large";
+	}
+
+	if size :under 149 {
+		test_fail "mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header #1 not added";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added #1";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not added";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content added #2";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder2";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder2" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 149 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 100 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header #1 not in stored mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content #1 in stored mail ";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not in stored mail";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content #2 in stored mail";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in redirected mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in redirected mail ";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not in redirected mail";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content #2 in redirected mail";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - last" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader :last "X-Some-Header" "Header content";
+
+	if not size :over 76 {
+		test_fail "mail is not larger";
+	}
+
+	if size :over 107 {
+		test_fail "mail is too large";
+	}
+
+	if size :under 107 {
+		test_fail "mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder3";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder3" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 107 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 100 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in stored mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in stored mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in redirected mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in redirected mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - last (two)" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader :last "X-Some-Header" "Header content";
+	addheader "X-Some-Other-Header" "More header content";
+
+	if not size :over 76 {
+		test_fail "mail is not larger";
+	}
+
+	if size :over 149 {
+		test_fail "mail is too large";
+	}
+
+	if size :under 149 {
+		test_fail "mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header #1 not added";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added #1";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not added";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content added #2";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder4";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder4" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 149 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 100 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header #1 not in stored mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content #1 in stored mail";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not in stored mail";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content #2 in stored mail";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header #1 not in redirected mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content #1 in redirected mail ";
+	}
+
+	if not exists "x-some-other-header" {
+		test_fail "header #2 not in redirected mail";
+	}
+
+	if not header :is "x-some-other-header" "More header content" {
+		test_fail "wrong content #2 in redirected mail";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - framed" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header-first" "Header content first";
+	addheader :last "X-Some-Header-last" "Header content last";
+
+	if not size :over 76 {
+		test_fail "mail is not larger";
+	}
+
+	if size :over 160 {
+		test_fail "mail is too large";
+	}
+
+	if size :under 160 {
+		test_fail "mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not added";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not added";
+	}
+
+	if not header :is "x-some-header-first" "Header content first" {
+		test_fail "wrong first content added";
+	}
+
+	if not header :is "x-some-header-last" "Header content last" {
+		test_fail "wrong last content added";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder5";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder5" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 160 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 152 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored mail";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not in stored mail";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not in stored mail";
+	}
+
+	if not header :is "x-some-header-first" "Header content first" {
+		test_fail "wrong first header content in stored mail ";
+	}
+
+	if not header :is "x-some-header-last" "Header content last" {
+		test_fail "wrong last header content in stored mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not in redirected mail";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not in redirected mail";
+	}
+
+	if not header :is "x-some-header-first" "Header content first" {
+		test_fail "wrong first header content in redirected mail ";
+	}
+
+	if not header :is "x-some-header-last" "Header content last" {
+		test_fail "wrong last header content in redirected mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+/*
+ * Addheader - folded
+ */
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - folded" {
+	set "before"
+		"This is very long header content, folded to fit inside multiple header lines. This may cause problems, so that is why it is tested here.";
+	set "after"
+		"This is somewhat longer header content, folded to fit inside multiple header lines. This may cause problems, so that is why it is tested here.";
+
+	addheader :last "X-Some-Header-first" "${before}";
+	addheader :last "X-Some-Header-last" "${after}";
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not added";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not added";
+	}
+
+	if not header :is "x-some-header-first" "${before}" {
+		test_fail "wrong first content added";
+	}
+
+	if not header :is "x-some-header-last" "${after}" {
+		test_fail "wrong last content added";
+	}
+
+	redirect "frop@example.com";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not in redirected mail";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not in redirected mail";
+	}
+
+	if not header :is "x-some-header-first" "${before}" {
+		test_fail "wrong first header content in redirected mail ";
+	}
+
+	if not header :is "x-some-header-last" "${after}" {
+		test_fail "wrong last header content in redirected mail ";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+/*
+ * Addheader - newlines
+ */
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - newlines" {
+	set "before" text:
+This is very long header content
+ containing newlines. This may
+ cause some problems, so that
+ is why it is tested here.
+.
+;
+
+	set "after" text:
+This is somewhat longer header content
+ containing newlines. This may
+ cause some problems, so that
+ is why it is tested here.
+.
+;
+
+	set "before_out"
+		"This is very long header content containing newlines. This may cause some problems, so that is why it is tested here.";
+
+	set "after_out"
+		"This is somewhat longer header content containing newlines. This may cause some problems, so that is why it is tested here.";
+
+	addheader "X-Some-Header-first" "${before}";
+	addheader :last "X-Some-Header-last" "${after}";
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not added";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not added";
+	}
+
+	if not header :is "x-some-header-first" "${before_out}" {
+		if header :matches "x-some-header-first" "*" {}
+		test_fail "wrong first content added: `${0}`";
+	}
+
+	if not header :is "x-some-header-last" "${after_out}" {
+		if header :matches "x-some-header-last" "*" {}
+		test_fail "wrong last content added: `${0}`";
+	}
+
+	redirect "frop@example.com";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in redirected mail";
+	}
+
+	if not exists "x-some-header-first" {
+		test_fail "first header not in redirected mail";
+	}
+
+	if not exists "x-some-header-last" {
+		test_fail "last header not in redirected mail";
+	}
+
+	if not header :is "x-some-header-first" "${before_out}" {
+		if header :matches "x-some-header-first" "*" {}
+		test_fail "wrong first header content in redirected mail: `${0}`";
+	}
+
+	if not header :is "x-some-header-last" "${after_out}" {
+		if header :matches "x-some-header-last" "*" {}
+		test_fail "wrong last header content in redirected mail: `${0}`";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in redirected mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "${message}";
+test "Addheader - implicit keep" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header" "Header content";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "INBOX" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 76 {
+		test_fail "stored mail is not larger";
+	}
+
+	if size :over 107 {
+		test_fail "stored mail is too large";
+	}
+
+	if size :under 100 {
+		test_fail "stored mail is too small";
+	}
+
+	if not header :is "subject" "Frop!" {
+		test_fail "original subject header not retained in stored message";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added to stored message";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added to stored message";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+}
+
+test_set "message" "${message}";
+test "Addheader - UTF 8" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header" "Это тест!";
+	fileinto :create "folder6";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder6" 0 {
+		test_fail "message not stored";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added to stored message";
+	}
+
+	if not header :is "x-some-header" "Это тест!" {
+		if header :matches "x-some-header" "*" {}
+		test_fail "Bel character not retained: `${0}`";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+}
+
+test_result_reset;
+
+test_set "message" "${message}";
+test "Addheader - devious characters" {
+	if size :over 76 {
+		test_fail "original message is longer than 76 bytes?!";
+	}
+
+	addheader "X-Some-Header" "Ring my ${hex:07}!";
+	fileinto :create "folder7";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder7" 0 {
+		test_fail "message not stored";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added to stored message";
+	}
+
+	if header :is "x-some-header" "Ring my !" {
+		if header :matches "x-some-header" "*" {}
+		test_fail "Bel character not retained: `${0}`";
+	}
+
+	if not header :is "x-some-header" "Ring my ${hex:07}!" {
+		if header :matches "x-some-header" "*" {}
+		test_fail "Incorrect header value: `${0}`";
+	}
+
+	if not body :matches "Frop!*" {
+		test_fail "body not retained in stored mail";
+	}
+}
+
+test_result_reset;
+test_set "message" "";
+test "Addheader - empty" {
+	addheader :last "X-Some-Header" "Header content";
+
+	if not size :over 0 {
+		test_fail "mail is not larger";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not added";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content added";
+	}
+
+	redirect "frop@example.com";
+	fileinto :create "folder8";
+
+	if not test_result_execute {
+		test_fail "failed to execute result";
+	}
+
+	if not test_message :folder "folder8" 0 {
+		test_fail "message not stored";
+	}
+
+	if not size :over 0 {
+		test_fail "stored mail is not larger";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in stored mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in stored mail ";
+	}
+
+	if not test_message :smtp 0 {
+		test_fail "message not redirected";
+	}
+
+	if not exists "x-some-header" {
+		test_fail "header not in redirected mail";
+	}
+
+	if not header :is "x-some-header" "Header content" {
+		test_fail "wrong content in redirected mail ";
+	}
+}
