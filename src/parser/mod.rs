@@ -1,5 +1,8 @@
 pub mod lexer;
+pub mod string;
 use phf::phf_map;
+
+use crate::runtime::StringItem;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Token {
@@ -11,7 +14,7 @@ pub(crate) enum Token {
     ParenthesisClose,
     Comma,
     Semicolon,
-    String(Vec<u8>),
+    String(StringItem),
     Number(usize),
     Identifier(Word),
     Tag(Word),
@@ -139,6 +142,24 @@ pub(crate) enum Word {
     Value,
     VirusTest,
     Zone,
+}
+
+#[derive(Debug)]
+pub struct ParseError {
+    line_num: usize,
+    line_pos: usize,
+    error_type: ErrorType,
+}
+
+#[derive(Debug)]
+pub enum ErrorType {
+    InvalidCharacter(u8),
+    InvalidNumber(String),
+    InvalidUnicodeSequence(u32),
+    InvalidUtf8String,
+    UnterminatedString,
+    UnterminatedComment,
+    UnterminatedMultiline,
 }
 
 static WORDS: phf::Map<&'static str, Word> = phf_map! {
