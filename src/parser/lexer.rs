@@ -1,4 +1,6 @@
-use super::{Token, WORDS};
+use crate::runtime::StringItem;
+
+use super::{string::tokenize_string, ErrorType, ParseError, Token, WORDS};
 
 #[derive(Debug)]
 pub(crate) struct TokenInfo {
@@ -9,25 +11,10 @@ pub(crate) struct TokenInfo {
 
 enum State {
     None,
-    BracketComment { line_num: usize, line_pos: usize },
+    BracketComment,
     HashComment,
-    QuotedString { line_num: usize, line_pos: usize },
-    MultiLine { line_num: usize, line_pos: usize },
-}
-
-#[derive(Debug)]
-pub struct Error {
-    line_num: usize,
-    line_pos: usize,
-    error_type: ErrorType,
-}
-
-#[derive(Debug)]
-pub enum ErrorType {
-    InvalidCharacter(u8),
-    UnterminatedString,
-    UnterminatedComment,
-    UnterminatedMultiline,
+    QuotedString(bool),
+    MultiLine(bool),
 }
 
 struct Parser {
@@ -39,11 +26,15 @@ struct Parser {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
+pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, ParseError> {
     let mut parser = Parser::new(bytes);
     let mut state = State::None;
     let mut iter = bytes.iter().enumerate().peekable();
     let mut last_ch = 0;
+
+    // Start position for comments, quoted strings and multi-line strings.
+    let mut line_num = 0;
+    let mut line_pos = 0;
 
     'outer: while let Some((pos, &ch)) = iter.next() {
         match state {
@@ -58,10 +49,9 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                     if parser.is_token_start() {
                         parser.token_is_tag();
                     } else if parser.token_bytes().eq_ignore_ascii_case(b"text") {
-                        state = State::MultiLine {
-                            line_num: parser.line_num,
-                            line_pos: pos - parser.line_start,
-                        };
+                        state = State::MultiLine(false);
+                        line_num = parser.line_num;
+                        line_pos = pos - parser.line_start;
                         while let Some((pos, &ch)) = iter.next() {
                             if ch == b'\n' {
                                 last_ch = b'\n';
@@ -71,7 +61,7 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                             }
                         }
                     } else {
-                        return Err(Error::invalid_character(
+                        return Err(ParseError::invalid_character(
                             parser.line_num,
                             pos - parser.line_start,
                             ch,
@@ -79,10 +69,9 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                     }
                 }
                 b'"' => {
-                    state = State::QuotedString {
-                        line_num: parser.line_num,
-                        line_pos: pos - parser.line_start,
-                    };
+                    state = State::QuotedString(false);
+                    line_num = parser.line_num;
+                    line_pos = pos - parser.line_start;
                     parser.push_current_token(pos - 1);
                 }
                 b'{' => {
@@ -112,14 +101,13 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                 b'/' => {
                     if let Some((_, b'*')) = iter.next() {
                         last_ch = 0;
-                        state = State::BracketComment {
-                            line_num: parser.line_num,
-                            line_pos: pos - parser.line_start,
-                        };
+                        state = State::BracketComment;
+                        line_num = parser.line_num;
+                        line_pos = pos - parser.line_start;
                         parser.push_current_token(pos - 1);
                         continue;
                     } else {
-                        return Err(Error::invalid_character(
+                        return Err(ParseError::invalid_character(
                             parser.line_num,
                             pos - parser.line_start,
                             ch,
@@ -138,7 +126,7 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                     parser.push_current_token(pos - 1);
                 }
                 _ => {
-                    return Err(Error::invalid_character(
+                    return Err(ParseError::invalid_character(
                         parser.line_num,
                         pos - parser.line_start,
                         ch,
@@ -160,21 +148,25 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                     parser.new_line(pos);
                 }
             }
-            State::QuotedString { .. } => match ch {
+            State::QuotedString(maybe_variable) => match ch {
                 b'\\' => (),
                 b'"' if last_ch != b'\\' => {
-                    parser.push_string(pos);
+                    parser.push_string(pos, maybe_variable);
                     state = State::None;
                 }
                 b'\n' => {
                     parser.new_line(pos);
                     parser.push_byte(b'\n');
                 }
+                b'{' if last_ch == b'$' => {
+                    state = State::QuotedString(true);
+                    parser.push_byte(ch);
+                }
                 _ => {
                     parser.push_byte(ch);
                 }
             },
-            State::MultiLine { .. } => match ch {
+            State::MultiLine(maybe_variable) => match ch {
                 b'.' if last_ch == b'\n' => {
                     match (iter.next(), iter.peek()) {
                         (Some((_, b'\r')), Some((_, b'\n'))) => {
@@ -197,7 +189,7 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                     }
 
                     if last_ch == b'\n' {
-                        parser.push_string(pos);
+                        parser.push_string(pos, maybe_variable);
                         parser.new_line(pos);
                         state = State::None;
                     }
@@ -207,6 +199,10 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
                 b'\n' => {
                     parser.new_line(pos);
                     parser.push_byte(b'\n');
+                }
+                b'{' if last_ch == b'$' => {
+                    state = State::MultiLine(true);
+                    parser.push_byte(ch);
                 }
                 _ => {
                     parser.push_byte(ch);
@@ -218,17 +214,17 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
     }
 
     match state {
-        State::BracketComment { line_num, line_pos } => Err(Error {
+        State::BracketComment => Err(ParseError {
             line_num,
             line_pos,
             error_type: ErrorType::UnterminatedComment,
         }),
-        State::QuotedString { line_num, line_pos } => Err(Error {
+        State::QuotedString(_) => Err(ParseError {
             line_num,
             line_pos,
             error_type: ErrorType::UnterminatedString,
         }),
-        State::MultiLine { line_num, line_pos } => Err(Error {
+        State::MultiLine(_) => Err(ParseError {
             line_num,
             line_pos,
             error_type: ErrorType::UnterminatedMultiline,
@@ -237,9 +233,9 @@ pub(crate) fn tokenize(bytes: &[u8]) -> Result<Vec<TokenInfo>, Error> {
     }
 }
 
-impl Error {
+impl ParseError {
     pub fn invalid_character(line_num: usize, line_pos: usize, ch: u8) -> Self {
-        Error {
+        ParseError {
             line_num,
             line_pos,
             error_type: ErrorType::InvalidCharacter(ch),
@@ -316,9 +312,27 @@ impl Parser {
         });
     }
 
-    pub fn push_string(&mut self, pos: usize) {
-        self.push_token(Token::String(self.buf.to_vec()), pos);
+    pub fn push_string(&mut self, pos: usize, maybe_variable: bool) -> Result<(), ParseError> {
+        self.push_token(
+            Token::String(if maybe_variable {
+                tokenize_string(&self.buf, true).map_err(|error_type| ParseError {
+                    line_num: self.line_num,
+                    line_pos: pos - self.line_start,
+                    error_type,
+                })?
+            } else {
+                StringItem::Text(
+                    String::from_utf8(self.buf.to_vec()).map_err(|_| ParseError {
+                        line_num: self.line_num,
+                        line_pos: pos - self.line_start,
+                        error_type: ErrorType::InvalidUtf8String,
+                    })?,
+                )
+            }),
+            pos,
+        );
         self.buf.clear();
+        Ok(())
     }
 
     #[inline(always)]
