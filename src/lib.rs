@@ -1,5 +1,39 @@
-pub mod parser;
+use runtime::Command;
+
+pub mod compiler;
 pub mod runtime;
+
+pub struct Sieve {
+    capabilities: Vec<Capability>,
+    commands: Vec<Command>,
+}
+
+pub struct Compiler {
+    // Settings
+    pub(crate) max_script_len: usize,
+    pub(crate) max_string_len: usize,
+    pub(crate) max_variable_len: usize,
+    pub(crate) max_nested_blocks: usize,
+    pub(crate) max_nested_tests: usize,
+}
+
+#[derive(Debug, Clone)]
+pub enum Capability {
+    Envelope,
+    FileInto,
+    EncodedCharacter,
+    Comparator(Comparator),
+    Other(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum Comparator {
+    Elbonia,
+    Octet,
+    AsciiCaseMap,
+    AsciiNumeric,
+    Other(String),
+}
 
 #[cfg(test)]
 mod tests {
@@ -8,8 +42,6 @@ mod tests {
         fs,
         path::PathBuf,
     };
-
-    use crate::parser::{lexer::tokenize, Token};
 
     use super::*;
 
@@ -28,25 +60,25 @@ mod tests {
 
     #[test]
     fn parse_all() {
-        let mut files = Vec::new();
+        //let mut files = Vec::new();
         //let mut items = BTreeSet::new();
 
-        read_dir(PathBuf::from("tests"), &mut files);
-        for file in files {
-            println!("parsing {:?}", file);
-            let bytes = fs::read(&file).unwrap();
-            let tokens = tokenize(&bytes).unwrap();
-            for token in tokens {
-                if let Token::Identifier(id) = token.token {
-                    //items.insert(id.to_lowercase());
-                }
+        //read_dir(PathBuf::from("tests"), &mut files);
+        //for file in files {
+        /*println!("parsing {:?}", file);
+        let bytes = fs::read(&file).unwrap();
+        let tokens = tokenize(&bytes).unwrap();
+        for token in tokens {
+            if let Token::Identifier(id) = token.token {
+                //items.insert(id.to_lowercase());
             }
+        }*/
 
-            /*if file.as_os_str().to_str().unwrap().contains("lexer.svtest") {
-                println!("{:#?}", tokens);
-                break;
-            }*/
-        }
+        /*if file.as_os_str().to_str().unwrap().contains("lexer.svtest") {
+            println!("{:#?}", tokens);
+            break;
+        }*/
+        //}
 
         /*fs::write(
             "identifiers.txt",

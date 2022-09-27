@@ -1,0 +1,46 @@
+use crate::{
+    compiler::{
+        lexer::{tokenizer::Tokenizer, Token},
+        CompileError,
+    },
+    runtime::StringItem,
+    Capability,
+};
+
+impl<'x> Tokenizer<'x> {
+    pub(crate) fn parse_require(
+        &mut self,
+        capabilities: &mut Vec<Capability>,
+    ) -> Result<(), CompileError> {
+        let token_info = self.unwrap_next()?;
+        match token_info.token {
+            Token::BracketOpen => loop {
+                let token_info = self.unwrap_next()?;
+                match token_info.token {
+                    Token::String(StringItem::Text(value)) => {
+                        capabilities.push(Capability::parse(value));
+                        let token_info = self.unwrap_next()?;
+                        match token_info.token {
+                            Token::Comma => (),
+                            Token::BracketClose => break,
+                            _ => {
+                                return Err(token_info.into());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(token_info.into());
+                    }
+                }
+            },
+            Token::String(StringItem::Text(value)) => {
+                capabilities.push(Capability::parse(value));
+            }
+            _ => {
+                return Err(token_info.into());
+            }
+        }
+
+        self.expect_token(Token::Semicolon)
+    }
+}
