@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::Compiler;
 
 use self::lexer::tokenizer::TokenInfo;
@@ -25,10 +27,14 @@ pub enum ErrorType {
     ScriptTooLong,
     StringTooLong,
     VariableTooLong,
-    UnexpectedToken(String),
-    MissingParameters(String),
+    UnexpectedToken {
+        expected: Cow<'static, str>,
+        found: String,
+    },
     UnexpectedEOF,
     TooManyNestedBlocks,
+    TooManyNestedTests,
+    UnsupportedComparator(String),
 }
 
 impl Default for Compiler {
@@ -63,12 +69,15 @@ impl CompileError {
     }
 }
 
-impl From<TokenInfo> for CompileError {
-    fn from(token: TokenInfo) -> Self {
+impl TokenInfo {
+    pub fn expected(self, expected: impl Into<Cow<'static, str>>) -> CompileError {
         CompileError {
-            line_num: token.line_num,
-            line_pos: token.line_pos,
-            error_type: ErrorType::UnexpectedToken(token.token.to_string()),
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type: ErrorType::UnexpectedToken {
+                expected: expected.into(),
+                found: self.token.to_string(),
+            },
         }
     }
 }

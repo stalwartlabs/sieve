@@ -24,12 +24,12 @@ impl<'x> Tokenizer<'x> {
                             Token::Comma => (),
                             Token::BracketClose => break,
                             _ => {
-                                return Err(token_info.into());
+                                return Err(token_info.expected("']' or ','"));
                             }
                         }
                     }
                     _ => {
-                        return Err(token_info.into());
+                        return Err(token_info.expected("string"));
                     }
                 }
             },
@@ -37,10 +37,10 @@ impl<'x> Tokenizer<'x> {
                 capabilities.push(Capability::parse(value));
             }
             _ => {
-                return Err(token_info.into());
+                return Err(token_info.expected("'[' or string"));
             }
         }
 
-        self.expect_token(Token::Semicolon)
+        Ok(())
     }
 }

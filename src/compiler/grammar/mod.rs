@@ -1,11 +1,33 @@
+use serde::{Deserialize, Serialize};
+
 use super::{
     lexer::{tokenizer::Tokenizer, Token},
     CompileError,
 };
 
 pub mod ast;
-pub mod iff;
+pub mod comparator;
 pub mod require;
+pub mod string_list;
+pub mod test;
+pub mod test_address;
+pub mod test_envelope;
+pub mod test_header;
+pub mod test_size;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum AddressPart {
+    LocalPart,
+    Domain,
+    All,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum MatchType {
+    Is,
+    Contains,
+    Matches,
+}
 
 impl<'x> Tokenizer<'x> {
     #[inline(always)]
@@ -27,7 +49,7 @@ impl<'x> Tokenizer<'x> {
                 }
                 Token::CurlyClose => match curly_count {
                     0 => {
-                        return Err(token_info.into());
+                        return Err(token_info.expected("command"));
                     }
                     1 => {
                         break;

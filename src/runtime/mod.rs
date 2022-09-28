@@ -1,6 +1,6 @@
-use crate::Capability;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum StringItem {
     Text(Vec<u8>),
     VariableName(String),
@@ -8,14 +8,4 @@ pub(crate) enum StringItem {
     MatchMany(usize),
     MatchOne,
     List(Vec<StringItem>),
-}
-
-#[derive(Debug)]
-pub(crate) enum Command {
-    Keep,
-    FileInto { mailbox: StringItem },
-    Redirect { address: StringItem },
-    Discard,
-    Stop,
-    Invalid { command: String },
 }
