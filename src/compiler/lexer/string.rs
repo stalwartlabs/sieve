@@ -214,6 +214,73 @@ impl Compiler {
     }
 }
 
+fn parse_matches(parts: &mut Vec<StringItem>, bytes: &[u8]) -> bool {
+    let mut chars = Vec::with_capacity(bytes.len());
+    let parts_start = parts.len();
+
+    for &ch in bytes {
+        match ch {
+            b'*' => {
+                if !chars.is_empty() {
+                    parts.push(StringItem::Text(chars.to_vec()));
+                    chars.clear();
+                }
+                if let Some(StringItem::MatchMany(count)) = parts.last_mut() {
+                    *count += 1;
+                } else {
+                    parts.push(StringItem::MatchMany(1));
+                }
+            }
+            b'?' => {
+                if !chars.is_empty() {
+                    parts.push(StringItem::Text(chars.to_vec()));
+                    chars.clear();
+                }
+                parts.push(StringItem::MatchOne);
+            }
+            _ => {
+                chars.push(ch);
+            }
+        }
+    }
+
+    let has_matches = parts_start != parts.len();
+    if has_matches && !chars.is_empty() {
+        parts.push(StringItem::Text(chars.to_vec()));
+    }
+    has_matches
+}
+
+impl StringItem {
+    pub fn into_matches(self) -> Self {
+        match self {
+            StringItem::Text(text) => {
+                let mut list = Vec::new();
+                if parse_matches(&mut list, &text) {
+                    StringItem::List(list)
+                } else {
+                    StringItem::Text(text)
+                }
+            }
+            StringItem::List(list) => {
+                let mut new_list = Vec::with_capacity(list.len());
+                for item in list {
+                    match item {
+                        StringItem::Text(text) => {
+                            if !parse_matches(&mut new_list, &text) {
+                                new_list.push(StringItem::Text(text));
+                            }
+                        }
+                        _ => new_list.push(item),
+                    }
+                }
+                StringItem::List(new_list)
+            }
+            _ => self,
+        }
+    }
+}
+
 impl Display for StringItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

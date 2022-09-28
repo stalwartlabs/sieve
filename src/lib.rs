@@ -1,8 +1,10 @@
-use runtime::Command;
+use compiler::grammar::ast::Command;
+use serde::{Deserialize, Serialize};
 
 pub mod compiler;
 pub mod runtime;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Sieve {
     capabilities: Vec<Capability>,
     commands: Vec<Command>,
@@ -17,7 +19,7 @@ pub struct Compiler {
     pub(crate) max_nested_tests: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Capability {
     Envelope,
     FileInto,
@@ -26,7 +28,7 @@ pub enum Capability {
     Other(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Comparator {
     Elbonia,
     Octet,

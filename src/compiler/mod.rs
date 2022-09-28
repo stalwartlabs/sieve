@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::Compiler;
 
 use self::lexer::tokenizer::TokenInfo;
@@ -25,10 +27,14 @@ pub enum ErrorType {
     ScriptTooLong,
     StringTooLong,
     VariableTooLong,
-    UnexpectedToken(String),
-    MissingParameters(String),
+    UnexpectedToken {
+        expected: Cow<'static, str>,
+        found: String,
+    },
     UnexpectedEOF,
     TooManyNestedBlocks,
+    TooManyNestedTests,
+    UnsupportedComparator(String),
 }
 
 impl Default for Compiler {
@@ -63,12 +69,58 @@ impl CompileError {
     }
 }
 
-impl From<TokenInfo> for CompileError {
-    fn from(token: TokenInfo) -> Self {
+impl TokenInfo {
+    pub fn expected(self, expected: impl Into<Cow<'static, str>>) -> CompileError {
         CompileError {
-            line_num: token.line_num,
-            line_pos: token.line_pos,
-            error_type: ErrorType::UnexpectedToken(token.token.to_string()),
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type: ErrorType::UnexpectedToken {
+                expected: expected.into(),
+                found: self.token.to_string(),
+            },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::PathBuf};
+
+    use crate::Compiler;
+
+    #[test]
+    fn parse_rfc() {
+        let mut test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        test_dir.push("tests");
+        test_dir.push("rfcs");
+        let mut tests_run = 0;
+
+        for file_name in fs::read_dir(&test_dir).unwrap() {
+            let mut file_name = file_name.unwrap().path();
+            if file_name.extension().map_or(false, |e| e == "sieve") {
+                let script = fs::read(&file_name).unwrap();
+                file_name.set_extension("json");
+                //let expected_result = fs::read(&file_name).unwrap();
+
+                tests_run += 1;
+
+                let sieve = Compiler::new().compile(&script).unwrap();
+                let json_sieve = serde_json::to_string_pretty(&sieve).unwrap();
+
+                fs::write(&file_name, json_sieve.as_bytes()).unwrap();
+
+                /*if json_sieve.as_bytes() != expected_result {
+                    file_name.set_extension("failed");
+                    fs::write(&file_name, json_sieve.as_bytes()).unwrap();
+                    panic!("Test failed, parsed sieve saved to {}", file_name.display());
+                }*/
+            }
+        }
+
+        assert!(
+            tests_run > 0,
+            "Did not find any tests to run in folder {}.",
+            test_dir.display()
+        );
     }
 }

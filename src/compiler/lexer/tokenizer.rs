@@ -132,7 +132,7 @@ impl<'x> Tokenizer<'x> {
     }
 
     pub fn get_string(&mut self, maybe_variable: bool) -> Result<TokenInfo, CompileError> {
-        let token = self.get_token(Token::String(if maybe_variable {
+        let token = Token::String(if maybe_variable {
             self.compiler
                 .tokenize_string(&self.buf, true)
                 .map_err(|error_type| CompileError {
@@ -142,10 +142,15 @@ impl<'x> Tokenizer<'x> {
                 })?
         } else {
             StringItem::Text(self.buf.to_vec())
-        }));
+        });
+
         self.buf.clear();
 
-        Ok(token)
+        Ok(TokenInfo {
+            token,
+            line_num: self.text_line_num,
+            line_pos: self.text_line_pos,
+        })
     }
 
     #[inline(always)]
@@ -211,7 +216,7 @@ impl<'x> Tokenizer<'x> {
         if next_token.token == token {
             Ok(())
         } else {
-            Err(next_token.into())
+            Err(next_token.expected(format!("'{}'", token)))
         }
     }
 
@@ -220,7 +225,7 @@ impl<'x> Tokenizer<'x> {
         if let Token::String(s) = next_token.token {
             Ok(s)
         } else {
-            Err(next_token.into())
+            Err(next_token.expected("string"))
         }
     }
 
