@@ -1,0 +1,306 @@
+{
+  "capabilities": [
+    "Relational",
+    {
+      "Comparator": "AsciiNumeric"
+    },
+    "FileInto"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    120,
+                    45,
+                    112,
+                    114,
+                    105,
+                    111,
+                    114,
+                    105,
+                    116,
+                    121
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    51
+                  ]
+                }
+              ],
+              "match_type": {
+                "Value": "Lt"
+              },
+              "comparator": "AsciiNumeric",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    80,
+                    114,
+                    105,
+                    111,
+                    114,
+                    105,
+                    116,
+                    121
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "Address": {
+              "header_list": [
+                {
+                  "Text": [
+                    116,
+                    111
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    53
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": {
+                "Count": "Gt"
+              },
+              "comparator": "AsciiNumeric",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    83,
+                    80,
+                    65,
+                    77
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "Address": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    77
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": {
+                "Value": "Gt"
+              },
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    70,
+                    114,
+                    111,
+                    109,
+                    32,
+                    78,
+                    45,
+                    90
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "test": "True",
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    70,
+                    114,
+                    111,
+                    109,
+                    32,
+                    65,
+                    45,
+                    77
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AllOf": [
+              {
+                "Address": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        116,
+                        111
+                      ]
+                    },
+                    {
+                      "Text": [
+                        99,
+                        99
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "Text": [
+                        49
+                      ]
+                    }
+                  ],
+                  "address_part": "All",
+                  "match_type": {
+                    "Count": "Eq"
+                  },
+                  "comparator": "AsciiNumeric",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_anychild": false
+                }
+              },
+              {
+                "Address": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        116,
+                        111
+                      ]
+                    },
+                    {
+                      "Text": [
+                        99,
+                        99
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "Text": [
+                        109,
+                        101,
+                        64,
+                        102,
+                        111,
+                        111,
+                        46,
+                        101,
+                        120,
+                        97,
+                        109,
+                        112,
+                        108,
+                        101,
+                        46,
+                        99,
+                        111,
+                        109
+                      ]
+                    }
+                  ],
+                  "address_part": "All",
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_anychild": false
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    79,
+                    110,
+                    108,
+                    121,
+                    32,
+                    109,
+                    101
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

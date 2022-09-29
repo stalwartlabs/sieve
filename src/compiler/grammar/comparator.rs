@@ -1,4 +1,5 @@
 use phf::phf_map;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
@@ -6,8 +7,16 @@ use crate::{
         CompileError,
     },
     runtime::StringItem,
-    Comparator,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Comparator {
+    Elbonia,
+    Octet,
+    AsciiCaseMap,
+    AsciiNumeric,
+    Other(String),
+}
 
 impl<'x> Tokenizer<'x> {
     pub(crate) fn parse_comparator(&mut self) -> Result<Comparator, CompileError> {

@@ -6,10 +6,9 @@ use crate::{
         CompileError,
     },
     runtime::StringItem,
-    Comparator,
 };
 
-use super::{test::Test, AddressPart, MatchType};
+use super::{comparator::Comparator, test::Test, AddressPart, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestAddress {
@@ -18,6 +17,11 @@ pub(crate) struct TestAddress {
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub index: Option<u16>,
+    pub index_last: bool,
+
+    pub mime: bool,
+    pub mime_anychild: bool,
 }
 
 impl<'x> Tokenizer<'x> {
@@ -27,6 +31,11 @@ impl<'x> Tokenizer<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_list = None;
         let mut key_list = None;
+        let mut index = None;
+        let mut index_last = false;
+
+        let mut mime = false;
+        let mut mime_anychild = false;
 
         loop {
             let token_info = self.unwrap_next()?;
@@ -34,11 +43,25 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(word @ (Word::LocalPart | Word::Domain | Word::All)) => {
                     address_part = word.into();
                 }
-                Token::Tag(word @ (Word::Is | Word::Contains | Word::Matches)) => {
-                    match_type = word.into();
+                Token::Tag(
+                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                ) => {
+                    match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
+                }
+                Token::Tag(Word::Index) => {
+                    index = (self.unwrap_number(u16::MAX as usize)? as u16).into();
+                }
+                Token::Tag(Word::Last) => {
+                    index_last = true;
+                }
+                Token::Tag(Word::Mime) => {
+                    mime = true;
+                }
+                Token::Tag(Word::AnyChild) => {
+                    mime_anychild = true;
                 }
                 Token::String(string) => {
                     if header_list.is_none() {
@@ -75,6 +98,10 @@ impl<'x> Tokenizer<'x> {
             address_part,
             match_type,
             comparator,
+            index,
+            index_last,
+            mime,
+            mime_anychild,
         }))
     }
 }
@@ -85,17 +112,6 @@ impl From<Word> for AddressPart {
             Word::LocalPart => AddressPart::LocalPart,
             Word::Domain => AddressPart::Domain,
             Word::All => AddressPart::All,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<Word> for MatchType {
-    fn from(word: Word) -> Self {
-        match word {
-            Word::Is => MatchType::Is,
-            Word::Contains => MatchType::Contains,
-            Word::Matches => MatchType::Matches,
             _ => unreachable!(),
         }
     }

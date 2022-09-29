@@ -1,0 +1,231 @@
+{
+  "capabilities": [
+    "Body"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Body": {
+              "key_list": [
+                {
+                  "Text": [
+                    77,
+                    65,
+                    75,
+                    69,
+                    32,
+                    77,
+                    79,
+                    78,
+                    69,
+                    89,
+                    32,
+                    70,
+                    65,
+                    83,
+                    84
+                  ]
+                }
+              ],
+              "body_transform": "Raw",
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap"
+            }
+          },
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Body": {
+              "key_list": [
+                {
+                  "Text": [
+                    109,
+                    105,
+                    115,
+                    115,
+                    105,
+                    108,
+                    101
+                  ]
+                },
+                {
+                  "Text": [
+                    99,
+                    111,
+                    111,
+                    114,
+                    100,
+                    105,
+                    110,
+                    97,
+                    116,
+                    101,
+                    115
+                  ]
+                }
+              ],
+              "body_transform": {
+                "Content": [
+                  {
+                    "Text": [
+                      116,
+                      101,
+                      120,
+                      116
+                    ]
+                  }
+                ]
+              },
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap"
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    115,
+                    101,
+                    99,
+                    114,
+                    101,
+                    116,
+                    115
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Body": {
+              "key_list": [
+                {
+                  "Text": []
+                }
+              ],
+              "body_transform": {
+                "Content": [
+                  {
+                    "Text": [
+                      97,
+                      117,
+                      100,
+                      105,
+                      111,
+                      47,
+                      109,
+                      112,
+                      51
+                    ]
+                  }
+                ]
+              },
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap"
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    106,
+                    117,
+                    107,
+                    101,
+                    98,
+                    111,
+                    120
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Body": {
+              "key_list": [
+                {
+                  "Text": [
+                    112,
+                    114,
+                    111,
+                    106,
+                    101,
+                    99,
+                    116,
+                    32,
+                    115,
+                    99,
+                    104,
+                    101,
+                    100,
+                    117,
+                    108,
+                    101
+                  ]
+                }
+              ],
+              "body_transform": "Text",
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap"
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    112,
+                    114,
+                    111,
+                    106,
+                    101,
+                    99,
+                    116,
+                    47,
+                    115,
+                    99,
+                    104,
+                    101,
+                    100,
+                    117,
+                    108,
+                    101
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

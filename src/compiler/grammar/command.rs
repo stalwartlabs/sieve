@@ -5,21 +5,49 @@ use crate::{
         lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
-    runtime::StringItem,
     Compiler, Sieve,
 };
 
-use super::test::{If, Test};
+use super::{
+    action_convert::Convert,
+    action_editheader::{AddHeader, DeleteHeader},
+    action_fileinto::FileInto,
+    action_mime::{Break, Enclose, ExtractText, ForEveryPart, Replace},
+    action_notify::Notify,
+    action_redirect::Redirect,
+    action_set::Set,
+    test::{If, Test},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Command {
     If(Vec<If>),
     Keep,
-    FileInto(StringItem),
-    Redirect(StringItem),
+    FileInto(FileInto),
+    Redirect(Redirect),
     Discard,
     Stop,
     Invalid(String),
+
+    // RFC 5703
+    ForEveryPart(ForEveryPart),
+    Break(Break),
+    Replace(Replace),
+    Enclose(Enclose),
+    ExtractText(ExtractText),
+
+    // RFC 6558
+    Convert(Convert),
+
+    // RFC 5293
+    AddHeader(AddHeader),
+    DeleteHeader(DeleteHeader),
+
+    // RFC 5229
+    Set(Set),
+
+    // RFC 5435
+    Notify(Notify),
 }
 
 impl Compiler {
@@ -90,10 +118,10 @@ impl Compiler {
                             commands.push(Command::Keep);
                         }
                         Word::FileInto => {
-                            commands.push(Command::FileInto(tokens.unwrap_string()?));
+                            commands.push(Command::FileInto(tokens.parse_fileinto()?));
                         }
                         Word::Redirect => {
-                            commands.push(Command::Redirect(tokens.unwrap_string()?));
+                            commands.push(Command::Redirect(tokens.parse_redirect()?));
                         }
                         Word::Discard => {
                             commands.push(Command::Discard);
@@ -101,8 +129,78 @@ impl Compiler {
                         Word::Stop => {
                             commands.push(Command::Stop);
                         }
+
+                        // RFC 5703
+                        Word::ForEveryPart => {
+                            commands.push(Command::ForEveryPart(ForEveryPart {
+                                name: if let Some(Ok(Token::Tag(Word::Name))) =
+                                    tokens.peek().map(|r| r.map(|t| &t.token))
+                                {
+                                    tokens.next();
+                                    tokens.unwrap_static_string()?.into()
+                                } else {
+                                    None
+                                },
+                                commands: Vec::new(),
+                            }));
+                            is_new_block = true;
+                        }
+                        Word::Break => {
+                            commands.push(Command::Break(Break {
+                                name: if let Some(Ok(Token::Tag(Word::Name))) =
+                                    tokens.peek().map(|r| r.map(|t| &t.token))
+                                {
+                                    tokens.next();
+                                    tokens.unwrap_static_string()?.into()
+                                } else {
+                                    None
+                                },
+                            }));
+                        }
+                        Word::Replace => {
+                            commands.push(Command::Replace(tokens.parse_replace()?));
+                        }
+                        Word::Enclose => {
+                            commands.push(Command::Enclose(tokens.parse_enclose()?));
+                        }
+                        Word::ExtractText => {
+                            commands.push(Command::ExtractText(tokens.parse_extracttext()?));
+                        }
+
+                        // RFC 6558
+                        Word::Convert => {
+                            commands.push(Command::Convert(tokens.parse_convert()?));
+                        }
+
+                        // RFC 5293
+                        Word::AddHeader => {
+                            commands.push(Command::AddHeader(tokens.parse_addheader()?));
+                        }
+                        Word::DeleteHeader => {
+                            commands.push(Command::DeleteHeader(tokens.parse_deleteheader()?));
+                        }
+
+                        // RFC 5229
+                        Word::Set => {
+                            commands.push(Command::Set(tokens.parse_set()?));
+                        }
+
+                        // RFC 5435
+                        Word::Notify => {
+                            commands.push(Command::Notify(tokens.parse_notify()?));
+                        }
+
                         _ => {
-                            return Err(token_info.expected("command"));
+                            #[cfg(test)]
+                            {
+                                tokens.ignore_command()?;
+                                commands.push(Command::Invalid(command.to_string()));
+                                continue;
+                            }
+                            #[cfg(not(test))]
+                            {
+                                return Err(token_info.expected("command"));
+                            }
                         }
                     }
 
@@ -130,6 +228,9 @@ impl Compiler {
                     match prev_commands.last_mut() {
                         Some(Command::If(ifs)) => {
                             ifs.last_mut().unwrap().commands = commands;
+                        }
+                        Some(Command::ForEveryPart(fep)) => {
+                            fep.commands = commands;
                         }
                         _ => debug_assert!(false, "This should not have happened."),
                     }

@@ -12,7 +12,7 @@ pub(crate) struct Tokenizer<'x> {
     pub compiler: &'x Compiler,
     pub iter: Peekable<Iter<'x, u8>>,
     pub buf: Vec<u8>,
-    pub next_token: Option<TokenInfo>,
+    pub next_token: Vec<TokenInfo>,
 
     pub pos: usize,
     pub line_num: usize,
@@ -59,7 +59,7 @@ impl<'x> Tokenizer<'x> {
             token_line_num: 0,
             token_line_pos: 0,
             token_is_tag: false,
-            next_token: None,
+            next_token: Vec::with_capacity(2),
             last_ch: 0,
             state: State::None,
         }
@@ -124,7 +124,7 @@ impl<'x> Tokenizer<'x> {
             line_pos: self.pos - self.line_start,
         };
         if let Some(token) = self.get_current_token() {
-            self.next_token = next_token.into();
+            self.next_token.push(next_token);
             token
         } else {
             next_token
@@ -229,6 +229,28 @@ impl<'x> Tokenizer<'x> {
         }
     }
 
+    pub fn unwrap_static_string(&mut self) -> Result<Vec<u8>, CompileError> {
+        let next_token = self.unwrap_next()?;
+        if let Token::String(StringItem::Text(s)) = next_token.token {
+            Ok(s)
+        } else {
+            Err(next_token.expected("string"))
+        }
+    }
+
+    pub fn unwrap_number(&mut self, max_value: usize) -> Result<usize, CompileError> {
+        let next_token = self.unwrap_next()?;
+        if let Token::Number(n) = next_token.token {
+            if n < max_value {
+                Ok(n)
+            } else {
+                Err(next_token.expected(format!("number lower than {}", max_value)))
+            }
+        } else {
+            Err(next_token.expected("number"))
+        }
+    }
+
     pub fn invalid_character(&self) -> CompileError {
         CompileError {
             line_num: self.line_num,
@@ -236,13 +258,23 @@ impl<'x> Tokenizer<'x> {
             error_type: ErrorType::InvalidCharacter(self.last_ch),
         }
     }
+
+    pub fn peek(&mut self) -> Option<Result<&TokenInfo, CompileError>> {
+        if self.next_token.is_empty() {
+            match self.next()? {
+                Ok(next_token) => self.next_token.push(next_token),
+                Err(err) => return Some(Err(err)),
+            }
+        }
+        self.next_token.last().map(Ok)
+    }
 }
 
 impl<'x> Iterator for Tokenizer<'x> {
     type Item = Result<TokenInfo, CompileError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(prev_token) = self.next_token.take() {
+        if let Some(prev_token) = self.next_token.pop() {
             return Some(Ok(prev_token));
         }
 

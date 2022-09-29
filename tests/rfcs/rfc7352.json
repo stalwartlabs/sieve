@@ -1,0 +1,897 @@
+{
+  "capabilities": [
+    "Duplicate",
+    "Variables"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Duplicate": {
+              "handle": null,
+              "dup_match": "Default",
+              "seconds": null,
+              "last": false
+            }
+          },
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Duplicate": {
+              "handle": null,
+              "dup_match": {
+                "Header": {
+                  "Text": [
+                    109,
+                    101,
+                    115,
+                    115,
+                    97,
+                    103,
+                    101,
+                    45,
+                    105,
+                    100
+                  ]
+                }
+              },
+              "seconds": null,
+              "last": false
+            }
+          },
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    109,
+                    101,
+                    115,
+                    115,
+                    97,
+                    103,
+                    101,
+                    45,
+                    105,
+                    100
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "If": [
+                {
+                  "test": {
+                    "Duplicate": {
+                      "handle": null,
+                      "dup_match": {
+                        "UniqueId": {
+                          "VariableNumber": 0
+                        }
+                      },
+                      "seconds": null,
+                      "last": false
+                    }
+                  },
+                  "commands": [
+                    "Discard"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Duplicate": {
+              "handle": null,
+              "dup_match": "Default",
+              "seconds": null,
+              "last": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": true,
+                "folder": {
+                  "Text": [
+                    84,
+                    114,
+                    97,
+                    115,
+                    104,
+                    47,
+                    68,
+                    117,
+                    112,
+                    108,
+                    105,
+                    99,
+                    97,
+                    116,
+                    101
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        65,
+                        76,
+                        69,
+                        82,
+                        84,
+                        58,
+                        32
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "If": [
+                {
+                  "test": {
+                    "Duplicate": {
+                      "handle": null,
+                      "dup_match": {
+                        "UniqueId": {
+                          "VariableNumber": 1
+                        }
+                      },
+                      "seconds": 60,
+                      "last": false
+                    }
+                  },
+                  "commands": [
+                    {
+                      "Invalid": "setflag"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    65,
+                    108,
+                    101,
+                    114,
+                    116,
+                    115
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Envelope": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "zone": null
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    115,
+                    101,
+                    110,
+                    100,
+                    101,
+                    114
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Not": {
+              "Duplicate": {
+                "handle": null,
+                "dup_match": {
+                  "UniqueId": {
+                    "VariableName": "sender"
+                  }
+                },
+                "seconds": 1800,
+                "last": false
+              }
+            }
+          },
+          "commands": [
+            {
+              "Notify": {
+                "from": null,
+                "importance": null,
+                "options": [],
+                "message": {
+                  "List": [
+                    {
+                      "Text": [
+                        91,
+                        83,
+                        73,
+                        69,
+                        86,
+                        69,
+                        93,
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "sender"
+                    },
+                    {
+                      "Text": [
+                        58,
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "subject"
+                    }
+                  ]
+                },
+                "method": {
+                  "Text": [
+                    120,
+                    109,
+                    112,
+                    112,
+                    58,
+                    117,
+                    115,
+                    101,
+                    114,
+                    64,
+                    105,
+                    109,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Envelope": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "zone": null
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    115,
+                    101,
+                    110,
+                    100,
+                    101,
+                    114
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "String": {
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "source": [
+                {
+                  "VariableName": "subject"
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        82,
+                        101,
+                        58
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    115,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Not": {
+              "Duplicate": {
+                "handle": null,
+                "dup_match": {
+                  "UniqueId": {
+                    "List": [
+                      {
+                        "VariableName": "sender"
+                      },
+                      {
+                        "Text": [
+                          32
+                        ]
+                      },
+                      {
+                        "VariableName": "subject"
+                      }
+                    ]
+                  }
+                },
+                "seconds": 1800,
+                "last": false
+              }
+            }
+          },
+          "commands": [
+            {
+              "Notify": {
+                "from": null,
+                "importance": null,
+                "options": [],
+                "message": {
+                  "List": [
+                    {
+                      "Text": [
+                        91,
+                        83,
+                        73,
+                        69,
+                        86,
+                        69,
+                        93,
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "sender"
+                    },
+                    {
+                      "Text": [
+                        58,
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "subject"
+                    }
+                  ]
+                },
+                "method": {
+                  "Text": [
+                    120,
+                    109,
+                    112,
+                    112,
+                    58,
+                    117,
+                    115,
+                    101,
+                    114,
+                    64,
+                    105,
+                    109,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Duplicate": {
+              "handle": {
+                "Text": [
+                  110,
+                  111,
+                  116,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              "dup_match": {
+                "Header": {
+                  "Text": [
+                    88,
+                    45,
+                    69,
+                    118,
+                    101,
+                    110,
+                    116,
+                    45,
+                    73,
+                    68
+                  ]
+                }
+              },
+              "seconds": null,
+              "last": false
+            }
+          },
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AllOf": [
+              {
+                "Duplicate": {
+                  "handle": {
+                    "Text": [
+                      115,
+                      117,
+                      112,
+                      112,
+                      111,
+                      114,
+                      116
+                    ]
+                  },
+                  "dup_match": {
+                    "Header": {
+                      "Text": [
+                        88,
+                        45,
+                        84,
+                        105,
+                        99,
+                        107,
+                        101,
+                        116,
+                        45,
+                        73,
+                        68
+                      ]
+                    }
+                  },
+                  "seconds": null,
+                  "last": false
+                }
+              },
+              {
+                "Address": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        116,
+                        111
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "Text": [
+                        115,
+                        117,
+                        112,
+                        112,
+                        111,
+                        114,
+                        116,
+                        64,
+                        101,
+                        120,
+                        97,
+                        109,
+                        112,
+                        108,
+                        101,
+                        46,
+                        99,
+                        111,
+                        109
+                      ]
+                    }
+                  ],
+                  "address_part": "All",
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_anychild": false
+                }
+              },
+              {
+                "Header": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        115,
+                        117,
+                        98,
+                        106,
+                        101,
+                        99,
+                        116
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "Text": [
+                        102,
+                        105,
+                        108,
+                        101,
+                        115,
+                        101,
+                        114,
+                        118,
+                        101,
+                        114
+                      ]
+                    }
+                  ],
+                  "match_type": "Contains",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_opts": "None",
+                  "mime_anychild": false
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "Invalid": "setflag"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

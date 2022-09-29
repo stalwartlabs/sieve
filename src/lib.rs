@@ -1,4 +1,4 @@
-use compiler::grammar::ast::Command;
+use compiler::grammar::{capability::Capability, command::Command};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -17,24 +17,6 @@ pub struct Compiler {
     pub(crate) max_variable_len: usize,
     pub(crate) max_nested_blocks: usize,
     pub(crate) max_nested_tests: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Capability {
-    Envelope,
-    FileInto,
-    EncodedCharacter,
-    Comparator(Comparator),
-    Other(String),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Comparator {
-    Elbonia,
-    Octet,
-    AsciiCaseMap,
-    AsciiNumeric,
-    Other(String),
 }
 
 #[cfg(test)]

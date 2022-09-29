@@ -1,0 +1,854 @@
+{
+  "capabilities": [
+    "EncodedCharacter",
+    "Variables"
+  ],
+  "commands": [
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            100,
+            111,
+            108,
+            108,
+            97,
+            114
+          ]
+        },
+        "value": {
+          "Text": [
+            36
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            116,
+            101,
+            120,
+            116
+          ]
+        },
+        "value": {
+          "List": [
+            {
+              "Text": [
+                114,
+                101,
+                103,
+                97,
+                114,
+                100,
+                105,
+                110,
+                103,
+                32
+              ]
+            },
+            {
+              "VariableName": "dollar"
+            },
+            {
+              "Text": [
+                123,
+                98,
+                101,
+                101,
+                112,
+                125
+              ]
+            }
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            110,
+            97,
+            109,
+            101
+          ]
+        },
+        "value": {
+          "Text": [
+            69,
+            116,
+            104,
+            101,
+            108,
+            98,
+            101,
+            114,
+            116
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    83,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        100,
+                        101,
+                        97,
+                        114,
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "Name"
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": []
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    76,
+                    105,
+                    115,
+                    116,
+                    45,
+                    73,
+                    68
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    },
+                    {
+                      "Text": [
+                        60
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    },
+                    {
+                      "Text": [
+                        64
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "List": [
+                    {
+                      "Text": [
+                        73,
+                        78,
+                        66,
+                        79,
+                        88,
+                        46,
+                        108,
+                        105,
+                        115,
+                        116,
+                        115,
+                        46
+                      ]
+                    },
+                    {
+                      "VariableNumber": 2
+                    }
+                  ]
+                }
+              }
+            },
+            "Stop"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    83,
+                    117,
+                    98,
+                    106,
+                    101,
+                    99,
+                    116
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        91
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    },
+                    {
+                      "Text": [
+                        93,
+                        32
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ],
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "Invalid": "fileinfo"
+            },
+            "Stop"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Address": {
+              "header_list": [
+                {
+                  "Text": [
+                    84,
+                    111
+                  ]
+                },
+                {
+                  "Text": [
+                    67,
+                    99
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        99,
+                        111,
+                        121,
+                        111,
+                        116,
+                        101,
+                        64
+                      ]
+                    },
+                    {
+                      "MatchMany": 2
+                    },
+                    {
+                      "Text": [
+                        46,
+                        99,
+                        111,
+                        109
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        119,
+                        105,
+                        108,
+                        101,
+                        64
+                      ]
+                    },
+                    {
+                      "MatchMany": 2
+                    },
+                    {
+                      "Text": [
+                        46,
+                        99,
+                        111,
+                        109
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "List": [
+                    {
+                      "Text": [
+                        73,
+                        78,
+                        66,
+                        79,
+                        88,
+                        46,
+                        98,
+                        117,
+                        115,
+                        105,
+                        110,
+                        101,
+                        115,
+                        115,
+                        46
+                      ]
+                    },
+                    {
+                      "VariableNumber": 2
+                    }
+                  ]
+                }
+              }
+            },
+            "Stop"
+          ]
+        },
+        {
+          "test": "True",
+          "commands": []
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AnyOf": [
+              "True",
+              {
+                "Address": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        84,
+                        111
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "List": [
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            46,
+                            99,
+                            111,
+                            109
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "address_part": "Domain",
+                  "match_type": "Matches",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_anychild": false
+                }
+              }
+            ]
+          },
+          "commands": [
+            "Stop"
+          ]
+        }
+      ]
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            104,
+            111,
+            110,
+            111,
+            114,
+            105,
+            102,
+            105,
+            99
+          ]
+        },
+        "value": {
+          "Text": [
+            77,
+            114
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            102,
+            105,
+            114,
+            115,
+            116,
+            95,
+            110,
+            97,
+            109,
+            101
+          ]
+        },
+        "value": {
+          "Text": [
+            87,
+            105,
+            108,
+            101
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            108,
+            97,
+            115,
+            116,
+            95,
+            110,
+            97,
+            109,
+            101
+          ]
+        },
+        "value": {
+          "Text": [
+            67,
+            111,
+            121,
+            111,
+            116,
+            101
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            118,
+            97,
+            99,
+            97,
+            116,
+            105,
+            111,
+            110
+          ]
+        },
+        "value": {
+          "List": [
+            {
+              "Text": [
+                68,
+                101,
+                97,
+                114,
+                32
+              ]
+            },
+            {
+              "VariableName": "HONORIFIC"
+            },
+            {
+              "Text": [
+                32
+              ]
+            },
+            {
+              "VariableName": "last_name"
+            },
+            {
+              "Text": [
+                44,
+                10,
+                73,
+                39,
+                109,
+                32,
+                111,
+                117,
+                116,
+                44,
+                32,
+                112,
+                108,
+                101,
+                97,
+                115,
+                101,
+                32,
+                108,
+                101,
+                97,
+                118,
+                101,
+                32,
+                97,
+                32,
+                109,
+                101,
+                115,
+                115,
+                97,
+                103,
+                101,
+                32,
+                97,
+                102,
+                116,
+                101,
+                114,
+                32,
+                116,
+                104,
+                101,
+                32,
+                109,
+                101,
+                101,
+                112,
+                46,
+                10
+              ]
+            }
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            97
+          ]
+        },
+        "value": {
+          "Text": [
+            106,
+            117,
+            77,
+            66,
+            108,
+            69,
+            100,
+            32,
+            108,
+            69,
+            84,
+            116,
+            101,
+            82,
+            83
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [
+          "Length"
+        ],
+        "name": {
+          "Text": [
+            98
+          ]
+        },
+        "value": {
+          "VariableName": "a"
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [
+          "Lower"
+        ],
+        "name": {
+          "Text": [
+            98
+          ]
+        },
+        "value": {
+          "VariableName": "a"
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [
+          "UpperFirst"
+        ],
+        "name": {
+          "Text": [
+            98
+          ]
+        },
+        "value": {
+          "VariableName": "a"
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [
+          "UpperFirst",
+          "Lower"
+        ],
+        "name": {
+          "Text": [
+            98
+          ]
+        },
+        "value": {
+          "VariableName": "a"
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [
+          "QuoteWildcard"
+        ],
+        "name": {
+          "Text": [
+            98
+          ]
+        },
+        "value": {
+          "Text": [
+            82,
+            111,
+            99,
+            107,
+            42
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Text": [
+            115,
+            116,
+            97,
+            116,
+            101
+          ]
+        },
+        "value": {
+          "List": [
+            {
+              "VariableName": "state"
+            },
+            {
+              "Text": [
+                32,
+                112,
+                101,
+                110,
+                100,
+                105,
+                110,
+                103
+              ]
+            }
+          ]
+        },
+        "encode_url": false
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "String": {
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "source": [
+                {
+                  "List": [
+                    {
+                      "Text": [
+                        32
+                      ]
+                    },
+                    {
+                      "VariableName": "state"
+                    },
+                    {
+                      "Text": [
+                        32
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    },
+                    {
+                      "Text": [
+                        32,
+                        112,
+                        101,
+                        110,
+                        100,
+                        105,
+                        110,
+                        103,
+                        32
+                      ]
+                    },
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "commands": []
+        }
+      ]
+    }
+  ]
+}

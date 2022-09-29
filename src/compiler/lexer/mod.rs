@@ -1,4 +1,3 @@
-pub mod capability;
 pub mod string;
 pub mod tokenizer;
 pub mod word;
@@ -37,7 +36,7 @@ impl Display for Token {
             Token::ParenthesisClose => f.write_str("}"),
             Token::Comma => f.write_str(","),
             Token::Semicolon => f.write_str(";"),
-            Token::String(_) => f.write_str(""),
+            Token::String(s) => write!(f, "\"{}\"", s),
             Token::Number(n) => write!(f, "{}", n),
             Token::Identifier(w) => w.fmt(f),
             Token::Tag(t) => write!(f, ":{}", t),

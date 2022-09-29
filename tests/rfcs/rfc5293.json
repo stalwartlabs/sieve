@@ -1,0 +1,364 @@
+{
+  "capabilities": [],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Not": {
+              "Header": {
+                "header_list": [
+                  {
+                    "Text": [
+                      88,
+                      45,
+                      83,
+                      105,
+                      101,
+                      118,
+                      101,
+                      45,
+                      70,
+                      105,
+                      108,
+                      116,
+                      101,
+                      114,
+                      101,
+                      100
+                    ]
+                  }
+                ],
+                "key_list": [
+                  {
+                    "Text": [
+                      60,
+                      107,
+                      105,
+                      109,
+                      64,
+                      106,
+                      111,
+                      98,
+                      46,
+                      101,
+                      120,
+                      97,
+                      109,
+                      112,
+                      108,
+                      101,
+                      46,
+                      99,
+                      111,
+                      109,
+                      62
+                    ]
+                  },
+                  {
+                    "Text": [
+                      60,
+                      107,
+                      105,
+                      109,
+                      64,
+                      104,
+                      111,
+                      109,
+                      101,
+                      46,
+                      101,
+                      120,
+                      97,
+                      109,
+                      112,
+                      108,
+                      101,
+                      46,
+                      99,
+                      111,
+                      109,
+                      62
+                    ]
+                  }
+                ],
+                "match_type": "Contains",
+                "comparator": "AsciiCaseMap",
+                "index": null,
+                "index_last": false,
+                "mime": false,
+                "mime_opts": "None",
+                "mime_anychild": false
+              }
+            }
+          },
+          "commands": [
+            {
+              "AddHeader": {
+                "last": false,
+                "field_name": {
+                  "Text": [
+                    88,
+                    45,
+                    83,
+                    105,
+                    101,
+                    118,
+                    101,
+                    45,
+                    70,
+                    105,
+                    108,
+                    116,
+                    101,
+                    114,
+                    101,
+                    100
+                  ]
+                },
+                "value": {
+                  "Text": [
+                    60,
+                    107,
+                    105,
+                    109,
+                    64,
+                    106,
+                    111,
+                    98,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109,
+                    62
+                  ]
+                }
+              }
+            },
+            {
+              "Redirect": {
+                "copy": false,
+                "address": {
+                  "Text": [
+                    107,
+                    105,
+                    109,
+                    64,
+                    104,
+                    111,
+                    109,
+                    101,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                },
+                "notify": "Default",
+                "ret": "Default",
+                "by_time": "None"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "DeleteHeader": {
+        "index": 1,
+        "index_last": false,
+        "comparator": "AsciiCaseMap",
+        "match_type": "Contains",
+        "field_name": {
+          "Text": [
+            68,
+            101,
+            108,
+            105,
+            118,
+            101,
+            114,
+            101,
+            100,
+            45,
+            84,
+            111
+          ]
+        },
+        "value_patterns": [
+          {
+            "Text": [
+              98,
+              111,
+              98,
+              64,
+              101,
+              120,
+              97,
+              109,
+              112,
+              108,
+              101,
+              46,
+              99,
+              111,
+              109
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "AddHeader": {
+        "last": false,
+        "field_name": {
+          "Text": [
+            88,
+            45,
+            72,
+            101,
+            108,
+            108,
+            111
+          ]
+        },
+        "value": {
+          "Text": [
+            87,
+            111,
+            114,
+            108,
+            100
+          ]
+        }
+      }
+    },
+    {
+      "DeleteHeader": {
+        "index": 1,
+        "index_last": false,
+        "comparator": "AsciiCaseMap",
+        "match_type": "Is",
+        "field_name": {
+          "Text": [
+            88,
+            45,
+            72,
+            101,
+            108,
+            108,
+            111
+          ]
+        },
+        "value_patterns": []
+      }
+    },
+    {
+      "DeleteHeader": {
+        "index": 1,
+        "index_last": false,
+        "comparator": "AsciiCaseMap",
+        "match_type": "Matches",
+        "field_name": {
+          "Text": [
+            88,
+            45,
+            72,
+            101,
+            108,
+            108,
+            111
+          ]
+        },
+        "value_patterns": [
+          {
+            "List": [
+              {
+                "Text": [
+                  104,
+                  101,
+                  108,
+                  108,
+                  111
+                ]
+              },
+              {
+                "MatchMany": 1
+              },
+              {
+                "Text": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100
+                ]
+              }
+            ]
+          },
+          {
+            "List": [
+              {
+                "Text": [
+                  104,
+                  105
+                ]
+              },
+              "MatchOne",
+              {
+                "Text": [
+                  116,
+                  104,
+                  101,
+                  114,
+                  101
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "DeleteHeader": {
+        "index": 1,
+        "index_last": false,
+        "comparator": "AsciiCaseMap",
+        "match_type": "Is",
+        "field_name": {
+          "Text": [
+            88,
+            45,
+            66,
+            121
+          ]
+        },
+        "value_patterns": [
+          {
+            "Text": [
+              97,
+              98,
+              99
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1148 @@
+{
+  "capabilities": [
+    "Mime",
+    "ForEveryPart",
+    "FileInto",
+    "Replace",
+    "Enclose"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    67,
+                    111,
+                    110,
+                    116,
+                    101,
+                    110,
+                    116,
+                    45,
+                    84,
+                    121,
+                    112,
+                    101
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    105,
+                    109,
+                    97,
+                    103,
+                    101
+                  ]
+                }
+              ],
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": true,
+              "mime_opts": "Type",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    105,
+                    109,
+                    97,
+                    103,
+                    101,
+                    115
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    67,
+                    111,
+                    110,
+                    116,
+                    101,
+                    110,
+                    116,
+                    45,
+                    84,
+                    121,
+                    112,
+                    101
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    116,
+                    101,
+                    120,
+                    116,
+                    47,
+                    104,
+                    116,
+                    109,
+                    108
+                  ]
+                }
+              ],
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": true,
+              "mime_opts": "ContentType",
+              "mime_anychild": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    104,
+                    116,
+                    109,
+                    108
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ForEveryPart": {
+        "name": null,
+        "commands": [
+          {
+            "If": [
+              {
+                "test": {
+                  "AllOf": [
+                    {
+                      "Header": {
+                        "header_list": [
+                          {
+                            "Text": [
+                              67,
+                              111,
+                              110,
+                              116,
+                              101,
+                              110,
+                              116,
+                              45,
+                              68,
+                              105,
+                              115,
+                              112,
+                              111,
+                              115,
+                              105,
+                              116,
+                              105,
+                              111,
+                              110
+                            ]
+                          }
+                        ],
+                        "key_list": [
+                          {
+                            "Text": [
+                              105,
+                              109,
+                              112,
+                              111,
+                              114,
+                              116,
+                              97,
+                              110,
+                              116
+                            ]
+                          }
+                        ],
+                        "match_type": "Contains",
+                        "comparator": "AsciiCaseMap",
+                        "index": null,
+                        "index_last": false,
+                        "mime": true,
+                        "mime_opts": {
+                          "Param": [
+                            {
+                              "Text": [
+                                102,
+                                105,
+                                108,
+                                101,
+                                110,
+                                97,
+                                109,
+                                101
+                              ]
+                            }
+                          ]
+                        },
+                        "mime_anychild": false
+                      }
+                    },
+                    {
+                      "Header": {
+                        "header_list": [
+                          {
+                            "Text": [
+                              67,
+                              111,
+                              110,
+                              116,
+                              101,
+                              110,
+                              116,
+                              45,
+                              84,
+                              121,
+                              112,
+                              101
+                            ]
+                          }
+                        ],
+                        "key_list": [
+                          {
+                            "Text": [
+                              112,
+                              100,
+                              102
+                            ]
+                          }
+                        ],
+                        "match_type": "Is",
+                        "comparator": "AsciiCaseMap",
+                        "index": null,
+                        "index_last": false,
+                        "mime": true,
+                        "mime_opts": "Subtype",
+                        "mime_anychild": false
+                      }
+                    },
+                    {
+                      "Size": {
+                        "over": true,
+                        "limit": 102400
+                      }
+                    }
+                  ]
+                },
+                "commands": [
+                  {
+                    "FileInto": {
+                      "copy": false,
+                      "create": false,
+                      "folder": {
+                        "Text": [
+                          73,
+                          78,
+                          66,
+                          79,
+                          88,
+                          46,
+                          105,
+                          109,
+                          112,
+                          111,
+                          114,
+                          116,
+                          97,
+                          110,
+                          116
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "Break": {
+                      "name": null
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Address": {
+              "header_list": [
+                {
+                  "Text": [
+                    99,
+                    111,
+                    110,
+                    116,
+                    101,
+                    110,
+                    116,
+                    45,
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    116,
+                    105,
+                    109,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "address_part": "All",
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": true,
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    112,
+                    97,
+                    114,
+                    116,
+                    45,
+                    102,
+                    114,
+                    111,
+                    109,
+                    45,
+                    116,
+                    105,
+                    109
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Exists": {
+              "header_names": [
+                {
+                  "Text": [
+                    99,
+                    111,
+                    110,
+                    116,
+                    101,
+                    110,
+                    116,
+                    45,
+                    109,
+                    100,
+                    53
+                  ]
+                }
+              ],
+              "mime": true,
+              "mime_anychild": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    109,
+                    100,
+                    53
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ForEveryPart": {
+        "name": null,
+        "commands": [
+          {
+            "If": [
+              {
+                "test": {
+                  "AnyOf": [
+                    {
+                      "Header": {
+                        "header_list": [
+                          {
+                            "Text": [
+                              67,
+                              111,
+                              110,
+                              116,
+                              101,
+                              110,
+                              116,
+                              45,
+                              84,
+                              121,
+                              112,
+                              101
+                            ]
+                          }
+                        ],
+                        "key_list": [
+                          {
+                            "Text": [
+                              97,
+                              112,
+                              112,
+                              108,
+                              105,
+                              99,
+                              97,
+                              116,
+                              105,
+                              111,
+                              110,
+                              47,
+                              101,
+                              120,
+                              101
+                            ]
+                          }
+                        ],
+                        "match_type": "Is",
+                        "comparator": "AsciiCaseMap",
+                        "index": null,
+                        "index_last": false,
+                        "mime": true,
+                        "mime_opts": "ContentType",
+                        "mime_anychild": false
+                      }
+                    },
+                    {
+                      "Header": {
+                        "header_list": [
+                          {
+                            "Text": [
+                              67,
+                              111,
+                              110,
+                              116,
+                              101,
+                              110,
+                              116,
+                              45,
+                              84,
+                              121,
+                              112,
+                              101
+                            ]
+                          },
+                          {
+                            "Text": [
+                              67,
+                              111,
+                              110,
+                              116,
+                              101,
+                              110,
+                              116,
+                              45,
+                              68,
+                              105,
+                              115,
+                              112,
+                              111,
+                              115,
+                              105,
+                              116,
+                              105,
+                              111,
+                              110
+                            ]
+                          }
+                        ],
+                        "key_list": [
+                          {
+                            "List": [
+                              {
+                                "MatchMany": 1
+                              },
+                              {
+                                "Text": [
+                                  46,
+                                  99,
+                                  111,
+                                  109
+                                ]
+                              }
+                            ]
+                          }
+                        ],
+                        "match_type": "Matches",
+                        "comparator": "AsciiCaseMap",
+                        "index": null,
+                        "index_last": false,
+                        "mime": true,
+                        "mime_opts": {
+                          "Param": [
+                            {
+                              "Text": [
+                                102,
+                                105,
+                                108,
+                                101,
+                                110,
+                                97,
+                                109,
+                                101
+                              ]
+                            }
+                          ]
+                        },
+                        "mime_anychild": false
+                      }
+                    }
+                  ]
+                },
+                "commands": [
+                  {
+                    "Replace": {
+                      "subject": null,
+                      "from": null,
+                      "replacement": {
+                        "Text": [
+                          69,
+                          120,
+                          101,
+                          99,
+                          117,
+                          116,
+                          97,
+                          98,
+                          108,
+                          101,
+                          32,
+                          97,
+                          116,
+                          116,
+                          97,
+                          99,
+                          104,
+                          109,
+                          101,
+                          110,
+                          116,
+                          32,
+                          114,
+                          101,
+                          109,
+                          111,
+                          118,
+                          101,
+                          100,
+                          32,
+                          98,
+                          121,
+                          32,
+                          117,
+                          115,
+                          101,
+                          114,
+                          32,
+                          102,
+                          105,
+                          108,
+                          116,
+                          101,
+                          114
+                        ]
+                      },
+                      "mime": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "ForEveryPart": {
+        "name": [
+          109,
+          97,
+          105,
+          110,
+          95,
+          108,
+          111,
+          111,
+          112
+        ],
+        "commands": [
+          {
+            "If": [
+              {
+                "test": {
+                  "Header": {
+                    "header_list": [
+                      {
+                        "Text": [
+                          67,
+                          111,
+                          110,
+                          116,
+                          101,
+                          110,
+                          116,
+                          45,
+                          84,
+                          121,
+                          112,
+                          101
+                        ]
+                      },
+                      {
+                        "Text": [
+                          67,
+                          111,
+                          110,
+                          116,
+                          101,
+                          110,
+                          116,
+                          45,
+                          68,
+                          105,
+                          115,
+                          112,
+                          111,
+                          115,
+                          105,
+                          116,
+                          105,
+                          111,
+                          110
+                        ]
+                      }
+                    ],
+                    "key_list": [
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              99,
+                              111,
+                              109
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              101,
+                              120,
+                              101
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              118,
+                              98,
+                              115
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              115,
+                              99,
+                              114
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              112,
+                              105,
+                              102
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              104,
+                              116,
+                              97
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              98,
+                              97,
+                              116
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "List": [
+                          {
+                            "MatchMany": 1
+                          },
+                          {
+                            "Text": [
+                              46,
+                              122,
+                              105,
+                              112
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    "match_type": "Matches",
+                    "comparator": "AsciiCaseMap",
+                    "index": null,
+                    "index_last": false,
+                    "mime": true,
+                    "mime_opts": {
+                      "Param": [
+                        {
+                          "Text": [
+                            102,
+                            105,
+                            108,
+                            101,
+                            110,
+                            97,
+                            109,
+                            101
+                          ]
+                        }
+                      ]
+                    },
+                    "mime_anychild": false
+                  }
+                },
+                "commands": [
+                  {
+                    "Enclose": {
+                      "subject": {
+                        "Text": [
+                          87,
+                          97,
+                          114,
+                          110,
+                          105,
+                          110,
+                          103
+                        ]
+                      },
+                      "headers": [],
+                      "value": {
+                        "Text": [
+                          87,
+                          97,
+                          114,
+                          110,
+                          105,
+                          110,
+                          103,
+                          10
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "Break": {
+                      "name": [
+                        109,
+                        97,
+                        105,
+                        110,
+                        95,
+                        108,
+                        111,
+                        111,
+                        112
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    98,
+                    111,
+                    115,
+                    115,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    111,
+                    114,
+                    103
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false
+            }
+          },
+          "commands": [
+            {
+              "If": [
+                {
+                  "test": {
+                    "Header": {
+                      "header_list": [
+                        {
+                          "Text": [
+                            83,
+                            117,
+                            98,
+                            106,
+                            101,
+                            99,
+                            116
+                          ]
+                        }
+                      ],
+                      "key_list": [
+                        {
+                          "List": [
+                            {
+                              "MatchMany": 1
+                            }
+                          ]
+                        }
+                      ],
+                      "match_type": "Matches",
+                      "comparator": "AsciiCaseMap",
+                      "index": null,
+                      "index_last": false,
+                      "mime": false,
+                      "mime_opts": "None",
+                      "mime_anychild": false
+                    }
+                  },
+                  "commands": [
+                    {
+                      "Set": {
+                        "modifiers": [],
+                        "name": {
+                          "Text": [
+                            115,
+                            117,
+                            98,
+                            106,
+                            101,
+                            99,
+                            116
+                          ]
+                        },
+                        "value": {
+                          "VariableNumber": 1
+                        },
+                        "encode_url": false
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ForEveryPart": {
+                "name": null,
+                "commands": [
+                  {
+                    "If": [
+                      {
+                        "test": {
+                          "Header": {
+                            "header_list": [
+                              {
+                                "Text": [
+                                  67,
+                                  111,
+                                  110,
+                                  116,
+                                  101,
+                                  110,
+                                  116,
+                                  45,
+                                  84,
+                                  121,
+                                  112,
+                                  101
+                                ]
+                              }
+                            ],
+                            "key_list": [
+                              {
+                                "Text": [
+                                  116,
+                                  101,
+                                  120,
+                                  116
+                                ]
+                              }
+                            ],
+                            "match_type": "Is",
+                            "comparator": "AsciiCaseMap",
+                            "index": null,
+                            "index_last": false,
+                            "mime": true,
+                            "mime_opts": "Type",
+                            "mime_anychild": false
+                          }
+                        },
+                        "commands": [
+                          {
+                            "ExtractText": {
+                              "modifiers": [],
+                              "first": 100,
+                              "varname": {
+                                "Text": [
+                                  109,
+                                  115,
+                                  103,
+                                  99,
+                                  111,
+                                  110,
+                                  116,
+                                  101,
+                                  110,
+                                  116
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "Break": {
+                              "name": null
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "If": [
+                {
+                  "test": {
+                    "Not": {
+                      "Header": {
+                        "header_list": [
+                          {
+                            "Text": [
+                              115,
+                              117,
+                              98,
+                              106,
+                              101,
+                              99,
+                              116
+                            ]
+                          }
+                        ],
+                        "key_list": [
+                          {
+                            "Text": [
+                              70,
+                              89,
+                              73,
+                              58
+                            ]
+                          }
+                        ],
+                        "match_type": "Contains",
+                        "comparator": "AsciiCaseMap",
+                        "index": null,
+                        "index_last": false,
+                        "mime": false,
+                        "mime_opts": "None",
+                        "mime_anychild": false
+                      }
+                    }
+                  },
+                  "commands": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "capabilities": [
+    "Copy",
+    "FileInto"
+  ],
+  "commands": [
+    {
+      "FileInto": {
+        "copy": true,
+        "create": false,
+        "folder": {
+          "Text": [
+            105,
+            110,
+            99,
+            111,
+            109,
+            105,
+            110,
+            103
+          ]
+        }
+      }
+    },
+    {
+      "Redirect": {
+        "copy": true,
+        "address": {
+          "Text": [
+            116,
+            101,
+            115,
+            116
+          ]
+        },
+        "notify": "Default",
+        "ret": "Default",
+        "by_time": "None"
+      }
+    }
+  ]
+}

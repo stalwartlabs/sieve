@@ -1,0 +1,656 @@
+{
+  "capabilities": [
+    "Date",
+    "Relational",
+    "FileInto",
+    "Index"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "AllOf": [
+              {
+                "Header": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        102,
+                        114,
+                        111,
+                        109
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "Text": [
+                        98,
+                        111,
+                        115,
+                        115,
+                        64,
+                        101,
+                        120,
+                        97,
+                        109,
+                        112,
+                        108,
+                        101,
+                        46,
+                        99,
+                        111,
+                        109
+                      ]
+                    }
+                  ],
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_opts": "None",
+                  "mime_anychild": false
+                }
+              },
+              {
+                "Date": {
+                  "header_name": {
+                    "Text": [
+                      100,
+                      97,
+                      116,
+                      101
+                    ]
+                  },
+                  "key_list": [
+                    {
+                      "Text": [
+                        48,
+                        57
+                      ]
+                    }
+                  ],
+                  "match_type": {
+                    "Value": "Ge"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "zone": "Original",
+                  "date_part": "Hour"
+                }
+              },
+              {
+                "Date": {
+                  "header_name": {
+                    "Text": [
+                      100,
+                      97,
+                      116,
+                      101
+                    ]
+                  },
+                  "key_list": [
+                    {
+                      "Text": [
+                        49,
+                        55
+                      ]
+                    }
+                  ],
+                  "match_type": {
+                    "Value": "Lt"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "zone": "Original",
+                  "date_part": "Hour"
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    117,
+                    114,
+                    103,
+                    101,
+                    110,
+                    116
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AnyOf": [
+              {
+                "Date": {
+                  "header_name": {
+                    "Text": [
+                      114,
+                      101,
+                      99,
+                      101,
+                      105,
+                      118,
+                      101,
+                      100
+                    ]
+                  },
+                  "key_list": [
+                    {
+                      "Text": [
+                        48
+                      ]
+                    }
+                  ],
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "zone": "Local",
+                  "date_part": "Weekday"
+                }
+              },
+              {
+                "Date": {
+                  "header_name": {
+                    "Text": [
+                      114,
+                      101,
+                      99,
+                      101,
+                      105,
+                      118,
+                      101,
+                      100
+                    ]
+                  },
+                  "key_list": [
+                    {
+                      "Text": [
+                        54
+                      ]
+                    }
+                  ],
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "zone": "Local",
+                  "date_part": "Weekday"
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    119,
+                    101,
+                    101,
+                    107,
+                    101,
+                    110,
+                    100
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AnyOf": [
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Weekday",
+                  "key_list": [
+                    {
+                      "Text": [
+                        48
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Weekday",
+                  "key_list": [
+                    {
+                      "Text": [
+                        54
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": {
+                    "Value": "Lt"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Hour",
+                  "key_list": [
+                    {
+                      "Text": [
+                        48,
+                        57
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": {
+                    "Value": "Ge"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Hour",
+                  "key_list": [
+                    {
+                      "Text": [
+                        49,
+                        55
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "Redirect": {
+                "copy": false,
+                "address": {
+                  "Text": [
+                    112,
+                    97,
+                    103,
+                    101,
+                    114,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                },
+                "notify": "Default",
+                "ret": "Default",
+                "by_time": "None"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AllOf": [
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": {
+                    "Value": "Ge"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Date",
+                  "key_list": [
+                    {
+                      "Text": [
+                        50,
+                        48,
+                        48,
+                        55,
+                        45,
+                        48,
+                        54,
+                        45,
+                        51,
+                        48
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "CurrentDate": {
+                  "zone": null,
+                  "match_type": {
+                    "Value": "Le"
+                  },
+                  "comparator": "AsciiCaseMap",
+                  "date_part": "Date",
+                  "key_list": [
+                    {
+                      "Text": [
+                        50,
+                        48,
+                        48,
+                        55,
+                        45,
+                        48,
+                        55,
+                        45,
+                        48,
+                        55
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "Invalid": "vacation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "CurrentDate": {
+              "zone": null,
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "date_part": "Month",
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    109,
+                    111,
+                    110,
+                    116,
+                    104
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "CurrentDate": {
+              "zone": null,
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "date_part": "Year",
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    121,
+                    101,
+                    97,
+                    114
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "List": [
+            {
+              "VariableName": "month"
+            },
+            {
+              "Text": [
+                45
+              ]
+            },
+            {
+              "VariableName": "year"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "CurrentDate": {
+              "zone": null,
+              "match_type": "Matches",
+              "comparator": "AsciiCaseMap",
+              "date_part": "Std11",
+              "key_list": [
+                {
+                  "List": [
+                    {
+                      "MatchMany": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "commands": [
+            {
+              "AddHeader": {
+                "last": false,
+                "field_name": {
+                  "Text": [
+                    80,
+                    114,
+                    111,
+                    99,
+                    101,
+                    115,
+                    115,
+                    105,
+                    110,
+                    103,
+                    45,
+                    100,
+                    97,
+                    116,
+                    101
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Date": {
+              "header_name": {
+                "Text": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  118,
+                  101,
+                  100
+                ]
+              },
+              "key_list": [
+                {
+                  "Text": [
+                    50,
+                    48,
+                    48,
+                    55,
+                    45,
+                    48,
+                    50,
+                    45,
+                    50,
+                    54,
+                    84,
+                    48,
+                    57,
+                    58,
+                    48,
+                    48,
+                    58,
+                    48,
+                    48,
+                    45,
+                    48,
+                    53,
+                    58,
+                    48,
+                    48
+                  ]
+                }
+              ],
+              "match_type": {
+                "Value": "Gt"
+              },
+              "comparator": "AsciiCaseMap",
+              "index": 2,
+              "index_last": false,
+              "zone": {
+                "Time": -500
+              },
+              "date_part": "Iso8601"
+            }
+          },
+          "commands": [
+            {
+              "Redirect": {
+                "copy": false,
+                "address": {
+                  "Text": [
+                    97,
+                    102,
+                    116,
+                    101,
+                    114,
+                    99,
+                    117,
+                    116,
+                    111,
+                    102,
+                    102,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    111,
+                    114,
+                    103
+                  ]
+                },
+                "notify": "Default",
+                "ret": "Default",
+                "by_time": "None"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
