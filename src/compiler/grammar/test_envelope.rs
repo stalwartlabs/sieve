@@ -6,10 +6,9 @@ use crate::{
         CompileError,
     },
     runtime::StringItem,
-    Comparator,
 };
 
-use super::{test::Test, AddressPart, MatchType};
+use super::{comparator::Comparator, test::Test, AddressPart, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestEnvelope {
@@ -18,6 +17,7 @@ pub(crate) struct TestEnvelope {
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub zone: Option<i32>,
 }
 
 impl<'x> Tokenizer<'x> {
@@ -27,6 +27,7 @@ impl<'x> Tokenizer<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_list = None;
         let mut key_list = None;
+        let mut zone = None;
 
         loop {
             let token_info = self.unwrap_next()?;
@@ -34,11 +35,25 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(word @ (Word::LocalPart | Word::Domain | Word::All)) => {
                     address_part = word.into();
                 }
-                Token::Tag(word @ (Word::Is | Word::Contains | Word::Matches)) => {
-                    match_type = word.into();
+                Token::Tag(
+                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                ) => {
+                    match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
+                }
+                Token::Tag(Word::Zone) => {
+                    let token_info = self.unwrap_next()?;
+                    if let Token::String(StringItem::Text(value)) = &token_info.token {
+                        if let Ok(value) = std::str::from_utf8(value) {
+                            if let Ok(timezone) = value.parse::<i32>() {
+                                zone = timezone.into();
+                                continue;
+                            }
+                        }
+                    }
+                    return Err(token_info.expected("string containing time zone"));
                 }
                 Token::String(string) => {
                     if header_list.is_none() {
@@ -75,6 +90,7 @@ impl<'x> Tokenizer<'x> {
             address_part,
             match_type,
             comparator,
+            zone,
         }))
     }
 }

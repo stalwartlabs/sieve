@@ -4,8 +4,9 @@ use crate::{
         CompileError,
     },
     runtime::StringItem,
-    Capability,
 };
+
+use super::capability::Capability;
 
 impl<'x> Tokenizer<'x> {
     pub(crate) fn parse_require(
