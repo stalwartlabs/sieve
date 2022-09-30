@@ -47,7 +47,8 @@
               "index_last": false,
               "mime": true,
               "mime_opts": "Type",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -70,7 +71,10 @@
                     101,
                     115
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -121,7 +125,8 @@
               "index_last": false,
               "mime": true,
               "mime_opts": "ContentType",
-              "mime_anychild": true
+              "mime_anychild": true,
+              "list": false
             }
           },
           "commands": [
@@ -142,7 +147,10 @@
                     109,
                     108
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -221,7 +229,8 @@
                             }
                           ]
                         },
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     },
                     {
@@ -259,7 +268,8 @@
                         "index_last": false,
                         "mime": true,
                         "mime_opts": "Subtype",
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     },
                     {
@@ -293,7 +303,10 @@
                           110,
                           116
                         ]
-                      }
+                      },
+                      "flags": [],
+                      "mailbox_id": null,
+                      "special_use": null
                     }
                   },
                   {
@@ -358,7 +371,8 @@
               "index": null,
               "index_last": false,
               "mime": true,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -388,7 +402,10 @@
                     105,
                     109
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -438,7 +455,10 @@
                     100,
                     53
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -501,7 +521,8 @@
                         "index_last": false,
                         "mime": true,
                         "mime_opts": "ContentType",
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     },
                     {
@@ -585,7 +606,8 @@
                             }
                           ]
                         },
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     }
                   ]
@@ -856,7 +878,8 @@
                         }
                       ]
                     },
-                    "mime_anychild": false
+                    "mime_anychild": false,
+                    "list": false
                   }
                 },
                 "commands": [
@@ -953,7 +976,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -990,7 +1014,8 @@
                       "index_last": false,
                       "mime": false,
                       "mime_opts": "None",
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -1061,7 +1086,8 @@
                             "index_last": false,
                             "mime": true,
                             "mime_opts": "Type",
-                            "mime_anychild": false
+                            "mime_anychild": false,
+                            "list": false
                           }
                         },
                         "commands": [
@@ -1132,7 +1158,8 @@
                         "index_last": false,
                         "mime": false,
                         "mime_opts": "None",
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     }
                   },

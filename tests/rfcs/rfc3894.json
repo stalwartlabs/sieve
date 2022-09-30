@@ -19,7 +19,10 @@
             110,
             103
           ]
-        }
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
       }
     },
     {
@@ -35,7 +38,8 @@
         },
         "notify": "Default",
         "ret": "Default",
-        "by_time": "None"
+        "by_time": "None",
+        "list": false
       }
     }
   ]

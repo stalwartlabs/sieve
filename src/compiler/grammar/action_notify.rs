@@ -8,6 +8,8 @@ use crate::{
     runtime::StringItem,
 };
 
+use super::action_vacation::Fcc;
+
 /*
 notify [":from" string]
            [":importance" <"1" / "2" / "3">]
@@ -23,6 +25,7 @@ pub(crate) struct Notify {
     pub importance: Option<StringItem>,
     pub options: Vec<StringItem>,
     pub message: Option<StringItem>,
+    pub fcc: Option<Fcc>,
     pub method: StringItem,
 }
 
@@ -33,6 +36,12 @@ impl<'x> Tokenizer<'x> {
         let mut importance = None;
         let mut message = None;
         let mut options = Vec::new();
+
+        let mut fcc = None;
+        let mut create = false;
+        let mut flags = Vec::new();
+        let mut special_use = None;
+        let mut mailbox_id = None;
 
         while method.is_none() {
             let token_info = self.unwrap_next()?;
@@ -49,6 +58,21 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Options) => {
                     options = self.parse_strings(false)?;
                 }
+                Token::Tag(Word::Create) => {
+                    create = true;
+                }
+                Token::Tag(Word::SpecialUse) => {
+                    special_use = self.unwrap_string()?.into();
+                }
+                Token::Tag(Word::MailboxId) => {
+                    mailbox_id = self.unwrap_string()?.into();
+                }
+                Token::Tag(Word::Fcc) => {
+                    fcc = self.unwrap_string()?.into();
+                }
+                Token::Tag(Word::Flags) => {
+                    flags = self.parse_strings(false)?;
+                }
                 Token::String(string) => {
                     method = string.into();
                 }
@@ -58,12 +82,30 @@ impl<'x> Tokenizer<'x> {
             }
         }
 
+        if fcc.is_none()
+            && (create || !flags.is_empty() || special_use.is_some() || mailbox_id.is_some())
+        {
+            return Err(self.unwrap_next()?.invalid("missing ':fcc' tag"));
+        }
+
         Ok(Notify {
             method: method.unwrap(),
             from,
             importance,
             options,
             message,
+            fcc: if let Some(fcc) = fcc {
+                Fcc {
+                    fcc,
+                    create,
+                    flags,
+                    special_use,
+                    mailbox_id,
+                }
+                .into()
+            } else {
+                None
+            },
         })
     }
 }

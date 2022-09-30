@@ -144,7 +144,10 @@
                     99,
                     115
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]

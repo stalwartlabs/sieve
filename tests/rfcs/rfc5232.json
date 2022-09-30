@@ -1,0 +1,1384 @@
+{
+  "capabilities": [
+    "FileInto",
+    "Imap4Flags",
+    "Variables"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "Size": {
+              "over": true,
+              "limit": 512000
+            }
+          },
+          "commands": [
+            {
+              "SetFlag": {
+                "varname": null,
+                "flags": [
+                  {
+                    "Text": [
+                      68,
+                      101,
+                      108,
+                      101,
+                      116,
+                      101,
+                      100
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    98,
+                    111,
+                    115,
+                    115,
+                    64,
+                    102,
+                    114,
+                    111,
+                    98,
+                    110,
+                    105,
+                    116,
+                    122,
+                    109,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    101,
+                    100,
+                    117
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "SetFlag": {
+                "varname": {
+                  "Text": [
+                    102,
+                    108,
+                    97,
+                    103,
+                    118,
+                    97,
+                    114
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      70,
+                      108,
+                      97,
+                      103,
+                      103,
+                      101,
+                      100
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    70,
+                    114,
+                    111,
+                    109,
+                    32,
+                    66,
+                    111,
+                    115,
+                    115
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "flagvar"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "AddFlag": {
+        "varname": {
+          "Text": [
+            102,
+            108,
+            97,
+            103,
+            118,
+            97,
+            114
+          ]
+        },
+        "flags": [
+          {
+            "Text": [
+              68,
+              101,
+              108,
+              101,
+              116,
+              101,
+              100
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "AddFlag": {
+        "varname": {
+          "Text": [
+            102,
+            108,
+            97,
+            103,
+            118,
+            97,
+            114
+          ]
+        },
+        "flags": [
+          {
+            "Text": [
+              65,
+              110,
+              115,
+              119,
+              101,
+              114,
+              101,
+              100
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "AddFlag": {
+        "varname": {
+          "Text": [
+            102,
+            108,
+            97,
+            103,
+            118,
+            97,
+            114
+          ]
+        },
+        "flags": [
+          {
+            "Text": [
+              68,
+              101,
+              108,
+              101,
+              116,
+              101,
+              100
+            ]
+          },
+          {
+            "Text": [
+              65,
+              110,
+              115,
+              119,
+              101,
+              114,
+              101,
+              100
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "AddFlag": {
+        "varname": {
+          "Text": [
+            102,
+            108,
+            97,
+            103,
+            118,
+            97,
+            114
+          ]
+        },
+        "flags": [
+          {
+            "Text": [
+              68,
+              101,
+              108,
+              101,
+              116,
+              101,
+              100,
+              32,
+              65,
+              110,
+              115,
+              119,
+              101,
+              114,
+              101,
+              100
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    68,
+                    105,
+                    115,
+                    112,
+                    111,
+                    115,
+                    105,
+                    116,
+                    105,
+                    111,
+                    110,
+                    45,
+                    78,
+                    111,
+                    116,
+                    105,
+                    102,
+                    105,
+                    99,
+                    97,
+                    116,
+                    105,
+                    111,
+                    110,
+                    45,
+                    84,
+                    111
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    109,
+                    101,
+                    108,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "AddFlag": {
+                "varname": {
+                  "Text": [
+                    102,
+                    108,
+                    97,
+                    103,
+                    118,
+                    97,
+                    114
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      36,
+                      77,
+                      68,
+                      78,
+                      82,
+                      101,
+                      113,
+                      117,
+                      105,
+                      114,
+                      101,
+                      100
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    102,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    105,
+                    109,
+                    97,
+                    112,
+                    64,
+                    99,
+                    97,
+                    99,
+                    46,
+                    119,
+                    97,
+                    115,
+                    104,
+                    105,
+                    110,
+                    103,
+                    116,
+                    111,
+                    110,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    101,
+                    100,
+                    117
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "RemoveFlag": {
+                "varname": {
+                  "Text": [
+                    102,
+                    108,
+                    97,
+                    103,
+                    118,
+                    97,
+                    114
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      36,
+                      77,
+                      68,
+                      78,
+                      82,
+                      101,
+                      113,
+                      117,
+                      105,
+                      114,
+                      101,
+                      100
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    105,
+                    109,
+                    97,
+                    112,
+                    45,
+                    108,
+                    105,
+                    115,
+                    116
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "flagvar"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AnyOf": [
+              {
+                "HasFlag": {
+                  "comparator": "AsciiCaseMap",
+                  "match_type": "Contains",
+                  "variable_list": [
+                    {
+                      "Text": [
+                        77,
+                        121,
+                        86,
+                        97,
+                        114
+                      ]
+                    }
+                  ],
+                  "flags": [
+                    {
+                      "Text": [
+                        74,
+                        117,
+                        110,
+                        107
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "HasFlag": {
+                  "comparator": "AsciiCaseMap",
+                  "match_type": "Contains",
+                  "variable_list": [
+                    {
+                      "Text": [
+                        77,
+                        121,
+                        86,
+                        97,
+                        114
+                      ]
+                    }
+                  ],
+                  "flags": [
+                    {
+                      "Text": [
+                        108,
+                        97,
+                        98,
+                        101,
+                        108
+                      ]
+                    },
+                    {
+                      "Text": [
+                        102,
+                        111,
+                        114,
+                        119,
+                        97,
+                        114,
+                        100
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "HasFlag": {
+                  "comparator": "AsciiNumeric",
+                  "match_type": {
+                    "Count": "Ge"
+                  },
+                  "variable_list": [
+                    {
+                      "Text": [
+                        77,
+                        121,
+                        70,
+                        108,
+                        97,
+                        103,
+                        115
+                      ]
+                    }
+                  ],
+                  "flags": [
+                    {
+                      "Text": [
+                        50
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    70,
+                    114,
+                    111,
+                    109,
+                    32,
+                    66,
+                    111,
+                    115,
+                    115
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      68,
+                      101,
+                      108,
+                      101,
+                      116,
+                      101,
+                      100
+                    ]
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            },
+            {
+              "Keep": {
+                "flags": [
+                  {
+                    "Text": [
+                      104,
+                      101,
+                      108,
+                      108,
+                      111
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Size": {
+              "over": true,
+              "limit": 1048576
+            }
+          },
+          "commands": [
+            {
+              "AddFlag": {
+                "varname": {
+                  "Text": [
+                    77,
+                    121,
+                    70,
+                    108,
+                    97,
+                    103,
+                    115
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      66,
+                      105,
+                      103
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "If": [
+                {
+                  "test": {
+                    "Header": {
+                      "header_list": [
+                        {
+                          "Text": [
+                            70,
+                            114,
+                            111,
+                            109
+                          ]
+                        }
+                      ],
+                      "key_list": [
+                        {
+                          "Text": [
+                            98,
+                            111,
+                            115,
+                            115,
+                            64,
+                            99,
+                            111,
+                            109,
+                            112,
+                            97,
+                            110,
+                            121,
+                            46,
+                            101,
+                            120,
+                            97,
+                            109,
+                            112,
+                            108,
+                            101,
+                            46,
+                            99,
+                            111,
+                            109
+                          ]
+                        }
+                      ],
+                      "match_type": "Is",
+                      "comparator": "AsciiCaseMap",
+                      "index": null,
+                      "index_last": false,
+                      "mime": false,
+                      "mime_opts": "None",
+                      "mime_anychild": false,
+                      "list": false
+                    }
+                  },
+                  "commands": [
+                    {
+                      "AddFlag": {
+                        "varname": {
+                          "Text": [
+                            77,
+                            121,
+                            70,
+                            108,
+                            97,
+                            103,
+                            115
+                          ]
+                        },
+                        "flags": [
+                          {
+                            "Text": [
+                              70,
+                              108,
+                              97,
+                              103,
+                              103,
+                              101,
+                              100
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    66,
+                    105,
+                    103,
+                    32,
+                    109,
+                    101,
+                    115,
+                    115,
+                    97,
+                    103,
+                    101,
+                    115
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    70,
+                    114,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    103,
+                    114,
+                    97,
+                    110,
+                    100,
+                    109,
+                    97,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    110,
+                    101,
+                    116
+                  ]
+                }
+              ],
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "AddFlag": {
+                "varname": {
+                  "Text": [
+                    77,
+                    121,
+                    70,
+                    108,
+                    97,
+                    103,
+                    115
+                  ]
+                },
+                "flags": [
+                  {
+                    "Text": [
+                      65,
+                      110,
+                      115,
+                      119,
+                      101,
+                      114,
+                      101,
+                      100
+                    ]
+                  },
+                  {
+                    "Text": [
+                      36,
+                      77,
+                      68,
+                      78,
+                      83,
+                      101,
+                      110,
+                      116
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    71,
+                    114,
+                    97,
+                    110,
+                    100,
+                    77,
+                    97
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Header": {
+              "header_list": [
+                {
+                  "Text": [
+                    83,
+                    101,
+                    110,
+                    100,
+                    101,
+                    114
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    111,
+                    119,
+                    110,
+                    101,
+                    114,
+                    45,
+                    105,
+                    101,
+                    116,
+                    102,
+                    45,
+                    109,
+                    116,
+                    97,
+                    45,
+                    102,
+                    105,
+                    108,
+                    116,
+                    101,
+                    114,
+                    115,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    111,
+                    114,
+                    103
+                  ]
+                }
+              ],
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_opts": "None",
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    77,
+                    121,
+                    70,
+                    108,
+                    97,
+                    103,
+                    115
+                  ]
+                },
+                "value": {
+                  "Text": [
+                    70,
+                    108,
+                    97,
+                    103,
+                    103,
+                    101,
+                    100,
+                    32,
+                    36,
+                    87,
+                    111,
+                    114,
+                    107
+                  ]
+                },
+                "encode_url": false
+              }
+            },
+            {
+              "Keep": {
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "Address": {
+              "header_list": [
+                {
+                  "Text": [
+                    70,
+                    114,
+                    111,
+                    109
+                  ]
+                },
+                {
+                  "Text": [
+                    84,
+                    111
+                  ]
+                }
+              ],
+              "key_list": [
+                {
+                  "Text": [
+                    99,
+                    111,
+                    109,
+                    112,
+                    97,
+                    110,
+                    121,
+                    46,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    99,
+                    111,
+                    109
+                  ]
+                }
+              ],
+              "address_part": "Domain",
+              "match_type": "Is",
+              "comparator": "AsciiCaseMap",
+              "index": null,
+              "index_last": false,
+              "mime": false,
+              "mime_anychild": false,
+              "list": false
+            }
+          },
+          "commands": [
+            {
+              "Keep": {
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "AnyOf": [
+              {
+                "Not": {
+                  "Address": {
+                    "header_list": [
+                      {
+                        "Text": [
+                          84,
+                          111
+                        ]
+                      },
+                      {
+                        "Text": [
+                          67,
+                          99
+                        ]
+                      }
+                    ],
+                    "key_list": [
+                      {
+                        "Text": [
+                          109,
+                          101,
+                          64,
+                          99,
+                          111,
+                          109,
+                          112,
+                          97,
+                          110,
+                          121,
+                          46,
+                          101,
+                          120,
+                          97,
+                          109,
+                          112,
+                          108,
+                          101,
+                          46,
+                          99,
+                          111,
+                          109
+                        ]
+                      }
+                    ],
+                    "address_part": "All",
+                    "match_type": "Contains",
+                    "comparator": "AsciiCaseMap",
+                    "index": null,
+                    "index_last": false,
+                    "mime": false,
+                    "mime_anychild": false,
+                    "list": false
+                  }
+                }
+              },
+              {
+                "Header": {
+                  "header_list": [
+                    {
+                      "Text": [
+                        115,
+                        117,
+                        98,
+                        106,
+                        101,
+                        99,
+                        116
+                      ]
+                    }
+                  ],
+                  "key_list": [
+                    {
+                      "List": [
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            109,
+                            97,
+                            107,
+                            101
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            109,
+                            111,
+                            110,
+                            101,
+                            121
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            102,
+                            97,
+                            115,
+                            116
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        }
+                      ]
+                    },
+                    {
+                      "List": [
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            117,
+                            110,
+                            105,
+                            118,
+                            101,
+                            114,
+                            115,
+                            105,
+                            116,
+                            121
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            100,
+                            105,
+                            112,
+                            108
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        },
+                        {
+                          "Text": [
+                            109,
+                            97,
+                            115
+                          ]
+                        },
+                        {
+                          "MatchMany": 1
+                        }
+                      ]
+                    }
+                  ],
+                  "match_type": "Matches",
+                  "comparator": "AsciiCaseMap",
+                  "index": null,
+                  "index_last": false,
+                  "mime": false,
+                  "mime_opts": "None",
+                  "mime_anychild": false,
+                  "list": false
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "Invalid": "remove"
+            },
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    115,
+                    112,
+                    97,
+                    109
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": "True",
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    112,
+                    101,
+                    114,
+                    115,
+                    111,
+                    110,
+                    97,
+                    108
+                  ]
+                },
+                "flags": [
+                  {
+                    "VariableName": "MyFlags"
+                  }
+                ],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

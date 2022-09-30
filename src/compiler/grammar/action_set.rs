@@ -15,6 +15,7 @@ pub(crate) enum Modifier {
     LowerFirst,
     UpperFirst,
     QuoteWildcard,
+    QuoteRegex,
     Length,
 }
 
@@ -42,6 +43,7 @@ impl<'x> Tokenizer<'x> {
                     | Word::LowerFirst
                     | Word::UpperFirst
                     | Word::QuoteWildcard
+                    | Word::QuoteRegex
                     | Word::Length),
                 ) => {
                     modifiers.push(word.into());
@@ -79,6 +81,7 @@ impl From<Word> for Modifier {
             Word::LowerFirst => Modifier::LowerFirst,
             Word::UpperFirst => Modifier::UpperFirst,
             Word::QuoteWildcard => Modifier::QuoteWildcard,
+            Word::QuoteRegex => Modifier::QuoteRegex,
             Word::Length => Modifier::Length,
             _ => unreachable!(),
         }

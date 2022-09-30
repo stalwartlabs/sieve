@@ -13,10 +13,21 @@ use super::{
     test_date::{TestCurrentDate, TestDate},
     test_duplicate::TestDuplicate,
     test_envelope::TestEnvelope,
+    test_environment::TestEnvironment,
     test_exists::TestExists,
+    test_extlists::TestValidExtList,
+    test_hasflag::TestHasFlag,
     test_header::TestHeader,
+    test_ihave::TestIhave,
+    test_mailbox::{
+        TestMailboxExists, TestMetadata, TestMetadataExists, TestServerMetadata,
+        TestServerMetadataExists,
+    },
+    test_mailboxid::TestMailboxIdExists,
     test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
     test_size::TestSize,
+    test_spamtest::{TestSpamTest, TestVirusTest},
+    test_specialuse::TestSpecialUseExists,
     test_string::TestString,
 };
 
@@ -38,6 +49,7 @@ pub(crate) enum Test {
     Exists(TestExists),
     Header(TestHeader),
     Size(TestSize),
+    Invalid(String),
 
     // RFC 5173
     Body(TestBody),
@@ -58,6 +70,35 @@ pub(crate) enum Test {
     // RFC 5435
     NotifyMethodCapability(TestNotifyMethodCapability),
     ValidNotifyMethod(TestValidNotifyMethod),
+
+    // RFC 5183
+    Environment(TestEnvironment),
+
+    // RFC 6134
+    ValidExtList(TestValidExtList),
+
+    // RFC 5463
+    Ihave(TestIhave),
+
+    // RFC 5232
+    HasFlag(TestHasFlag),
+
+    // RFC 5490
+    MailboxExists(TestMailboxExists),
+    Metadata(TestMetadata),
+    MetadataExists(TestMetadataExists),
+    ServerMetadata(TestServerMetadata),
+    ServerMetadataExists(TestServerMetadataExists),
+
+    // RFC 9042
+    MailboxIdExists(TestMailboxIdExists),
+
+    // RFC 5235
+    SpamTest(TestSpamTest),
+    VirusTest(TestVirusTest),
+
+    // RFC 8579
+    SpecialUseExists(TestSpecialUseExists),
 }
 
 impl<'x> Tokenizer<'x> {
@@ -168,6 +209,45 @@ impl<'x> Tokenizer<'x> {
                     self.parse_test_valid_notify_method()?
                 }
 
+                // RFC 5183
+                Token::Identifier(Word::Environment) => self.parse_test_environment()?,
+
+                // RFC 6134
+                Token::Identifier(Word::ValidExtList) => self.parse_test_valid_ext_list()?,
+
+                // RFC 5463
+                Token::Identifier(Word::Ihave) => self.parse_test_ihave()?,
+
+                // RFC 5232
+                Token::Identifier(Word::HasFlag) => self.parse_test_hasflag()?,
+
+                // RFC 5490
+                Token::Identifier(Word::MailboxExists) => self.parse_test_mailboxexists()?,
+                Token::Identifier(Word::Metadata) => self.parse_test_metadata()?,
+                Token::Identifier(Word::MetadataExists) => self.parse_test_metadataexists()?,
+                Token::Identifier(Word::ServerMetadata) => self.parse_test_servermetadata()?,
+                Token::Identifier(Word::ServerMetadataExists) => {
+                    self.parse_test_servermetadataexists()?
+                }
+
+                // RFC 9042
+                Token::Identifier(Word::MailboxIdExists) => self.parse_test_mailboxidexists()?,
+
+                // RFC 5235
+                Token::Identifier(Word::SpamTest) => self.parse_test_spamtest()?,
+                Token::Identifier(Word::VirusTest) => self.parse_test_virustest()?,
+
+                // RFC 8579
+                Token::Identifier(Word::SpecialUseExists) => self.parse_test_specialuseexists()?,
+
+                Token::Identifier(word) => {
+                    self.ignore_test()?;
+                    Test::Invalid(word.to_string())
+                }
+                Token::Invalid(word) => {
+                    self.ignore_test()?;
+                    Test::Invalid(word)
+                }
                 _ => return Err(token_info.expected("test name")),
             };
 

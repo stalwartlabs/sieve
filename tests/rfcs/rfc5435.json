@@ -170,6 +170,7 @@
                     108
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     120,
@@ -244,6 +245,7 @@
                     108
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     116,
@@ -313,7 +315,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -361,6 +364,7 @@
                     116
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     109,
@@ -447,7 +451,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -484,7 +489,8 @@
                       "index_last": false,
                       "mime": false,
                       "mime_opts": "None",
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -542,7 +548,8 @@
                       "index_last": false,
                       "mime": false,
                       "mime_opts": "None",
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -604,6 +611,7 @@
                     }
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     109,
@@ -650,7 +658,10 @@
                     118,
                     101
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -711,7 +722,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -742,7 +754,8 @@
                       "address_part": "All",
                       "match_type": "Matches",
                       "comparator": "AsciiCaseMap",
-                      "zone": null
+                      "zone": null,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -827,7 +840,8 @@
                       "index_last": false,
                       "mime": false,
                       "mime_opts": "None",
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -885,7 +899,8 @@
                       "index": null,
                       "index_last": false,
                       "mime": false,
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -939,6 +954,7 @@
                     }
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     109,
@@ -1099,7 +1115,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -1202,7 +1219,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -1252,7 +1270,8 @@
                   {
                     "Text": []
                   }
-                ]
+                ],
+                "list": false
               }
             }
           },
@@ -1263,6 +1282,7 @@
                 "importance": null,
                 "options": [],
                 "message": null,
+                "fcc": null,
                 "method": {
                   "VariableName": "notif_method"
                 }
@@ -1315,7 +1335,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -1352,7 +1373,8 @@
                       "index_last": false,
                       "mime": false,
                       "mime_opts": "None",
-                      "mime_anychild": false
+                      "mime_anychild": false,
+                      "list": false
                     }
                   },
                   "commands": [
@@ -1415,7 +1437,8 @@
                         "index_last": false,
                         "mime": false,
                         "mime_opts": "None",
-                        "mime_anychild": false
+                        "mime_anychild": false,
+                        "list": false
                       }
                     }
                   },
@@ -1446,6 +1469,7 @@
                             }
                           ]
                         },
+                        "fcc": null,
                         "method": {
                           "Text": [
                             116,

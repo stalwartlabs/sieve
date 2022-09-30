@@ -1,0 +1,244 @@
+{
+  "capabilities": [
+    "FileInto",
+    "SpecialUse"
+  ],
+  "commands": [
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            73,
+            78,
+            66,
+            79,
+            88,
+            47,
+            65,
+            114,
+            99,
+            104,
+            105,
+            118,
+            101
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": {
+          "Text": [
+            65,
+            114,
+            99,
+            104,
+            105,
+            118,
+            101
+          ]
+        }
+      }
+    },
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            83,
+            112,
+            97,
+            109
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": {
+          "Text": [
+            74,
+            117,
+            110,
+            107
+          ]
+        }
+      }
+    },
+    {
+      "FileInto": {
+        "copy": false,
+        "create": true,
+        "folder": {
+          "Text": [
+            83,
+            112,
+            97,
+            109
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": {
+          "Text": [
+            74,
+            117,
+            110,
+            107
+          ]
+        }
+      }
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "Environment": {
+              "name": {
+                "Text": [
+                  105,
+                  109,
+                  97,
+                  112,
+                  46,
+                  109,
+                  97,
+                  105,
+                  108,
+                  98,
+                  111,
+                  120
+                ]
+              },
+              "key_list": [
+                {
+                  "Text": [
+                    42
+                  ]
+                }
+              ],
+              "match_type": "Contains",
+              "comparator": "AsciiCaseMap"
+            }
+          },
+          "commands": [
+            {
+              "Set": {
+                "modifiers": [],
+                "name": {
+                  "Text": [
+                    109,
+                    97,
+                    105,
+                    108,
+                    98,
+                    111,
+                    120
+                  ]
+                },
+                "value": {
+                  "VariableNumber": 1
+                },
+                "encode_url": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "AllOf": [
+              {
+                "Environment": {
+                  "name": {
+                    "Text": [
+                      105,
+                      109,
+                      97,
+                      112,
+                      46,
+                      99,
+                      97,
+                      117,
+                      115,
+                      101
+                    ]
+                  },
+                  "key_list": [
+                    {
+                      "Text": [
+                        67,
+                        79,
+                        80,
+                        89
+                      ]
+                    }
+                  ],
+                  "match_type": "Is",
+                  "comparator": "AsciiCaseMap"
+                }
+              },
+              {
+                "SpecialUseExists": {
+                  "mailbox": {
+                    "VariableName": "mailbox"
+                  },
+                  "attributes": [
+                    {
+                      "Text": [
+                        74,
+                        117,
+                        110,
+                        107
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "commands": [
+            {
+              "Redirect": {
+                "copy": false,
+                "address": {
+                  "Text": [
+                    115,
+                    112,
+                    97,
+                    109,
+                    45,
+                    114,
+                    101,
+                    112,
+                    111,
+                    114,
+                    116,
+                    64,
+                    101,
+                    120,
+                    97,
+                    109,
+                    112,
+                    108,
+                    101,
+                    46,
+                    111,
+                    114,
+                    103
+                  ]
+                },
+                "notify": "Default",
+                "ret": "Default",
+                "by_time": "None",
+                "list": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

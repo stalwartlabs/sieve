@@ -43,7 +43,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -62,7 +63,10 @@
                     116,
                     121
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -93,7 +97,8 @@
               "index": null,
               "index_last": false,
               "mime": false,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -108,7 +113,10 @@
                     65,
                     77
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -141,7 +149,8 @@
               "index": null,
               "index_last": false,
               "mime": false,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -160,7 +169,10 @@
                     45,
                     90
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -183,7 +195,10 @@
                     45,
                     77
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -226,7 +241,8 @@
                   "index": null,
                   "index_last": false,
                   "mime": false,
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               },
               {
@@ -275,7 +291,8 @@
                   "index": null,
                   "index_last": false,
                   "mime": false,
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               }
             ]
@@ -295,7 +312,10 @@
                     109,
                     101
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]

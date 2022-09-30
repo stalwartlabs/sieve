@@ -11,11 +11,16 @@ use super::{
 pub mod action_convert;
 pub mod action_editheader;
 pub mod action_fileinto;
+pub mod action_flags;
+pub mod action_include;
+pub mod action_keep;
 pub mod action_mime;
 pub mod action_notify;
 pub mod action_redirect;
+pub mod action_reject;
 pub mod action_require;
 pub mod action_set;
+pub mod action_vacation;
 pub mod capability;
 pub mod command;
 pub mod comparator;
@@ -26,10 +31,18 @@ pub mod test_body;
 pub mod test_date;
 pub mod test_duplicate;
 pub mod test_envelope;
+pub mod test_environment;
 pub mod test_exists;
+pub mod test_extlists;
+pub mod test_hasflag;
 pub mod test_header;
+pub mod test_ihave;
+pub mod test_mailbox;
+pub mod test_mailboxid;
 pub mod test_notify;
 pub mod test_size;
+pub mod test_spamtest;
+pub mod test_specialuse;
 pub mod test_string;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,6 +50,8 @@ pub(crate) enum AddressPart {
     LocalPart,
     Domain,
     All,
+    User,
+    Detail,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,6 +59,7 @@ pub(crate) enum MatchType {
     Is,
     Contains,
     Matches,
+    Regex,
     Value(RelationalMatch),
     Count(RelationalMatch),
 }
@@ -92,11 +108,42 @@ impl<'x> Tokenizer<'x> {
         Ok(())
     }
 
+    pub fn ignore_test(&mut self) -> Result<(), CompileError> {
+        let mut d_count = 0;
+        while let Some(token_info) = self.peek() {
+            match token_info?.token {
+                Token::ParenthesisOpen => {
+                    d_count += 1;
+                }
+                Token::ParenthesisClose => {
+                    if d_count == 0 {
+                        break;
+                    } else {
+                        d_count -= 1;
+                    }
+                }
+                Token::Comma => {
+                    if d_count == 0 {
+                        break;
+                    }
+                }
+                Token::CurlyOpen => {
+                    break;
+                }
+                _ => (),
+            }
+            self.next();
+        }
+
+        Ok(())
+    }
+
     pub fn parse_match_type(&mut self, word: Word) -> Result<MatchType, CompileError> {
         match word {
             Word::Is => Ok(MatchType::Is),
             Word::Contains => Ok(MatchType::Contains),
             Word::Matches => Ok(MatchType::Matches),
+            Word::Regex => Ok(MatchType::Regex),
             _ => {
                 let token_info = self.unwrap_next()?;
                 if let Token::String(StringItem::Text(text)) = &token_info.token {

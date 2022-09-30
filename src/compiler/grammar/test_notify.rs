@@ -36,13 +36,18 @@ impl<'x> Tokenizer<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut notification_uri = None;
         let mut notification_capability = None;
-        let mut key_list = None;
+        let key_list;
 
         loop {
             let token_info = self.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
-                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                    word @ (Word::Is
+                    | Word::Contains
+                    | Word::Matches
+                    | Word::Value
+                    | Word::Count
+                    | Word::Regex),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
@@ -54,21 +59,18 @@ impl<'x> Tokenizer<'x> {
                         notification_uri = string.into();
                     } else if notification_capability.is_none() {
                         notification_capability = string.into();
-                    } else if key_list.is_none() {
+                    } else {
                         key_list = vec![if match_type == MatchType::Matches {
                             string.into_matches()
                         } else {
                             string
-                        }]
-                        .into();
+                        }];
                         break;
                     }
                 }
                 Token::BracketOpen => {
                     if notification_uri.is_some() && notification_capability.is_some() {
-                        key_list = self
-                            .parse_string_list(match_type == MatchType::Matches)?
-                            .into();
+                        key_list = self.parse_string_list(match_type == MatchType::Matches)?;
                         break;
                     } else {
                         return Err(token_info.expected("string or string list"));
@@ -87,7 +89,7 @@ impl<'x> Tokenizer<'x> {
         }
 
         Ok(Test::NotifyMethodCapability(TestNotifyMethodCapability {
-            key_list: key_list.unwrap(),
+            key_list,
             match_type,
             comparator,
             notification_uri: notification_uri.unwrap(),

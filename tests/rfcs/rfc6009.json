@@ -47,7 +47,8 @@
               "address_part": "All",
               "match_type": "Is",
               "comparator": "AsciiCaseMap",
-              "zone": null
+              "zone": null,
+              "list": false
             }
           },
           "commands": []
@@ -89,7 +90,8 @@
                   "address_part": "All",
                   "match_type": "Is",
                   "comparator": "AsciiCaseMap",
-                  "zone": null
+                  "zone": null,
+                  "list": false
                 }
               },
               {
@@ -118,7 +120,8 @@
                     "Count": "Eq"
                   },
                   "comparator": "AsciiNumeric",
-                  "zone": null
+                  "zone": null,
+                  "list": false
                 }
               }
             ]
@@ -182,7 +185,8 @@
               "address_part": "All",
               "match_type": "Matches",
               "comparator": "AsciiCaseMap",
-              "zone": null
+              "zone": null,
+              "list": false
             }
           },
           "commands": []
@@ -226,7 +230,8 @@
                   "address_part": "All",
                   "match_type": "Contains",
                   "comparator": "AsciiCaseMap",
-                  "zone": null
+                  "zone": null,
+                  "list": false
                 }
               },
               {
@@ -263,7 +268,8 @@
                     "Value": "Eq"
                   },
                   "comparator": "AsciiNumeric",
-                  "zone": null
+                  "zone": null,
+                  "list": false
                 }
               }
             ]
@@ -289,7 +295,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -346,7 +353,8 @@
                         "Value": "Ge"
                       },
                       "comparator": "AsciiCaseMap",
-                      "zone": null
+                      "zone": null,
+                      "list": false
                     }
                   },
                   "commands": []
@@ -418,7 +426,8 @@
               "address_part": "All",
               "match_type": "Matches",
               "comparator": "AsciiCaseMap",
-              "zone": 0
+              "zone": 0,
+              "list": false
             }
           },
           "commands": [
@@ -473,7 +482,8 @@
                         {
                           "VariableName": "bdate"
                         }
-                      ]
+                      ],
+                      "list": false
                     }
                   },
                   "commands": [
@@ -498,7 +508,10 @@
                               "VariableName": "bhour"
                             }
                           ]
-                        }
+                        },
+                        "flags": [],
+                        "mailbox_id": null,
+                        "special_use": null
                       }
                     }
                   ]
@@ -552,7 +565,8 @@
               "index": null,
               "index_last": false,
               "mime": false,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -586,7 +600,8 @@
                 },
                 "notify": "Never",
                 "ret": "Default",
-                "by_time": "None"
+                "by_time": "None",
+                "list": false
               }
             }
           ]
@@ -636,7 +651,8 @@
               "index": null,
               "index_last": false,
               "mime": false,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -676,7 +692,8 @@
                     "mode": "Default",
                     "trace": false
                   }
-                }
+                },
+                "list": false
               }
             }
           ]
@@ -701,7 +718,8 @@
                     50
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -722,7 +740,8 @@
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "list": false
                     }
                   },
                   "commands": [
@@ -764,7 +783,8 @@
                             }
                           ]
                         }
-                      ]
+                      ],
+                      "list": false
                     }
                   },
                   "commands": [
@@ -847,7 +867,8 @@
                     "mode": "Return",
                     "trace": false
                   }
-                }
+                },
+                "list": false
               }
             }
           ]

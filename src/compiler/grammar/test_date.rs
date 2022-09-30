@@ -21,6 +21,7 @@ pub(crate) struct TestDate {
     pub index_last: bool,
     pub zone: Zone,
     pub date_part: DatePart,
+    pub list: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,6 +31,7 @@ pub(crate) struct TestCurrentDate {
     pub comparator: Comparator,
     pub date_part: DatePart,
     pub key_list: Vec<StringItem>,
+    pub list: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,17 +63,24 @@ impl<'x> Tokenizer<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_name = None;
-        let mut key_list = None;
+        let key_list;
         let mut index = None;
         let mut index_last = false;
         let mut zone = Zone::Local;
         let mut date_part = None;
 
+        let mut list = false;
+
         loop {
             let mut token_info = self.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
-                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                    word @ (Word::Is
+                    | Word::Contains
+                    | Word::Matches
+                    | Word::Value
+                    | Word::Count
+                    | Word::Regex),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
@@ -83,6 +92,9 @@ impl<'x> Tokenizer<'x> {
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
+                }
+                Token::Tag(Word::List) => {
+                    list = true;
                 }
                 Token::Tag(Word::OriginalZone) => {
                     zone = Zone::Original;
@@ -115,20 +127,17 @@ impl<'x> Tokenizer<'x> {
                         }
                         token_info.token = Token::String(string);
                         return Err(token_info.expected("valid date part"));
-                    } else if key_list.is_none() {
+                    } else {
                         key_list = vec![if match_type == MatchType::Matches {
                             string.into_matches()
                         } else {
                             string
-                        }]
-                        .into();
+                        }];
                         break;
                     }
                 }
                 Token::BracketOpen if header_name.is_some() && date_part.is_some() => {
-                    key_list = self
-                        .parse_string_list(match_type == MatchType::Matches)?
-                        .into();
+                    key_list = self.parse_string_list(match_type == MatchType::Matches)?;
                     break;
                 }
                 _ => {
@@ -145,33 +154,44 @@ impl<'x> Tokenizer<'x> {
 
         Ok(Test::Date(TestDate {
             header_name: header_name.unwrap(),
-            key_list: key_list.unwrap(),
+            key_list,
             date_part: date_part.unwrap(),
             match_type,
             comparator,
             index,
             index_last,
             zone,
+            list,
         }))
     }
 
     pub(crate) fn parse_test_currentdate(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
-        let mut key_list = None;
+        let key_list;
         let mut zone = None;
         let mut date_part = None;
+
+        let mut list = false;
 
         loop {
             let mut token_info = self.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
-                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                    word @ (Word::Is
+                    | Word::Contains
+                    | Word::Matches
+                    | Word::Value
+                    | Word::Count
+                    | Word::Regex),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
+                }
+                Token::Tag(Word::List) => {
+                    list = true;
                 }
                 Token::Tag(Word::Zone) => {
                     let token_info = self.unwrap_next()?;
@@ -199,20 +219,17 @@ impl<'x> Tokenizer<'x> {
                         }
                         token_info.token = Token::String(string);
                         return Err(token_info.expected("valid date part"));
-                    } else if key_list.is_none() {
+                    } else {
                         key_list = vec![if match_type == MatchType::Matches {
                             string.into_matches()
                         } else {
                             string
-                        }]
-                        .into();
+                        }];
                         break;
                     }
                 }
                 Token::BracketOpen if date_part.is_some() => {
-                    key_list = self
-                        .parse_string_list(match_type == MatchType::Matches)?
-                        .into();
+                    key_list = self.parse_string_list(match_type == MatchType::Matches)?;
                     break;
                 }
                 _ => {
@@ -226,11 +243,12 @@ impl<'x> Tokenizer<'x> {
         }
 
         Ok(Test::CurrentDate(TestCurrentDate {
-            key_list: key_list.unwrap(),
+            key_list,
             date_part: date_part.unwrap(),
             match_type,
             comparator,
             zone,
+            list,
         }))
     }
 }

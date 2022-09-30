@@ -104,7 +104,10 @@
                     116,
                     115
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -157,7 +160,10 @@
                     111,
                     120
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -220,7 +226,10 @@
                     108,
                     101
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]

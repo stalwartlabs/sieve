@@ -88,7 +88,8 @@
                 "index_last": false,
                 "mime": false,
                 "mime_opts": "None",
-                "mime_anychild": false
+                "mime_anychild": false,
+                "list": false
               }
             }
           },
@@ -172,7 +173,8 @@
                 },
                 "notify": "Default",
                 "ret": "Default",
-                "by_time": "None"
+                "by_time": "None",
+                "list": false
               }
             }
           ]

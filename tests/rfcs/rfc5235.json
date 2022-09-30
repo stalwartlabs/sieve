@@ -1,0 +1,534 @@
+{
+  "capabilities": [
+    "SpamTest",
+    "FileInto",
+    "Relational",
+    {
+      "Comparator": "AsciiNumeric"
+    },
+    "VirusTest"
+  ],
+  "commands": [
+    {
+      "If": [
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    117,
+                    110,
+                    99,
+                    108,
+                    97,
+                    115,
+                    115,
+                    105,
+                    102,
+                    105,
+                    101,
+                    100
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  51
+                ]
+              },
+              "match_type": {
+                "Value": "Ge"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    115,
+                    112,
+                    97,
+                    109,
+                    45,
+                    116,
+                    114,
+                    97,
+                    112
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": false
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    117,
+                    110,
+                    99,
+                    108,
+                    97,
+                    115,
+                    115,
+                    105,
+                    102,
+                    105,
+                    101,
+                    100
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    110,
+                    111,
+                    116,
+                    45,
+                    115,
+                    112,
+                    97,
+                    109
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  51,
+                  55
+                ]
+              },
+              "match_type": {
+                "Value": "Lt"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    115,
+                    112,
+                    97,
+                    109,
+                    45,
+                    116,
+                    114,
+                    97,
+                    112
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": "True",
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Count": "Eq"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    117,
+                    110,
+                    99,
+                    108,
+                    97,
+                    115,
+                    115,
+                    105,
+                    102,
+                    105,
+                    101,
+                    100
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    110,
+                    111,
+                    116,
+                    45,
+                    115,
+                    112,
+                    97,
+                    109
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "SpamTest": {
+              "value": {
+                "Text": [
+                  51,
+                  55
+                ]
+              },
+              "match_type": {
+                "Value": "Lt"
+              },
+              "comparator": "AsciiNumeric",
+              "percent": true
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    115,
+                    112,
+                    97,
+                    109,
+                    45,
+                    116,
+                    114,
+                    97,
+                    112
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": "True",
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "VirusTest": {
+              "value": {
+                "Text": [
+                  48
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric"
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    117,
+                    110,
+                    99,
+                    108,
+                    97,
+                    115,
+                    115,
+                    105,
+                    102,
+                    105,
+                    101,
+                    100
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "If": [
+        {
+          "test": {
+            "VirusTest": {
+              "value": {
+                "Text": [
+                  52
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric"
+            }
+          },
+          "commands": [
+            {
+              "FileInto": {
+                "copy": false,
+                "create": false,
+                "folder": {
+                  "Text": [
+                    73,
+                    78,
+                    66,
+                    79,
+                    88,
+                    46,
+                    113,
+                    117,
+                    97,
+                    114,
+                    97,
+                    110,
+                    116,
+                    105,
+                    110,
+                    101
+                  ]
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
+              }
+            }
+          ]
+        },
+        {
+          "test": {
+            "VirusTest": {
+              "value": {
+                "Text": [
+                  53
+                ]
+              },
+              "match_type": {
+                "Value": "Eq"
+              },
+              "comparator": "AsciiNumeric"
+            }
+          },
+          "commands": [
+            "Discard"
+          ]
+        }
+      ]
+    }
+  ]
+}

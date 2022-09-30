@@ -35,6 +35,7 @@ pub enum ErrorType {
     TooManyNestedBlocks,
     TooManyNestedTests,
     UnsupportedComparator(String),
+    InvalidGrammar(Cow<'static, str>),
 }
 
 impl Default for Compiler {
@@ -78,6 +79,14 @@ impl TokenInfo {
                 expected: expected.into(),
                 found: self.token.to_string(),
             },
+        }
+    }
+
+    pub fn invalid(self, reason: impl Into<Cow<'static, str>>) -> CompileError {
+        CompileError {
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type: ErrorType::InvalidGrammar(reason.into()),
         }
     }
 }

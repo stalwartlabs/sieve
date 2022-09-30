@@ -89,7 +89,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -152,7 +153,10 @@
                     116,
                     101
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -203,7 +207,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -224,7 +229,19 @@
                   },
                   "commands": [
                     {
-                      "Invalid": "setflag"
+                      "SetFlag": {
+                        "varname": null,
+                        "flags": [
+                          {
+                            "Text": [
+                              115,
+                              101,
+                              101,
+                              110
+                            ]
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
@@ -243,7 +260,10 @@
                     116,
                     115
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -277,7 +297,8 @@
               "address_part": "All",
               "match_type": "Matches",
               "comparator": "AsciiCaseMap",
-              "zone": null
+              "zone": null,
+              "list": false
             }
           },
           "commands": [
@@ -337,7 +358,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -416,6 +438,7 @@
                     }
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     120,
@@ -477,7 +500,8 @@
               "address_part": "All",
               "match_type": "Matches",
               "comparator": "AsciiCaseMap",
-              "zone": null
+              "zone": null,
+              "list": false
             }
           },
           "commands": [
@@ -537,7 +561,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -592,7 +617,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -683,6 +709,7 @@
                     }
                   ]
                 },
+                "fcc": null,
                 "method": {
                   "Text": [
                     120,
@@ -840,7 +867,8 @@
                   "index": null,
                   "index_last": false,
                   "mime": false,
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               },
               {
@@ -880,14 +908,27 @@
                   "index_last": false,
                   "mime": false,
                   "mime_opts": "None",
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               }
             ]
           },
           "commands": [
             {
-              "Invalid": "setflag"
+              "SetFlag": {
+                "varname": null,
+                "flags": [
+                  {
+                    "Text": [
+                      115,
+                      101,
+                      101,
+                      110
+                    ]
+                  }
+                ]
+              }
             }
           ]
         }

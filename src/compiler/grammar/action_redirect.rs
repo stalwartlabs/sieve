@@ -15,6 +15,7 @@ pub(crate) struct Redirect {
     pub notify: NotifyValue,
     pub ret: Ret,
     pub by_time: ByTime,
+    pub list: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +76,7 @@ impl<'x> Tokenizer<'x> {
         let mut copy = false;
         let mut ret = Ret::Default;
         let mut notify = NotifyValue::Default;
+        let mut list = false;
         let mut by_mode = ByMode::Default;
         let mut by_trace = false;
         let mut by_rlimit = None;
@@ -85,6 +87,9 @@ impl<'x> Tokenizer<'x> {
             match token_info.token {
                 Token::Tag(Word::Copy) => {
                     copy = true;
+                }
+                Token::Tag(Word::List) => {
+                    list = true;
                 }
                 Token::Tag(Word::ByTrace) => {
                     by_trace = true;
@@ -169,6 +174,7 @@ impl<'x> Tokenizer<'x> {
             } else {
                 ByTime::None
             },
+            list,
         })
     }
 }

@@ -139,7 +139,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": []
@@ -195,7 +196,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -225,7 +227,10 @@
                       "VariableNumber": 2
                     }
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             },
             "Stop"
@@ -280,7 +285,8 @@
               "index_last": false,
               "mime": false,
               "mime_opts": "None",
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -369,7 +375,8 @@
               "index": null,
               "index_last": false,
               "mime": false,
-              "mime_anychild": false
+              "mime_anychild": false,
+              "list": false
             }
           },
           "commands": [
@@ -402,7 +409,10 @@
                       "VariableNumber": 2
                     }
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             },
             "Stop"
@@ -453,7 +463,8 @@
                   "index": null,
                   "index_last": false,
                   "mime": false,
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               }
             ]
@@ -843,7 +854,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": []

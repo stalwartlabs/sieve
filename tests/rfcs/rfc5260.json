@@ -51,7 +51,8 @@
                   "index_last": false,
                   "mime": false,
                   "mime_opts": "None",
-                  "mime_anychild": false
+                  "mime_anychild": false,
+                  "list": false
                 }
               },
               {
@@ -79,7 +80,8 @@
                   "index": null,
                   "index_last": false,
                   "zone": "Original",
-                  "date_part": "Hour"
+                  "date_part": "Hour",
+                  "list": false
                 }
               },
               {
@@ -107,7 +109,8 @@
                   "index": null,
                   "index_last": false,
                   "zone": "Original",
-                  "date_part": "Hour"
+                  "date_part": "Hour",
+                  "list": false
                 }
               }
             ]
@@ -126,7 +129,10 @@
                     110,
                     116
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -164,7 +170,8 @@
                   "index": null,
                   "index_last": false,
                   "zone": "Local",
-                  "date_part": "Weekday"
+                  "date_part": "Weekday",
+                  "list": false
                 }
               },
               {
@@ -193,7 +200,8 @@
                   "index": null,
                   "index_last": false,
                   "zone": "Local",
-                  "date_part": "Weekday"
+                  "date_part": "Weekday",
+                  "list": false
                 }
               }
             ]
@@ -213,7 +221,10 @@
                     110,
                     100
                   ]
-                }
+                },
+                "flags": [],
+                "mailbox_id": null,
+                "special_use": null
               }
             }
           ]
@@ -237,7 +248,8 @@
                         48
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               },
               {
@@ -252,7 +264,8 @@
                         54
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               },
               {
@@ -270,7 +283,8 @@
                         57
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               },
               {
@@ -288,7 +302,8 @@
                         55
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               }
             ]
@@ -320,7 +335,8 @@
                 },
                 "notify": "Default",
                 "ret": "Default",
-                "by_time": "None"
+                "by_time": "None",
+                "list": false
               }
             }
           ]
@@ -355,7 +371,8 @@
                         48
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               },
               {
@@ -381,14 +398,68 @@
                         55
                       ]
                     }
-                  ]
+                  ],
+                  "list": false
                 }
               }
             ]
           },
           "commands": [
             {
-              "Invalid": "vacation"
+              "Vacation": {
+                "period": {
+                  "Days": 7
+                },
+                "subject": null,
+                "from": null,
+                "handle": null,
+                "addresses": [],
+                "mime": false,
+                "fcc": null,
+                "reason": {
+                  "Text": [
+                    73,
+                    39,
+                    109,
+                    32,
+                    97,
+                    119,
+                    97,
+                    121,
+                    32,
+                    100,
+                    117,
+                    114,
+                    105,
+                    110,
+                    103,
+                    32,
+                    116,
+                    104,
+                    101,
+                    32,
+                    102,
+                    105,
+                    114,
+                    115,
+                    116,
+                    32,
+                    119,
+                    101,
+                    101,
+                    107,
+                    32,
+                    105,
+                    110,
+                    32,
+                    74,
+                    117,
+                    108,
+                    121,
+                    46
+                  ]
+                }
+              }
             }
           ]
         }
@@ -411,7 +482,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -454,7 +526,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -497,7 +570,10 @@
               "VariableName": "year"
             }
           ]
-        }
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
       }
     },
     {
@@ -517,7 +593,8 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "list": false
             }
           },
           "commands": [
@@ -609,7 +686,8 @@
               "zone": {
                 "Time": -500
               },
-              "date_part": "Iso8601"
+              "date_part": "Iso8601",
+              "list": false
             }
           },
           "commands": [
@@ -645,7 +723,8 @@
                 },
                 "notify": "Default",
                 "ret": "Default",
-                "by_time": "None"
+                "by_time": "None",
+                "list": false
               }
             }
           ]
