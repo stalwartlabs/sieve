@@ -6,29 +6,31 @@ use crate::compiler::{
 };
 
 use super::{
-    action_convert::Convert,
+    actions::action_convert::Convert,
     command::Command,
-    test_address::TestAddress,
-    test_body::TestBody,
-    test_date::{TestCurrentDate, TestDate},
-    test_duplicate::TestDuplicate,
-    test_envelope::TestEnvelope,
-    test_environment::TestEnvironment,
-    test_exists::TestExists,
-    test_extlists::TestValidExtList,
-    test_hasflag::TestHasFlag,
-    test_header::TestHeader,
-    test_ihave::TestIhave,
-    test_mailbox::{
-        TestMailboxExists, TestMetadata, TestMetadataExists, TestServerMetadata,
-        TestServerMetadataExists,
+    tests::{
+        test_address::TestAddress,
+        test_body::TestBody,
+        test_date::{TestCurrentDate, TestDate},
+        test_duplicate::TestDuplicate,
+        test_envelope::TestEnvelope,
+        test_environment::TestEnvironment,
+        test_exists::TestExists,
+        test_extlists::TestValidExtList,
+        test_hasflag::TestHasFlag,
+        test_header::TestHeader,
+        test_ihave::TestIhave,
+        test_mailbox::{
+            TestMailboxExists, TestMetadata, TestMetadataExists, TestServerMetadata,
+            TestServerMetadataExists,
+        },
+        test_mailboxid::TestMailboxIdExists,
+        test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
+        test_size::TestSize,
+        test_spamtest::{TestSpamTest, TestVirusTest},
+        test_specialuse::TestSpecialUseExists,
+        test_string::TestString,
     },
-    test_mailboxid::TestMailboxIdExists,
-    test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
-    test_size::TestSize,
-    test_spamtest::{TestSpamTest, TestVirusTest},
-    test_specialuse::TestSpecialUseExists,
-    test_string::TestString,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

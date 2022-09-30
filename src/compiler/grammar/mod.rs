@@ -8,42 +8,13 @@ use super::{
     CompileError,
 };
 
-pub mod action_convert;
-pub mod action_editheader;
-pub mod action_fileinto;
-pub mod action_flags;
-pub mod action_include;
-pub mod action_keep;
-pub mod action_mime;
-pub mod action_notify;
-pub mod action_redirect;
-pub mod action_reject;
-pub mod action_require;
-pub mod action_set;
-pub mod action_vacation;
+pub mod actions;
 pub mod capability;
 pub mod command;
 pub mod comparator;
 pub mod string_list;
 pub mod test;
-pub mod test_address;
-pub mod test_body;
-pub mod test_date;
-pub mod test_duplicate;
-pub mod test_envelope;
-pub mod test_environment;
-pub mod test_exists;
-pub mod test_extlists;
-pub mod test_hasflag;
-pub mod test_header;
-pub mod test_ihave;
-pub mod test_mailbox;
-pub mod test_mailboxid;
-pub mod test_notify;
-pub mod test_size;
-pub mod test_spamtest;
-pub mod test_specialuse;
-pub mod test_string;
+pub mod tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum AddressPart {

@@ -8,36 +8,24 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::{action_mime::MimeOpts, comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestHeader {
-    pub header_list: Vec<StringItem>,
-    pub key_list: Vec<StringItem>,
+pub(crate) struct TestString {
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub index: Option<u16>,
-    pub index_last: bool,
-
-    pub mime: bool,
-    pub mime_opts: MimeOpts,
-    pub mime_anychild: bool,
+    pub source: Vec<StringItem>,
+    pub key_list: Vec<StringItem>,
 
     pub list: bool,
 }
 
 impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_test_header(&mut self) -> Result<Test, CompileError> {
+    pub(crate) fn parse_test_string(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
-        let mut header_list = None;
-        let key_list;
-        let mut index = None;
-        let mut index_last = false;
-
-        let mut mime = false;
-        let mut mime_opts = MimeOpts::None;
-        let mut mime_anychild = false;
+        let mut source = None;
+        let key_list: Vec<StringItem>;
 
         let mut list = false;
 
@@ -57,29 +45,12 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::Tag(Word::Index) => {
-                    index = (self.unwrap_number(u16::MAX as usize)? as u16).into();
-                }
-                Token::Tag(Word::Last) => {
-                    index_last = true;
-                }
                 Token::Tag(Word::List) => {
                     list = true;
                 }
-                Token::Tag(Word::Mime) => {
-                    mime = true;
-                }
-                Token::Tag(Word::AnyChild) => {
-                    mime_anychild = true;
-                }
-                Token::Tag(
-                    word @ (Word::Type | Word::Subtype | Word::ContentType | Word::Param),
-                ) => {
-                    mime_opts = self.parse_mimeopts(word)?;
-                }
                 Token::String(string) => {
-                    if header_list.is_none() {
-                        header_list = vec![string].into();
+                    if source.is_none() {
+                        source = vec![string].into();
                     } else {
                         key_list = vec![if match_type == MatchType::Matches {
                             string.into_matches()
@@ -90,8 +61,8 @@ impl<'x> Tokenizer<'x> {
                     }
                 }
                 Token::BracketOpen => {
-                    if header_list.is_none() {
-                        header_list = self.parse_string_list(false)?.into();
+                    if source.is_none() {
+                        source = self.parse_string_list(false)?.into();
                     } else {
                         key_list = self.parse_string_list(match_type == MatchType::Matches)?;
                         break;
@@ -103,16 +74,11 @@ impl<'x> Tokenizer<'x> {
             }
         }
 
-        Ok(Test::Header(TestHeader {
-            header_list: header_list.unwrap(),
+        Ok(Test::String(TestString {
+            source: source.unwrap(),
             key_list,
             match_type,
             comparator,
-            index,
-            index_last,
-            mime,
-            mime_opts,
-            mime_anychild,
             list,
         }))
     }

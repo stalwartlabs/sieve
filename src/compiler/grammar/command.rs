@@ -9,21 +9,24 @@ use crate::{
 };
 
 use super::{
-    action_convert::Convert,
-    action_editheader::{AddHeader, DeleteHeader},
-    action_fileinto::FileInto,
-    action_flags::FlagAction,
-    action_include::{Global, Include},
-    action_keep::Keep,
-    action_mime::{Break, Enclose, ExtractText, ForEveryPart, Replace},
-    action_notify::Notify,
-    action_redirect::Redirect,
-    action_reject::Reject,
-    action_set::Set,
-    action_vacation::Vacation,
+    actions::{
+        action_convert::Convert,
+        action_editheader::{AddHeader, DeleteHeader},
+        action_fileinto::FileInto,
+        action_flags::FlagAction,
+        action_include::{Global, Include},
+        action_keep::Keep,
+        action_mime::{Break, Enclose, ExtractText, ForEveryPart, Replace},
+        action_notify::Notify,
+        action_redirect::Redirect,
+        action_reject::Reject,
+        action_set::Set,
+        action_vacation::Vacation,
+    },
     test::{If, Test},
-    test_ihave::Error,
 };
+
+use super::tests::test_ihave::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Command {

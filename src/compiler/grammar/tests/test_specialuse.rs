@@ -8,7 +8,7 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::test::Test;
+use crate::compiler::grammar::test::Test;
 
 /*
    Usage:  specialuse_exists [<mailbox: string>]

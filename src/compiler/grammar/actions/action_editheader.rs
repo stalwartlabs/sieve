@@ -8,7 +8,7 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::{comparator::Comparator, MatchType};
+use crate::compiler::grammar::{comparator::Comparator, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct AddHeader {
