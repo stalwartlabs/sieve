@@ -12,17 +12,23 @@ use super::{
     action_convert::Convert,
     action_editheader::{AddHeader, DeleteHeader},
     action_fileinto::FileInto,
+    action_flags::FlagAction,
+    action_include::{Global, Include},
+    action_keep::Keep,
     action_mime::{Break, Enclose, ExtractText, ForEveryPart, Replace},
     action_notify::Notify,
     action_redirect::Redirect,
+    action_reject::Reject,
     action_set::Set,
+    action_vacation::Vacation,
     test::{If, Test},
+    test_ihave::Error,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Command {
     If(Vec<If>),
-    Keep,
+    Keep(Keep),
     FileInto(FileInto),
     Redirect(Redirect),
     Discard,
@@ -48,6 +54,25 @@ pub(crate) enum Command {
 
     // RFC 5435
     Notify(Notify),
+
+    // RFC 5429
+    Reject(Reject),
+
+    // RFC 5230
+    Vacation(Vacation),
+
+    // RFC 5463
+    Error(Error),
+
+    // RFC 5232
+    SetFlag(FlagAction),
+    AddFlag(FlagAction),
+    RemoveFlag(FlagAction),
+
+    // RFC 6609
+    Include(Include),
+    Return,
+    Global(Global),
 }
 
 impl Compiler {
@@ -115,7 +140,7 @@ impl Compiler {
                             }
                         }
                         Word::Keep => {
-                            commands.push(Command::Keep);
+                            commands.push(Command::Keep(tokens.parse_keep()?));
                         }
                         Word::FileInto => {
                             commands.push(Command::FileInto(tokens.parse_fileinto()?));
@@ -188,6 +213,46 @@ impl Compiler {
                         // RFC 5435
                         Word::Notify => {
                             commands.push(Command::Notify(tokens.parse_notify()?));
+                        }
+
+                        // RFC 5429
+                        Word::Reject => {
+                            commands.push(Command::Reject(tokens.parse_reject(false)?));
+                        }
+                        Word::Ereject => {
+                            commands.push(Command::Reject(tokens.parse_reject(true)?));
+                        }
+
+                        // RFC 5230
+                        Word::Vacation => {
+                            commands.push(Command::Vacation(tokens.parse_vacation()?));
+                        }
+
+                        // RFC 5463
+                        Word::Error => {
+                            commands.push(Command::Error(tokens.parse_error()?));
+                        }
+
+                        // RFC 5232
+                        Word::SetFlag => {
+                            commands.push(Command::SetFlag(tokens.parse_flag_action()?));
+                        }
+                        Word::AddFlag => {
+                            commands.push(Command::AddFlag(tokens.parse_flag_action()?));
+                        }
+                        Word::RemoveFlag => {
+                            commands.push(Command::RemoveFlag(tokens.parse_flag_action()?));
+                        }
+
+                        // RFC 6609
+                        Word::Include => {
+                            commands.push(Command::Include(tokens.parse_include()?));
+                        }
+                        Word::Return => {
+                            commands.push(Command::Return);
+                        }
+                        Word::Global => {
+                            commands.push(Command::Global(tokens.parse_global()?));
                         }
 
                         _ => {

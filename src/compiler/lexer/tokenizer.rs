@@ -222,19 +222,31 @@ impl<'x> Tokenizer<'x> {
 
     pub fn unwrap_string(&mut self) -> Result<StringItem, CompileError> {
         let next_token = self.unwrap_next()?;
-        if let Token::String(s) = next_token.token {
-            Ok(s)
-        } else {
-            Err(next_token.expected("string"))
+        match next_token.token {
+            Token::String(s) => Ok(s),
+            Token::BracketOpen => {
+                let mut items = self.parse_string_list(false)?;
+                match items.pop() {
+                    Some(s) if items.is_empty() => Ok(s),
+                    _ => Err(next_token.expected("string")),
+                }
+            }
+            _ => Err(next_token.expected("string")),
         }
     }
 
     pub fn unwrap_static_string(&mut self) -> Result<Vec<u8>, CompileError> {
         let next_token = self.unwrap_next()?;
-        if let Token::String(StringItem::Text(s)) = next_token.token {
-            Ok(s)
-        } else {
-            Err(next_token.expected("string"))
+        match next_token.token {
+            Token::String(StringItem::Text(s)) => Ok(s),
+            Token::BracketOpen => {
+                let mut items = self.parse_string_list(false)?;
+                match items.pop() {
+                    Some(StringItem::Text(s)) if items.is_empty() => Ok(s),
+                    _ => Err(next_token.expected("string")),
+                }
+            }
+            _ => Err(next_token.expected("string")),
         }
     }
 

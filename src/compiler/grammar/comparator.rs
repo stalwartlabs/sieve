@@ -1,13 +1,7 @@
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, Token},
-        CompileError,
-    },
-    runtime::StringItem,
-};
+use crate::compiler::{lexer::tokenizer::Tokenizer, CompileError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Comparator {
@@ -20,18 +14,13 @@ pub enum Comparator {
 
 impl<'x> Tokenizer<'x> {
     pub(crate) fn parse_comparator(&mut self) -> Result<Comparator, CompileError> {
-        let token_info = self.unwrap_next()?;
-        if let Token::String(StringItem::Text(comparator)) = token_info.token {
-            let comparator = String::from_utf8(comparator)
-                .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned());
-            Ok(if let Some(comparator) = COMPARATOR.get(&comparator) {
-                comparator.clone()
-            } else {
-                Comparator::Other(comparator)
-            })
+        let comparator = String::from_utf8(self.unwrap_static_string()?)
+            .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned());
+        Ok(if let Some(comparator) = COMPARATOR.get(&comparator) {
+            comparator.clone()
         } else {
-            Err(token_info.expected("string"))
-        }
+            Comparator::Other(comparator)
+        })
     }
 }
 

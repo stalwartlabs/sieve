@@ -135,6 +135,7 @@ impl<'x> Tokenizer<'x> {
                     | Word::LowerFirst
                     | Word::UpperFirst
                     | Word::QuoteWildcard
+                    | Word::QuoteRegex
                     | Word::Length),
                 ) => {
                     modifiers.push(word.into());

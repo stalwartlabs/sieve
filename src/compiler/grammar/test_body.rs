@@ -41,7 +41,12 @@ impl<'x> Tokenizer<'x> {
                     body_transform = BodyTransform::Content(self.parse_strings(false)?);
                 }
                 Token::Tag(
-                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                    word @ (Word::Is
+                    | Word::Contains
+                    | Word::Matches
+                    | Word::Value
+                    | Word::Count
+                    | Word::Regex),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }

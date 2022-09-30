@@ -77,7 +77,12 @@ impl<'x> Tokenizer<'x> {
             let token_info = self.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
-                    word @ (Word::Is | Word::Contains | Word::Matches | Word::Value | Word::Count),
+                    word @ (Word::Is
+                    | Word::Contains
+                    | Word::Matches
+                    | Word::Value
+                    | Word::Count
+                    | Word::Regex),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
