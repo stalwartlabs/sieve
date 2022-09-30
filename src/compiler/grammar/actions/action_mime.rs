@@ -8,7 +8,9 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::{action_set::Modifier, command::Command};
+use crate::compiler::grammar::command::Command;
+
+use super::action_set::Modifier;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct ForEveryPart {

@@ -8,7 +8,7 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::{comparator::Comparator, test::Test, AddressPart, MatchType};
+use crate::compiler::grammar::{comparator::Comparator, test::Test, AddressPart, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestEnvelope {

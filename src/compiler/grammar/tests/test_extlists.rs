@@ -5,7 +5,7 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::test::Test;
+use crate::compiler::grammar::test::Test;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestValidExtList {

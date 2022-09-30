@@ -2,13 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
+        grammar::test::Test,
         lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError,
     },
     runtime::StringItem,
 };
 
-use super::{comparator::Comparator, test::Test, AddressPart, MatchType};
+use crate::compiler::grammar::{comparator::Comparator, AddressPart, MatchType};
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestAddress {

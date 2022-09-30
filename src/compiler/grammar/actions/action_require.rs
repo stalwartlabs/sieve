@@ -6,7 +6,7 @@ use crate::{
     runtime::StringItem,
 };
 
-use super::capability::Capability;
+use crate::compiler::grammar::capability::Capability;
 
 impl<'x> Tokenizer<'x> {
     pub(crate) fn parse_require(
