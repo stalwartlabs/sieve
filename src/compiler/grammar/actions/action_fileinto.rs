@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::command::{Command, CompilerState},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct FileInto {
     pub copy: bool,
     pub create: bool,
@@ -18,17 +16,17 @@ pub(crate) struct FileInto {
     pub special_use: Option<StringItem>,
 }
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_fileinto(&mut self) -> Result<FileInto, CompileError> {
-        let mut folder = None;
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_fileinto(&mut self) -> Result<(), CompileError> {
+        let folder;
         let mut copy = false;
         let mut create = false;
         let mut flags = Vec::new();
         let mut mailbox_id = None;
         let mut special_use = None;
 
-        while folder.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Copy) => {
                     copy = true;
@@ -40,27 +38,26 @@ impl<'x> Tokenizer<'x> {
                     flags = self.parse_strings(false)?;
                 }
                 Token::Tag(Word::MailboxId) => {
-                    mailbox_id = self.unwrap_string()?.into();
+                    mailbox_id = self.parse_string()?.into();
                 }
                 Token::Tag(Word::SpecialUse) => {
-                    special_use = self.unwrap_string()?.into();
-                }
-                Token::String(string) => {
-                    folder = string.into();
+                    special_use = self.parse_string()?.into();
                 }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    folder = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
 
-        Ok(FileInto {
-            folder: folder.unwrap(),
+        self.commands.push(Command::FileInto(FileInto {
+            folder,
             copy,
             create,
             flags,
             mailbox_id,
             special_use,
-        })
+        }));
+        Ok(())
     }
 }

@@ -1,962 +1,1082 @@
-{
-  "capabilities": [
-    "Envelope",
-    "ExtLists",
-    "FileInto",
-    "SpamTest",
-    "Relational",
+[
+  [
+    0,
     {
-      "Comparator": "AsciiNumeric"
+      "Require": [
+        "Envelope",
+        "ExtLists",
+        "FileInto",
+        "SpamTest",
+        "Relational",
+        {
+          "Comparator": "AsciiNumeric"
+        }
+      ]
     }
   ],
-  "commands": [
+  [
+    1,
     {
-      "If": [
-        {
-          "test": {
-            "Envelope": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    58,
-                    97,
-                    100,
-                    100,
-                    114,
-                    98,
-                    111,
-                    111,
-                    107,
-                    58,
-                    100,
-                    101,
-                    102,
-                    97,
-                    117,
-                    108,
-                    116
-                  ]
-                }
-              ],
-              "address_part": "All",
-              "match_type": "Is",
-              "comparator": "AsciiCaseMap",
-              "zone": null,
-              "list": true
-            }
-          },
-          "commands": [
-            {
-              "If": [
-                {
-                  "test": {
-                    "SpamTest": {
-                      "value": {
-                        "Text": [
-                          56
-                        ]
-                      },
-                      "match_type": {
-                        "Value": "Ge"
-                      },
-                      "comparator": "AsciiNumeric",
-                      "percent": false
-                    }
-                  },
-                  "commands": [
-                    {
-                      "FileInto": {
-                        "copy": false,
-                        "create": false,
-                        "folder": {
-                          "Text": [
-                            115,
-                            112,
-                            97,
-                            109
-                          ]
-                        },
-                        "flags": [],
-                        "mailbox_id": null,
-                        "special_use": null
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "test": {
-            "SpamTest": {
-              "value": {
+      "Test": {
+        "test": {
+          "Envelope": {
+            "header_list": [
+              {
                 "Text": [
-                  51
+                  102,
+                  114,
+                  111,
+                  109
                 ]
-              },
-              "match_type": {
-                "Value": "Ge"
-              },
-              "comparator": "AsciiNumeric",
-              "percent": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    115,
-                    112,
-                    97,
-                    109
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
               }
-            }
-          ]
-        }
-      ]
-    },
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  58,
+                  97,
+                  100,
+                  100,
+                  114,
+                  98,
+                  111,
+                  111,
+                  107,
+                  58,
+                  100,
+                  101,
+                  102,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "zone": null,
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    2,
     {
-      "If": [
-        {
-          "test": {
-            "ValidExtList": {
-              "list_names": [
-                {
-                  "Text": [
-                    97,
-                    100,
-                    100,
-                    114,
-                    98,
-                    111,
-                    111,
-                    107
-                  ]
-                }
+      "Jz": 7
+    }
+  ],
+  [
+    3,
+    {
+      "Test": {
+        "test": {
+          "SpamTest": {
+            "value": {
+              "Text": [
+                56
               ]
-            }
-          },
-          "commands": [
-            {
-              "Keep": {
-                "flags": []
-              }
-            }
-          ]
-        }
-      ]
-    },
+            },
+            "match_type": {
+              "Value": "Ge"
+            },
+            "comparator": "AsciiNumeric",
+            "percent": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    4,
     {
-      "If": [
-        {
-          "test": {
-            "Envelope": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    58,
-                    97,
-                    100,
-                    100,
-                    114,
-                    98,
-                    111,
-                    111,
-                    107,
-                    58,
-                    100,
-                    101,
-                    102,
-                    97,
-                    117,
-                    108,
-                    116
-                  ]
-                }
-              ],
-              "address_part": "All",
-              "match_type": "Is",
-              "comparator": "AsciiCaseMap",
-              "zone": null,
-              "list": true
-            }
-          },
-          "commands": [
-            {
-              "Set": {
-                "modifiers": [],
-                "name": {
-                  "Text": [
-                    108,
-                    105,
-                    109
-                  ]
-                },
-                "value": {
-                  "Text": [
-                    56
-                  ]
-                },
-                "encode_url": false
-              }
-            }
+      "Jz": 6
+    }
+  ],
+  [
+    5,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            115,
+            112,
+            97,
+            109
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Set": {
-                "modifiers": [],
-                "name": {
-                  "Text": [
-                    108,
-                    105,
-                    109
-                  ]
-                },
-                "value": {
-                  "Text": [
-                    51
-                  ]
-                },
-                "encode_url": false
-              }
-            }
-          ]
-        }
-      ]
-    },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    6,
     {
-      "If": [
-        {
-          "test": {
-            "SpamTest": {
-              "value": {
-                "VariableName": "lim"
-              },
-              "match_type": {
-                "Value": "Ge"
-              },
-              "comparator": "AsciiNumeric",
-              "percent": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    115,
-                    112,
-                    97,
-                    109
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
-        }
-      ]
-    },
+      "Jmp": 10
+    }
+  ],
+  [
+    7,
     {
-      "If": [
-        {
-          "test": {
-            "CurrentDate": {
-              "zone": null,
-              "match_type": "Is",
-              "comparator": "AsciiCaseMap",
-              "date_part": "Date",
-              "key_list": [
-                {
-                  "Text": [
-                    116,
-                    97,
-                    103,
-                    58,
-                    101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    46,
-                    99,
-                    111,
-                    109,
-                    44,
-                    50,
-                    48,
-                    49,
-                    49,
-                    45,
-                    48,
-                    49,
-                    45,
-                    48,
-                    49,
-                    58,
-                    108,
-                    111,
-                    99,
-                    97,
-                    108,
-                    72,
-                    111,
-                    108,
-                    105,
-                    100,
-                    97,
-                    121,
-                    115
-                  ]
-                }
-              ],
-              "list": true
-            }
-          },
-          "commands": [
-            {
-              "Notify": {
-                "from": null,
-                "importance": null,
-                "options": [],
-                "message": null,
-                "fcc": null,
-                "method": {
-                  "Text": [
-                    120,
-                    109,
-                    112,
-                    112,
-                    58,
-                    114,
-                    111,
-                    109,
-                    101,
-                    111,
-                    64,
-                    105,
-                    109,
-                    46,
-                    101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    46,
-                    99,
-                    111,
-                    109
-                  ]
-                }
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "If": [
-        {
-          "test": {
-            "AllOf": [
-              {
-                "Envelope": {
-                  "header_list": [
-                    {
-                      "Text": [
-                        116,
-                        111
-                      ]
-                    }
-                  ],
-                  "key_list": [
-                    {
-                      "Text": [
-                        109,
-                        121,
-                        108,
-                        105,
-                        115,
-                        116
-                      ]
-                    }
-                  ],
-                  "address_part": "Detail",
-                  "match_type": "Is",
-                  "comparator": "AsciiCaseMap",
-                  "zone": null,
-                  "list": false
-                }
-              },
-              {
-                "Header": {
-                  "header_list": [
-                    {
-                      "Text": [
-                        102,
-                        114,
-                        111,
-                        109
-                      ]
-                    }
-                  ],
-                  "key_list": [
-                    {
-                      "Text": [
-                        116,
-                        97,
-                        103,
-                        58,
-                        101,
-                        120,
-                        97,
-                        109,
-                        112,
-                        108,
-                        101,
-                        46,
-                        99,
-                        111,
-                        109,
-                        44,
-                        50,
-                        48,
-                        49,
-                        48,
-                        45,
-                        48,
-                        53,
-                        45,
-                        50,
-                        56,
-                        58,
-                        109,
-                        121,
-                        108,
-                        105,
-                        115,
-                        116
-                      ]
-                    }
-                  ],
-                  "match_type": "Is",
-                  "comparator": "AsciiCaseMap",
-                  "index": null,
-                  "index_last": false,
-                  "mime": false,
-                  "mime_opts": "None",
-                  "mime_anychild": false,
-                  "list": true
-                }
-              }
-            ]
-          },
-          "commands": [
-            {
-              "Redirect": {
-                "copy": false,
-                "address": {
-                  "Text": [
-                    116,
-                    97,
-                    103,
-                    58,
-                    101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    46,
-                    99,
-                    111,
-                    109,
-                    44,
-                    50,
-                    48,
-                    49,
-                    48,
-                    45,
-                    48,
-                    53,
-                    45,
-                    50,
-                    56,
-                    58,
-                    109,
-                    121,
-                    108,
-                    105,
-                    115,
-                    116
-                  ]
-                },
-                "notify": "Default",
-                "ret": "Default",
-                "by_time": "None",
-                "list": true
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    114,
-                    101,
-                    99,
-                    101,
-                    105,
-                    118,
-                    101,
-                    100
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "List": [
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        40
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        32,
-                        91
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        93,
-                        41
-                      ]
-                    },
-                    {
-                      "MatchMany": 1
-                    }
-                  ]
-                }
-              ],
-              "match_type": "Matches",
-              "comparator": "AsciiCaseMap",
-              "index": 1,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Set": {
-                "modifiers": [],
-                "name": {
-                  "Text": [
-                    105,
-                    112
-                  ]
-                },
-                "value": {
-                  "List": [
-                    {
-                      "VariableNumber": 3
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "VariableNumber": 4
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "VariableNumber": 5
-                    },
-                    {
-                      "Text": [
-                        46
-                      ]
-                    },
-                    {
-                      "VariableNumber": 6
-                    }
-                  ]
-                },
-                "encode_url": false
-              }
-            },
-            {
-              "If": [
-                {
-                  "test": {
-                    "String": {
-                      "match_type": "Is",
-                      "comparator": "AsciiCaseMap",
-                      "source": [
-                        {
-                          "VariableName": "ip"
-                        }
-                      ],
-                      "key_list": [
-                        {
-                          "Text": [
-                            116,
-                            97,
-                            103,
-                            58,
-                            101,
-                            120,
-                            97,
-                            109,
-                            112,
-                            108,
-                            101,
-                            46,
-                            99,
-                            111,
-                            109,
-                            44,
-                            50,
-                            48,
-                            49,
-                            49,
-                            45,
-                            48,
-                            52,
-                            45,
-                            49,
-                            48,
-                            58,
-                            68,
-                            105,
-                            115,
-                            97,
-                            108,
-                            108,
-                            111,
-                            119,
-                            101,
-                            100,
-                            73,
-                            80,
-                            115
-                          ]
-                        }
-                      ],
-                      "list": true
-                    }
-                  },
-                  "commands": [
-                    {
-                      "Reject": {
-                        "ereject": false,
-                        "reason": {
-                          "Text": [
-                            77,
-                            101,
-                            115,
-                            115,
-                            97,
-                            103,
-                            101,
-                            32,
-                            110,
-                            111,
-                            116,
-                            32,
-                            97,
-                            108,
-                            108,
-                            111,
-                            119,
-                            101,
-                            100,
-                            32,
-                            102,
-                            114,
-                            111,
-                            109,
-                            32,
-                            116,
-                            104,
-                            105,
-                            115,
-                            32,
-                            73,
-                            80,
-                            32,
-                            97,
-                            100,
-                            100,
-                            114,
-                            101,
-                            115,
-                            115
-                          ]
-                        }
-                      }
-                    }
-                  ]
-                }
+      "Test": {
+        "test": {
+          "SpamTest": {
+            "value": {
+              "Text": [
+                51
               ]
-            }
-          ]
-        }
-      ]
-    },
+            },
+            "match_type": {
+              "Value": "Ge"
+            },
+            "comparator": "AsciiNumeric",
+            "percent": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    8,
     {
-      "ForEveryPart": {
-        "name": null,
-        "commands": [
-          {
-            "If": [
+      "Jz": 10
+    }
+  ],
+  [
+    9,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            115,
+            112,
+            97,
+            109
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    10,
+    {
+      "Test": {
+        "test": {
+          "ValidExtList": {
+            "list_names": [
               {
-                "test": {
-                  "Header": {
-                    "header_list": [
-                      {
-                        "Text": [
-                          67,
-                          111,
-                          110,
-                          116,
-                          101,
-                          110,
-                          116,
-                          45,
-                          84,
-                          121,
-                          112,
-                          101
-                        ]
-                      },
-                      {
-                        "Text": [
-                          67,
-                          111,
-                          110,
-                          116,
-                          101,
-                          110,
-                          116,
-                          45,
-                          68,
-                          105,
-                          115,
-                          112,
-                          111,
-                          115,
-                          105,
-                          116,
-                          105,
-                          111,
-                          110
-                        ]
-                      }
-                    ],
-                    "key_list": [
-                      {
-                        "Text": [
-                          116,
-                          97,
-                          103,
-                          58,
-                          101,
-                          120,
-                          97,
-                          109,
-                          112,
-                          108,
-                          101,
-                          46,
-                          99,
-                          111,
-                          109,
-                          44,
-                          50,
-                          48,
-                          49,
-                          49,
-                          45,
-                          48,
-                          52,
-                          45,
-                          49,
-                          48,
-                          58,
-                          66,
-                          97,
-                          100,
-                          70,
-                          105,
-                          108,
-                          101,
-                          78,
-                          97,
-                          109,
-                          101,
-                          69,
-                          120,
-                          116,
-                          115
-                        ]
-                      }
-                    ],
-                    "match_type": "Is",
-                    "comparator": "AsciiCaseMap",
-                    "index": null,
-                    "index_last": false,
-                    "mime": true,
-                    "mime_opts": {
-                      "Param": [
-                        {
-                          "Text": [
-                            102,
-                            105,
-                            108,
-                            101,
-                            110,
-                            97,
-                            109,
-                            101
-                          ]
-                        }
-                      ]
-                    },
-                    "mime_anychild": false,
-                    "list": true
-                  }
-                },
-                "commands": [
-                  {
-                    "Enclose": {
-                      "subject": {
-                        "Text": [
-                          87,
-                          97,
-                          114,
-                          110,
-                          105,
-                          110,
-                          103
-                        ]
-                      },
-                      "headers": [],
-                      "value": {
-                        "Text": [
-                          87,
-                          65,
-                          82,
-                          78,
-                          73,
-                          78,
-                          71,
-                          33,
-                          10
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "Break": {
-                      "name": null
-                    }
-                  }
+                "Text": [
+                  97,
+                  100,
+                  100,
+                  114,
+                  98,
+                  111,
+                  111,
+                  107
                 ]
               }
             ]
           }
-        ]
+        },
+        "is_not": false
       }
     }
+  ],
+  [
+    11,
+    {
+      "Jz": 13
+    }
+  ],
+  [
+    12,
+    {
+      "Keep": {
+        "flags": []
+      }
+    }
+  ],
+  [
+    13,
+    {
+      "Test": {
+        "test": {
+          "Envelope": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  58,
+                  97,
+                  100,
+                  100,
+                  114,
+                  98,
+                  111,
+                  111,
+                  107,
+                  58,
+                  100,
+                  101,
+                  102,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "zone": null,
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    14,
+    {
+      "Jz": 17
+    }
+  ],
+  [
+    15,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "Text": [
+            56
+          ]
+        },
+        "encode_url": false
+      }
+    }
+  ],
+  [
+    16,
+    {
+      "Jmp": 18
+    }
+  ],
+  [
+    17,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 1
+        },
+        "value": {
+          "Text": [
+            51
+          ]
+        },
+        "encode_url": false
+      }
+    }
+  ],
+  [
+    18,
+    {
+      "Test": {
+        "test": {
+          "SpamTest": {
+            "value": {
+              "Text": []
+            },
+            "match_type": {
+              "Value": "Ge"
+            },
+            "comparator": "AsciiNumeric",
+            "percent": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    19,
+    {
+      "Jz": 21
+    }
+  ],
+  [
+    20,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            115,
+            112,
+            97,
+            109
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    21,
+    {
+      "Test": {
+        "test": {
+          "CurrentDate": {
+            "zone": null,
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "date_part": "Date",
+            "key_list": [
+              {
+                "Text": [
+                  116,
+                  97,
+                  103,
+                  58,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  99,
+                  111,
+                  109,
+                  44,
+                  50,
+                  48,
+                  49,
+                  49,
+                  45,
+                  48,
+                  49,
+                  45,
+                  48,
+                  49,
+                  58,
+                  108,
+                  111,
+                  99,
+                  97,
+                  108,
+                  72,
+                  111,
+                  108,
+                  105,
+                  100,
+                  97,
+                  121,
+                  115
+                ]
+              }
+            ],
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    22,
+    {
+      "Jz": 24
+    }
+  ],
+  [
+    23,
+    {
+      "Notify": {
+        "from": null,
+        "importance": null,
+        "options": [],
+        "message": null,
+        "fcc": null,
+        "method": {
+          "Text": [
+            120,
+            109,
+            112,
+            112,
+            58,
+            114,
+            111,
+            109,
+            101,
+            111,
+            64,
+            105,
+            109,
+            46,
+            101,
+            120,
+            97,
+            109,
+            112,
+            108,
+            101,
+            46,
+            99,
+            111,
+            109
+          ]
+        }
+      }
+    }
+  ],
+  [
+    24,
+    {
+      "Test": {
+        "test": {
+          "Envelope": {
+            "header_list": [
+              {
+                "Text": [
+                  116,
+                  111
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  109,
+                  121,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              }
+            ],
+            "address_part": "Detail",
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "zone": null,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    25,
+    {
+      "Jz": 27
+    }
+  ],
+  [
+    26,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  116,
+                  97,
+                  103,
+                  58,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  99,
+                  111,
+                  109,
+                  44,
+                  50,
+                  48,
+                  49,
+                  48,
+                  45,
+                  48,
+                  53,
+                  45,
+                  50,
+                  56,
+                  58,
+                  109,
+                  121,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              }
+            ],
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    27,
+    {
+      "Jz": 29
+    }
+  ],
+  [
+    28,
+    {
+      "Redirect": {
+        "copy": false,
+        "address": {
+          "Text": [
+            116,
+            97,
+            103,
+            58,
+            101,
+            120,
+            97,
+            109,
+            112,
+            108,
+            101,
+            46,
+            99,
+            111,
+            109,
+            44,
+            50,
+            48,
+            49,
+            48,
+            45,
+            48,
+            53,
+            45,
+            50,
+            56,
+            58,
+            109,
+            121,
+            108,
+            105,
+            115,
+            116
+          ]
+        },
+        "notify": "Default",
+        "ret": "Default",
+        "by_time": "None",
+        "list": true
+      }
+    }
+  ],
+  [
+    29,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  118,
+                  101,
+                  100
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "List": [
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      40
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      32,
+                      91
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      46
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      46
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      46
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      93,
+                      41
+                    ]
+                  },
+                  {
+                    "MatchMany": 1
+                  }
+                ]
+              }
+            ],
+            "match_type": "Matches",
+            "comparator": "AsciiCaseMap",
+            "index": 1,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    30,
+    {
+      "Jz": 35
+    }
+  ],
+  [
+    31,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 2
+        },
+        "value": {
+          "List": [
+            {
+              "MatchVariable": 3
+            },
+            {
+              "Text": [
+                46
+              ]
+            },
+            {
+              "MatchVariable": 4
+            },
+            {
+              "Text": [
+                46
+              ]
+            },
+            {
+              "MatchVariable": 5
+            },
+            {
+              "Text": [
+                46
+              ]
+            },
+            {
+              "MatchVariable": 6
+            }
+          ]
+        },
+        "encode_url": false
+      }
+    }
+  ],
+  [
+    32,
+    {
+      "Test": {
+        "test": {
+          "String": {
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "source": [
+              {
+                "LocalVariable": 2
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  116,
+                  97,
+                  103,
+                  58,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  99,
+                  111,
+                  109,
+                  44,
+                  50,
+                  48,
+                  49,
+                  49,
+                  45,
+                  48,
+                  52,
+                  45,
+                  49,
+                  48,
+                  58,
+                  68,
+                  105,
+                  115,
+                  97,
+                  108,
+                  108,
+                  111,
+                  119,
+                  101,
+                  100,
+                  73,
+                  80,
+                  115
+                ]
+              }
+            ],
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    33,
+    {
+      "Jz": 35
+    }
+  ],
+  [
+    34,
+    {
+      "Reject": {
+        "ereject": false,
+        "reason": {
+          "Text": [
+            77,
+            101,
+            115,
+            115,
+            97,
+            103,
+            101,
+            32,
+            110,
+            111,
+            116,
+            32,
+            97,
+            108,
+            108,
+            111,
+            119,
+            101,
+            100,
+            32,
+            102,
+            114,
+            111,
+            109,
+            32,
+            116,
+            104,
+            105,
+            115,
+            32,
+            73,
+            80,
+            32,
+            97,
+            100,
+            100,
+            114,
+            101,
+            115,
+            115
+          ]
+        }
+      }
+    }
+  ],
+  [
+    35,
+    {
+      "ForEveryPart": {
+        "jz_pos": 41
+      }
+    }
+  ],
+  [
+    36,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  67,
+                  111,
+                  110,
+                  116,
+                  101,
+                  110,
+                  116,
+                  45,
+                  84,
+                  121,
+                  112,
+                  101
+                ]
+              },
+              {
+                "Text": [
+                  67,
+                  111,
+                  110,
+                  116,
+                  101,
+                  110,
+                  116,
+                  45,
+                  68,
+                  105,
+                  115,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  116,
+                  97,
+                  103,
+                  58,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  99,
+                  111,
+                  109,
+                  44,
+                  50,
+                  48,
+                  49,
+                  49,
+                  45,
+                  48,
+                  52,
+                  45,
+                  49,
+                  48,
+                  58,
+                  66,
+                  97,
+                  100,
+                  70,
+                  105,
+                  108,
+                  101,
+                  78,
+                  97,
+                  109,
+                  101,
+                  69,
+                  120,
+                  116,
+                  115
+                ]
+              }
+            ],
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": true,
+            "mime_opts": {
+              "Param": [
+                {
+                  "Text": [
+                    102,
+                    105,
+                    108,
+                    101,
+                    110,
+                    97,
+                    109,
+                    101
+                  ]
+                }
+              ]
+            },
+            "mime_anychild": false,
+            "list": true
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    37,
+    {
+      "Jz": 40
+    }
+  ],
+  [
+    38,
+    {
+      "Enclose": {
+        "subject": {
+          "Text": [
+            87,
+            97,
+            114,
+            110,
+            105,
+            110,
+            103
+          ]
+        },
+        "headers": [],
+        "value": {
+          "Text": [
+            87,
+            65,
+            82,
+            78,
+            73,
+            78,
+            71,
+            33,
+            10
+          ]
+        }
+      }
+    }
+  ],
+  [
+    39,
+    {
+      "Jmp": 41
+    }
+  ],
+  [
+    40,
+    {
+      "Jmp": 35
+    }
   ]
-}
+]

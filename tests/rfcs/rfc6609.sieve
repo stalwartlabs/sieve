@@ -54,8 +54,6 @@ if string :count "eq" "${test_mailbox}" "1"
     stop;
 }
 
-global ["test", "test_mailbox"];
-
 if header :contains "Subject" "${test}"
 {
     set "test_mailbox" "spam-${test}";
@@ -68,6 +66,11 @@ global "i_am_on_vacation";
 set "global.i_am_on_vacation" "1";
 
 if string :is "${i_am_on_vacation}" "1"
+{
+    vacation "It's true, I am on vacation.";
+}
+
+if string :is "${global.i_am_on_vacation}" "1"
 {
     vacation "It's true, I am on vacation.";
 }

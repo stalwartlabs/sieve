@@ -1,326 +1,399 @@
-{
-  "capabilities": [
-    "Relational",
+[
+  [
+    0,
     {
-      "Comparator": "AsciiNumeric"
-    },
-    "FileInto"
-  ],
-  "commands": [
-    {
-      "If": [
+      "Require": [
+        "Relational",
         {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    120,
-                    45,
-                    112,
-                    114,
-                    105,
-                    111,
-                    114,
-                    105,
-                    116,
-                    121
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    51
-                  ]
-                }
-              ],
-              "match_type": {
-                "Value": "Lt"
-              },
-              "comparator": "AsciiNumeric",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    80,
-                    114,
-                    105,
-                    111,
-                    114,
-                    105,
-                    116,
-                    121
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
+          "Comparator": "AsciiNumeric"
         },
-        {
-          "test": {
-            "Address": {
-              "header_list": [
-                {
-                  "Text": [
-                    116,
-                    111
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    53
-                  ]
-                }
-              ],
-              "address_part": "All",
-              "match_type": {
-                "Count": "Gt"
-              },
-              "comparator": "AsciiNumeric",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    83,
-                    80,
-                    65,
-                    77
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
-        },
-        {
-          "test": {
-            "Address": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    77
-                  ]
-                }
-              ],
-              "address_part": "All",
-              "match_type": {
-                "Value": "Gt"
-              },
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    70,
-                    114,
-                    111,
-                    109,
-                    32,
-                    78,
-                    45,
-                    90
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
-        },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    70,
-                    114,
-                    111,
-                    109,
-                    32,
-                    65,
-                    45,
-                    77
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "If": [
-        {
-          "test": {
-            "AllOf": [
-              {
-                "Address": {
-                  "header_list": [
-                    {
-                      "Text": [
-                        116,
-                        111
-                      ]
-                    },
-                    {
-                      "Text": [
-                        99,
-                        99
-                      ]
-                    }
-                  ],
-                  "key_list": [
-                    {
-                      "Text": [
-                        49
-                      ]
-                    }
-                  ],
-                  "address_part": "All",
-                  "match_type": {
-                    "Count": "Eq"
-                  },
-                  "comparator": "AsciiNumeric",
-                  "index": null,
-                  "index_last": false,
-                  "mime": false,
-                  "mime_anychild": false,
-                  "list": false
-                }
-              },
-              {
-                "Address": {
-                  "header_list": [
-                    {
-                      "Text": [
-                        116,
-                        111
-                      ]
-                    },
-                    {
-                      "Text": [
-                        99,
-                        99
-                      ]
-                    }
-                  ],
-                  "key_list": [
-                    {
-                      "Text": [
-                        109,
-                        101,
-                        64,
-                        102,
-                        111,
-                        111,
-                        46,
-                        101,
-                        120,
-                        97,
-                        109,
-                        112,
-                        108,
-                        101,
-                        46,
-                        99,
-                        111,
-                        109
-                      ]
-                    }
-                  ],
-                  "address_part": "All",
-                  "match_type": "Is",
-                  "comparator": "AsciiCaseMap",
-                  "index": null,
-                  "index_last": false,
-                  "mime": false,
-                  "mime_anychild": false,
-                  "list": false
-                }
-              }
-            ]
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    79,
-                    110,
-                    108,
-                    121,
-                    32,
-                    109,
-                    101
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": null,
-                "special_use": null
-              }
-            }
-          ]
-        }
+        "FileInto"
       ]
     }
+  ],
+  [
+    1,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  120,
+                  45,
+                  112,
+                  114,
+                  105,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  51
+                ]
+              }
+            ],
+            "match_type": {
+              "Value": "Lt"
+            },
+            "comparator": "AsciiNumeric",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Jz": 5
+    }
+  ],
+  [
+    3,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            80,
+            114,
+            105,
+            111,
+            114,
+            105,
+            116,
+            121
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    4,
+    {
+      "Jmp": 14
+    }
+  ],
+  [
+    5,
+    {
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": [
+                  116,
+                  111
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  53
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": {
+              "Count": "Gt"
+            },
+            "comparator": "AsciiNumeric",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    6,
+    {
+      "Jz": 9
+    }
+  ],
+  [
+    7,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            83,
+            80,
+            65,
+            77
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    8,
+    {
+      "Jmp": 14
+    }
+  ],
+  [
+    9,
+    {
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  77
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": {
+              "Value": "Gt"
+            },
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    10,
+    {
+      "Jz": 13
+    }
+  ],
+  [
+    11,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            70,
+            114,
+            111,
+            109,
+            32,
+            78,
+            45,
+            90
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    12,
+    {
+      "Jmp": 14
+    }
+  ],
+  [
+    13,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            70,
+            114,
+            111,
+            109,
+            32,
+            65,
+            45,
+            77
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
+  ],
+  [
+    14,
+    {
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": [
+                  116,
+                  111
+                ]
+              },
+              {
+                "Text": [
+                  99,
+                  99
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  49
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": {
+              "Count": "Eq"
+            },
+            "comparator": "AsciiNumeric",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    15,
+    {
+      "Jz": 17
+    }
+  ],
+  [
+    16,
+    {
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": [
+                  116,
+                  111
+                ]
+              },
+              {
+                "Text": [
+                  99,
+                  99
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  109,
+                  101,
+                  64,
+                  102,
+                  111,
+                  111,
+                  46,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  99,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": "Is",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    17,
+    {
+      "Jz": 19
+    }
+  ],
+  [
+    18,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            79,
+            110,
+            108,
+            121,
+            32,
+            109,
+            101
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
+    }
   ]
-}
+]

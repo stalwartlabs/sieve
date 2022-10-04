@@ -1,17 +1,15 @@
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::{command::CompilerState, Comparator},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestDate {
     pub header_name: StringItem,
     pub key_list: Vec<StringItem>,
@@ -24,7 +22,7 @@ pub(crate) struct TestDate {
     pub list: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestCurrentDate {
     pub zone: Option<i32>,
     pub match_type: MatchType,
@@ -58,7 +56,7 @@ pub(crate) enum DatePart {
     Weekday,
 }
 
-impl<'x> Tokenizer<'x> {
+impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_date(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
@@ -72,7 +70,7 @@ impl<'x> Tokenizer<'x> {
         let mut list = false;
 
         loop {
-            let mut token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -88,7 +86,7 @@ impl<'x> Tokenizer<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.unwrap_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
@@ -100,8 +98,8 @@ impl<'x> Tokenizer<'x> {
                     zone = Zone::Original;
                 }
                 Token::Tag(Word::Zone) => {
-                    let token_info = self.unwrap_next()?;
-                    if let Token::String(StringItem::Text(value)) = &token_info.token {
+                    let token_info = self.tokens.unwrap_next()?;
+                    if let Token::StringConstant(value) = &token_info.token {
                         if let Ok(value) = std::str::from_utf8(value) {
                             if let Ok(timezone) = value.parse() {
                                 zone = Zone::Time(timezone);
@@ -111,11 +109,11 @@ impl<'x> Tokenizer<'x> {
                     }
                     return Err(token_info.expected("string containing time zone"));
                 }
-                Token::String(string) => {
+                _ => {
                     if header_name.is_none() {
-                        header_name = string.into();
+                        header_name = self.parse_string_token(token_info)?.into();
                     } else if date_part.is_none() {
-                        if let StringItem::Text(string) = &string {
+                        if let Token::StringConstant(string) = &token_info.token {
                             if let Ok(string) = std::str::from_utf8(string) {
                                 if let Some(date_part_) =
                                     DATE_PART.get(&string.to_ascii_lowercase())
@@ -125,29 +123,12 @@ impl<'x> Tokenizer<'x> {
                                 }
                             }
                         }
-                        token_info.token = Token::String(string);
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
                         break;
                     }
-                }
-                Token::BracketOpen if header_name.is_some() && date_part.is_some() => {
-                    key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                    break;
-                }
-                _ => {
-                    return Err(token_info.expected(
-                        if header_name.is_some() && date_part.is_some() {
-                            "string or string list"
-                        } else {
-                            "string"
-                        },
-                    ));
                 }
             }
         }
@@ -175,7 +156,7 @@ impl<'x> Tokenizer<'x> {
         let mut list = false;
 
         loop {
-            let mut token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -194,8 +175,8 @@ impl<'x> Tokenizer<'x> {
                     list = true;
                 }
                 Token::Tag(Word::Zone) => {
-                    let token_info = self.unwrap_next()?;
-                    if let Token::String(StringItem::Text(value)) = &token_info.token {
+                    let token_info = self.tokens.unwrap_next()?;
+                    if let Token::StringConstant(value) = &token_info.token {
                         if let Ok(value) = std::str::from_utf8(value) {
                             if let Ok(timezone) = value.parse::<i32>() {
                                 zone = timezone.into();
@@ -205,9 +186,9 @@ impl<'x> Tokenizer<'x> {
                     }
                     return Err(token_info.expected("string containing time zone"));
                 }
-                Token::String(string) => {
+                _ => {
                     if date_part.is_none() {
-                        if let StringItem::Text(string) = &string {
+                        if let Token::StringConstant(string) = &token_info.token {
                             if let Ok(string) = std::str::from_utf8(string) {
                                 if let Some(date_part_) =
                                     DATE_PART.get(&string.to_ascii_lowercase())
@@ -217,27 +198,12 @@ impl<'x> Tokenizer<'x> {
                                 }
                             }
                         }
-                        token_info.token = Token::String(string);
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
                         break;
                     }
-                }
-                Token::BracketOpen if date_part.is_some() => {
-                    key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                    break;
-                }
-                _ => {
-                    return Err(token_info.expected(if date_part.is_some() {
-                        "string or string list"
-                    } else {
-                        "string"
-                    }));
                 }
             }
         }

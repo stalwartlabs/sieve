@@ -1,21 +1,19 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::{command::CompilerState, Comparator},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{test::Test, MatchType};
 
 /*
            Usage:    spamtest [":percent"] [COMPARATOR] [MATCH-TYPE]
                      <value: string>
 */
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestSpamTest {
     pub value: StringItem,
     pub match_type: MatchType,
@@ -23,14 +21,14 @@ pub(crate) struct TestSpamTest {
     pub percent: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestVirusTest {
     pub value: StringItem,
     pub match_type: MatchType,
     pub comparator: Comparator,
 }
 
-impl<'x> Tokenizer<'x> {
+impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_spamtest(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
@@ -38,7 +36,7 @@ impl<'x> Tokenizer<'x> {
         let value;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -56,12 +54,9 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Percent) => {
                     percent = true;
                 }
-                Token::String(string) => {
-                    value = string;
-                    break;
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    value = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
@@ -80,7 +75,7 @@ impl<'x> Tokenizer<'x> {
         let value;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -95,12 +90,9 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::String(string) => {
-                    value = string;
-                    break;
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    value = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }

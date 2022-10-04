@@ -89,6 +89,22 @@ impl TokenInfo {
             error_type: ErrorType::InvalidGrammar(reason.into()),
         }
     }
+
+    pub fn invalid_utf8(self) -> CompileError {
+        CompileError {
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type: ErrorType::InvalidUtf8String,
+        }
+    }
+
+    pub fn custom(self, error_type: ErrorType) -> CompileError {
+        CompileError {
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -115,7 +131,10 @@ mod tests {
                 tests_run += 1;
 
                 let sieve = Compiler::new().compile(&script).unwrap();
-                let json_sieve = serde_json::to_string_pretty(&sieve).unwrap();
+                let json_sieve = serde_json::to_string_pretty(
+                    &sieve.commands.into_iter().enumerate().collect::<Vec<_>>(),
+                )
+                .unwrap();
 
                 fs::write(&file_name, json_sieve.as_bytes()).unwrap();
 

@@ -1,5 +1,62 @@
 require ["mime", "foreverypart", "fileinto", "replace", "enclose"];
 
+if true {
+    discard;
+}
+
+if allof(true, true, true) {
+    discard;
+}
+
+if anyof(true, false, false) {
+    discard;
+}
+
+if not anyof(true, false, false) {
+    stop;
+}
+
+if not allof(true, false, false) {
+    stop;
+}
+
+foreverypart :name "b1"
+{
+    foreverypart :name "b2"
+    {
+        foreverypart :name "b3"
+        {
+            foreverypart :name "b4"
+            {
+                foreverypart :name "b5"
+                {
+                    break :name "b1";
+                    return;
+                }
+                foreverypart :name "b6"
+                {
+                    break :name "b2";
+                    return;
+                }
+                break :name "b1";
+            }
+            break :name "b1";
+        }
+        break :name "b1";
+    }
+
+    if true {
+        discard;
+    } elsif false {
+        stop;
+    } else {
+        discard;
+    }
+    keep;
+    break :name "b1";
+}
+
+
 if header :mime :type "Content-Type" "image"
 {
     fileinto "INBOX.images";

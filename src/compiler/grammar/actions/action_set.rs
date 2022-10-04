@@ -1,11 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::command::{Command, CompilerState},
+    lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
+    CompileError,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,23 +17,29 @@ pub(crate) enum Modifier {
     Length,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Set {
     pub modifiers: Vec<Modifier>,
-    pub name: StringItem,
+    pub name: Variable,
     pub value: StringItem,
     pub encode_url: bool,
 }
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_set(&mut self) -> Result<Set, CompileError> {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum Variable {
+    Local(usize),
+    Global(String),
+}
+
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_set(&mut self) -> Result<(), CompileError> {
         let mut modifiers = Vec::new();
         let mut name = None;
-        let mut value = None;
+        let value;
         let mut encode_url = false;
 
-        while value.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Lower
@@ -51,25 +55,60 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::EncodeUrl) => {
                     encode_url = true;
                 }
-                Token::String(string) => {
-                    if name.is_none() {
-                        name = string.into();
-                    } else {
-                        value = string.into();
-                    }
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    if name.is_none() {
+                        match token_info.token {
+                            Token::StringConstant(value) => {
+                                name = if value.len() > 7
+                                    && value[..7].eq_ignore_ascii_case(b"global.")
+                                {
+                                    Variable::Global(
+                                        String::from_utf8(value[7..].to_vec()).map_err(|_| {
+                                            TokenInfo {
+                                                token: Token::StringConstant(value),
+                                                line_num: token_info.line_num,
+                                                line_pos: token_info.line_pos,
+                                            }
+                                            .invalid_utf8()
+                                        })?,
+                                    )
+                                } else {
+                                    let name = String::from_utf8(value).map_err(|err| {
+                                        TokenInfo {
+                                            token: Token::StringConstant(err.into_bytes()),
+                                            line_num: token_info.line_num,
+                                            line_pos: token_info.line_pos,
+                                        }
+                                        .invalid_utf8()
+                                    })?;
+
+                                    if !self.is_var_global(&name) {
+                                        Variable::Local(self.register_local_var(&name))
+                                    } else {
+                                        Variable::Global(name.to_ascii_lowercase())
+                                    }
+                                }
+                                .into();
+                            }
+                            _ => {
+                                return Err(token_info.invalid("variable name must be a constant"));
+                            }
+                        }
+                    } else {
+                        value = self.parse_string_token(token_info)?;
+                        break;
+                    }
                 }
             }
         }
 
-        Ok(Set {
+        self.commands.push(Command::Set(Set {
             modifiers,
             name: name.unwrap(),
-            value: value.unwrap(),
+            value,
             encode_url,
-        })
+        }));
+        Ok(())
     }
 }
 

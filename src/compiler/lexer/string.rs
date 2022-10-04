@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use crate::{compiler::ErrorType, runtime::StringItem, Compiler};
+use serde::{Deserialize, Serialize};
+
+use crate::compiler::{grammar::command::CompilerState, ErrorType};
 
 enum State {
     None,
@@ -11,11 +13,23 @@ enum State {
     },
 }
 
-impl Compiler {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum StringItem {
+    Text(Vec<u8>),
+    LocalVariable(usize),
+    MatchVariable(usize),
+    GlobalVariable(String),
+    MatchMany(usize),
+    MatchOne,
+    List(Vec<StringItem>),
+}
+
+impl<'x> CompilerState<'x> {
     pub(crate) fn tokenize_string(
         &self,
         bytes: &[u8],
         parse_decoded: bool,
+        parse_matches: bool,
     ) -> Result<StringItem, ErrorType> {
         let mut state = State::None;
         let mut items = Vec::with_capacity(3);
@@ -26,7 +40,6 @@ impl Compiler {
 
         let mut hex_start = usize::MAX;
         let mut decode_buf = Vec::with_capacity(bytes.len());
-        let mut string_len = 0;
 
         for (pos, &ch) in bytes.iter().enumerate() {
             let mut is_var_error = false;
@@ -51,29 +64,41 @@ impl Compiler {
                         if pos > var_start_pos {
                             // Add any text before the variable
                             if !decode_buf.is_empty() {
-                                string_len += decode_buf.len();
-                                self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
+                                self.add_string_item(
+                                    &mut items,
+                                    &decode_buf,
+                                    parse_decoded,
+                                    parse_matches,
+                                )?;
                                 decode_buf.clear();
                             }
 
-                            items.push(if !var_is_number {
-                                let var_len = pos - var_start_pos;
-                                if var_len < self.max_variable_len {
-                                    string_len += var_len;
-                                    StringItem::VariableName(
-                                        String::from_utf8(bytes[var_start_pos..pos].to_vec())
+                            if !var_is_number {
+                                if pos - var_start_pos > 7
+                                    && bytes[var_start_pos..var_start_pos + 7]
+                                        .eq_ignore_ascii_case(b"global.")
+                                {
+                                    items.push(StringItem::GlobalVariable(
+                                        String::from_utf8(bytes[var_start_pos + 7..pos].to_vec())
                                             .unwrap(),
-                                    )
+                                    ));
                                 } else {
-                                    return Err(ErrorType::VariableTooLong);
+                                    let var_name =
+                                        String::from_utf8(bytes[var_start_pos..pos].to_vec())
+                                            .unwrap();
+                                    if self.is_var_global(&var_name) {
+                                        items.push(StringItem::GlobalVariable(var_name));
+                                    } else if let Some(var_id) = self.get_local_var(&var_name) {
+                                        items.push(StringItem::LocalVariable(var_id));
+                                    }
                                 }
                             } else {
                                 let num = std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
-                                StringItem::VariableNumber(
+                                items.push(StringItem::MatchVariable(
                                     num.parse()
                                         .map_err(|_| ErrorType::InvalidNumber(num.to_string()))?,
-                                )
-                            });
+                                ));
+                            }
                             state = State::None;
                         } else {
                             is_var_error = true;
@@ -179,19 +204,14 @@ impl Compiler {
         }
 
         if !decode_buf.is_empty() {
-            string_len += decode_buf.len();
-            self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
+            self.add_string_item(&mut items, &decode_buf, parse_decoded, parse_matches)?;
         }
 
-        if string_len < self.max_string_len {
-            Ok(match items.len() {
-                1 => items.pop().unwrap(),
-                0 => StringItem::Text(Vec::new()),
-                _ => StringItem::List(items),
-            })
-        } else {
-            Err(ErrorType::StringTooLong)
-        }
+        Ok(match items.len() {
+            1 => items.pop().unwrap(),
+            0 => StringItem::Text(Vec::new()),
+            _ => StringItem::List(items),
+        })
     }
 
     #[inline(always)]
@@ -200,11 +220,47 @@ impl Compiler {
         items: &mut Vec<StringItem>,
         buf: &[u8],
         parse_decoded: bool,
+        parse_matches: bool,
     ) -> Result<(), ErrorType> {
         if !parse_decoded {
-            items.push(StringItem::Text(buf.to_vec()));
+            if !parse_matches {
+                items.push(StringItem::Text(buf.to_vec()));
+            } else {
+                let mut chars = Vec::with_capacity(buf.len());
+                let items_start = items.len();
+
+                for &ch in buf {
+                    match ch {
+                        b'*' => {
+                            if !chars.is_empty() {
+                                items.push(StringItem::Text(chars.to_vec()));
+                                chars.clear();
+                            }
+                            if let Some(StringItem::MatchMany(count)) = items.last_mut() {
+                                *count += 1;
+                            } else {
+                                items.push(StringItem::MatchMany(1));
+                            }
+                        }
+                        b'?' => {
+                            if !chars.is_empty() {
+                                items.push(StringItem::Text(chars.to_vec()));
+                                chars.clear();
+                            }
+                            items.push(StringItem::MatchOne);
+                        }
+                        _ => {
+                            chars.push(ch);
+                        }
+                    }
+                }
+
+                if items_start != items.len() && !chars.is_empty() {
+                    items.push(StringItem::Text(chars.to_vec()));
+                }
+            }
         } else {
-            match self.tokenize_string(buf, false)? {
+            match self.tokenize_string(buf, false, parse_matches)? {
                 StringItem::List(new_items) => items.extend(new_items),
                 item => items.push(item),
             }
@@ -214,79 +270,13 @@ impl Compiler {
     }
 }
 
-fn parse_matches(parts: &mut Vec<StringItem>, bytes: &[u8]) -> bool {
-    let mut chars = Vec::with_capacity(bytes.len());
-    let parts_start = parts.len();
-
-    for &ch in bytes {
-        match ch {
-            b'*' => {
-                if !chars.is_empty() {
-                    parts.push(StringItem::Text(chars.to_vec()));
-                    chars.clear();
-                }
-                if let Some(StringItem::MatchMany(count)) = parts.last_mut() {
-                    *count += 1;
-                } else {
-                    parts.push(StringItem::MatchMany(1));
-                }
-            }
-            b'?' => {
-                if !chars.is_empty() {
-                    parts.push(StringItem::Text(chars.to_vec()));
-                    chars.clear();
-                }
-                parts.push(StringItem::MatchOne);
-            }
-            _ => {
-                chars.push(ch);
-            }
-        }
-    }
-
-    let has_matches = parts_start != parts.len();
-    if has_matches && !chars.is_empty() {
-        parts.push(StringItem::Text(chars.to_vec()));
-    }
-    has_matches
-}
-
-impl StringItem {
-    pub fn into_matches(self) -> Self {
-        match self {
-            StringItem::Text(text) => {
-                let mut list = Vec::new();
-                if parse_matches(&mut list, &text) {
-                    StringItem::List(list)
-                } else {
-                    StringItem::Text(text)
-                }
-            }
-            StringItem::List(list) => {
-                let mut new_list = Vec::with_capacity(list.len());
-                for item in list {
-                    match item {
-                        StringItem::Text(text) => {
-                            if !parse_matches(&mut new_list, &text) {
-                                new_list.push(StringItem::Text(text));
-                            }
-                        }
-                        _ => new_list.push(item),
-                    }
-                }
-                StringItem::List(new_list)
-            }
-            _ => self,
-        }
-    }
-}
-
 impl Display for StringItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StringItem::Text(t) => f.write_str(&String::from_utf8_lossy(t)),
-            StringItem::VariableName(v) => write!(f, "${{{}}}", v),
-            StringItem::VariableNumber(v) => write!(f, "${{{}}}", v),
+            StringItem::LocalVariable(v) => write!(f, "${{{}}}", v),
+            StringItem::MatchVariable(v) => write!(f, "${{{}}}", v),
+            StringItem::GlobalVariable(v) => write!(f, "${{global.{}}}", v),
             StringItem::MatchMany(_) => f.write_str("*"),
             StringItem::MatchOne => f.write_str("?"),
             StringItem::List(l) => {
@@ -302,11 +292,24 @@ impl Display for StringItem {
 #[cfg(test)]
 mod tests {
 
-    use crate::{runtime::StringItem, Compiler};
+    use super::StringItem;
+    use crate::compiler::grammar::command::{Block, CompilerState};
+    use crate::compiler::lexer::tokenizer::Tokenizer;
+    use crate::compiler::lexer::word::Word;
+    use crate::{AHashSet, Compiler};
 
     #[test]
     fn tokenize_string() {
-        let compiler = Compiler::new();
+        let c = Compiler::new();
+        let compiler = CompilerState {
+            commands: Vec::new(),
+            block_stack: Vec::new(),
+            block: Block::new(Word::Not),
+            last_block_type: Word::Not,
+            vars_global: AHashSet::new(),
+            vars_num: 0,
+            tokens: Tokenizer::new(&c, b""),
+        };
 
         for (input, expected_result) in [
             ("$${hex:24 24}", StringItem::Text(b"$$$".to_vec())),
@@ -333,34 +336,37 @@ mod tests {
                 StringItem::Text(b"${Unicode:Cool}".to_vec()),
             ),
             ("", StringItem::Text(b"".to_vec())),
-            ("${full}", StringItem::VariableName("full".to_string())),
             (
-                "${BAD${Company}",
+                "${global.full}",
+                StringItem::GlobalVariable("full".to_string()),
+            ),
+            (
+                "${BAD${global.Company}",
                 StringItem::List(vec![
                     StringItem::Text(b"${BAD".to_vec()),
-                    StringItem::VariableName("Company".to_string()),
+                    StringItem::GlobalVariable("Company".to_string()),
                 ]),
             ),
             (
-                "${President, ${Company} Inc.}",
+                "${President, ${global.Company} Inc.}",
                 StringItem::List(vec![
                     StringItem::Text(b"${President, ".to_vec()),
-                    StringItem::VariableName("Company".to_string()),
+                    StringItem::GlobalVariable("Company".to_string()),
                     StringItem::Text(b" Inc.}".to_vec()),
                 ]),
             ),
             (
-                "dear${hex:20 24 7b 4e}ame}",
+                "dear${hex:20 24 7b}global.Name}",
                 StringItem::List(vec![
                     StringItem::Text(b"dear ".to_vec()),
-                    StringItem::VariableName("Name".to_string()),
+                    StringItem::GlobalVariable("Name".to_string()),
                 ]),
             ),
             (
                 "INBOX.lists.${2}",
                 StringItem::List(vec![
                     StringItem::Text(b"INBOX.lists.".to_vec()),
-                    StringItem::VariableNumber(2),
+                    StringItem::MatchVariable(2),
                 ]),
             ),
             (
@@ -370,24 +376,26 @@ mod tests {
             ("&%${}!", StringItem::Text(b"&%${}!".to_vec())),
             ("${doh!}", StringItem::Text(b"${doh!}".to_vec())),
             (
-                "${hex: 20 }${hi}${hex: 20 }",
+                "${hex: 20 }${global.hi}${hex: 20 }",
                 StringItem::List(vec![
                     StringItem::Text(b" ".to_vec()),
-                    StringItem::VariableName("hi".to_string()),
+                    StringItem::GlobalVariable("hi".to_string()),
                     StringItem::Text(b" ".to_vec()),
                 ]),
             ),
             (
-                "${hex:20 24 7b z}${hi}${unicode:}${unicode: }${hex:20}",
+                "${hex:20 24 7b z}${global.hi}${unicode:}${unicode: }${hex:20}",
                 StringItem::List(vec![
                     StringItem::Text(b"${hex:20 24 7b z}".to_vec()),
-                    StringItem::VariableName("hi".to_string()),
+                    StringItem::GlobalVariable("hi".to_string()),
                     StringItem::Text(b"${unicode:}${unicode: } ".to_vec()),
                 ]),
             ),
         ] {
             assert_eq!(
-                compiler.tokenize_string(input.as_bytes(), true).unwrap(),
+                compiler
+                    .tokenize_string(input.as_bytes(), true, false)
+                    .unwrap(),
                 expected_result,
                 "Failed for {}",
                 input
@@ -395,7 +403,9 @@ mod tests {
         }
 
         for input in ["${unicode:200000}", "${Unicode:DF01}"] {
-            assert!(compiler.tokenize_string(input.as_bytes(), true).is_err());
+            assert!(compiler
+                .tokenize_string(input.as_bytes(), true, false)
+                .is_err());
         }
     }
 }

@@ -1,116 +1,131 @@
-{
-  "capabilities": [
-    "FileInto",
-    "MailboxId"
-  ],
-  "commands": [
+[
+  [
+    0,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    99,
-                    111,
-                    121,
-                    111,
-                    116,
-                    101
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "FileInto": {
-                "copy": false,
-                "create": false,
-                "folder": {
-                  "Text": [
-                    73,
-                    78,
-                    66,
-                    79,
-                    88,
-                    46,
-                    104,
-                    97,
-                    114,
-                    97,
-                    115,
-                    115,
-                    109,
-                    101,
-                    110,
-                    116
-                  ]
-                },
-                "flags": [],
-                "mailbox_id": {
-                  "Text": [
-                    70,
-                    54,
-                    51,
-                    53,
-                    50,
-                    97,
-                    101,
-                    48,
-                    51,
-                    45,
-                    98,
-                    55,
-                    102,
-                    53,
-                    45,
-                    52,
-                    54,
-                    51,
-                    99,
-                    45,
-                    56,
-                    57,
-                    54,
-                    102,
-                    45,
-                    100,
-                    56,
-                    98,
-                    52,
-                    56,
-                    101,
-                    101,
-                    51
-                  ]
-                },
-                "special_use": null
-              }
-            }
-          ]
-        }
+      "Require": [
+        "FileInto",
+        "MailboxId"
       ]
-    },
+    }
+  ],
+  [
+    1,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  99,
+                  111,
+                  121,
+                  111,
+                  116,
+                  101
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Jz": 4
+    }
+  ],
+  [
+    3,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            73,
+            78,
+            66,
+            79,
+            88,
+            46,
+            104,
+            97,
+            114,
+            97,
+            115,
+            115,
+            109,
+            101,
+            110,
+            116
+          ]
+        },
+        "flags": [],
+        "mailbox_id": {
+          "Text": [
+            70,
+            54,
+            51,
+            53,
+            50,
+            97,
+            101,
+            48,
+            51,
+            45,
+            98,
+            55,
+            102,
+            53,
+            45,
+            52,
+            54,
+            51,
+            99,
+            45,
+            56,
+            57,
+            54,
+            102,
+            45,
+            100,
+            56,
+            98,
+            52,
+            56,
+            101,
+            101,
+            51
+          ]
+        },
+        "special_use": null
+      }
+    }
+  ],
+  [
+    4,
     {
       "FileInto": {
         "copy": false,
@@ -153,7 +168,10 @@
         },
         "special_use": null
       }
-    },
+    }
+  ],
+  [
+    5,
     {
       "Notify": {
         "from": null,
@@ -259,209 +277,228 @@
           ]
         }
       }
-    },
+    }
+  ],
+  [
+    6,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    99,
-                    111,
-                    121,
-                    111,
-                    116,
-                    101
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "If": [
-                {
-                  "test": {
-                    "MailboxIdExists": {
-                      "mailbox_ids": [
-                        {
-                          "Text": [
-                            70,
-                            54,
-                            51,
-                            53,
-                            50,
-                            97,
-                            101,
-                            48,
-                            51,
-                            45,
-                            98,
-                            55,
-                            102,
-                            53,
-                            45,
-                            52,
-                            54,
-                            51,
-                            99,
-                            45,
-                            56,
-                            57,
-                            54,
-                            102,
-                            45,
-                            100,
-                            56,
-                            98,
-                            52,
-                            56,
-                            101,
-                            101,
-                            51
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  "commands": [
-                    {
-                      "FileInto": {
-                        "copy": false,
-                        "create": false,
-                        "folder": {
-                          "Text": [
-                            73,
-                            78,
-                            66,
-                            79,
-                            88,
-                            46,
-                            110,
-                            97,
-                            109,
-                            101,
-                            46,
-                            119,
-                            105,
-                            108,
-                            108,
-                            46,
-                            110,
-                            111,
-                            116,
-                            46,
-                            98,
-                            101,
-                            46,
-                            117,
-                            115,
-                            101,
-                            100
-                          ]
-                        },
-                        "flags": [],
-                        "mailbox_id": {
-                          "Text": [
-                            70,
-                            54,
-                            51,
-                            53,
-                            50,
-                            97,
-                            101,
-                            48,
-                            51,
-                            45,
-                            98,
-                            55,
-                            102,
-                            53,
-                            45,
-                            52,
-                            54,
-                            51,
-                            99,
-                            45,
-                            56,
-                            57,
-                            54,
-                            102,
-                            45,
-                            100,
-                            56,
-                            98,
-                            52,
-                            56,
-                            101,
-                            101,
-                            51
-                          ]
-                        },
-                        "special_use": null
-                      }
-                    }
-                  ]
-                },
-                {
-                  "test": "True",
-                  "commands": [
-                    {
-                      "FileInto": {
-                        "copy": false,
-                        "create": false,
-                        "folder": {
-                          "Text": [
-                            73,
-                            78,
-                            66,
-                            79,
-                            88,
-                            46,
-                            104,
-                            97,
-                            114,
-                            97,
-                            115,
-                            115,
-                            109,
-                            101,
-                            110,
-                            116
-                          ]
-                        },
-                        "flags": [],
-                        "mailbox_id": null,
-                        "special_use": null
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  99,
+                  111,
+                  121,
+                  111,
+                  116,
+                  101
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    7,
+    {
+      "Jz": 13
+    }
+  ],
+  [
+    8,
+    {
+      "Test": {
+        "test": {
+          "MailboxIdExists": {
+            "mailbox_ids": [
+              {
+                "Text": [
+                  70,
+                  54,
+                  51,
+                  53,
+                  50,
+                  97,
+                  101,
+                  48,
+                  51,
+                  45,
+                  98,
+                  55,
+                  102,
+                  53,
+                  45,
+                  52,
+                  54,
+                  51,
+                  99,
+                  45,
+                  56,
+                  57,
+                  54,
+                  102,
+                  45,
+                  100,
+                  56,
+                  98,
+                  52,
+                  56,
+                  101,
+                  101,
+                  51
+                ]
+              }
+            ]
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    9,
+    {
+      "Jz": 12
+    }
+  ],
+  [
+    10,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            73,
+            78,
+            66,
+            79,
+            88,
+            46,
+            110,
+            97,
+            109,
+            101,
+            46,
+            119,
+            105,
+            108,
+            108,
+            46,
+            110,
+            111,
+            116,
+            46,
+            98,
+            101,
+            46,
+            117,
+            115,
+            101,
+            100
           ]
-        }
-      ]
+        },
+        "flags": [],
+        "mailbox_id": {
+          "Text": [
+            70,
+            54,
+            51,
+            53,
+            50,
+            97,
+            101,
+            48,
+            51,
+            45,
+            98,
+            55,
+            102,
+            53,
+            45,
+            52,
+            54,
+            51,
+            99,
+            45,
+            56,
+            57,
+            54,
+            102,
+            45,
+            100,
+            56,
+            98,
+            52,
+            56,
+            101,
+            101,
+            51
+          ]
+        },
+        "special_use": null
+      }
+    }
+  ],
+  [
+    11,
+    {
+      "Jmp": 13
+    }
+  ],
+  [
+    12,
+    {
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "Text": [
+            73,
+            78,
+            66,
+            79,
+            88,
+            46,
+            104,
+            97,
+            114,
+            97,
+            115,
+            115,
+            109,
+            101,
+            110,
+            116
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
+      }
     }
   ]
-}
+]

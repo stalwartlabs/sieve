@@ -1,3 +1,4 @@
+use ahash::{AHashMap, AHashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -14,33 +15,37 @@ use super::{
         action_editheader::{AddHeader, DeleteHeader},
         action_fileinto::FileInto,
         action_flags::FlagAction,
-        action_include::{Global, Include},
+        action_include::Include,
         action_keep::Keep,
-        action_mime::{Break, Enclose, ExtractText, ForEveryPart, Replace},
+        action_mime::{Enclose, ExtractText, ForEveryPart, Replace},
         action_notify::Notify,
         action_redirect::Redirect,
         action_reject::Reject,
         action_set::Set,
         action_vacation::Vacation,
     },
-    test::{If, Test},
+    test::BoolOp,
+    Capability, Invalid,
 };
 
 use super::tests::test_ihave::Error;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) enum Command {
-    If(Vec<If>),
+    Require(Vec<Capability>),
     Keep(Keep),
     FileInto(FileInto),
     Redirect(Redirect),
     Discard,
     Stop,
-    Invalid(String),
+    Invalid(Invalid),
+    Test(BoolOp),
+    Jmp(usize),
+    Jz(usize),
+    Jnz(usize),
 
     // RFC 5703
     ForEveryPart(ForEveryPart),
-    Break(Break),
     Replace(Replace),
     Enclose(Enclose),
     ExtractText(ExtractText),
@@ -75,7 +80,27 @@ pub(crate) enum Command {
     // RFC 6609
     Include(Include),
     Return,
-    Global(Global),
+}
+
+pub(crate) struct Block {
+    btype: Word,
+    label: Option<Vec<u8>>,
+    line_num: usize,
+    line_pos: usize,
+    last_block_start: usize,
+    if_jmps: Vec<usize>,
+    break_jmps: Vec<usize>,
+    vars_local: AHashMap<String, usize>,
+}
+
+pub(crate) struct CompilerState<'x> {
+    pub(crate) tokens: Tokenizer<'x>,
+    pub(crate) commands: Vec<Command>,
+    pub(crate) block_stack: Vec<Block>,
+    pub(crate) block: Block,
+    pub(crate) last_block_type: Word,
+    pub(crate) vars_global: AHashSet<String>,
+    pub(crate) vars_num: usize,
 }
 
 impl Compiler {
@@ -88,226 +113,325 @@ impl Compiler {
             });
         }
 
-        let mut tokens = Tokenizer::new(self, script);
-        let mut commands = Vec::new();
-        let mut capabilities = Vec::new();
+        let mut state = CompilerState {
+            tokens: Tokenizer::new(self, script),
+            commands: Vec::new(),
+            block_stack: Vec::new(),
+            block: Block::new(Word::Not),
+            last_block_type: Word::Not,
+            vars_global: AHashSet::new(),
+            vars_num: 0,
+        };
 
-        let mut block_stack = Vec::new();
-        let mut block_line_num = 0;
-        let mut block_line_pos = 0;
-
-        while let Some(token_info) = tokens.next() {
+        while let Some(token_info) = state.tokens.next() {
             let token_info = token_info?;
 
             match token_info.token {
                 Token::Identifier(command) => {
-                    let mut is_new_block = false;
+                    let mut is_new_block = None;
 
                     match command {
                         Word::Require => {
-                            tokens.parse_require(&mut capabilities)?;
+                            state.parse_require()?;
                         }
                         Word::If => {
-                            commands.push(Command::If(vec![If {
-                                test: tokens.parse_test()?,
-                                commands: Vec::new(),
-                            }]));
-                            is_new_block = true;
+                            is_new_block = Block::new(Word::If).into();
+                            state.parse_test()?;
+                            state.block.if_jmps.clear();
                         }
                         Word::ElsIf => {
-                            if let Some(Command::If(ifs)) = commands.last_mut() {
-                                if ifs.last().unwrap().test != Test::True {
-                                    ifs.push(If {
-                                        test: tokens.parse_test()?,
-                                        commands: Vec::new(),
-                                    });
-                                    is_new_block = true;
-                                }
-                            }
-                            if !is_new_block {
+                            if let Word::If | Word::ElsIf = &state.last_block_type {
+                                is_new_block = Block::new(Word::ElsIf).into();
+                                state.parse_test()?;
+                            } else {
                                 return Err(token_info.expected("'if' before 'elsif'"));
                             }
                         }
                         Word::Else => {
-                            if let Some(Command::If(ifs)) = commands.last_mut() {
-                                if ifs.last().unwrap().test != Test::True {
-                                    ifs.push(If {
-                                        test: Test::True,
-                                        commands: Vec::new(),
-                                    });
-                                    is_new_block = true;
-                                }
-                            }
-                            if !is_new_block {
+                            if let Word::If | Word::ElsIf = &state.last_block_type {
+                                is_new_block = Block::new(Word::Else).into();
+                            } else {
                                 return Err(token_info.expected("'if' or 'elsif' before 'else'"));
                             }
                         }
                         Word::Keep => {
-                            commands.push(Command::Keep(tokens.parse_keep()?));
+                            state.parse_keep()?;
                         }
                         Word::FileInto => {
-                            commands.push(Command::FileInto(tokens.parse_fileinto()?));
+                            state.parse_fileinto()?;
                         }
                         Word::Redirect => {
-                            commands.push(Command::Redirect(tokens.parse_redirect()?));
+                            state.parse_redirect()?;
                         }
                         Word::Discard => {
-                            commands.push(Command::Discard);
+                            state.commands.push(Command::Discard);
                         }
                         Word::Stop => {
-                            commands.push(Command::Stop);
+                            state.commands.push(Command::Stop);
                         }
 
                         // RFC 5703
                         Word::ForEveryPart => {
-                            commands.push(Command::ForEveryPart(ForEveryPart {
-                                name: if let Some(Ok(Token::Tag(Word::Name))) =
-                                    tokens.peek().map(|r| r.map(|t| &t.token))
-                                {
-                                    tokens.next();
-                                    tokens.unwrap_static_string()?.into()
-                                } else {
-                                    None
-                                },
-                                commands: Vec::new(),
-                            }));
-                            is_new_block = true;
+                            is_new_block = if let Some(Ok(Token::Tag(Word::Name))) =
+                                state.tokens.peek().map(|r| r.map(|t| &t.token))
+                            {
+                                let tag = state.tokens.next().unwrap().unwrap();
+                                let label = state.tokens.expect_static_string()?;
+                                for block in &state.block_stack {
+                                    if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                        return Err(tag.invalid(format!(
+                                            "label {:?} already defined",
+                                            String::from_utf8_lossy(&label)
+                                        )));
+                                    }
+                                }
+                                Block::labeled(Word::ForEveryPart, label)
+                            } else {
+                                Block::new(Word::ForEveryPart)
+                            }
+                            .into();
+                            state
+                                .commands
+                                .push(Command::ForEveryPart(ForEveryPart { jz_pos: usize::MAX }));
                         }
                         Word::Break => {
-                            commands.push(Command::Break(Break {
-                                name: if let Some(Ok(Token::Tag(Word::Name))) =
-                                    tokens.peek().map(|r| r.map(|t| &t.token))
+                            if let Some(Ok(Token::Tag(Word::Name))) =
+                                state.tokens.peek().map(|r| r.map(|t| &t.token))
+                            {
+                                let tag = state.tokens.next().unwrap().unwrap();
+                                let label = state.tokens.expect_static_string()?;
+                                let mut label_found = false;
+
+                                for block in
+                                    state.block_stack.iter_mut().chain([&mut state.block]).rev()
                                 {
-                                    tokens.next();
-                                    tokens.unwrap_static_string()?.into()
+                                    if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                        block.break_jmps.push(state.commands.len());
+                                        label_found = true;
+                                        break;
+                                    }
+                                }
+
+                                if !label_found {
+                                    return Err(tag.invalid(format!(
+                                        "label {:?} does not exist",
+                                        String::from_utf8_lossy(&label)
+                                    )));
+                                }
+                            } else {
+                                let mut label_found = false;
+                                if let Word::ForEveryPart = &state.block.btype {
+                                    state.block.break_jmps.push(state.commands.len());
+                                    label_found = true;
                                 } else {
-                                    None
-                                },
-                            }));
+                                    for block in state.block_stack.iter_mut().rev() {
+                                        if let Word::ForEveryPart = &block.btype {
+                                            block.break_jmps.push(state.commands.len());
+                                            label_found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if !label_found {
+                                    return Err(token_info.invalid("break used outside loop"));
+                                }
+                            }
+
+                            state.commands.push(Command::Jmp(usize::MAX));
                         }
                         Word::Replace => {
-                            commands.push(Command::Replace(tokens.parse_replace()?));
+                            state.parse_replace()?;
                         }
                         Word::Enclose => {
-                            commands.push(Command::Enclose(tokens.parse_enclose()?));
+                            state.parse_enclose()?;
                         }
                         Word::ExtractText => {
-                            commands.push(Command::ExtractText(tokens.parse_extracttext()?));
+                            state.parse_extracttext()?;
                         }
 
                         // RFC 6558
                         Word::Convert => {
-                            commands.push(Command::Convert(tokens.parse_convert()?));
+                            state.parse_convert()?;
                         }
 
                         // RFC 5293
                         Word::AddHeader => {
-                            commands.push(Command::AddHeader(tokens.parse_addheader()?));
+                            state.parse_addheader()?;
                         }
                         Word::DeleteHeader => {
-                            commands.push(Command::DeleteHeader(tokens.parse_deleteheader()?));
+                            state.parse_deleteheader()?;
                         }
 
                         // RFC 5229
                         Word::Set => {
-                            commands.push(Command::Set(tokens.parse_set()?));
+                            state.parse_set()?;
                         }
 
                         // RFC 5435
                         Word::Notify => {
-                            commands.push(Command::Notify(tokens.parse_notify()?));
+                            state.parse_notify()?;
                         }
 
                         // RFC 5429
                         Word::Reject => {
-                            commands.push(Command::Reject(tokens.parse_reject(false)?));
+                            state.parse_reject(false)?;
                         }
                         Word::Ereject => {
-                            commands.push(Command::Reject(tokens.parse_reject(true)?));
+                            state.parse_reject(true)?;
                         }
 
                         // RFC 5230
                         Word::Vacation => {
-                            commands.push(Command::Vacation(tokens.parse_vacation()?));
+                            state.parse_vacation()?;
                         }
 
                         // RFC 5463
                         Word::Error => {
-                            commands.push(Command::Error(tokens.parse_error()?));
+                            state.parse_error()?;
                         }
 
                         // RFC 5232
-                        Word::SetFlag => {
-                            commands.push(Command::SetFlag(tokens.parse_flag_action()?));
-                        }
-                        Word::AddFlag => {
-                            commands.push(Command::AddFlag(tokens.parse_flag_action()?));
-                        }
-                        Word::RemoveFlag => {
-                            commands.push(Command::RemoveFlag(tokens.parse_flag_action()?));
+                        Word::SetFlag | Word::AddFlag | Word::RemoveFlag => {
+                            state.parse_flag_action(command)?;
                         }
 
                         // RFC 6609
                         Word::Include => {
-                            commands.push(Command::Include(tokens.parse_include()?));
+                            state.parse_include()?;
                         }
                         Word::Return => {
-                            commands.push(Command::Return);
+                            state.commands.push(Command::Return);
                         }
                         Word::Global => {
-                            commands.push(Command::Global(tokens.parse_global()?));
+                            for global in state.parse_static_strings()? {
+                                if !state.is_var_local(&global) {
+                                    if global.len() < self.max_variable_len {
+                                        state.register_global_var(&global);
+                                    } else {
+                                        return Err(state
+                                            .tokens
+                                            .unwrap_next()?
+                                            .custom(ErrorType::VariableTooLong));
+                                    }
+                                } else {
+                                    return Err(state.tokens.unwrap_next()?.invalid(format!(
+                                        "variable {:?} already defined as local",
+                                        global
+                                    )));
+                                }
+                            }
                         }
 
                         _ => {
-                            #[cfg(test)]
-                            {
-                                tokens.ignore_command()?;
-                                commands.push(Command::Invalid(command.to_string()));
-                                continue;
-                            }
-                            #[cfg(not(test))]
-                            {
-                                return Err(token_info.expected("command"));
-                            }
+                            state.ignore_command()?;
+                            state.commands.push(Command::Invalid(Invalid {
+                                name: command.to_string(),
+                                line_num: token_info.line_num,
+                                line_pos: token_info.line_pos,
+                            }));
+                            continue;
                         }
                     }
 
-                    if is_new_block {
-                        block_line_num = tokens.line_num;
-                        block_line_pos = tokens.pos - tokens.line_start;
+                    if let Some(mut new_block) = is_new_block {
+                        new_block.line_num = state.tokens.line_num;
+                        new_block.line_pos = state.tokens.pos - state.tokens.line_start;
 
-                        tokens.expect_token(Token::CurlyOpen)?;
-                        if block_stack.len() < self.max_nested_blocks {
-                            block_stack.push(commands);
-                            commands = Vec::new();
+                        state.tokens.expect_token(Token::CurlyOpen)?;
+                        if state.block_stack.len() < self.max_nested_blocks {
+                            state.block.last_block_start = state.commands.len() - 1;
+                            state.block_stack.push(state.block);
+                            state.block = new_block;
                         } else {
                             return Err(CompileError {
-                                line_num: block_line_num,
-                                line_pos: block_line_pos,
+                                line_num: state.block.line_num,
+                                line_pos: state.block.line_pos,
                                 error_type: ErrorType::TooManyNestedBlocks,
                             });
                         }
                     } else {
-                        tokens.expect_command_end()?;
+                        state.expect_command_end()?;
                     }
                 }
-                Token::CurlyClose if !block_stack.is_empty() => {
-                    let mut prev_commands = block_stack.pop().unwrap();
-                    match prev_commands.last_mut() {
-                        Some(Command::If(ifs)) => {
-                            ifs.last_mut().unwrap().commands = commands;
+                Token::CurlyClose if !state.block_stack.is_empty() => {
+                    let mut prev_block = state.block_stack.pop().unwrap();
+                    match &state.block.btype {
+                        Word::ForEveryPart => {
+                            state
+                                .commands
+                                .push(Command::Jmp(prev_block.last_block_start));
+                            let cur_pos = state.commands.len();
+                            if let Command::ForEveryPart(fep) =
+                                &mut state.commands[prev_block.last_block_start]
+                            {
+                                fep.jz_pos = cur_pos;
+                            } else {
+                                debug_assert!(false, "This should not have happened.");
+                            }
+                            for pos in state.block.break_jmps {
+                                if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                    *jmp_pos = cur_pos;
+                                } else {
+                                    debug_assert!(false, "This should not have happened.");
+                                }
+                            }
+                            state.last_block_type = Word::Not;
                         }
-                        Some(Command::ForEveryPart(fep)) => {
-                            fep.commands = commands;
+                        Word::If | Word::ElsIf => {
+                            let next_is_block = matches!(
+                                state.tokens.peek().map(|r| r.map(|t| &t.token)),
+                                Some(Ok(Token::Identifier(Word::ElsIf | Word::Else)))
+                            );
+                            if next_is_block {
+                                prev_block.if_jmps.push(state.commands.len());
+                                state.commands.push(Command::Jmp(usize::MAX));
+                            }
+                            let cur_pos = state.commands.len();
+                            if let Command::Jz(jmp_pos) =
+                                &mut state.commands[prev_block.last_block_start]
+                            {
+                                *jmp_pos = cur_pos;
+                            } else {
+                                debug_assert!(false, "This should not have happened.");
+                            }
+                            if !next_is_block {
+                                for pos in prev_block.if_jmps.drain(..) {
+                                    if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                        *jmp_pos = cur_pos;
+                                    } else {
+                                        debug_assert!(false, "This should not have happened.");
+                                    }
+                                }
+                                state.last_block_type = Word::Not;
+                            } else {
+                                state.last_block_type = state.block.btype;
+                            }
                         }
-                        _ => debug_assert!(false, "This should not have happened."),
+                        Word::Else => {
+                            let cur_pos = state.commands.len();
+                            for pos in prev_block.if_jmps.drain(..) {
+                                if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                    *jmp_pos = cur_pos;
+                                } else {
+                                    debug_assert!(false, "This should not have happened.");
+                                }
+                            }
+                            state.last_block_type = Word::Else;
+                        }
+                        _ => {
+                            debug_assert!(false, "This should not have happened.");
+                        }
                     }
 
-                    commands = prev_commands;
+                    state.block = prev_block;
                 }
                 Token::Invalid(command) => {
-                    tokens.ignore_command()?;
-                    commands.push(Command::Invalid(command));
+                    state.ignore_command()?;
+                    state.commands.push(Command::Invalid(Invalid {
+                        name: command,
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                    }));
                 }
                 _ => {
                     return Err(token_info.expected("command"));
@@ -315,17 +439,96 @@ impl Compiler {
             }
         }
 
-        if block_stack.is_empty() {
+        if state.block_stack.is_empty() {
             Ok(Sieve {
-                capabilities,
-                commands,
+                commands: state.commands,
+                num_vars: state.vars_num,
             })
         } else {
             Err(CompileError {
-                line_num: block_line_num,
-                line_pos: block_line_pos,
+                line_num: state.block.line_num,
+                line_pos: state.block.line_pos,
                 error_type: ErrorType::UnterminatedBlock,
             })
+        }
+    }
+}
+
+impl<'x> CompilerState<'x> {
+    pub(crate) fn is_var_local(&self, name: &str) -> bool {
+        let name = name.to_ascii_lowercase();
+        if self.block.vars_local.contains_key(&name) {
+            true
+        } else {
+            for block in self.block_stack.iter().rev() {
+                if block.vars_local.contains_key(&name) {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+
+    pub(crate) fn is_var_global(&self, name: &str) -> bool {
+        let name = name.to_ascii_lowercase();
+        self.vars_global.contains(&name)
+    }
+
+    pub(crate) fn register_local_var(&mut self, name: &str) -> usize {
+        let name = name.to_ascii_lowercase();
+        if let Some(var_id) = self.get_local_var(&name) {
+            var_id
+        } else {
+            let var_id = self.vars_num;
+            self.block.vars_local.insert(name, var_id);
+            self.vars_num += 1;
+            var_id
+        }
+    }
+
+    pub(crate) fn register_global_var(&mut self, name: &str) {
+        self.vars_global.insert(name.to_ascii_lowercase());
+    }
+
+    pub(crate) fn get_local_var(&self, name: &str) -> Option<usize> {
+        let name = name.to_ascii_lowercase();
+        if let Some(var_id) = self.block.vars_local.get(&name) {
+            Some(*var_id)
+        } else {
+            for block in self.block_stack.iter().rev() {
+                if let Some(var_id) = block.vars_local.get(&name) {
+                    return Some(*var_id);
+                }
+            }
+            None
+        }
+    }
+}
+
+impl Block {
+    pub fn new(btype: Word) -> Self {
+        Block {
+            btype,
+            label: None,
+            line_num: 0,
+            line_pos: 0,
+            last_block_start: 0,
+            if_jmps: vec![],
+            break_jmps: vec![],
+            vars_local: AHashMap::new(),
+        }
+    }
+
+    pub fn labeled(btype: Word, label: Vec<u8>) -> Self {
+        Block {
+            btype,
+            label: label.into(),
+            line_num: 0,
+            line_pos: 0,
+            last_block_start: 0,
+            if_jmps: vec![],
+            break_jmps: vec![],
+            vars_local: AHashMap::new(),
         }
     }
 }

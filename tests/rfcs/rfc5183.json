@@ -1,62 +1,74 @@
-{
-  "capabilities": [
-    "Environment"
-  ],
-  "commands": [
+[
+  [
+    0,
     {
-      "If": [
-        {
-          "test": {
-            "Environment": {
-              "name": {
-                "Text": [
-                  114,
-                  101,
-                  109,
-                  111,
-                  116,
-                  101,
-                  45,
-                  104,
-                  111,
-                  115,
-                  116
-                ]
-              },
-              "key_list": [
-                {
-                  "List": [
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        46,
-                        101,
-                        120,
-                        97,
-                        109,
-                        112,
-                        108,
-                        101,
-                        46,
-                        99,
-                        111,
-                        109
-                      ]
-                    }
-                  ]
-                }
-              ],
-              "match_type": "Matches",
-              "comparator": "AsciiCaseMap"
-            }
-          },
-          "commands": [
-            "Discard"
-          ]
-        }
+      "Require": [
+        "Environment"
       ]
     }
+  ],
+  [
+    1,
+    {
+      "Test": {
+        "test": {
+          "Environment": {
+            "name": {
+              "Text": [
+                114,
+                101,
+                109,
+                111,
+                116,
+                101,
+                45,
+                104,
+                111,
+                115,
+                116
+              ]
+            },
+            "key_list": [
+              {
+                "List": [
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      46,
+                      101,
+                      120,
+                      97,
+                      109,
+                      112,
+                      108,
+                      101,
+                      46,
+                      99,
+                      111,
+                      109
+                    ]
+                  }
+                ]
+              }
+            ],
+            "match_type": "Matches",
+            "comparator": "AsciiCaseMap"
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Jz": 4
+    }
+  ],
+  [
+    3,
+    "Discard"
   ]
-}
+]

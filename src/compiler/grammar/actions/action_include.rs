@@ -1,11 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::command::{Command, CompilerState},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
 /*
@@ -15,7 +13,7 @@ include [LOCATION] [":once"] [":optional"] <value: string>
 
 */
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Include {
     pub location: Location,
     pub once: bool,
@@ -23,26 +21,21 @@ pub(crate) struct Include {
     pub value: StringItem,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Location {
     Personal,
     Global,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Global {
-    pub value: Vec<StringItem>,
-}
-
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_include(&mut self) -> Result<Include, CompileError> {
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_include(&mut self) -> Result<(), CompileError> {
         let value;
         let mut once = false;
         let mut optional = false;
         let mut location = Location::Personal;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Once) => {
                     once = true;
@@ -56,27 +49,19 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Global) => {
                     location = Location::Global;
                 }
-                Token::String(string) => {
-                    value = string;
-                    break;
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    value = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
 
-        Ok(Include {
+        self.commands.push(Command::Include(Include {
             location,
             once,
             optional,
             value,
-        })
-    }
-
-    pub(crate) fn parse_global(&mut self) -> Result<Global, CompileError> {
-        Ok(Global {
-            value: self.parse_strings(false)?,
-        })
+        }));
+        Ok(())
     }
 }

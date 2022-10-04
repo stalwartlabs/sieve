@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::command::{Command, CompilerState},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Vacation {
     pub period: Period,
     pub subject: Option<StringItem>,
@@ -20,14 +18,14 @@ pub(crate) struct Vacation {
     pub reason: StringItem,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Period {
     Days(u64),
     Seconds(u64),
     Default,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Fcc {
     pub fcc: StringItem,
     pub create: bool,
@@ -66,15 +64,15 @@ vacation [FCC]
    SPECIAL-USE = ":specialuse" string
 */
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_vacation(&mut self) -> Result<Vacation, CompileError> {
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_vacation(&mut self) -> Result<(), CompileError> {
         let mut period = Period::Default;
         let mut subject = None;
         let mut from = None;
         let mut handle = None;
         let mut addresses = Vec::new();
         let mut mime = false;
-        let mut reason = None;
+        let reason;
 
         let mut fcc = None;
         let mut create = false;
@@ -82,8 +80,8 @@ impl<'x> Tokenizer<'x> {
         let mut special_use = None;
         let mut mailbox_id = None;
 
-        while reason.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Mime) => {
                     mime = true;
@@ -93,7 +91,7 @@ impl<'x> Tokenizer<'x> {
                 }
                 Token::Tag(Word::Days) => {
                     if period == Period::Default {
-                        period = Period::Days(self.unwrap_number(u64::MAX as usize)? as u64);
+                        period = Period::Days(self.tokens.expect_number(u64::MAX as usize)? as u64);
                     } else {
                         return Err(
                             token_info.invalid("multiple ':days' or ':seconds' tags specified")
@@ -102,7 +100,8 @@ impl<'x> Tokenizer<'x> {
                 }
                 Token::Tag(Word::Seconds) => {
                     if period == Period::Default {
-                        period = Period::Seconds(self.unwrap_number(u64::MAX as usize)? as u64);
+                        period =
+                            Period::Seconds(self.tokens.expect_number(u64::MAX as usize)? as u64);
                     } else {
                         return Err(
                             token_info.invalid("multiple ':days' or ':seconds' tags specified")
@@ -110,22 +109,22 @@ impl<'x> Tokenizer<'x> {
                     }
                 }
                 Token::Tag(Word::Subject) => {
-                    subject = self.unwrap_string()?.into();
+                    subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::From) => {
-                    from = self.unwrap_string()?.into();
+                    from = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Handle) => {
-                    handle = self.unwrap_string()?.into();
+                    handle = self.parse_string()?.into();
                 }
                 Token::Tag(Word::SpecialUse) => {
-                    special_use = self.unwrap_string()?.into();
+                    special_use = self.parse_string()?.into();
                 }
                 Token::Tag(Word::MailboxId) => {
-                    mailbox_id = self.unwrap_string()?.into();
+                    mailbox_id = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Fcc) => {
-                    fcc = self.unwrap_string()?.into();
+                    fcc = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Flags) => {
                     flags = self.parse_strings(false)?;
@@ -133,11 +132,9 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Addresses) => {
                     addresses = self.parse_strings(false)?;
                 }
-                Token::String(string) => {
-                    reason = string.into();
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    reason = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
@@ -145,11 +142,11 @@ impl<'x> Tokenizer<'x> {
         if fcc.is_none()
             && (create || !flags.is_empty() || special_use.is_some() || mailbox_id.is_some())
         {
-            return Err(self.unwrap_next()?.invalid("missing ':fcc' tag"));
+            return Err(self.tokens.unwrap_next()?.invalid("missing ':fcc' tag"));
         }
 
-        Ok(Vacation {
-            reason: reason.unwrap(),
+        self.commands.push(Command::Vacation(Vacation {
+            reason,
             period,
             subject,
             from,
@@ -168,6 +165,7 @@ impl<'x> Tokenizer<'x> {
             } else {
                 None
             },
-        })
+        }));
+        Ok(())
     }
 }

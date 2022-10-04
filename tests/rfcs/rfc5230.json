@@ -1,430 +1,467 @@
-{
-  "capabilities": [
-    "Vacation"
+[
+  [
+    0,
+    {
+      "Require": [
+        "Vacation"
+      ]
+    }
   ],
-  "commands": [
+  [
+    1,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    115,
-                    117,
-                    98,
-                    106,
-                    101,
-                    99,
-                    116
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    99,
-                    121,
-                    114,
-                    117,
-                    115
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    39,
-                    109,
-                    32,
-                    111,
-                    117,
-                    116,
-                    32,
-                    45,
-                    45,
-                    32,
-                    115,
-                    101,
-                    110,
-                    100,
-                    32,
-                    109,
-                    97,
-                    105,
-                    108,
-                    32,
-                    116,
-                    111,
-                    32,
-                    99,
-                    121,
-                    114,
-                    117,
-                    115,
-                    45,
-                    98,
-                    117,
-                    103,
-                    115
-                  ]
-                }
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  115,
+                  117,
+                  98,
+                  106,
+                  101,
+                  99,
+                  116
+                ]
               }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  99,
+                  121,
+                  114,
+                  117,
+                  115
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Jz": 5
+    }
+  ],
+  [
+    3,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            39,
+            109,
+            32,
+            111,
+            117,
+            116,
+            32,
+            45,
+            45,
+            32,
+            115,
+            101,
+            110,
+            100,
+            32,
+            109,
+            97,
+            105,
+            108,
+            32,
+            116,
+            111,
+            32,
+            99,
+            121,
+            114,
+            117,
+            115,
+            45,
+            98,
+            117,
+            103,
+            115
+          ]
+        }
+      }
+    }
+  ],
+  [
+    4,
+    {
+      "Jmp": 6
+    }
+  ],
+  [
+    5,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            39,
+            109,
+            32,
+            111,
+            117,
+            116,
+            32,
+            45,
+            45,
+            32,
+            99,
+            97,
+            108,
+            108,
+            32,
+            109,
+            101,
+            32,
+            97,
+            116,
+            32,
+            43,
+            49,
+            32,
+            51,
+            48,
+            52,
+            32,
+            53,
+            53,
+            53,
+            32,
+            48,
+            49,
+            50,
+            51
+          ]
+        }
+      }
+    }
+  ],
+  [
+    6,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  115,
+                  117,
+                  98,
+                  106,
+                  101,
+                  99,
+                  116
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "MatchMany": 1
+              }
+            ],
+            "match_type": "Matches",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    7,
+    {
+      "Jz": 9
+    }
+  ],
+  [
+    8,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": {
+          "List": [
+            {
+              "Text": [
+                65,
+                117,
+                116,
+                111,
+                109,
+                97,
+                116,
+                105,
+                99,
+                32,
+                114,
+                101,
+                115,
+                112,
+                111,
+                110,
+                115,
+                101,
+                32,
+                116,
+                111,
+                58,
+                32
+              ]
+            },
+            {
+              "MatchVariable": 1
             }
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    39,
-                    109,
-                    32,
-                    111,
-                    117,
-                    116,
-                    32,
-                    45,
-                    45,
-                    32,
-                    99,
-                    97,
-                    108,
-                    108,
-                    32,
-                    109,
-                    101,
-                    32,
-                    97,
-                    116,
-                    32,
-                    43,
-                    49,
-                    32,
-                    51,
-                    48,
-                    52,
-                    32,
-                    53,
-                    53,
-                    53,
-                    32,
-                    48,
-                    49,
-                    50,
-                    51
-                  ]
-                }
-              }
-            }
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            39,
+            109,
+            32,
+            97,
+            119,
+            97,
+            121,
+            32,
+            45,
+            45,
+            32,
+            115,
+            101,
+            110,
+            100,
+            32,
+            109,
+            97,
+            105,
+            108,
+            32,
+            116,
+            111,
+            32,
+            102,
+            111,
+            111,
+            32,
+            105,
+            110,
+            32,
+            109,
+            121,
+            32,
+            97,
+            98,
+            115,
+            101,
+            110,
+            99,
+            101
           ]
         }
-      ]
-    },
+      }
+    }
+  ],
+  [
+    9,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    115,
-                    117,
-                    98,
-                    106,
-                    101,
-                    99,
-                    116
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "List": [
-                    {
-                      "MatchMany": 1
-                    }
-                  ]
-                }
-              ],
-              "match_type": "Matches",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": {
-                  "List": [
-                    {
-                      "Text": [
-                        65,
-                        117,
-                        116,
-                        111,
-                        109,
-                        97,
-                        116,
-                        105,
-                        99,
-                        32,
-                        114,
-                        101,
-                        115,
-                        112,
-                        111,
-                        110,
-                        115,
-                        101,
-                        32,
-                        116,
-                        111,
-                        58,
-                        32
-                      ]
-                    },
-                    {
-                      "VariableNumber": 1
-                    }
-                  ]
-                },
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    39,
-                    109,
-                    32,
-                    97,
-                    119,
-                    97,
-                    121,
-                    32,
-                    45,
-                    45,
-                    32,
-                    115,
-                    101,
-                    110,
-                    100,
-                    32,
-                    109,
-                    97,
-                    105,
-                    108,
-                    32,
-                    116,
-                    111,
-                    32,
-                    102,
-                    111,
-                    111,
-                    32,
-                    105,
-                    110,
-                    32,
-                    109,
-                    121,
-                    32,
-                    97,
-                    98,
-                    115,
-                    101,
-                    110,
-                    99,
-                    101
-                  ]
-                }
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  115,
+                  117,
+                  98,
+                  106,
+                  101,
+                  99,
+                  116
+                ]
               }
-            }
-          ]
-        }
-      ]
-    },
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  108,
+                  117,
+                  110,
+                  99,
+                  104
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    10,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    115,
-                    117,
-                    98,
-                    106,
-                    101,
-                    99,
-                    116
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    108,
-                    117,
-                    110,
-                    99,
-                    104
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": {
-                  "Text": [
-                    114,
-                    97,
-                    110,
-                    45,
-                    97,
-                    119,
-                    97,
-                    121
-                  ]
-                },
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    39,
-                    109,
-                    32,
-                    111,
-                    117,
-                    116,
-                    32,
-                    97,
-                    110,
-                    100,
-                    32,
-                    99,
-                    97,
-                    110,
-                    39,
-                    116,
-                    32,
-                    109,
-                    101,
-                    101,
-                    116,
-                    32,
-                    102,
-                    111,
-                    114,
-                    32,
-                    108,
-                    117,
-                    110,
-                    99,
-                    104
-                  ]
-                }
-              }
-            }
+      "Jz": 13
+    }
+  ],
+  [
+    11,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": {
+          "Text": [
+            114,
+            97,
+            110,
+            45,
+            97,
+            119,
+            97,
+            121
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": {
-                  "Text": [
-                    114,
-                    97,
-                    110,
-                    45,
-                    97,
-                    119,
-                    97,
-                    121
-                  ]
-                },
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    39,
-                    109,
-                    32,
-                    111,
-                    117,
-                    116
-                  ]
-                }
-              }
-            }
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            39,
+            109,
+            32,
+            111,
+            117,
+            116,
+            32,
+            97,
+            110,
+            100,
+            32,
+            99,
+            97,
+            110,
+            39,
+            116,
+            32,
+            109,
+            101,
+            101,
+            116,
+            32,
+            102,
+            111,
+            114,
+            32,
+            108,
+            117,
+            110,
+            99,
+            104
           ]
         }
-      ]
-    },
+      }
+    }
+  ],
+  [
+    12,
+    {
+      "Jmp": 14
+    }
+  ],
+  [
+    13,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": {
+          "Text": [
+            114,
+            97,
+            110,
+            45,
+            97,
+            119,
+            97,
+            121
+          ]
+        },
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            39,
+            109,
+            32,
+            111,
+            117,
+            116
+          ]
+        }
+      }
+    }
+  ],
+  [
+    14,
     {
       "Vacation": {
         "period": "Default",
@@ -901,7 +938,10 @@
           ]
         }
       }
-    },
+    }
+  ],
+  [
+    15,
     {
       "Vacation": {
         "period": {
@@ -1032,556 +1072,598 @@
           ]
         }
       }
-    },
+    }
+  ],
+  [
+    16,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    98,
-                    111,
-                    115,
-                    115,
-                    64,
-                    101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    46,
-                    101,
-                    100,
-                    117
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Redirect": {
-                "copy": false,
-                "address": {
-                  "Text": [
-                    112,
-                    108,
-                    101,
-                    101,
-                    98,
-                    64,
-                    105,
-                    115,
-                    112,
-                    46,
-                    101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    46,
-                    111,
-                    114,
-                    103
-                  ]
-                },
-                "notify": "Default",
-                "ret": "Default",
-                "by_time": "None",
-                "list": false
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
               }
-            }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  98,
+                  111,
+                  115,
+                  115,
+                  64,
+                  101,
+                  120,
+                  97,
+                  109,
+                  112,
+                  108,
+                  101,
+                  46,
+                  101,
+                  100,
+                  117
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    17,
+    {
+      "Jz": 20
+    }
+  ],
+  [
+    18,
+    {
+      "Redirect": {
+        "copy": false,
+        "address": {
+          "Text": [
+            112,
+            108,
+            101,
+            101,
+            98,
+            64,
+            105,
+            115,
+            112,
+            46,
+            101,
+            120,
+            97,
+            109,
+            112,
+            108,
+            101,
+            46,
+            111,
+            114,
+            103
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    83,
-                    111,
-                    114,
-                    114,
-                    121,
-                    44,
-                    32,
-                    73,
-                    39,
-                    109,
-                    32,
-                    97,
-                    119,
-                    97,
-                    121,
-                    44,
-                    32,
-                    73,
-                    39,
-                    108,
-                    108,
-                    32,
-                    114,
-                    101,
-                    97,
-                    100,
-                    32,
-                    121,
-                    111,
-                    117,
-                    114,
-                    10,
-                    109,
-                    101,
-                    115,
-                    115,
-                    97,
-                    103,
-                    101,
-                    32,
-                    119,
-                    104,
-                    101,
-                    110,
-                    32,
-                    73,
-                    32,
-                    103,
-                    101,
-                    116,
-                    32,
-                    97,
-                    114,
-                    111,
-                    117,
-                    110,
-                    100,
-                    32,
-                    116,
-                    111,
-                    32,
-                    105,
-                    116,
-                    46
-                  ]
-                }
-              }
-            }
+        "notify": "Default",
+        "ret": "Default",
+        "by_time": "None",
+        "list": false
+      }
+    }
+  ],
+  [
+    19,
+    {
+      "Jmp": 21
+    }
+  ],
+  [
+    20,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            83,
+            111,
+            114,
+            114,
+            121,
+            44,
+            32,
+            73,
+            39,
+            109,
+            32,
+            97,
+            119,
+            97,
+            121,
+            44,
+            32,
+            73,
+            39,
+            108,
+            108,
+            32,
+            114,
+            101,
+            97,
+            100,
+            32,
+            121,
+            111,
+            117,
+            114,
+            10,
+            109,
+            101,
+            115,
+            115,
+            97,
+            103,
+            101,
+            32,
+            119,
+            104,
+            101,
+            110,
+            32,
+            73,
+            32,
+            103,
+            101,
+            116,
+            32,
+            97,
+            114,
+            111,
+            117,
+            110,
+            100,
+            32,
+            116,
+            111,
+            32,
+            105,
+            116,
+            46
           ]
         }
-      ]
-    },
+      }
+    }
+  ],
+  [
+    21,
     {
-      "If": [
-        {
-          "test": {
-            "Header": {
-              "header_list": [
-                {
-                  "Text": [
-                    97,
-                    99,
-                    99,
-                    101,
-                    112,
-                    116,
-                    45,
-                    108,
-                    97,
-                    110,
-                    103,
-                    117,
-                    97,
-                    103,
-                    101
-                  ]
-                },
-                {
-                  "Text": [
-                    99,
-                    111,
-                    110,
-                    116,
-                    101,
-                    110,
-                    116,
-                    45,
-                    108,
-                    97,
-                    110,
-                    103,
-                    117,
-                    97,
-                    103,
-                    101
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "Text": [
-                    101,
-                    110
-                  ]
-                }
-              ],
-              "match_type": "Contains",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_opts": "None",
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    73,
-                    32,
-                    97,
-                    109,
-                    32,
-                    97,
-                    119,
-                    97,
-                    121,
-                    32,
-                    116,
-                    104,
-                    105,
-                    115,
-                    32,
-                    119,
-                    101,
-                    101,
-                    107,
-                    46
-                  ]
-                }
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  112,
+                  116,
+                  45,
+                  108,
+                  97,
+                  110,
+                  103,
+                  117,
+                  97,
+                  103,
+                  101
+                ]
+              },
+              {
+                "Text": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  101,
+                  110,
+                  116,
+                  45,
+                  108,
+                  97,
+                  110,
+                  103,
+                  117,
+                  97,
+                  103,
+                  101
+                ]
               }
-            }
+            ],
+            "key_list": [
+              {
+                "Text": [
+                  101,
+                  110
+                ]
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    22,
+    {
+      "Jz": 25
+    }
+  ],
+  [
+    23,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            73,
+            32,
+            97,
+            109,
+            32,
+            97,
+            119,
+            97,
+            121,
+            32,
+            116,
+            104,
+            105,
+            115,
+            32,
+            119,
+            101,
+            101,
+            107,
+            46
+          ]
+        }
+      }
+    }
+  ],
+  [
+    24,
+    {
+      "Jmp": 26
+    }
+  ],
+  [
+    25,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": null,
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            69,
+            115,
+            116,
+            111,
+            121,
+            32,
+            97,
+            117,
+            115,
+            101,
+            110,
+            116,
+            101,
+            32,
+            101,
+            115,
+            116,
+            97,
+            32,
+            115,
+            101,
+            109,
+            97,
+            110,
+            97,
+            46
+          ]
+        }
+      }
+    }
+  ],
+  [
+    26,
+    {
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": [
+                  102,
+                  114,
+                  111,
+                  109
+                ]
+              }
+            ],
+            "key_list": [
+              {
+                "List": [
+                  {
+                    "MatchMany": 1
+                  },
+                  {
+                    "Text": [
+                      64,
+                      111,
+                      117,
+                      114,
+                      100,
+                      105,
+                      118,
+                      105,
+                      115,
+                      105,
+                      111,
+                      110,
+                      46,
+                      101,
+                      120,
+                      97,
+                      109,
+                      112,
+                      108,
+                      101,
+                      46,
+                      99,
+                      111,
+                      109
+                    ]
+                  }
+                ]
+              }
+            ],
+            "address_part": "All",
+            "match_type": "Matches",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    27,
+    {
+      "Jz": 30
+    }
+  ],
+  [
+    28,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": {
+          "Text": [
+            71,
+            111,
+            110,
+            101,
+            32,
+            102,
+            105,
+            115,
+            104,
+            105,
+            110,
+            103
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": null,
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    69,
-                    115,
-                    116,
-                    111,
-                    121,
-                    32,
-                    97,
-                    117,
-                    115,
-                    101,
-                    110,
-                    116,
-                    101,
-                    32,
-                    101,
-                    115,
-                    116,
-                    97,
-                    32,
-                    115,
-                    101,
-                    109,
-                    97,
-                    110,
-                    97,
-                    46
-                  ]
-                }
-              }
-            }
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            72,
+            97,
+            118,
+            105,
+            110,
+            103,
+            32,
+            108,
+            111,
+            116,
+            115,
+            32,
+            111,
+            102,
+            32,
+            102,
+            117,
+            110,
+            33,
+            32,
+            66,
+            97,
+            99,
+            107,
+            32,
+            105,
+            110,
+            32,
+            97,
+            32,
+            100,
+            97,
+            121,
+            32,
+            111,
+            114,
+            32,
+            116,
+            119,
+            111,
+            33
           ]
         }
-      ]
-    },
+      }
+    }
+  ],
+  [
+    29,
     {
-      "If": [
-        {
-          "test": {
-            "Address": {
-              "header_list": [
-                {
-                  "Text": [
-                    102,
-                    114,
-                    111,
-                    109
-                  ]
-                }
-              ],
-              "key_list": [
-                {
-                  "List": [
-                    {
-                      "MatchMany": 1
-                    },
-                    {
-                      "Text": [
-                        64,
-                        111,
-                        117,
-                        114,
-                        100,
-                        105,
-                        118,
-                        105,
-                        115,
-                        105,
-                        111,
-                        110,
-                        46,
-                        101,
-                        120,
-                        97,
-                        109,
-                        112,
-                        108,
-                        101,
-                        46,
-                        99,
-                        111,
-                        109
-                      ]
-                    }
-                  ]
-                }
-              ],
-              "address_part": "All",
-              "match_type": "Matches",
-              "comparator": "AsciiCaseMap",
-              "index": null,
-              "index_last": false,
-              "mime": false,
-              "mime_anychild": false,
-              "list": false
-            }
-          },
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": {
-                  "Text": [
-                    71,
-                    111,
-                    110,
-                    101,
-                    32,
-                    102,
-                    105,
-                    115,
-                    104,
-                    105,
-                    110,
-                    103
-                  ]
-                },
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    72,
-                    97,
-                    118,
-                    105,
-                    110,
-                    103,
-                    32,
-                    108,
-                    111,
-                    116,
-                    115,
-                    32,
-                    111,
-                    102,
-                    32,
-                    102,
-                    117,
-                    110,
-                    33,
-                    32,
-                    66,
-                    97,
-                    99,
-                    107,
-                    32,
-                    105,
-                    110,
-                    32,
-                    97,
-                    32,
-                    100,
-                    97,
-                    121,
-                    32,
-                    111,
-                    114,
-                    32,
-                    116,
-                    119,
-                    111,
-                    33
-                  ]
-                }
-              }
-            }
+      "Jmp": 31
+    }
+  ],
+  [
+    30,
+    {
+      "Vacation": {
+        "period": "Default",
+        "subject": {
+          "Text": [
+            74,
+            101,
+            32,
+            115,
+            117,
+            105,
+            115,
+            32,
+            112,
+            97,
+            114,
+            116,
+            105,
+            32,
+            99,
+            101,
+            116,
+            116,
+            101,
+            32,
+            115,
+            101,
+            109,
+            97,
+            105,
+            110,
+            101
           ]
         },
-        {
-          "test": "True",
-          "commands": [
-            {
-              "Vacation": {
-                "period": "Default",
-                "subject": {
-                  "Text": [
-                    74,
-                    101,
-                    32,
-                    115,
-                    117,
-                    105,
-                    115,
-                    32,
-                    112,
-                    97,
-                    114,
-                    116,
-                    105,
-                    32,
-                    99,
-                    101,
-                    116,
-                    116,
-                    101,
-                    32,
-                    115,
-                    101,
-                    109,
-                    97,
-                    105,
-                    110,
-                    101
-                  ]
-                },
-                "from": null,
-                "handle": null,
-                "addresses": [],
-                "mime": false,
-                "fcc": null,
-                "reason": {
-                  "Text": [
-                    74,
-                    101,
-                    32,
-                    108,
-                    105,
-                    114,
-                    97,
-                    105,
-                    32,
-                    118,
-                    111,
-                    116,
-                    114,
-                    101,
-                    32,
-                    109,
-                    101,
-                    115,
-                    115,
-                    97,
-                    103,
-                    101,
-                    32,
-                    113,
-                    117,
-                    97,
-                    110,
-                    100,
-                    32,
-                    106,
-                    101,
-                    32,
-                    114,
-                    101,
-                    116,
-                    111,
-                    117,
-                    114,
-                    110,
-                    101,
-                    46
-                  ]
-                }
-              }
-            }
+        "from": null,
+        "handle": null,
+        "addresses": [],
+        "mime": false,
+        "fcc": null,
+        "reason": {
+          "Text": [
+            74,
+            101,
+            32,
+            108,
+            105,
+            114,
+            97,
+            105,
+            32,
+            118,
+            111,
+            116,
+            114,
+            101,
+            32,
+            109,
+            101,
+            115,
+            115,
+            97,
+            103,
+            101,
+            32,
+            113,
+            117,
+            97,
+            110,
+            100,
+            32,
+            106,
+            101,
+            32,
+            114,
+            101,
+            116,
+            111,
+            117,
+            114,
+            110,
+            101,
+            46
           ]
         }
-      ]
-    },
+      }
+    }
+  ],
+  [
+    31,
     {
       "Vacation": {
         "period": {
@@ -1696,7 +1778,10 @@
           ]
         }
       }
-    },
+    }
+  ],
+  [
+    32,
     {
       "Vacation": {
         "period": {
@@ -1863,4 +1948,4 @@
       }
     }
   ]
-}
+]

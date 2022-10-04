@@ -1,27 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::{command::CompilerState, Comparator},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMailboxExists {
     pub mailbox_names: Vec<StringItem>,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMetadataExists {
     pub mailbox: StringItem,
     pub annotation_names: Vec<StringItem>,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestServerMetadataExists {
     pub annotation_names: Vec<StringItem>,
 }
@@ -34,7 +32,7 @@ metadata [MATCH-TYPE] [COMPARATOR]
 
 */
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMetadata {
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -50,7 +48,7 @@ servermetadata [MATCH-TYPE] [COMPARATOR]
 
 */
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestServerMetadata {
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -58,7 +56,7 @@ pub(crate) struct TestServerMetadata {
     pub key_list: Vec<StringItem>,
 }
 
-impl<'x> Tokenizer<'x> {
+impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxExists(TestMailboxExists {
             mailbox_names: self.parse_strings(false)?,
@@ -67,7 +65,7 @@ impl<'x> Tokenizer<'x> {
 
     pub(crate) fn parse_test_metadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MetadataExists(TestMetadataExists {
-            mailbox: self.unwrap_string()?,
+            mailbox: self.parse_string()?,
             annotation_names: self.parse_strings(false)?,
         }))
     }
@@ -86,7 +84,7 @@ impl<'x> Tokenizer<'x> {
         let key_list: Vec<StringItem>;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -101,36 +99,16 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::String(string) => {
-                    if mailbox.is_none() {
-                        mailbox = string.into();
-                    } else if annotation_name.is_none() {
-                        annotation_name = string.into();
-                    } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
-                        break;
-                    }
-                }
-                Token::BracketOpen => {
-                    if mailbox.is_some() && annotation_name.is_some() {
-                        key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                        break;
-                    } else {
-                        return Err(token_info.expected("string"));
-                    }
-                }
                 _ => {
-                    return Err(token_info.expected(
-                        if mailbox.is_none() || annotation_name.is_none() {
-                            "string"
-                        } else {
-                            "string or string list"
-                        },
-                    ));
+                    if mailbox.is_none() {
+                        mailbox = self.parse_string_token(token_info)?.into();
+                    } else if annotation_name.is_none() {
+                        annotation_name = self.parse_string_token(token_info)?.into();
+                    } else {
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        break;
+                    }
                 }
             }
         }
@@ -151,7 +129,7 @@ impl<'x> Tokenizer<'x> {
         let key_list: Vec<StringItem>;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -166,32 +144,14 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::String(string) => {
-                    if annotation_name.is_none() {
-                        annotation_name = string.into();
-                    } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
-                        break;
-                    }
-                }
-                Token::BracketOpen => {
-                    if annotation_name.is_some() {
-                        key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                        break;
-                    } else {
-                        return Err(token_info.expected("string"));
-                    }
-                }
                 _ => {
-                    return Err(token_info.expected(if annotation_name.is_none() {
-                        "string"
+                    if annotation_name.is_none() {
+                        annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        "string or string list"
-                    }));
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        break;
+                    }
                 }
             }
         }

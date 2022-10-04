@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    lexer::{tokenizer::Tokenizer, word::Word, Token},
+    lexer::{word::Word, Token},
     CompileError, ErrorType,
 };
 
 use super::{
     actions::action_convert::Convert,
-    command::Command,
+    command::{Command, CompilerState},
     tests::{
         test_address::TestAddress,
         test_body::TestBody,
@@ -31,19 +31,11 @@ use super::{
         test_specialuse::TestSpecialUseExists,
         test_string::TestString,
     },
+    Invalid,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct If {
-    pub test: Test,
-    pub commands: Vec<Command>,
-}
-
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Test {
-    AllOf(Vec<Test>),
-    AnyOf(Vec<Test>),
-    Not(Box<Test>),
     True,
     False,
     Address(TestAddress),
@@ -51,7 +43,7 @@ pub(crate) enum Test {
     Exists(TestExists),
     Header(TestHeader),
     Size(TestSize),
-    Invalid(String),
+    Invalid(Invalid),
 
     // RFC 5173
     Body(TestBody),
@@ -103,44 +95,76 @@ pub(crate) enum Test {
     SpecialUseExists(TestSpecialUseExists),
 }
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_test(&mut self) -> Result<Test, CompileError> {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct BoolOp {
+    pub(crate) test: Test,
+    pub(crate) is_not: bool,
+}
+
+#[derive(Debug)]
+struct Block {
+    is_all: bool,
+    is_not: bool,
+    p_count: u32,
+    jmps: Vec<usize>,
+}
+
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_test(&mut self) -> Result<(), CompileError> {
+        let mut block_stack: Vec<Block> = Vec::new();
+        let mut block = Block {
+            is_all: false,
+            is_not: false,
+            p_count: 0,
+            jmps: Vec::new(),
+        };
         let mut is_not = false;
-        let mut p_count = 0;
-        let mut tests_stack: Vec<(Vec<Test>, Word, bool, u32)> = Vec::new();
 
         loop {
-            let token_info = self.unwrap_next()?;
-            let mut test = match token_info.token {
-                Token::Comma if !tests_stack.is_empty() => {
-                    if !is_not {
+            let token_info = self.tokens.unwrap_next()?;
+            //println!("{:?} {:?} {}", token_info.token, block, block_stack.len());
+            let test = match token_info.token {
+                Token::Comma if !block_stack.is_empty() => {
+                    is_not = block.is_not;
+                    block.jmps.push(self.commands.len());
+                    self.commands.push(if block.is_all {
+                        Command::Jz(usize::MAX)
+                    } else {
+                        Command::Jnz(usize::MAX)
+                    });
+                    continue;
+                    /*if !is_not {
                         continue;
                     } else {
                         return Err(token_info.expected("test name"));
-                    }
+                    }*/
                 }
                 Token::ParenthesisOpen => {
-                    p_count += 1;
+                    block.p_count += 1;
                     continue;
                 }
                 Token::ParenthesisClose => {
-                    if p_count > 0 {
-                        p_count -= 1;
+                    if block.p_count > 0 {
+                        block.p_count -= 1;
                         continue;
-                    } else if !tests_stack.is_empty() {
-                        let (tests, test_name, prev_is_not, prev_p_count) =
-                            tests_stack.pop().unwrap();
-                        if tests.is_empty() {
-                            return Err(token_info.expected("test name"));
+                    } else if let Some(prev_block) = block_stack.pop() {
+                        let cur_pos = self.commands.len();
+                        for jmp_pos in block.jmps {
+                            if let Command::Jnz(jmp_pos) | Command::Jz(jmp_pos) =
+                                &mut self.commands[jmp_pos]
+                            {
+                                *jmp_pos = cur_pos;
+                            } else {
+                                debug_assert!(false, "This should not have happened")
+                            }
                         }
 
-                        is_not = prev_is_not;
-                        p_count = prev_p_count;
-
-                        match test_name {
-                            Word::AllOf => Test::AllOf(tests),
-                            Word::AnyOf => Test::AnyOf(tests),
-                            _ => unreachable!(),
+                        block = prev_block;
+                        is_not = block.is_not;
+                        if block_stack.is_empty() {
+                            break;
+                        } else {
+                            continue;
                         }
                     } else {
                         return Err(token_info.expected("test name"));
@@ -151,11 +175,27 @@ impl<'x> Tokenizer<'x> {
                     continue;
                 }
                 Token::Identifier(word @ (Word::AnyOf | Word::AllOf)) => {
-                    if tests_stack.len() < self.compiler.max_nested_tests {
-                        self.expect_token(Token::ParenthesisOpen)?;
-                        tests_stack.push((Vec::new(), word, is_not, p_count));
-                        is_not = false;
-                        p_count = 0;
+                    if block_stack.len() < self.tokens.compiler.max_nested_tests {
+                        self.tokens.expect_token(Token::ParenthesisOpen)?;
+                        block_stack.push(block);
+                        let (is_all, block_is_not) = if word == Word::AllOf {
+                            if !is_not {
+                                (true, false)
+                            } else {
+                                (false, true)
+                            }
+                        } else if !is_not {
+                            (false, false)
+                        } else {
+                            (true, true)
+                        };
+                        block = Block {
+                            is_all,
+                            is_not: block_is_not,
+                            p_count: 0,
+                            jmps: Vec::new(),
+                        };
+                        is_not = block_is_not;
                         continue;
                     } else {
                         return Err(CompileError {
@@ -191,7 +231,7 @@ impl<'x> Tokenizer<'x> {
                 Token::Identifier(Word::Body) => self.parse_test_body()?,
 
                 // RFC 6558
-                Token::Identifier(Word::Convert) => Test::Convert(self.parse_convert()?),
+                Token::Identifier(Word::Convert) => self.parse_test_convert()?,
 
                 // RFC 5260
                 Token::Identifier(Word::Date) => self.parse_test_date()?,
@@ -244,30 +284,36 @@ impl<'x> Tokenizer<'x> {
 
                 Token::Identifier(word) => {
                     self.ignore_test()?;
-                    Test::Invalid(word.to_string())
+                    Test::Invalid(Invalid {
+                        name: word.to_string(),
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                    })
                 }
-                Token::Invalid(word) => {
+                Token::Invalid(name) => {
                     self.ignore_test()?;
-                    Test::Invalid(word)
+                    Test::Invalid(Invalid {
+                        name,
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                    })
                 }
                 _ => return Err(token_info.expected("test name")),
             };
 
-            while p_count > 0 {
-                self.expect_token(Token::ParenthesisClose)?;
-                p_count -= 1;
+            while block.p_count > 0 {
+                self.tokens.expect_token(Token::ParenthesisClose)?;
+                block.p_count -= 1;
             }
 
-            if is_not {
-                test = Test::Not(test.into());
-                is_not = false;
-            }
+            self.commands.push(Command::Test(BoolOp { test, is_not }));
 
-            if let Some((tests, _, _, _)) = tests_stack.last_mut() {
-                tests.push(test);
-            } else {
-                return Ok(test);
+            if block_stack.is_empty() {
+                break;
             }
         }
+
+        self.commands.push(Command::Jz(usize::MAX));
+        Ok(())
     }
 }

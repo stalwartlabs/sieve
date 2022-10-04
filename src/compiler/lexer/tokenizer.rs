@@ -2,7 +2,6 @@ use std::{iter::Peekable, slice::Iter};
 
 use crate::{
     compiler::{CompileError, ErrorType},
-    runtime::StringItem,
     Compiler,
 };
 
@@ -132,25 +131,27 @@ impl<'x> Tokenizer<'x> {
     }
 
     pub fn get_string(&mut self, maybe_variable: bool) -> Result<TokenInfo, CompileError> {
-        let token = Token::String(if maybe_variable {
-            self.compiler
-                .tokenize_string(&self.buf, true)
-                .map_err(|error_type| CompileError {
-                    line_num: self.text_line_num,
-                    line_pos: self.text_line_pos,
-                    error_type,
-                })?
+        if self.buf.len() < self.compiler.max_string_len {
+            let token = if maybe_variable {
+                Token::StringVariable(self.buf.to_vec())
+            } else {
+                Token::StringConstant(self.buf.to_vec())
+            };
+
+            self.buf.clear();
+
+            Ok(TokenInfo {
+                token,
+                line_num: self.text_line_num,
+                line_pos: self.text_line_pos,
+            })
         } else {
-            StringItem::Text(self.buf.to_vec())
-        });
-
-        self.buf.clear();
-
-        Ok(TokenInfo {
-            token,
-            line_num: self.text_line_num,
-            line_pos: self.text_line_pos,
-        })
+            Err(CompileError {
+                line_num: self.text_line_num,
+                line_pos: self.text_line_pos,
+                error_type: ErrorType::StringTooLong,
+            })
+        }
     }
 
     #[inline(always)]
@@ -220,37 +221,29 @@ impl<'x> Tokenizer<'x> {
         }
     }
 
-    pub fn unwrap_string(&mut self) -> Result<StringItem, CompileError> {
+    pub fn expect_static_string(&mut self) -> Result<Vec<u8>, CompileError> {
         let next_token = self.unwrap_next()?;
         match next_token.token {
-            Token::String(s) => Ok(s),
+            Token::StringConstant(s) => Ok(s),
             Token::BracketOpen => {
-                let mut items = self.parse_string_list(false)?;
-                match items.pop() {
-                    Some(s) if items.is_empty() => Ok(s),
-                    _ => Err(next_token.expected("string")),
+                let mut string = None;
+                loop {
+                    let token_info = self.unwrap_next()?;
+                    match token_info.token {
+                        Token::StringConstant(string_) => {
+                            string = string_.into();
+                        }
+                        Token::BracketClose if string.is_some() => break,
+                        _ => return Err(token_info.expected("constant string")),
+                    }
                 }
+                Ok(string.unwrap())
             }
-            _ => Err(next_token.expected("string")),
+            _ => Err(next_token.expected("constant string")),
         }
     }
 
-    pub fn unwrap_static_string(&mut self) -> Result<Vec<u8>, CompileError> {
-        let next_token = self.unwrap_next()?;
-        match next_token.token {
-            Token::String(StringItem::Text(s)) => Ok(s),
-            Token::BracketOpen => {
-                let mut items = self.parse_string_list(false)?;
-                match items.pop() {
-                    Some(StringItem::Text(s)) if items.is_empty() => Ok(s),
-                    _ => Err(next_token.expected("string")),
-                }
-            }
-            _ => Err(next_token.expected("string")),
-        }
-    }
-
-    pub fn unwrap_number(&mut self, max_value: usize) -> Result<usize, CompileError> {
+    pub fn expect_number(&mut self, max_value: usize) -> Result<usize, CompileError> {
         let next_token = self.unwrap_next()?;
         if let Token::Number(n) = next_token.token {
             if n < max_value {

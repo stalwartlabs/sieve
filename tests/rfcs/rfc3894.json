@@ -1,9 +1,15 @@
-{
-  "capabilities": [
-    "Copy",
-    "FileInto"
+[
+  [
+    0,
+    {
+      "Require": [
+        "Copy",
+        "FileInto"
+      ]
+    }
   ],
-  "commands": [
+  [
+    1,
     {
       "FileInto": {
         "copy": true,
@@ -24,7 +30,10 @@
         "mailbox_id": null,
         "special_use": null
       }
-    },
+    }
+  ],
+  [
+    2,
     {
       "Redirect": {
         "copy": true,
@@ -43,4 +52,4 @@
       }
     }
   ]
-}
+]
