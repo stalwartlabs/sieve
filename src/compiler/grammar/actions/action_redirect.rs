@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::command::{Command, CompilerState},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Redirect {
     pub copy: bool,
     pub address: StringItem,
@@ -18,21 +16,21 @@ pub(crate) struct Redirect {
     pub list: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum NotifyItem {
     Success,
     Failure,
     Delay,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum NotifyValue {
     Never,
     Items(Vec<NotifyItem>),
     Default,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Ret {
     Full,
     Hdrs,
@@ -48,7 +46,7 @@ pub(crate) enum Ret {
 
 */
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum ByTime {
     Relative {
         rlimit: u64,
@@ -63,16 +61,16 @@ pub(crate) enum ByTime {
     None,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum ByMode {
     Notify,
     Return,
     Default,
 }
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_redirect(&mut self) -> Result<Redirect, CompileError> {
-        let mut address = None;
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_redirect(&mut self) -> Result<(), CompileError> {
+        let address;
         let mut copy = false;
         let mut ret = Ret::Default;
         let mut notify = NotifyValue::Default;
@@ -82,8 +80,8 @@ impl<'x> Tokenizer<'x> {
         let mut by_rlimit = None;
         let mut by_alimit = None;
 
-        while address.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Copy) => {
                     copy = true;
@@ -95,7 +93,7 @@ impl<'x> Tokenizer<'x> {
                     by_trace = true;
                 }
                 Token::Tag(Word::ByMode) => {
-                    let by_mode_ = self.unwrap_static_string()?;
+                    let by_mode_ = self.tokens.expect_static_string()?;
                     if by_mode_.eq_ignore_ascii_case(b"notify") {
                         by_mode = ByMode::Notify;
                     } else if by_mode_.eq_ignore_ascii_case(b"return") {
@@ -105,13 +103,13 @@ impl<'x> Tokenizer<'x> {
                     }
                 }
                 Token::Tag(Word::ByTimeRelative) => {
-                    by_rlimit = (self.unwrap_number(u64::MAX as usize)? as u64).into();
+                    by_rlimit = (self.tokens.expect_number(u64::MAX as usize)? as u64).into();
                 }
                 Token::Tag(Word::ByTimeAbsolute) => {
-                    by_alimit = self.unwrap_string()?.into();
+                    by_alimit = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Ret) => {
-                    let ret_ = self.unwrap_static_string()?;
+                    let ret_ = self.tokens.expect_static_string()?;
                     if ret_.eq_ignore_ascii_case(b"full") {
                         ret = Ret::Full;
                     } else if ret_.eq_ignore_ascii_case(b"hdrs") {
@@ -121,7 +119,7 @@ impl<'x> Tokenizer<'x> {
                     }
                 }
                 Token::Tag(Word::Notify) => {
-                    let notify_ = self.unwrap_static_string()?;
+                    let notify_ = self.tokens.expect_static_string()?;
                     if notify_.eq_ignore_ascii_case(b"never") {
                         notify = NotifyValue::Never;
                     } else {
@@ -145,17 +143,15 @@ impl<'x> Tokenizer<'x> {
                         }
                     }
                 }
-                Token::String(string) => {
-                    address = string.into();
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    address = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
 
-        Ok(Redirect {
-            address: address.unwrap(),
+        self.commands.push(Command::Redirect(Redirect {
+            address,
             copy,
             notify,
             ret,
@@ -175,6 +171,7 @@ impl<'x> Tokenizer<'x> {
                 ByTime::None
             },
             list,
-        })
+        }));
+        Ok(())
     }
 }

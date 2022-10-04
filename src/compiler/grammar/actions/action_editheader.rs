@@ -1,16 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
+use crate::compiler::{
+    grammar::{
+        command::{Command, CompilerState},
+        Comparator,
     },
-    runtime::StringItem,
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, MatchType};
+use crate::compiler::grammar::MatchType;
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct AddHeader {
     pub last: bool,
     pub field_name: StringItem,
@@ -24,7 +25,7 @@ pub(crate) struct AddHeader {
                    [<value-patterns: string-list>]
 
 */
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct DeleteHeader {
     pub index: Option<u16>,
     pub index_last: bool,
@@ -34,47 +35,46 @@ pub(crate) struct DeleteHeader {
     pub value_patterns: Vec<StringItem>,
 }
 
-impl<'x> Tokenizer<'x> {
-    pub(crate) fn parse_addheader(&mut self) -> Result<AddHeader, CompileError> {
+impl<'x> CompilerState<'x> {
+    pub(crate) fn parse_addheader(&mut self) -> Result<(), CompileError> {
         let mut field_name = None;
-        let mut value = None;
+        let value;
         let mut last = false;
 
-        while value.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Last) => {
                     last = true;
                 }
-                Token::String(string) => {
+                _ => {
+                    let string = self.parse_string_token(token_info)?;
                     if field_name.is_none() {
                         field_name = string.into();
                     } else {
-                        value = string.into();
+                        value = string;
+                        break;
                     }
-                }
-                _ => {
-                    return Err(token_info.expected("string"));
                 }
             }
         }
-
-        Ok(AddHeader {
+        self.commands.push(Command::AddHeader(AddHeader {
             last,
             field_name: field_name.unwrap(),
-            value: value.unwrap(),
-        })
+            value,
+        }));
+        Ok(())
     }
 
-    pub(crate) fn parse_deleteheader(&mut self) -> Result<DeleteHeader, CompileError> {
-        let mut field_name = None;
+    pub(crate) fn parse_deleteheader(&mut self) -> Result<(), CompileError> {
+        let field_name: StringItem;
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut index = None;
         let mut index_last = false;
 
-        while field_name.is_none() {
-            let token_info = self.unwrap_next()?;
+        loop {
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -90,33 +90,34 @@ impl<'x> Tokenizer<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.unwrap_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
                 }
-                Token::String(string) => {
-                    field_name = string.into();
-                }
                 _ => {
-                    return Err(token_info.expected("string"));
+                    field_name = self.parse_string_token(token_info)?;
+                    break;
                 }
             }
         }
 
-        Ok(DeleteHeader {
+        let cmd = Command::DeleteHeader(DeleteHeader {
             index,
             index_last,
             comparator,
             match_type,
-            field_name: field_name.unwrap(),
-            value_patterns: if let Some(Ok(Token::String(_) | Token::BracketOpen)) =
-                self.peek().map(|r| r.map(|t| &t.token))
+            field_name,
+            value_patterns: if let Some(Ok(
+                Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
+            )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
             {
                 self.parse_strings(match_type == MatchType::Matches)?
             } else {
                 Vec::new()
             },
-        })
+        });
+        self.commands.push(cmd);
+        Ok(())
     }
 }

@@ -1,17 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        grammar::actions::action_mime::MimeOpts,
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::{actions::action_mime::MimeOpts, command::CompilerState, Comparator},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestHeader {
     pub header_list: Vec<StringItem>,
     pub key_list: Vec<StringItem>,
@@ -27,7 +24,7 @@ pub(crate) struct TestHeader {
     pub list: bool,
 }
 
-impl<'x> Tokenizer<'x> {
+impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_header(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
@@ -43,7 +40,7 @@ impl<'x> Tokenizer<'x> {
         let mut list = false;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -59,7 +56,7 @@ impl<'x> Tokenizer<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.unwrap_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
@@ -78,28 +75,14 @@ impl<'x> Tokenizer<'x> {
                 ) => {
                     mime_opts = self.parse_mimeopts(word)?;
                 }
-                Token::String(string) => {
-                    if header_list.is_none() {
-                        header_list = vec![string].into();
-                    } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
-                        break;
-                    }
-                }
-                Token::BracketOpen => {
-                    if header_list.is_none() {
-                        header_list = self.parse_string_list(false)?.into();
-                    } else {
-                        key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                        break;
-                    }
-                }
                 _ => {
-                    return Err(token_info.expected("string or string list"));
+                    if header_list.is_none() {
+                        header_list = self.parse_strings_token(token_info, false)?.into();
+                    } else {
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        break;
+                    }
                 }
             }
         }

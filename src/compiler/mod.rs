@@ -89,4 +89,20 @@ impl TokenInfo {
             error_type: ErrorType::InvalidGrammar(reason.into()),
         }
     }
+
+    pub fn invalid_utf8(self) -> CompileError {
+        CompileError {
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type: ErrorType::InvalidUtf8String,
+        }
+    }
+
+    pub fn custom(self, error_type: ErrorType) -> CompileError {
+        CompileError {
+            line_num: self.line_num,
+            line_pos: self.line_pos,
+            error_type,
+        }
+    }
 }

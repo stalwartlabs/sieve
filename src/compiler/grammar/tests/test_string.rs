@@ -1,16 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compiler::{
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError,
-    },
-    runtime::StringItem,
+use crate::compiler::{
+    grammar::{command::CompilerState, Comparator},
+    lexer::{string::StringItem, word::Word, Token},
+    CompileError,
 };
 
-use crate::compiler::grammar::{comparator::Comparator, test::Test, MatchType};
+use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestString {
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -20,7 +18,7 @@ pub(crate) struct TestString {
     pub list: bool,
 }
 
-impl<'x> Tokenizer<'x> {
+impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_string(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
@@ -30,7 +28,7 @@ impl<'x> Tokenizer<'x> {
         let mut list = false;
 
         loop {
-            let token_info = self.unwrap_next()?;
+            let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::Is
@@ -48,28 +46,14 @@ impl<'x> Tokenizer<'x> {
                 Token::Tag(Word::List) => {
                     list = true;
                 }
-                Token::String(string) => {
-                    if source.is_none() {
-                        source = vec![string].into();
-                    } else {
-                        key_list = vec![if match_type == MatchType::Matches {
-                            string.into_matches()
-                        } else {
-                            string
-                        }];
-                        break;
-                    }
-                }
-                Token::BracketOpen => {
-                    if source.is_none() {
-                        source = self.parse_string_list(false)?.into();
-                    } else {
-                        key_list = self.parse_string_list(match_type == MatchType::Matches)?;
-                        break;
-                    }
-                }
                 _ => {
-                    return Err(token_info.expected("string or string list"));
+                    if source.is_none() {
+                        source = self.parse_strings_token(token_info, false)?.into();
+                    } else {
+                        key_list =
+                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        break;
+                    }
                 }
             }
         }
