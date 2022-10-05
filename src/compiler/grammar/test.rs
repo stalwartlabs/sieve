@@ -119,6 +119,7 @@ impl<'x> CompilerState<'x> {
             jmps: Vec::new(),
         };
         let mut is_not = false;
+        self.match_test_pos_last = usize::MAX;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;

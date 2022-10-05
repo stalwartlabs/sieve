@@ -7,14 +7,15 @@ use crate::{
     Context, Input, Runtime, Script, Sieve,
 };
 
+pub mod actions;
 pub mod context;
+pub mod eval;
 pub mod test;
-pub mod variables;
+pub mod tests;
 
 #[derive(Debug)]
 pub enum RuntimeError {
     IllegalAction,
-    InvalidUtf8(Vec<u8>),
     TooManyIncludes,
     InvalidInstruction(Invalid),
     ScriptErrorMessage(String),

@@ -17,52 +17,10 @@
           "ValidNotifyMethod": {
             "notification_uris": [
               {
-                "Text": [
-                  109,
-                  97,
-                  105,
-                  108,
-                  116,
-                  111,
-                  58
-                ]
+                "Text": "mailto:"
               },
               {
-                "Text": [
-                  104,
-                  116,
-                  116,
-                  112,
-                  58,
-                  47,
-                  47,
-                  103,
-                  119,
-                  46,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  110,
-                  101,
-                  116,
-                  47,
-                  110,
-                  111,
-                  116,
-                  105,
-                  102,
-                  121,
-                  63,
-                  116,
-                  101,
-                  115,
-                  116
-                ]
+                "Text": "http://gw.example.net/notify?test"
               }
             ]
           }
@@ -90,68 +48,14 @@
             "comparator": "AsciiCaseMap",
             "match_type": "Is",
             "notification_uri": {
-              "Text": [
-                120,
-                109,
-                112,
-                112,
-                58,
-                116,
-                105,
-                109,
-                64,
-                101,
-                120,
-                97,
-                109,
-                112,
-                108,
-                101,
-                46,
-                99,
-                111,
-                109,
-                63,
-                109,
-                101,
-                115,
-                115,
-                97,
-                103,
-                101,
-                59,
-                115,
-                117,
-                98,
-                106,
-                101,
-                99,
-                116,
-                61,
-                83,
-                73,
-                69,
-                86,
-                69
-              ]
+              "Text": "xmpp:tim@example.com?message;subject=SIEVE"
             },
             "notification_capability": {
-              "Text": [
-                79,
-                110,
-                108,
-                105,
-                110,
-                101
-              ]
+              "Text": "Online"
             },
             "key_list": [
               {
-                "Text": [
-                  121,
-                  101,
-                  115
-                ]
+                "Text": "yes"
               }
             ]
           }
@@ -172,73 +76,15 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": [
-            49
-          ]
+          "Text": "1"
         },
         "options": [],
         "message": {
-          "Text": [
-            89,
-            111,
-            117,
-            32,
-            103,
-            111,
-            116,
-            32,
-            109,
-            97,
-            105,
-            108
-          ]
+          "Text": "You got mail"
         },
         "fcc": null,
         "method": {
-          "Text": [
-            120,
-            109,
-            112,
-            112,
-            58,
-            116,
-            105,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109,
-            63,
-            109,
-            101,
-            115,
-            115,
-            97,
-            103,
-            101,
-            59,
-            115,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            61,
-            83,
-            73,
-            69,
-            86,
-            69
-          ]
+          "Text": "xmpp:tim@example.com?message;subject=SIEVE"
         }
       }
     }
@@ -257,41 +103,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": [
-            89,
-            111,
-            117,
-            32,
-            103,
-            111,
-            116,
-            32,
-            109,
-            97,
-            105,
-            108
-          ]
+          "Text": "You got mail"
         },
         "fcc": null,
         "method": {
-          "Text": [
-            116,
-            101,
-            108,
-            58,
-            43,
-            49,
-            52,
-            48,
-            56,
-            53,
-            53,
-            53,
-            49,
-            50,
-            49,
-            50
-          ]
+          "Text": "tel:+14085551212"
         }
       }
     }
@@ -304,34 +120,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  98,
-                  111,
-                  115,
-                  115,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "boss@example.org"
               }
             ],
             "match_type": "Contains",
@@ -360,72 +154,15 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": [
-            49
-          ]
+          "Text": "1"
         },
         "options": [],
         "message": {
-          "Text": [
-            84,
-            104,
-            105,
-            115,
-            32,
-            105,
-            115,
-            32,
-            112,
-            114,
-            111,
-            98,
-            97,
-            98,
-            108,
-            121,
-            32,
-            118,
-            101,
-            114,
-            121,
-            32,
-            105,
-            109,
-            112,
-            111,
-            114,
-            116,
-            97,
-            110,
-            116
-          ]
+          "Text": "This is probably very important"
         },
         "fcc": null,
         "method": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            116,
-            111,
-            58,
-            97,
-            108,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "mailto:alm@example.com"
         }
       }
     }
@@ -442,44 +179,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  116,
-                  111
-                ]
+                "Text": "to"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  115,
-                  105,
-                  101,
-                  118,
-                  101,
-                  109,
-                  97,
-                  105,
-                  108,
-                  105,
-                  110,
-                  103,
-                  108,
-                  105,
-                  115,
-                  116,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "sievemailinglist@example.org"
               }
             ],
             "match_type": "Contains",
@@ -499,7 +204,7 @@
   [
     14,
     {
-      "Jz": 23
+      "Jz": 25
     }
   ],
   [
@@ -510,15 +215,7 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
@@ -526,7 +223,9 @@
                 "MatchMany": 1
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -543,7 +242,7 @@
   [
     16,
     {
-      "Jz": 18
+      "Jz": 19
     }
   ],
   [
@@ -556,25 +255,29 @@
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
     18,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    19,
+    {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  70,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "From"
               }
             ],
             "key_list": [
@@ -582,7 +285,9 @@
                 "MatchMany": 1
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -597,85 +302,21 @@
     }
   ],
   [
-    19,
-    {
-      "Jz": 21
-    }
-  ],
-  [
     20,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 1
-        },
-        "value": {
-          "MatchVariable": 1
-        },
-        "encode_url": false
-      }
+      "Jz": 23
     }
   ],
   [
     21,
     {
-      "Notify": {
-        "from": null,
-        "importance": {
-          "Text": [
-            51
-          ]
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
         },
-        "options": [],
-        "message": {
-          "List": [
-            {
-              "Text": [
-                91,
-                83,
-                73,
-                69,
-                86,
-                69,
-                93,
-                32
-              ]
-            },
-            {
-              "Text": [
-                58,
-                32
-              ]
-            }
-          ]
-        },
-        "fcc": null,
-        "method": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            116,
-            111,
-            58,
-            97,
-            108,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+        "value": {
+          "MatchVariable": 1
         }
       }
     }
@@ -683,23 +324,47 @@
   [
     22,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    23,
+    {
+      "Notify": {
+        "from": null,
+        "importance": {
+          "Text": "3"
+        },
+        "options": [],
+        "message": {
+          "List": [
+            {
+              "Text": "[SIEVE] "
+            },
+            {
+              "Text": ": "
+            }
+          ]
+        },
+        "fcc": null,
+        "method": {
+          "Text": "mailto:alm@example.com"
+        }
+      }
+    }
+  ],
+  [
+    24,
+    {
       "FileInto": {
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            115,
-            105,
-            101,
-            118,
-            101
-          ]
+          "Text": "INBOX.sieve"
         },
         "flags": [],
         "mailbox_id": null,
@@ -708,19 +373,14 @@
     }
   ],
   [
-    23,
+    25,
     {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
@@ -730,77 +390,26 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      64
-                    ]
+                    "Text": "@"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      101,
-                      120,
-                      97,
-                      109,
-                      112,
-                      108,
-                      101,
-                      46,
-                      111,
-                      114,
-                      103
-                    ]
+                    "Text": ".example.org"
                   }
                 ]
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
             "mime": false,
             "mime_opts": "None",
             "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
-      }
-    }
-  ],
-  [
-    24,
-    {
-      "Jz": 35
-    }
-  ],
-  [
-    25,
-    {
-      "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "MatchMany": 1
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Matches",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
             "list": false
           }
         },
@@ -811,120 +420,18 @@
   [
     26,
     {
-      "Jz": 28
+      "Jz": 40
     }
   ],
   [
     27,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 2
-        },
-        "value": {
-          "List": [
-            {
-              "Text": [
-                32,
-                91,
-                114,
-                101,
-                97,
-                108,
-                108,
-                121,
-                58,
-                32
-              ]
-            },
-            {
-              "MatchVariable": 1
-            },
-            {
-              "Text": [
-                93
-              ]
-            }
-          ]
-        },
-        "encode_url": false
-      }
-    }
-  ],
-  [
-    28,
-    {
       "Test": {
         "test": {
-          "Header": {
+          "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "MatchMany": 1
-              }
-            ],
-            "match_type": "Matches",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
-      }
-    }
-  ],
-  [
-    29,
-    {
-      "Jz": 31
-    }
-  ],
-  [
-    30,
-    {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 3
-        },
-        "value": {
-          "MatchVariable": 1
-        },
-        "encode_url": false
-      }
-    }
-  ],
-  [
-    31,
-    {
-      "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
@@ -933,11 +440,82 @@
               }
             ],
             "address_part": "All",
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
+            "comparator": "AsciiCaseMap",
+            "zone": null,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    28,
+    {
+      "Jz": 31
+    }
+  ],
+  [
+    29,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "List": [
+            {
+              "Text": " [really: "
+            },
+            {
+              "MatchVariable": 1
+            },
+            {
+              "Text": "]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  [
+    30,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    31,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": "Subject"
+              }
+            ],
+            "key_list": [
+              {
+                "MatchMany": 1
+              }
+            ],
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
             "mime": false,
+            "mime_opts": "None",
             "mime_anychild": false,
             "list": false
           }
@@ -949,7 +527,7 @@
   [
     32,
     {
-      "Jz": 34
+      "Jz": 35
     }
   ],
   [
@@ -958,269 +536,131 @@
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 4
+          "Local": 0
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
     34,
     {
-      "Notify": {
-        "from": null,
-        "importance": null,
-        "options": [],
-        "message": {
-          "Text": [
-            58,
-            32
-          ]
-        },
-        "fcc": null,
-        "method": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            116,
-            111,
-            58,
-            97,
-            108,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
-        }
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
       }
     }
   ],
   [
     35,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 5
+      "Test": {
+        "test": {
+          "Address": {
+            "header_list": [
+              {
+                "Text": "from"
+              }
+            ],
+            "key_list": [
+              {
+                "MatchMany": 1
+              }
+            ],
+            "address_part": "All",
+            "match_type": {
+              "Matches": 2
+            },
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_anychild": false,
+            "list": false
+          }
         },
-        "value": {
-          "Text": [
-            120,
-            109,
-            112,
-            112,
-            58,
-            116,
-            105,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109,
-            63,
-            109,
-            101,
-            115,
-            115,
-            97,
-            103,
-            101,
-            59,
-            115,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            61,
-            83,
-            73,
-            69,
-            86,
-            69,
-            59,
-            98,
-            111,
-            100,
-            121,
-            61,
-            89,
-            111,
-            117,
-            37,
-            50,
-            48,
-            103,
-            111,
-            116,
-            37,
-            50,
-            48,
-            109,
-            97,
-            105,
-            108
-          ]
-        },
-        "encode_url": false
+        "is_not": false
       }
     }
   ],
   [
     36,
     {
-      "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": [
-                  115,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "Text": [
-                  89,
-                  111,
-                  117,
-                  114,
-                  32,
-                  100,
-                  111,
-                  103
-                ]
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
-      }
+      "Jz": 39
     }
   ],
   [
     37,
     {
-      "Jz": 39
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "MatchVariable": 1
+        }
+      }
     }
   ],
   [
     38,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 5
-        },
-        "value": {
-          "Text": [
-            116,
-            101,
-            108,
-            58,
-            43,
-            49,
-            52,
-            48,
-            56,
-            53,
-            53,
-            53,
-            49,
-            50,
-            49,
-            50
-          ]
-        },
-        "encode_url": false
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
       }
     }
   ],
   [
     39,
     {
+      "Notify": {
+        "from": null,
+        "importance": null,
+        "options": [],
+        "message": {
+          "Text": ": "
+        },
+        "fcc": null,
+        "method": {
+          "Text": "mailto:alm@example.com"
+        }
+      }
+    }
+  ],
+  [
+    40,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "Text": "xmpp:tim@example.com?message;subject=SIEVE;body=You%20got%20mail"
+        }
+      }
+    }
+  ],
+  [
+    41,
+    {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  116,
-                  111
-                ]
+                "Text": "subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  115,
-                  105,
-                  101,
-                  118,
-                  101,
-                  109,
-                  97,
-                  105,
-                  108,
-                  105,
-                  110,
-                  103,
-                  108,
-                  105,
-                  115,
-                  116,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "Your dog"
               }
             ],
             "match_type": "Contains",
@@ -1238,28 +678,77 @@
     }
   ],
   [
-    40,
+    42,
     {
-      "Jz": 42
+      "Jz": 44
     }
   ],
   [
-    41,
+    43,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 5
+          "Local": 0
         },
         "value": {
-          "Text": []
-        },
-        "encode_url": false
+          "Text": "tel:+14085551212"
+        }
       }
     }
   ],
   [
-    42,
+    44,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": "to"
+              }
+            ],
+            "key_list": [
+              {
+                "Text": "sievemailinglist@example.org"
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    45,
+    {
+      "Jz": 47
+    }
+  ],
+  [
+    46,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "Text": ""
+        }
+      }
+    }
+  ],
+  [
+    47,
     {
       "Test": {
         "test": {
@@ -1268,135 +757,18 @@
             "comparator": "AsciiCaseMap",
             "source": [
               {
-                "LocalVariable": 5
+                "LocalVariable": 0
               }
             ],
             "key_list": [
               {
-                "Text": []
+                "Text": ""
               }
             ],
             "list": false
           }
         },
         "is_not": true
-      }
-    }
-  ],
-  [
-    43,
-    {
-      "Jz": 45
-    }
-  ],
-  [
-    44,
-    {
-      "Notify": {
-        "from": null,
-        "importance": null,
-        "options": [],
-        "message": null,
-        "fcc": null,
-        "method": {
-          "LocalVariable": 5
-        }
-      }
-    }
-  ],
-  [
-    45,
-    {
-      "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "Text": [
-                  98,
-                  111,
-                  115,
-                  115,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
-      }
-    }
-  ],
-  [
-    46,
-    {
-      "Jz": 53
-    }
-  ],
-  [
-    47,
-    {
-      "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "MatchMany": 1
-              }
-            ],
-            "match_type": "Matches",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
       }
     }
   ],
@@ -1409,15 +781,15 @@
   [
     49,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 6
-        },
-        "value": {
-          "MatchVariable": 1
-        },
-        "encode_url": false
+      "Notify": {
+        "from": null,
+        "importance": null,
+        "options": [],
+        "message": null,
+        "fcc": null,
+        "method": {
+          "LocalVariable": 0
+        }
       }
     }
   ],
@@ -1429,25 +801,110 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  115,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  70,
-                  89,
-                  73,
-                  58
-                ]
+                "Text": "boss@example.org"
+              }
+            ],
+            "match_type": "Contains",
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    51,
+    {
+      "Jz": 59
+    }
+  ],
+  [
+    52,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": "Subject"
+              }
+            ],
+            "key_list": [
+              {
+                "MatchMany": 1
+              }
+            ],
+            "match_type": {
+              "Matches": 2
+            },
+            "comparator": "AsciiCaseMap",
+            "index": null,
+            "index_last": false,
+            "mime": false,
+            "mime_opts": "None",
+            "mime_anychild": false,
+            "list": false
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    53,
+    {
+      "Jz": 56
+    }
+  ],
+  [
+    54,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 1
+        },
+        "value": {
+          "MatchVariable": 1
+        }
+      }
+    }
+  ],
+  [
+    55,
+    {
+      "Clear": {
+        "local_vars_idx": 1,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    56,
+    {
+      "Test": {
+        "test": {
+          "Header": {
+            "header_list": [
+              {
+                "Text": "subject"
+              }
+            ],
+            "key_list": [
+              {
+                "Text": "FYI:"
               }
             ],
             "match_type": "Contains",
@@ -1465,52 +922,26 @@
     }
   ],
   [
-    51,
+    57,
     {
-      "Jz": 53
+      "Jz": 59
     }
   ],
   [
-    52,
+    58,
     {
       "Notify": {
         "from": null,
         "importance": {
-          "Text": [
-            49
-          ]
+          "Text": "1"
         },
         "options": [],
         "message": {
-          "Text": [
-            66,
-            79,
-            83,
-            83,
-            58,
-            32
-          ]
+          "Text": "BOSS: "
         },
         "fcc": null,
         "method": {
-          "Text": [
-            116,
-            101,
-            108,
-            58,
-            43,
-            49,
-            52,
-            48,
-            56,
-            53,
-            53,
-            53,
-            49,
-            50,
-            49,
-            50
-          ]
+          "Text": "tel:+14085551212"
         }
       }
     }

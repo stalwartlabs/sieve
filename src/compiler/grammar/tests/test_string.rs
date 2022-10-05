@@ -50,8 +50,7 @@ impl<'x> CompilerState<'x> {
                     if source.is_none() {
                         source = self.parse_strings_token(token_info, false)?.into();
                     } else {
-                        key_list =
-                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
                         break;
                     }
                 }

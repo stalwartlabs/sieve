@@ -52,8 +52,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
-                    key_list =
-                        self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                    key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
                     break;
                 }
             }

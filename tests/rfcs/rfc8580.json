@@ -20,84 +20,28 @@
         },
         "subject": null,
         "from": {
-          "Text": [
-            104,
-            101,
-            109,
-            105,
-            110,
-            103,
-            119,
-            97,
-            121,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "hemingway@example.com"
         },
         "handle": null,
         "addresses": [],
         "mime": false,
         "fcc": {
           "fcc": {
-            "Text": [
-              73,
-              78,
-              66,
-              79,
-              88,
-              46,
-              83,
-              101,
-              110,
-              116
-            ]
+            "Text": "INBOX.Sent"
           },
           "create": true,
           "flags": [
             {
-              "Text": [
-                83,
-                101,
-                101,
-                110
-              ]
+              "Text": "Seen"
             }
           ],
           "special_use": {
-            "Text": [
-              83,
-              101,
-              110,
-              116
-            ]
+            "Text": "Sent"
           },
           "mailbox_id": null
         },
         "reason": {
-          "Text": [
-            71,
-            111,
-            110,
-            101,
-            32,
-            70,
-            105,
-            115,
-            104,
-            105,
-            110,
-            39
-          ]
+          "Text": "Gone Fishin'"
         }
       }
     }
@@ -110,36 +54,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": [
-            89,
-            111,
-            117,
-            32,
-            103,
-            111,
-            116,
-            32,
-            109,
-            97,
-            105,
-            108,
-            33
-          ]
+          "Text": "You got mail!"
         },
         "fcc": {
           "fcc": {
-            "Text": [
-              73,
-              78,
-              66,
-              79,
-              88,
-              46,
-              83,
-              101,
-              110,
-              116
-            ]
+            "Text": "INBOX.Sent"
           },
           "create": false,
           "flags": [],
@@ -147,30 +66,7 @@
           "mailbox_id": null
         },
         "method": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            116,
-            111,
-            58,
-            107,
-            101,
-            110,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "mailto:ken@example.com"
         }
       }
     }
@@ -184,28 +80,14 @@
             "comparator": "AsciiCaseMap",
             "match_type": "Is",
             "notification_uri": {
-              "Text": [
-                120,
-                109,
-                112,
-                112,
-                58
-              ]
+              "Text": "xmpp:"
             },
             "notification_capability": {
-              "Text": [
-                102,
-                99,
-                99
-              ]
+              "Text": "fcc"
             },
             "key_list": [
               {
-                "Text": [
-                  121,
-                  101,
-                  115
-                ]
+                "Text": "yes"
               }
             ]
           }
@@ -228,35 +110,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": [
-            89,
-            111,
-            117,
-            32,
-            103,
-            111,
-            116,
-            32,
-            109,
-            97,
-            105,
-            108
-          ]
+          "Text": "You got mail"
         },
         "fcc": {
           "fcc": {
-            "Text": [
-              73,
-              78,
-              66,
-              79,
-              88,
-              46,
-              83,
-              101,
-              110,
-              116
-            ]
+            "Text": "INBOX.Sent"
           },
           "create": false,
           "flags": [],
@@ -264,50 +122,7 @@
           "mailbox_id": null
         },
         "method": {
-          "Text": [
-            120,
-            109,
-            112,
-            112,
-            58,
-            107,
-            101,
-            110,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109,
-            63,
-            109,
-            101,
-            115,
-            115,
-            97,
-            103,
-            101,
-            59,
-            115,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            61,
-            83,
-            73,
-            69,
-            86,
-            69
-          ]
+          "Text": "xmpp:ken@example.com?message;subject=SIEVE"
         }
       }
     }
@@ -326,36 +141,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": [
-            89,
-            111,
-            117,
-            32,
-            103,
-            111,
-            116,
-            32,
-            109,
-            97,
-            105,
-            108,
-            33
-          ]
+          "Text": "You got mail!"
         },
         "fcc": {
           "fcc": {
-            "Text": [
-              73,
-              78,
-              66,
-              79,
-              88,
-              46,
-              83,
-              101,
-              110,
-              116
-            ]
+            "Text": "INBOX.Sent"
           },
           "create": false,
           "flags": [],
@@ -363,30 +153,7 @@
           "mailbox_id": null
         },
         "method": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            116,
-            111,
-            58,
-            107,
-            101,
-            110,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "mailto:ken@example.com"
         }
       }
     }

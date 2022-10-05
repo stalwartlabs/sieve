@@ -1,6 +1,8 @@
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
+use crate::runtime::eval::IntoString;
+
 use self::command::CompilerState;
 
 use super::{
@@ -75,8 +77,8 @@ pub(crate) enum AddressPart {
 pub(crate) enum MatchType {
     Is,
     Contains,
-    Matches,
-    Regex,
+    Matches(usize),
+    Regex(usize),
     Value(RelationalMatch),
     Count(RelationalMatch),
 }
@@ -98,6 +100,13 @@ pub enum Comparator {
     AsciiCaseMap,
     AsciiNumeric,
     Other(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Clear {
+    pub(crate) local_vars_idx: u32,
+    pub(crate) local_vars_num: u32,
+    pub(crate) match_vars: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -175,8 +184,14 @@ impl<'x> CompilerState<'x> {
         match word {
             Word::Is => Ok(MatchType::Is),
             Word::Contains => Ok(MatchType::Contains),
-            Word::Matches => Ok(MatchType::Matches),
-            Word::Regex => Ok(MatchType::Regex),
+            Word::Matches => {
+                self.match_test_pos_last = self.commands.len();
+                Ok(MatchType::Matches(0))
+            }
+            Word::Regex => {
+                self.match_test_pos_last = self.commands.len();
+                Ok(MatchType::Regex(0))
+            }
             _ => {
                 let token_info = self.tokens.unwrap_next()?;
                 if let Token::StringConstant(text) = &token_info.token {
@@ -196,8 +211,7 @@ impl<'x> CompilerState<'x> {
     }
 
     pub(crate) fn parse_comparator(&mut self) -> Result<Comparator, CompileError> {
-        let comparator = String::from_utf8(self.tokens.expect_static_string()?)
-            .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned());
+        let comparator = self.tokens.expect_static_string()?.into_string();
         Ok(if let Some(comparator) = COMPARATOR.get(&comparator) {
             comparator.clone()
         } else {
@@ -247,7 +261,7 @@ impl<'x> CompilerState<'x> {
     pub fn parse_string(&mut self) -> Result<StringItem, CompileError> {
         let next_token = self.tokens.unwrap_next()?;
         match next_token.token {
-            Token::StringConstant(s) => Ok(StringItem::Text(s)),
+            Token::StringConstant(s) => Ok(StringItem::Text(s.into_string())),
             Token::StringVariable(s) => {
                 self.tokenize_string(&s, true, false)
                     .map_err(|error_type| CompileError {
@@ -274,7 +288,9 @@ impl<'x> CompilerState<'x> {
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
             Token::BracketOpen => self.parse_string_list(parse_matches),
-            Token::StringConstant(s) if !parse_matches => Ok(vec![StringItem::Text(s)]),
+            Token::StringConstant(s) if !parse_matches => {
+                Ok(vec![StringItem::Text(s.into_string())])
+            }
             Token::StringConstant(s) | Token::StringVariable(s) => self
                 .tokenize_string(&s, true, parse_matches)
                 .map(|s| vec![s])
@@ -292,7 +308,7 @@ impl<'x> CompilerState<'x> {
         token_info: TokenInfo,
     ) -> Result<StringItem, CompileError> {
         match token_info.token {
-            Token::StringConstant(s) => Ok(StringItem::Text(s)),
+            Token::StringConstant(s) => Ok(StringItem::Text(s.into_string())),
             Token::StringVariable(s) => {
                 self.tokenize_string(&s, true, false)
                     .map_err(|error_type| CompileError {
@@ -311,7 +327,9 @@ impl<'x> CompilerState<'x> {
         parse_matches: bool,
     ) -> Result<Vec<StringItem>, CompileError> {
         match token_info.token {
-            Token::StringConstant(s) if !parse_matches => Ok(vec![StringItem::Text(s)]),
+            Token::StringConstant(s) if !parse_matches => {
+                Ok(vec![StringItem::Text(s.into_string())])
+            }
             Token::StringConstant(s) | Token::StringVariable(s) => self
                 .tokenize_string(&s, true, parse_matches)
                 .map(|s| vec![s])
@@ -334,7 +352,7 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::StringConstant(s) if !parse_matches => {
-                    strings.push(StringItem::Text(s));
+                    strings.push(StringItem::Text(s.into_string()));
                 }
                 Token::StringConstant(s) | Token::StringVariable(s) => {
                     strings.push(self.tokenize_string(&s, true, parse_matches).map_err(
@@ -354,13 +372,18 @@ impl<'x> CompilerState<'x> {
     }
 }
 
+impl MatchType {
+    pub fn is_matches(&self) -> bool {
+        matches!(self, MatchType::Matches(_))
+    }
+}
+
 impl Capability {
     pub fn parse(bytes: Vec<u8>) -> Capability {
         if let Some(capability) = CAPABILITIES.get(std::str::from_utf8(&bytes).unwrap_or("")) {
             capability.clone()
         } else {
-            let capability = String::from_utf8(bytes)
-                .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned());
+            let capability = bytes.into_string();
             if let Some(comparator) = capability.strip_prefix("comparator-") {
                 Capability::Comparator(Comparator::Other(comparator.to_string()))
             } else {

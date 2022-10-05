@@ -15,34 +15,12 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            47,
-            65,
-            114,
-            99,
-            104,
-            105,
-            118,
-            101
-          ]
+          "Text": "INBOX/Archive"
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": [
-            65,
-            114,
-            99,
-            104,
-            105,
-            118,
-            101
-          ]
+          "Text": "Archive"
         }
       }
     }
@@ -54,22 +32,12 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            83,
-            112,
-            97,
-            109
-          ]
+          "Text": "Spam"
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": [
-            74,
-            117,
-            110,
-            107
-          ]
+          "Text": "Junk"
         }
       }
     }
@@ -81,22 +49,12 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": [
-            83,
-            112,
-            97,
-            109
-          ]
+          "Text": "Spam"
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": [
-            74,
-            117,
-            110,
-            107
-          ]
+          "Text": "Junk"
         }
       }
     }
@@ -108,26 +66,11 @@
         "test": {
           "Environment": {
             "name": {
-              "Text": [
-                105,
-                109,
-                97,
-                112,
-                46,
-                109,
-                97,
-                105,
-                108,
-                98,
-                111,
-                120
-              ]
+              "Text": "imap.mailbox"
             },
             "key_list": [
               {
-                "Text": [
-                  42
-                ]
+                "Text": "*"
               }
             ],
             "match_type": "Contains",
@@ -141,7 +84,7 @@
   [
     5,
     {
-      "Jz": 7
+      "Jz": 8
     }
   ],
   [
@@ -153,40 +96,33 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
-        },
-        "encode_url": false
+          "Text": ""
+        }
       }
     }
   ],
   [
     7,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 0
+      }
+    }
+  ],
+  [
+    8,
+    {
       "Test": {
         "test": {
           "Environment": {
             "name": {
-              "Text": [
-                105,
-                109,
-                97,
-                112,
-                46,
-                99,
-                97,
-                117,
-                115,
-                101
-              ]
+              "Text": "imap.cause"
             },
             "key_list": [
               {
-                "Text": [
-                  67,
-                  79,
-                  80,
-                  89
-                ]
+                "Text": "COPY"
               }
             ],
             "match_type": "Is",
@@ -198,28 +134,23 @@
     }
   ],
   [
-    8,
+    9,
     {
-      "Jz": 10
+      "Jz": 11
     }
   ],
   [
-    9,
+    10,
     {
       "Test": {
         "test": {
           "SpecialUseExists": {
             "mailbox": {
-              "Text": []
+              "Text": ""
             },
             "attributes": [
               {
-                "Text": [
-                  74,
-                  117,
-                  110,
-                  107
-                ]
+                "Text": "Junk"
               }
             ]
           }
@@ -229,42 +160,18 @@
     }
   ],
   [
-    10,
+    11,
     {
-      "Jz": 12
+      "Jz": 13
     }
   ],
   [
-    11,
+    12,
     {
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            115,
-            112,
-            97,
-            109,
-            45,
-            114,
-            101,
-            112,
-            111,
-            114,
-            116,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            111,
-            114,
-            103
-          ]
+          "Text": "spam-report@example.org"
         },
         "notify": "Default",
         "ret": "Default",

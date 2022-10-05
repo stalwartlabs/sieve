@@ -17,16 +17,7 @@
           "MailboxExists": {
             "mailbox_names": [
               {
-                "Text": [
-                  80,
-                  97,
-                  114,
-                  116,
-                  110,
-                  101,
-                  114,
-                  115
-                ]
+                "Text": "Partners"
               }
             ]
           }
@@ -48,16 +39,7 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": [
-            80,
-            97,
-            114,
-            116,
-            110,
-            101,
-            114,
-            115
-          ]
+          "Text": "Partners"
         },
         "flags": [],
         "mailbox_id": null,
@@ -77,54 +59,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": [
-            84,
-            104,
-            105,
-            115,
-            32,
-            109,
-            101,
-            115,
-            115,
-            97,
-            103,
-            101,
-            32,
-            119,
-            97,
-            115,
-            32,
-            110,
-            111,
-            116,
-            32,
-            97,
-            99,
-            99,
-            101,
-            112,
-            116,
-            101,
-            100,
-            32,
-            98,
-            121,
-            32,
-            116,
-            104,
-            101,
-            32,
-            77,
-            97,
-            105,
-            108,
-            115,
-            116,
-            111,
-            114,
-            101
-          ]
+          "Text": "This message was not accepted by the Mailstore"
         }
       }
     }
@@ -138,65 +73,14 @@
             "match_type": "Is",
             "comparator": "AsciiCaseMap",
             "mailbox": {
-              "Text": [
-                73,
-                78,
-                66,
-                79,
-                88
-              ]
+              "Text": "INBOX"
             },
             "annotation_name": {
-              "Text": [
-                47,
-                112,
-                114,
-                105,
-                118,
-                97,
-                116,
-                101,
-                47,
-                118,
-                101,
-                110,
-                100,
-                111,
-                114,
-                47,
-                118,
-                101,
-                110,
-                100,
-                111,
-                114,
-                46,
-                105,
-                115,
-                111,
-                100,
-                101,
-                47,
-                97,
-                117,
-                116,
-                111,
-                45,
-                114,
-                101,
-                112,
-                108,
-                105,
-                101,
-                115
-              ]
+              "Text": "/private/vendor/vendor.isode/auto-replies"
             },
             "key_list": [
               {
-                "Text": [
-                  111,
-                  110
-                ]
+                "Text": "on"
               }
             ]
           }
@@ -223,62 +107,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": [
-            73,
-            39,
-            109,
-            32,
-            97,
-            119,
-            97,
-            121,
-            32,
-            111,
-            110,
-            32,
-            104,
-            111,
-            108,
-            105,
-            100,
-            97,
-            121,
-            115,
-            32,
-            116,
-            105,
-            108,
-            108,
-            32,
-            77,
-            97,
-            114,
-            99,
-            104,
-            32,
-            50,
-            48,
-            48,
-            57,
-            46,
-            10,
-            69,
-            120,
-            112,
-            101,
-            99,
-            116,
-            32,
-            97,
-            32,
-            100,
-            101,
-            108,
-            97,
-            121,
-            46,
-            10
-          ]
+          "Text": "I'm away on holidays till March 2009.\nExpect a delay.\n"
         }
       }
     }
@@ -289,56 +118,12 @@
       "Test": {
         "test": {
           "ServerMetadata": {
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 1
+            },
             "comparator": "AsciiCaseMap",
             "annotation_name": {
-              "Text": [
-                47,
-                112,
-                114,
-                105,
-                118,
-                97,
-                116,
-                101,
-                47,
-                118,
-                101,
-                110,
-                100,
-                111,
-                114,
-                47,
-                118,
-                101,
-                110,
-                100,
-                111,
-                114,
-                46,
-                105,
-                115,
-                111,
-                100,
-                101,
-                47,
-                110,
-                111,
-                116,
-                105,
-                102,
-                105,
-                99,
-                97,
-                116,
-                105,
-                111,
-                110,
-                45,
-                117,
-                114,
-                105
-              ]
+              "Text": "/private/vendor/vendor.isode/notification-uri"
             },
             "key_list": [
               {
@@ -354,7 +139,7 @@
   [
     10,
     {
-      "Jz": 12
+      "Jz": 13
     }
   ],
   [
@@ -367,13 +152,22 @@
         },
         "value": {
           "MatchVariable": 0
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
     12,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 1
+      }
+    }
+  ],
+  [
+    13,
     {
       "Test": {
         "test": {
@@ -382,17 +176,12 @@
             "comparator": "AsciiCaseMap",
             "source": [
               {
-                "Text": []
+                "Text": ""
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  110,
-                  111,
-                  110,
-                  101
-                ]
+                "Text": "none"
               }
             ],
             "list": false
@@ -403,25 +192,20 @@
     }
   ],
   [
-    13,
+    14,
     {
-      "Jz": 24
+      "Jz": 28
     }
   ],
   [
-    14,
+    15,
     {
       "Test": {
         "test": {
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
@@ -430,7 +214,9 @@
               }
             ],
             "address_part": "All",
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "zone": null,
             "list": false
@@ -441,66 +227,54 @@
     }
   ],
   [
-    15,
+    16,
     {
-      "Jz": 17
+      "Jz": 19
     }
   ],
   [
-    16,
+    17,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 1
+          "Local": 0
         },
         "value": {
           "List": [
             {
-              "Text": [
-                32,
-                91,
-                114,
-                101,
-                97,
-                108,
-                108,
-                121,
-                58,
-                32
-              ]
+              "Text": " [really: "
             },
             {
               "MatchVariable": 1
             },
             {
-              "Text": [
-                93
-              ]
+              "Text": "]"
             }
           ]
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
-    17,
+    18,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    19,
     {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
@@ -508,7 +282,9 @@
                 "MatchMany": 1
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -523,40 +299,44 @@
     }
   ],
   [
-    18,
+    20,
     {
-      "Jz": 20
+      "Jz": 23
     }
   ],
   [
-    19,
+    21,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 2
+          "Local": 0
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
-    20,
+    22,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    23,
     {
       "Test": {
         "test": {
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
@@ -565,7 +345,9 @@
               }
             ],
             "address_part": "All",
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -579,134 +361,113 @@
     }
   ],
   [
-    21,
+    24,
     {
-      "Jz": 23
+      "Jz": 27
     }
   ],
   [
-    22,
+    25,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 3
+          "Local": 0
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
-    23,
+    26,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    27,
     {
       "Notify": {
         "from": null,
         "importance": null,
         "options": [],
         "message": {
-          "Text": [
-            58,
-            32
-          ]
+          "Text": ": "
         },
         "fcc": null,
         "method": {
-          "Text": []
+          "Text": ""
         }
-      }
-    }
-  ],
-  [
-    24,
-    {
-      "Test": {
-        "test": {
-          "ServerMetadataExists": {
-            "annotation_names": [
-              {
-                "Text": [
-                  104,
-                  101,
-                  108,
-                  108,
-                  111
-                ]
-              },
-              {
-                "Text": [
-                  119,
-                  111,
-                  114,
-                  108,
-                  100
-                ]
-              }
-            ]
-          }
-        },
-        "is_not": false
-      }
-    }
-  ],
-  [
-    25,
-    {
-      "Jz": 27
-    }
-  ],
-  [
-    26,
-    "Stop"
-  ],
-  [
-    27,
-    {
-      "Test": {
-        "test": {
-          "MetadataExists": {
-            "mailbox": {
-              "Text": [
-                73,
-                78,
-                66,
-                79,
-                88
-              ]
-            },
-            "annotation_names": [
-              {
-                "Text": [
-                  104,
-                  105
-                ]
-              },
-              {
-                "Text": [
-                  116,
-                  104,
-                  101,
-                  114,
-                  101
-                ]
-              }
-            ]
-          }
-        },
-        "is_not": false
       }
     }
   ],
   [
     28,
     {
-      "Jz": 30
+      "Test": {
+        "test": {
+          "ServerMetadataExists": {
+            "annotation_names": [
+              {
+                "Text": "hello"
+              },
+              {
+                "Text": "world"
+              }
+            ]
+          }
+        },
+        "is_not": false
+      }
     }
   ],
   [
     29,
+    {
+      "Jz": 31
+    }
+  ],
+  [
+    30,
+    "Stop"
+  ],
+  [
+    31,
+    {
+      "Test": {
+        "test": {
+          "MetadataExists": {
+            "mailbox": {
+              "Text": "INBOX"
+            },
+            "annotation_names": [
+              {
+                "Text": "hi"
+              },
+              {
+                "Text": "there"
+              }
+            ]
+          }
+        },
+        "is_not": false
+      }
+    }
+  ],
+  [
+    32,
+    {
+      "Jz": 34
+    }
+  ],
+  [
+    33,
     "Discard"
   ]
 ]

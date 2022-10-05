@@ -15,16 +15,7 @@
         "copy": true,
         "create": false,
         "folder": {
-          "Text": [
-            105,
-            110,
-            99,
-            111,
-            109,
-            105,
-            110,
-            103
-          ]
+          "Text": "incoming"
         },
         "flags": [],
         "mailbox_id": null,
@@ -38,12 +29,7 @@
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": [
-            116,
-            101,
-            115,
-            116
-          ]
+          "Text": "test"
         },
         "notify": "Default",
         "ret": "Default",

@@ -18,34 +18,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  98,
-                  111,
-                  115,
-                  115,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "boss@example.com"
               }
             ],
             "match_type": "Is",
@@ -75,19 +53,11 @@
         "test": {
           "Date": {
             "header_name": {
-              "Text": [
-                100,
-                97,
-                116,
-                101
-              ]
+              "Text": "date"
             },
             "key_list": [
               {
-                "Text": [
-                  48,
-                  57
-                ]
+                "Text": "09"
               }
             ],
             "match_type": {
@@ -118,19 +88,11 @@
         "test": {
           "Date": {
             "header_name": {
-              "Text": [
-                100,
-                97,
-                116,
-                101
-              ]
+              "Text": "date"
             },
             "key_list": [
               {
-                "Text": [
-                  49,
-                  55
-                ]
+                "Text": "17"
               }
             ],
             "match_type": {
@@ -161,14 +123,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            117,
-            114,
-            103,
-            101,
-            110,
-            116
-          ]
+          "Text": "urgent"
         },
         "flags": [],
         "mailbox_id": null,
@@ -183,22 +138,11 @@
         "test": {
           "Date": {
             "header_name": {
-              "Text": [
-                114,
-                101,
-                99,
-                101,
-                105,
-                118,
-                101,
-                100
-              ]
+              "Text": "received"
             },
             "key_list": [
               {
-                "Text": [
-                  48
-                ]
+                "Text": "0"
               }
             ],
             "match_type": "Is",
@@ -227,22 +171,11 @@
         "test": {
           "Date": {
             "header_name": {
-              "Text": [
-                114,
-                101,
-                99,
-                101,
-                105,
-                118,
-                101,
-                100
-              ]
+              "Text": "received"
             },
             "key_list": [
               {
-                "Text": [
-                  54
-                ]
+                "Text": "6"
               }
             ],
             "match_type": "Is",
@@ -271,15 +204,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            119,
-            101,
-            101,
-            107,
-            101,
-            110,
-            100
-          ]
+          "Text": "weekend"
         },
         "flags": [],
         "mailbox_id": null,
@@ -299,9 +224,7 @@
             "date_part": "Weekday",
             "key_list": [
               {
-                "Text": [
-                  48
-                ]
+                "Text": "0"
               }
             ],
             "list": false
@@ -329,9 +252,7 @@
             "date_part": "Weekday",
             "key_list": [
               {
-                "Text": [
-                  54
-                ]
+                "Text": "6"
               }
             ],
             "list": false
@@ -361,10 +282,7 @@
             "date_part": "Hour",
             "key_list": [
               {
-                "Text": [
-                  48,
-                  57
-                ]
+                "Text": "09"
               }
             ],
             "list": false
@@ -394,10 +312,7 @@
             "date_part": "Hour",
             "key_list": [
               {
-                "Text": [
-                  49,
-                  55
-                ]
+                "Text": "17"
               }
             ],
             "list": false
@@ -419,25 +334,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            112,
-            97,
-            103,
-            101,
-            114,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "pager@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -460,18 +357,7 @@
             "date_part": "Date",
             "key_list": [
               {
-                "Text": [
-                  50,
-                  48,
-                  48,
-                  55,
-                  45,
-                  48,
-                  54,
-                  45,
-                  51,
-                  48
-                ]
+                "Text": "2007-06-30"
               }
             ],
             "list": false
@@ -501,18 +387,7 @@
             "date_part": "Date",
             "key_list": [
               {
-                "Text": [
-                  50,
-                  48,
-                  48,
-                  55,
-                  45,
-                  48,
-                  55,
-                  45,
-                  48,
-                  55
-                ]
+                "Text": "2007-07-07"
               }
             ],
             "list": false
@@ -542,47 +417,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": [
-            73,
-            39,
-            109,
-            32,
-            97,
-            119,
-            97,
-            121,
-            32,
-            100,
-            117,
-            114,
-            105,
-            110,
-            103,
-            32,
-            116,
-            104,
-            101,
-            32,
-            102,
-            105,
-            114,
-            115,
-            116,
-            32,
-            119,
-            101,
-            101,
-            107,
-            32,
-            105,
-            110,
-            32,
-            74,
-            117,
-            108,
-            121,
-            46
-          ]
+          "Text": "I'm away during the first week in July."
         }
       }
     }
@@ -594,7 +429,9 @@
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Month",
             "key_list": [
@@ -612,7 +449,7 @@
   [
     28,
     {
-      "Jz": 30
+      "Jz": 31
     }
   ],
   [
@@ -625,19 +462,30 @@
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
     30,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    31,
+    {
       "Test": {
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Year",
             "key_list": [
@@ -653,36 +501,43 @@
     }
   ],
   [
-    31,
-    {
-      "Jz": 33
-    }
-  ],
-  [
     32,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 1
-        },
-        "value": {
-          "MatchVariable": 1
-        },
-        "encode_url": false
-      }
+      "Jz": 35
     }
   ],
   [
     33,
     {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "MatchVariable": 1
+        }
+      }
+    }
+  ],
+  [
+    34,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    35,
+    {
       "FileInto": {
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            45
-          ]
+          "Text": "-"
         },
         "flags": [],
         "mailbox_id": null,
@@ -691,13 +546,15 @@
     }
   ],
   [
-    34,
+    36,
     {
       "Test": {
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 1
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Std11",
             "key_list": [
@@ -713,34 +570,18 @@
     }
   ],
   [
-    35,
+    37,
     {
-      "Jz": 37
+      "Jz": 40
     }
   ],
   [
-    36,
+    38,
     {
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": [
-            80,
-            114,
-            111,
-            99,
-            101,
-            115,
-            115,
-            105,
-            110,
-            103,
-            45,
-            100,
-            97,
-            116,
-            101
-          ]
+          "Text": "Processing-date"
         },
         "value": {
           "MatchVariable": 0
@@ -749,52 +590,27 @@
     }
   ],
   [
-    37,
+    39,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 1
+      }
+    }
+  ],
+  [
+    40,
     {
       "Test": {
         "test": {
           "Date": {
             "header_name": {
-              "Text": [
-                114,
-                101,
-                99,
-                101,
-                105,
-                118,
-                101,
-                100
-              ]
+              "Text": "received"
             },
             "key_list": [
               {
-                "Text": [
-                  50,
-                  48,
-                  48,
-                  55,
-                  45,
-                  48,
-                  50,
-                  45,
-                  50,
-                  54,
-                  84,
-                  48,
-                  57,
-                  58,
-                  48,
-                  48,
-                  58,
-                  48,
-                  48,
-                  45,
-                  48,
-                  53,
-                  58,
-                  48,
-                  48
-                ]
+                "Text": "2007-02-26T09:00:00-05:00"
               }
             ],
             "match_type": {
@@ -815,42 +631,18 @@
     }
   ],
   [
-    38,
+    41,
     {
-      "Jz": 40
+      "Jz": 43
     }
   ],
   [
-    39,
+    42,
     {
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            97,
-            102,
-            116,
-            101,
-            114,
-            99,
-            117,
-            116,
-            111,
-            102,
-            102,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            111,
-            114,
-            103
-          ]
+          "Text": "aftercutoff@example.org"
         },
         "notify": "Default",
         "ret": "Default",

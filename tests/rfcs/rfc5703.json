@@ -424,31 +424,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  105,
-                  109,
-                  97,
-                  103,
-                  101
-                ]
+                "Text": "image"
               }
             ],
             "match_type": "Is",
@@ -478,20 +459,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            105,
-            109,
-            97,
-            103,
-            101,
-            115
-          ]
+          "Text": "INBOX.images"
         },
         "flags": [],
         "mailbox_id": null,
@@ -507,35 +475,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  116,
-                  101,
-                  120,
-                  116,
-                  47,
-                  104,
-                  116,
-                  109,
-                  108
-                ]
+                "Text": "text/html"
               }
             ],
             "match_type": "Is",
@@ -565,18 +510,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            104,
-            116,
-            109,
-            108
-          ]
+          "Text": "INBOX.html"
         },
         "flags": [],
         "mailbox_id": null,
@@ -600,42 +534,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  68,
-                  105,
-                  115,
-                  112,
-                  111,
-                  115,
-                  105,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
+                "Text": "Content-Disposition"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  105,
-                  109,
-                  112,
-                  111,
-                  114,
-                  116,
-                  97,
-                  110,
-                  116
-                ]
+                "Text": "important"
               }
             ],
             "match_type": "Contains",
@@ -646,16 +550,7 @@
             "mime_opts": {
               "Param": [
                 {
-                  "Text": [
-                    102,
-                    105,
-                    108,
-                    101,
-                    110,
-                    97,
-                    109,
-                    101
-                  ]
+                  "Text": "filename"
                 }
               ]
             },
@@ -681,29 +576,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  112,
-                  100,
-                  102
-                ]
+                "Text": "pdf"
               }
             ],
             "match_type": "Is",
@@ -753,23 +631,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            105,
-            109,
-            112,
-            111,
-            114,
-            116,
-            97,
-            110,
-            116
-          ]
+          "Text": "INBOX.important"
         },
         "flags": [],
         "mailbox_id": null,
@@ -797,41 +659,12 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  99,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "content-from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  116,
-                  105,
-                  109,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "tim@example.com"
               }
             ],
             "address_part": "All",
@@ -861,27 +694,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            112,
-            97,
-            114,
-            116,
-            45,
-            102,
-            114,
-            111,
-            109,
-            45,
-            116,
-            105,
-            109
-          ]
+          "Text": "INBOX.part-from-tim"
         },
         "flags": [],
         "mailbox_id": null,
@@ -897,19 +710,7 @@
           "Exists": {
             "header_names": [
               {
-                "Text": [
-                  99,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  109,
-                  100,
-                  53
-                ]
+                "Text": "content-md5"
               }
             ],
             "mime": true,
@@ -933,17 +734,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            109,
-            100,
-            53
-          ]
+          "Text": "INBOX.md5"
         },
         "flags": [],
         "mailbox_id": null,
@@ -967,41 +758,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  97,
-                  112,
-                  112,
-                  108,
-                  105,
-                  99,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  47,
-                  101,
-                  120,
-                  101
-                ]
+                "Text": "application/exe"
               }
             ],
             "match_type": "Is",
@@ -1032,43 +794,10 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               },
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  68,
-                  105,
-                  115,
-                  112,
-                  111,
-                  115,
-                  105,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
+                "Text": "Content-Disposition"
               }
             ],
             "key_list": [
@@ -1078,17 +807,14 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      99,
-                      111,
-                      109
-                    ]
+                    "Text": ".com"
                   }
                 ]
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -1096,16 +822,7 @@
             "mime_opts": {
               "Param": [
                 {
-                  "Text": [
-                    102,
-                    105,
-                    108,
-                    101,
-                    110,
-                    97,
-                    109,
-                    101
-                  ]
+                  "Text": "filename"
                 }
               ]
             },
@@ -1130,52 +847,7 @@
         "subject": null,
         "from": null,
         "replacement": {
-          "Text": [
-            69,
-            120,
-            101,
-            99,
-            117,
-            116,
-            97,
-            98,
-            108,
-            101,
-            32,
-            97,
-            116,
-            116,
-            97,
-            99,
-            104,
-            109,
-            101,
-            110,
-            116,
-            32,
-            114,
-            101,
-            109,
-            111,
-            118,
-            101,
-            100,
-            32,
-            98,
-            121,
-            32,
-            117,
-            115,
-            101,
-            114,
-            32,
-            102,
-            105,
-            108,
-            116,
-            101,
-            114
-          ]
+          "Text": "Executable attachment removed by user filter"
         },
         "mime": false
       }
@@ -1203,43 +875,10 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               },
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  68,
-                  105,
-                  115,
-                  112,
-                  111,
-                  115,
-                  105,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
+                "Text": "Content-Disposition"
               }
             ],
             "key_list": [
@@ -1249,12 +888,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      99,
-                      111,
-                      109
-                    ]
+                    "Text": ".com"
                   }
                 ]
               },
@@ -1264,12 +898,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      101,
-                      120,
-                      101
-                    ]
+                    "Text": ".exe"
                   }
                 ]
               },
@@ -1279,12 +908,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      118,
-                      98,
-                      115
-                    ]
+                    "Text": ".vbs"
                   }
                 ]
               },
@@ -1294,12 +918,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      115,
-                      99,
-                      114
-                    ]
+                    "Text": ".scr"
                   }
                 ]
               },
@@ -1309,12 +928,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      112,
-                      105,
-                      102
-                    ]
+                    "Text": ".pif"
                   }
                 ]
               },
@@ -1324,12 +938,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      104,
-                      116,
-                      97
-                    ]
+                    "Text": ".hta"
                   }
                 ]
               },
@@ -1339,12 +948,7 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      98,
-                      97,
-                      116
-                    ]
+                    "Text": ".bat"
                   }
                 ]
               },
@@ -1354,17 +958,14 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      46,
-                      122,
-                      105,
-                      112
-                    ]
+                    "Text": ".zip"
                   }
                 ]
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -1372,16 +973,7 @@
             "mime_opts": {
               "Param": [
                 {
-                  "Text": [
-                    102,
-                    105,
-                    108,
-                    101,
-                    110,
-                    97,
-                    109,
-                    101
-                  ]
+                  "Text": "filename"
                 }
               ]
             },
@@ -1404,28 +996,11 @@
     {
       "Enclose": {
         "subject": {
-          "Text": [
-            87,
-            97,
-            114,
-            110,
-            105,
-            110,
-            103
-          ]
+          "Text": "Warning"
         },
         "headers": [],
         "value": {
-          "Text": [
-            87,
-            97,
-            114,
-            110,
-            105,
-            110,
-            103,
-            10
-          ]
+          "Text": "Warning\n"
         }
       }
     }
@@ -1450,34 +1025,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  98,
-                  111,
-                  115,
-                  115,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "boss@example.org"
               }
             ],
             "match_type": "Contains",
@@ -1497,7 +1050,7 @@
   [
     98,
     {
-      "Jz": 110
+      "Jz": 111
     }
   ],
   [
@@ -1508,15 +1061,7 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
@@ -1524,7 +1069,9 @@
                 "MatchMany": 1
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 2
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -1541,7 +1088,7 @@
   [
     100,
     {
-      "Jz": 102
+      "Jz": 103
     }
   ],
   [
@@ -1554,51 +1101,42 @@
         },
         "value": {
           "MatchVariable": 1
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
     102,
     {
-      "ForEveryPart": {
-        "jz_pos": 108
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 2
       }
     }
   ],
   [
     103,
     {
+      "ForEveryPart": {
+        "jz_pos": 109
+      }
+    }
+  ],
+  [
+    104,
+    {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  111,
-                  110,
-                  116,
-                  101,
-                  110,
-                  116,
-                  45,
-                  84,
-                  121,
-                  112,
-                  101
-                ]
+                "Text": "Content-Type"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  116,
-                  101,
-                  120,
-                  116
-                ]
+                "Text": "text"
               }
             ],
             "match_type": "Is",
@@ -1616,73 +1154,49 @@
     }
   ],
   [
-    104,
-    {
-      "Jz": 107
-    }
-  ],
-  [
     105,
     {
-      "ExtractText": {
-        "modifiers": [],
-        "first": 100,
-        "varname": {
-          "Text": [
-            109,
-            115,
-            103,
-            99,
-            111,
-            110,
-            116,
-            101,
-            110,
-            116
-          ]
-        }
-      }
+      "Jz": 108
     }
   ],
   [
     106,
     {
-      "Jmp": 108
+      "ExtractText": {
+        "modifiers": [],
+        "first": 100,
+        "varname": {
+          "Text": "msgcontent"
+        }
+      }
     }
   ],
   [
     107,
     {
-      "Jmp": 102
+      "Jmp": 109
     }
   ],
   [
     108,
+    {
+      "Jmp": 103
+    }
+  ],
+  [
+    109,
     {
       "Test": {
         "test": {
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  115,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  70,
-                  89,
-                  73,
-                  58
-                ]
+                "Text": "FYI:"
               }
             ],
             "match_type": "Contains",
@@ -1700,9 +1214,9 @@
     }
   ],
   [
-    109,
+    110,
     {
-      "Jz": 110
+      "Jz": 111
     }
   ]
 ]

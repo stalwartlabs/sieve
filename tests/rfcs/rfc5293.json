@@ -7,77 +7,15 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  88,
-                  45,
-                  83,
-                  105,
-                  101,
-                  118,
-                  101,
-                  45,
-                  70,
-                  105,
-                  108,
-                  116,
-                  101,
-                  114,
-                  101,
-                  100
-                ]
+                "Text": "X-Sieve-Filtered"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  60,
-                  107,
-                  105,
-                  109,
-                  64,
-                  106,
-                  111,
-                  98,
-                  46,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109,
-                  62
-                ]
+                "Text": "<kim@job.example.com>"
               },
               {
-                "Text": [
-                  60,
-                  107,
-                  105,
-                  109,
-                  64,
-                  104,
-                  111,
-                  109,
-                  101,
-                  46,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109,
-                  62
-                ]
+                "Text": "<kim@home.example.com>"
               }
             ],
             "match_type": "Contains",
@@ -106,49 +44,10 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": [
-            88,
-            45,
-            83,
-            105,
-            101,
-            118,
-            101,
-            45,
-            70,
-            105,
-            108,
-            116,
-            101,
-            114,
-            101,
-            100
-          ]
+          "Text": "X-Sieve-Filtered"
         },
         "value": {
-          "Text": [
-            60,
-            107,
-            105,
-            109,
-            64,
-            106,
-            111,
-            98,
-            46,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109,
-            62
-          ]
+          "Text": "<kim@job.example.com>"
         }
       }
     }
@@ -159,28 +58,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            107,
-            105,
-            109,
-            64,
-            104,
-            111,
-            109,
-            101,
-            46,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "kim@home.example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -198,40 +76,11 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Contains",
         "field_name": {
-          "Text": [
-            68,
-            101,
-            108,
-            105,
-            118,
-            101,
-            114,
-            101,
-            100,
-            45,
-            84,
-            111
-          ]
+          "Text": "Delivered-To"
         },
         "value_patterns": [
           {
-            "Text": [
-              98,
-              111,
-              98,
-              64,
-              101,
-              120,
-              97,
-              109,
-              112,
-              108,
-              101,
-              46,
-              99,
-              111,
-              109
-            ]
+            "Text": "bob@example.com"
           }
         ]
       }
@@ -243,24 +92,10 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": [
-            88,
-            45,
-            72,
-            101,
-            108,
-            108,
-            111
-          ]
+          "Text": "X-Hello"
         },
         "value": {
-          "Text": [
-            87,
-            111,
-            114,
-            108,
-            100
-          ]
+          "Text": "World"
         }
       }
     }
@@ -274,15 +109,7 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Text": [
-            88,
-            45,
-            72,
-            101,
-            108,
-            108,
-            111
-          ]
+          "Text": "X-Hello"
         },
         "value_patterns": []
       }
@@ -295,61 +122,34 @@
         "index": 1,
         "index_last": false,
         "comparator": "AsciiCaseMap",
-        "match_type": "Matches",
+        "match_type": {
+          "Matches": 0
+        },
         "field_name": {
-          "Text": [
-            88,
-            45,
-            72,
-            101,
-            108,
-            108,
-            111
-          ]
+          "Text": "X-Hello"
         },
         "value_patterns": [
           {
             "List": [
               {
-                "Text": [
-                  104,
-                  101,
-                  108,
-                  108,
-                  111
-                ]
+                "Text": "hello"
               },
               {
                 "MatchMany": 1
               },
               {
-                "Text": [
-                  119,
-                  111,
-                  114,
-                  108,
-                  100
-                ]
+                "Text": "world"
               }
             ]
           },
           {
             "List": [
               {
-                "Text": [
-                  104,
-                  105
-                ]
+                "Text": "hi"
               },
               "MatchOne",
               {
-                "Text": [
-                  116,
-                  104,
-                  101,
-                  114,
-                  101
-                ]
+                "Text": "there"
               }
             ]
           }
@@ -366,20 +166,11 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Text": [
-            88,
-            45,
-            66,
-            121
-          ]
+          "Text": "X-By"
         },
         "value_patterns": [
           {
-            "Text": [
-              97,
-              98,
-              99
-            ]
+            "Text": "abc"
           }
         ]
       }

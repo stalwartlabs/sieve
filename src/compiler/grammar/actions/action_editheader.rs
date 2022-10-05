@@ -112,7 +112,7 @@ impl<'x> CompilerState<'x> {
                 Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
             )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
             {
-                self.parse_strings(match_type == MatchType::Matches)?
+                self.parse_strings(match_type.is_matches())?
             } else {
                 Vec::new()
             },

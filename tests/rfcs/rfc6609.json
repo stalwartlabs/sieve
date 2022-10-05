@@ -15,20 +15,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            97,
-            108,
-            119,
-            97,
-            121,
-            115,
-            95,
-            97,
-            108,
-            108,
-            111,
-            119
-          ]
+          "Text": "always_allow"
         }
       }
     }
@@ -41,18 +28,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            115,
-            112,
-            97,
-            109,
-            95,
-            116,
-            101,
-            115,
-            116,
-            115
-          ]
+          "Text": "spam_tests"
         }
       }
     }
@@ -65,18 +41,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            115,
-            112,
-            97,
-            109,
-            95,
-            116,
-            101,
-            115,
-            116,
-            115
-          ]
+          "Text": "spam_tests"
         }
       }
     }
@@ -89,21 +54,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            109,
-            97,
-            105,
-            108,
-            105,
-            110,
-            103,
-            95,
-            108,
-            105,
-            115,
-            116,
-            115
-          ]
+          "Text": "mailing_lists"
         }
       }
     }
@@ -116,34 +67,12 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  98,
-                  111,
-                  115,
-                  115,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "boss@example.com"
               }
             ],
             "address_part": "All",
@@ -188,33 +117,12 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  99,
-                  101,
-                  111,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "ceo@example.com"
               }
             ],
             "address_part": "All",
@@ -253,25 +161,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  88,
-                  88,
-                  88,
-                  88
-                ]
+                "Text": "XXXX"
               }
             ],
             "match_type": "Contains",
@@ -300,37 +195,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": [
-            83,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            32,
-            88,
-            88,
-            88,
-            88,
-            32,
-            105,
-            115,
-            32,
-            117,
-            110,
-            97,
-            99,
-            99,
-            101,
-            112,
-            116,
-            97,
-            98,
-            108,
-            101,
-            46
-          ]
+          "Text": "Subject XXXX is unacceptable."
         }
       }
     }
@@ -349,35 +214,12 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  109,
-                  111,
-                  110,
-                  101,
-                  121,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "money@example.com"
               }
             ],
             "address_part": "All",
@@ -406,43 +248,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": [
-            77,
-            97,
-            105,
-            108,
-            32,
-            102,
-            114,
-            111,
-            109,
-            32,
-            116,
-            104,
-            105,
-            115,
-            32,
-            115,
-            101,
-            110,
-            100,
-            101,
-            114,
-            32,
-            105,
-            115,
-            32,
-            117,
-            110,
-            119,
-            101,
-            108,
-            99,
-            111,
-            109,
-            101,
-            46
-          ]
+          "Text": "Mail from this sender is unwelcome."
         }
       }
     }
@@ -455,35 +261,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  76,
-                  105,
-                  115,
-                  116,
-                  45,
-                  73,
-                  68
-                ]
+                "Text": "List-ID"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  115,
-                  105,
-                  101,
-                  118,
-                  101,
-                  46,
-                  105,
-                  101,
-                  116,
-                  102,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "sieve.ietf.org"
               }
             ],
             "match_type": "Is",
@@ -513,19 +296,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            108,
-            105,
-            115,
-            116,
-            115,
-            46,
-            115,
-            105,
-            101,
-            118,
-            101
-          ]
+          "Text": "lists.sieve"
         },
         "flags": [],
         "mailbox_id": null,
@@ -547,41 +318,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  76,
-                  105,
-                  115,
-                  116,
-                  45,
-                  73,
-                  68
-                ]
+                "Text": "List-ID"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  105,
-                  101,
-                  116,
-                  102,
-                  45,
-                  105,
-                  109,
-                  97,
-                  112,
-                  101,
-                  120,
-                  116,
-                  46,
-                  105,
-                  109,
-                  99,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "ietf-imapext.imc.org"
               }
             ],
             "match_type": "Is",
@@ -611,21 +353,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            108,
-            105,
-            115,
-            116,
-            115,
-            46,
-            105,
-            109,
-            97,
-            112,
-            101,
-            120,
-            116
-          ]
+          "Text": "lists.imapext"
         },
         "flags": [],
         "mailbox_id": null,
@@ -641,23 +369,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  36,
-                  36
-                ]
+                "Text": "$$"
               }
             ],
             "match_type": "Contains",
@@ -688,31 +405,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  77,
-                  97,
-                  107,
-                  101,
-                  32,
-                  109,
-                  111,
-                  110,
-                  101,
-                  121
-                ]
+                "Text": "Make money"
               }
             ],
             "match_type": "Contains",
@@ -741,21 +439,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": [
-            78,
-            111,
-            32,
-            116,
-            104,
-            97,
-            110,
-            107,
-            32,
-            121,
-            111,
-            117,
-            46
-          ]
+          "Text": "No thank you."
         }
       }
     }
@@ -769,12 +453,8 @@
           "Global": "test"
         },
         "value": {
-          "Text": [
-            36,
-            36
-          ]
-        },
-        "encode_url": false
+          "Text": "$$"
+        }
       }
     }
   ],
@@ -786,21 +466,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            115,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            95,
-            116,
-            101,
-            115,
-            116,
-            115
-          ]
+          "Text": "subject_tests"
         }
       }
     }
@@ -814,20 +480,8 @@
           "Global": "test"
         },
         "value": {
-          "Text": [
-            77,
-            97,
-            107,
-            101,
-            32,
-            109,
-            111,
-            110,
-            101,
-            121
-          ]
-        },
-        "encode_url": false
+          "Text": "Make money"
+        }
       }
     }
   ],
@@ -839,21 +493,7 @@
         "once": false,
         "optional": false,
         "value": {
-          "Text": [
-            115,
-            117,
-            98,
-            106,
-            101,
-            99,
-            116,
-            95,
-            116,
-            101,
-            115,
-            116,
-            115
-          ]
+          "Text": "subject_tests"
         }
       }
     }
@@ -875,9 +515,7 @@
             ],
             "key_list": [
               {
-                "Text": [
-                  49
-                ]
+                "Text": "1"
               }
             ],
             "list": false
@@ -920,15 +558,7 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
@@ -967,20 +597,13 @@
         "value": {
           "List": [
             {
-              "Text": [
-                115,
-                112,
-                97,
-                109,
-                45
-              ]
+              "Text": "spam-"
             },
             {
               "GlobalVariable": "test"
             }
           ]
-        },
-        "encode_url": false
+        }
       }
     }
   ],
@@ -993,11 +616,8 @@
           "Global": "i_am_on_vacation"
         },
         "value": {
-          "Text": [
-            49
-          ]
-        },
-        "encode_url": false
+          "Text": "1"
+        }
       }
     }
   ],
@@ -1010,11 +630,8 @@
           "Global": "i_am_on_vacation"
         },
         "value": {
-          "Text": [
-            49
-          ]
-        },
-        "encode_url": false
+          "Text": "1"
+        }
       }
     }
   ],
@@ -1033,9 +650,7 @@
             ],
             "key_list": [
               {
-                "Text": [
-                  49
-                ]
+                "Text": "1"
               }
             ],
             "list": false
@@ -1063,36 +678,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": [
-            73,
-            116,
-            39,
-            115,
-            32,
-            116,
-            114,
-            117,
-            101,
-            44,
-            32,
-            73,
-            32,
-            97,
-            109,
-            32,
-            111,
-            110,
-            32,
-            118,
-            97,
-            99,
-            97,
-            116,
-            105,
-            111,
-            110,
-            46
-          ]
+          "Text": "It's true, I am on vacation."
         }
       }
     }
@@ -1112,9 +698,7 @@
             ],
             "key_list": [
               {
-                "Text": [
-                  49
-                ]
+                "Text": "1"
               }
             ],
             "list": false
@@ -1142,36 +726,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": [
-            73,
-            116,
-            39,
-            115,
-            32,
-            116,
-            114,
-            117,
-            101,
-            44,
-            32,
-            73,
-            32,
-            97,
-            109,
-            32,
-            111,
-            110,
-            32,
-            118,
-            97,
-            99,
-            97,
-            116,
-            105,
-            111,
-            110,
-            46
-          ]
+          "Text": "It's true, I am on vacation."
         }
       }
     }

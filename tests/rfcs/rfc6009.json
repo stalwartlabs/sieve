@@ -26,27 +26,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  110,
-                  111,
-                  116,
-                  105,
-                  102,
-                  121
-                ]
+                "Text": "notify"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  83,
-                  85,
-                  67,
-                  67,
-                  69,
-                  83,
-                  83
-                ]
+                "Text": "SUCCESS"
               }
             ],
             "address_part": "All",
@@ -74,27 +59,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  110,
-                  111,
-                  116,
-                  105,
-                  102,
-                  121
-                ]
+                "Text": "notify"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  70,
-                  65,
-                  73,
-                  76,
-                  85,
-                  82,
-                  69
-                ]
+                "Text": "FAILURE"
               }
             ],
             "address_part": "All",
@@ -122,21 +92,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  110,
-                  111,
-                  116,
-                  105,
-                  102,
-                  121
-                ]
+                "Text": "notify"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  49
-                ]
+                "Text": "1"
               }
             ],
             "address_part": "All",
@@ -166,53 +127,28 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  111,
-                  114,
-                  99,
-                  112,
-                  116
-                ]
+                "Text": "orcpt"
               }
             ],
             "key_list": [
               {
                 "List": [
                   {
-                    "Text": [
-                      114,
-                      102,
-                      99,
-                      56,
-                      50,
-                      50,
-                      59
-                    ]
+                    "Text": "rfc822;"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      64,
-                      101,
-                      120,
-                      97,
-                      109,
-                      112,
-                      108,
-                      101,
-                      46,
-                      99,
-                      111,
-                      109
-                    ]
+                    "Text": "@example.com"
                   }
                 ]
               }
             ],
             "address_part": "All",
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "zone": null,
             "list": false
@@ -236,29 +172,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  98,
-                  121,
-                  116,
-                  105,
-                  109,
-                  101,
-                  114,
-                  101,
-                  108,
-                  97,
-                  116,
-                  105,
-                  118,
-                  101
-                ]
+                "Text": "bytimerelative"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  45
-                ]
+                "Text": "-"
               }
             ],
             "address_part": "All",
@@ -286,29 +205,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  98,
-                  121,
-                  116,
-                  105,
-                  109,
-                  101,
-                  114,
-                  101,
-                  108,
-                  97,
-                  116,
-                  105,
-                  118,
-                  101
-                ]
+                "Text": "bytimerelative"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  48
-                ]
+                "Text": "0"
               }
             ],
             "address_part": "All",
@@ -337,7 +239,9 @@
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 1
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Iso8601",
             "key_list": [
@@ -355,7 +259,7 @@
   [
     14,
     {
-      "Jz": 18
+      "Jz": 19
     }
   ],
   [
@@ -368,8 +272,7 @@
         },
         "value": {
           "MatchVariable": 0
-        },
-        "encode_url": false
+        }
       }
     }
   ],
@@ -381,22 +284,7 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  98,
-                  121,
-                  116,
-                  105,
-                  109,
-                  101,
-                  97,
-                  98,
-                  115,
-                  111,
-                  108,
-                  117,
-                  116,
-                  101
-                ]
+                "Text": "bytimeabsolute"
               }
             ],
             "key_list": [
@@ -426,27 +314,22 @@
   [
     18,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 1
+      }
+    }
+  ],
+  [
+    19,
+    {
       "Test": {
         "test": {
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  98,
-                  121,
-                  116,
-                  105,
-                  109,
-                  101,
-                  97,
-                  98,
-                  115,
-                  111,
-                  108,
-                  117,
-                  116,
-                  101
-                ]
+                "Text": "bytimeabsolute"
               }
             ],
             "key_list": [
@@ -456,25 +339,19 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      84
-                    ]
+                    "Text": "T"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      58
-                    ]
+                    "Text": ":"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      58
-                    ]
+                    "Text": ":"
                   },
                   {
                     "MatchMany": 1
@@ -483,7 +360,9 @@
               }
             ],
             "address_part": "All",
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 5
+            },
             "comparator": "AsciiCaseMap",
             "zone": 0,
             "list": false
@@ -494,24 +373,9 @@
     }
   ],
   [
-    19,
-    {
-      "Jz": 25
-    }
-  ],
-  [
     20,
     {
-      "Set": {
-        "modifiers": [],
-        "name": {
-          "Local": 1
-        },
-        "value": {
-          "MatchVariable": 0
-        },
-        "encode_url": false
-      }
+      "Jz": 27
     }
   ],
   [
@@ -520,17 +384,30 @@
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 2
+          "Local": 0
         },
         "value": {
-          "MatchVariable": 2
-        },
-        "encode_url": false
+          "MatchVariable": 0
+        }
       }
     }
   ],
   [
     22,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 1
+        },
+        "value": {
+          "MatchVariable": 2
+        }
+      }
+    }
+  ],
+  [
+    23,
     {
       "Test": {
         "test": {
@@ -543,7 +420,7 @@
             "date_part": "Iso8601",
             "key_list": [
               {
-                "LocalVariable": 1
+                "LocalVariable": 0
               }
             ],
             "list": false
@@ -554,13 +431,13 @@
     }
   ],
   [
-    23,
+    24,
     {
-      "Jz": 25
+      "Jz": 26
     }
   ],
   [
-    24,
+    25,
     {
       "FileInto": {
         "copy": false,
@@ -568,18 +445,10 @@
         "folder": {
           "List": [
             {
-              "Text": [
-                109,
-                105,
-                115,
-                115,
-                101,
-                100,
-                45
-              ]
+              "Text": "missed-"
             },
             {
-              "LocalVariable": 2
+              "LocalVariable": 1
             }
           ]
         },
@@ -590,41 +459,29 @@
     }
   ],
   [
-    25,
+    26,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 2,
+        "match_vars": 5
+      }
+    }
+  ],
+  [
+    27,
     {
       "Test": {
         "test": {
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "user@example.com"
               }
             ],
             "address_part": "All",
@@ -642,40 +499,18 @@
     }
   ],
   [
-    26,
+    28,
     {
-      "Jz": 28
+      "Jz": 30
     }
   ],
   [
-    27,
+    29,
     {
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": [
-            101,
-            108,
-            115,
-            101,
-            119,
-            104,
-            101,
-            114,
-            101,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "elsewhere@example.com"
         },
         "notify": "Never",
         "ret": "Default",
@@ -685,41 +520,19 @@
     }
   ],
   [
-    28,
+    30,
     {
       "Test": {
         "test": {
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "user@example.com"
               }
             ],
             "address_part": "All",
@@ -737,40 +550,18 @@
     }
   ],
   [
-    29,
+    31,
     {
-      "Jz": 31
+      "Jz": 33
     }
   ],
   [
-    30,
+    32,
     {
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": [
-            99,
-            101,
-            108,
-            108,
-            112,
-            104,
-            111,
-            110,
-            101,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "cellphone@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -786,7 +577,7 @@
     }
   ],
   [
-    31,
+    33,
     {
       "Test": {
         "test": {
@@ -799,10 +590,7 @@
             "date_part": "Hour",
             "key_list": [
               {
-                "Text": [
-                  50,
-                  50
-                ]
+                "Text": "22"
               }
             ],
             "list": false
@@ -813,19 +601,21 @@
     }
   ],
   [
-    32,
+    34,
     {
-      "Jz": 40
+      "Jz": 44
     }
   ],
   [
-    33,
+    35,
     {
       "Test": {
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 1
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Date",
             "key_list": [
@@ -841,34 +631,45 @@
     }
   ],
   [
-    34,
+    36,
     {
-      "Jz": 36
+      "Jz": 39
     }
   ],
   [
-    35,
+    37,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 3
+          "Local": 0
         },
         "value": {
           "MatchVariable": 0
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
-    36,
+    38,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 1
+      }
+    }
+  ],
+  [
+    39,
     {
       "Test": {
         "test": {
           "CurrentDate": {
             "zone": null,
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 1
+            },
             "comparator": "AsciiCaseMap",
             "date_part": "Zone",
             "key_list": [
@@ -884,72 +685,49 @@
     }
   ],
   [
-    37,
+    40,
     {
-      "Jz": 39
+      "Jz": 43
     }
   ],
   [
-    38,
+    41,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 4
+          "Local": 0
         },
         "value": {
           "MatchVariable": 0
-        },
-        "encode_url": false
+        }
       }
     }
   ],
   [
-    39,
+    42,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 1
+      }
+    }
+  ],
+  [
+    43,
     {
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": [
-            99,
-            101,
-            108,
-            108,
-            112,
-            104,
-            111,
-            110,
-            101,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "cellphone@example.com"
         },
         "notify": "Default",
         "ret": "Default",
         "by_time": {
           "Absolute": {
             "alimit": {
-              "Text": [
-                84,
-                50,
-                48,
-                58,
-                48,
-                48,
-                58,
-                48,
-                48
-              ]
+              "Text": "T20:00:00"
             },
             "mode": "Return",
             "trace": false

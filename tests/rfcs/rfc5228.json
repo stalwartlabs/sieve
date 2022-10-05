@@ -63,24 +63,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  36,
-                  36,
-                  36
-                ]
+                "Text": "$$$"
               }
             ],
             "match_type": "Contains",
@@ -115,20 +103,10 @@
           "Exists": {
             "header_names": [
               {
-                "Text": [
-                  70,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "From"
               },
               {
-                "Text": [
-                  68,
-                  97,
-                  116,
-                  101
-                ]
+                "Text": "Date"
               }
             ],
             "mime": false,
@@ -153,34 +131,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  102,
-                  111,
-                  111,
-                  108,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "fool@example.com"
               }
             ],
             "match_type": "Contains",
@@ -215,36 +171,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  77,
-                  65,
-                  75,
-                  69,
-                  32,
-                  77,
-                  79,
-                  78,
-                  69,
-                  89,
-                  32,
-                  70,
-                  65,
-                  83,
-                  84
-                ]
+                "Text": "MAKE MONEY FAST"
               }
             ],
             "match_type": "Contains",
@@ -311,24 +243,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  99,
-                  111,
-                  121,
-                  111,
-                  116,
-                  101
-                ]
+                "Text": "coyote"
               }
             ],
             "match_type": "Contains",
@@ -369,24 +289,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  115,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  36,
-                  36,
-                  36
-                ]
+                "Text": "$$$"
               }
             ],
             "match_type": "Contains",
@@ -426,13 +334,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88
-          ]
+          "Text": "INBOX"
         },
         "flags": [],
         "mailbox_id": null,
@@ -448,24 +350,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  70,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "From"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  99,
-                  111,
-                  121,
-                  111,
-                  116,
-                  101
-                ]
+                "Text": "coyote"
               }
             ],
             "match_type": "Contains",
@@ -494,23 +384,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            97,
-            99,
-            109,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "acm@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -533,24 +407,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "Subject"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  36,
-                  36,
-                  36
-                ]
+                "Text": "$$$"
               }
             ],
             "match_type": "Contains",
@@ -579,30 +441,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            112,
-            111,
-            115,
-            116,
-            109,
-            97,
-            115,
-            116,
-            101,
-            114,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "postmaster@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -623,25 +462,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            102,
-            105,
-            101,
-            108,
-            100,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "field@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -666,24 +487,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  99,
-                  111,
-                  121,
-                  111,
-                  116,
-                  101
-                ]
+                "Text": "coyote"
               }
             ],
             "match_type": "Contains",
@@ -713,24 +522,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            73,
-            78,
-            66,
-            79,
-            88,
-            46,
-            104,
-            97,
-            114,
-            97,
-            115,
-            115,
-            109,
-            101,
-            110,
-            116
-          ]
+          "Text": "INBOX.harassment"
         },
         "flags": [],
         "mailbox_id": null,
@@ -744,24 +536,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": [
-            98,
-            97,
-            114,
-            116,
-            64,
-            101,
-            120,
-            97,
-            109,
-            112,
-            108,
-            101,
-            46,
-            99,
-            111,
-            109
-          ]
+          "Text": "bart@example.com"
         },
         "notify": "Default",
         "ret": "Default",
@@ -816,35 +591,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  105,
-                  100,
-                  105,
-                  111,
-                  116,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "idiot@example.com"
               }
             ],
             "match_type": "Contains",
@@ -879,33 +631,12 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  116,
-                  105,
-                  109,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "tim@example.com"
               }
             ],
             "address_part": "All",
@@ -948,33 +679,12 @@
           "Envelope": {
             "header_list": [
               {
-                "Text": [
-                  102,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "from"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  116,
-                  105,
-                  109,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "tim@example.com"
               }
             ],
             "address_part": "All",
@@ -1006,20 +716,10 @@
           "Exists": {
             "header_names": [
               {
-                "Text": [
-                  70,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "From"
               },
               {
-                "Text": [
-                  68,
-                  97,
-                  116,
-                  101
-                ]
+                "Text": "Date"
               }
             ],
             "mime": false,
@@ -1048,23 +748,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  88,
-                  45,
-                  67,
-                  97,
-                  102,
-                  102,
-                  101,
-                  105,
-                  110,
-                  101
-                ]
+                "Text": "X-Caffeine"
               }
             ],
             "key_list": [
               {
-                "Text": []
+                "Text": ""
               }
             ],
             "match_type": "Is",
@@ -1095,23 +784,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  88,
-                  45,
-                  67,
-                  97,
-                  102,
-                  102,
-                  101,
-                  105,
-                  110,
-                  101
-                ]
+                "Text": "X-Caffeine"
               }
             ],
             "key_list": [
               {
-                "Text": []
+                "Text": ""
               }
             ],
             "match_type": "Contains",
@@ -1142,10 +820,7 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  67,
-                  99
-                ]
+                "Text": "Cc"
               }
             ],
             "key_list": [
@@ -1158,7 +833,9 @@
                 ]
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -1198,50 +875,12 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  83,
-                  101,
-                  110,
-                  100,
-                  101,
-                  114
-                ]
+                "Text": "Sender"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  45,
-                  105,
-                  101,
-                  116,
-                  102,
-                  45,
-                  109,
-                  116,
-                  97,
-                  45,
-                  102,
-                  105,
-                  108,
-                  116,
-                  101,
-                  114,
-                  115,
-                  64,
-                  105,
-                  109,
-                  99,
-                  46,
-                  111,
-                  114,
-                  103
-                ]
+                "Text": "owner-ietf-mta-filters@imc.org"
               }
             ],
             "match_type": "Is",
@@ -1271,14 +910,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            102,
-            105,
-            108,
-            116,
-            101,
-            114
-          ]
+          "Text": "filter"
         },
         "flags": [],
         "mailbox_id": null,
@@ -1300,35 +932,15 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  70,
-                  114,
-                  111,
-                  109
-                ]
+                "Text": "From"
               },
               {
-                "Text": [
-                  84,
-                  111
-                ]
+                "Text": "To"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "example.com"
               }
             ],
             "address_part": "Domain",
@@ -1373,43 +985,18 @@
           "Address": {
             "header_list": [
               {
-                "Text": [
-                  84,
-                  111
-                ]
+                "Text": "To"
               },
               {
-                "Text": [
-                  67,
-                  99
-                ]
+                "Text": "Cc"
               },
               {
-                "Text": [
-                  66,
-                  99,
-                  99
-                ]
+                "Text": "Bcc"
               }
             ],
             "key_list": [
               {
-                "Text": [
-                  109,
-                  101,
-                  64,
-                  101,
-                  120,
-                  97,
-                  109,
-                  112,
-                  108,
-                  101,
-                  46,
-                  99,
-                  111,
-                  109
-                ]
+                "Text": "me@example.com"
               }
             ],
             "address_part": "All",
@@ -1440,15 +1027,7 @@
           "Header": {
             "header_list": [
               {
-                "Text": [
-                  115,
-                  117,
-                  98,
-                  106,
-                  101,
-                  99,
-                  116
-                ]
+                "Text": "subject"
               }
             ],
             "key_list": [
@@ -1458,35 +1037,19 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      109,
-                      97,
-                      107,
-                      101
-                    ]
+                    "Text": "make"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      109,
-                      111,
-                      110,
-                      101,
-                      121
-                    ]
+                    "Text": "money"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      102,
-                      97,
-                      115,
-                      116
-                    ]
+                    "Text": "fast"
                   },
                   {
                     "MatchMany": 1
@@ -1499,39 +1062,19 @@
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      117,
-                      110,
-                      105,
-                      118,
-                      101,
-                      114,
-                      115,
-                      105,
-                      116,
-                      121
-                    ]
+                    "Text": "university"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      100,
-                      105,
-                      112,
-                      108
-                    ]
+                    "Text": "dipl"
                   },
                   {
                     "MatchMany": 1
                   },
                   {
-                    "Text": [
-                      109,
-                      97,
-                      115
-                    ]
+                    "Text": "mas"
                   },
                   {
                     "MatchMany": 1
@@ -1539,7 +1082,9 @@
                 ]
               }
             ],
-            "match_type": "Matches",
+            "match_type": {
+              "Matches": 0
+            },
             "comparator": "AsciiCaseMap",
             "index": null,
             "index_last": false,
@@ -1566,12 +1111,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            115,
-            112,
-            97,
-            109
-          ]
+          "Text": "spam"
         },
         "flags": [],
         "mailbox_id": null,
@@ -1592,16 +1132,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": [
-            112,
-            101,
-            114,
-            115,
-            111,
-            110,
-            97,
-            108
-          ]
+          "Text": "personal"
         },
         "flags": [],
         "mailbox_id": null,
