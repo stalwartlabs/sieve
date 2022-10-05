@@ -6,15 +6,16 @@ use crate::compiler::{
     CompileError,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) enum Modifier {
-    Lower,
-    Upper,
-    LowerFirst,
-    UpperFirst,
-    QuoteWildcard,
-    QuoteRegex,
-    Length,
+    Lower = 41,
+    Upper = 40,
+    LowerFirst = 31,
+    UpperFirst = 30,
+    QuoteWildcard = 20,
+    QuoteRegex = 21,
+    EncodeUrl = 15,
+    Length = 10,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,7 +23,6 @@ pub(crate) struct Set {
     pub modifiers: Vec<Modifier>,
     pub name: Variable,
     pub value: StringItem,
-    pub encode_url: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,7 +36,6 @@ impl<'x> CompilerState<'x> {
         let mut modifiers = Vec::new();
         let mut name = None;
         let value;
-        let mut encode_url = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -48,12 +47,13 @@ impl<'x> CompilerState<'x> {
                     | Word::UpperFirst
                     | Word::QuoteWildcard
                     | Word::QuoteRegex
-                    | Word::Length),
+                    | Word::Length
+                    | Word::EncodeUrl),
                 ) => {
-                    modifiers.push(word.into());
-                }
-                Token::Tag(Word::EncodeUrl) => {
-                    encode_url = true;
+                    let modifier = word.into();
+                    if !modifiers.contains(&modifier) {
+                        modifiers.push(modifier);
+                    }
                 }
                 _ => {
                     if name.is_none() {
@@ -102,11 +102,12 @@ impl<'x> CompilerState<'x> {
             }
         }
 
+        modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
+
         self.commands.push(Command::Set(Set {
             modifiers,
             name: name.unwrap(),
             value,
-            encode_url,
         }));
         Ok(())
     }
@@ -122,6 +123,7 @@ impl From<Word> for Modifier {
             Word::QuoteWildcard => Modifier::QuoteWildcard,
             Word::QuoteRegex => Modifier::QuoteRegex,
             Word::Length => Modifier::Length,
+            Word::EncodeUrl => Modifier::EncodeUrl,
             _ => unreachable!(),
         }
     }

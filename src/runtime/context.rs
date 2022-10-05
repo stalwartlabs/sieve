@@ -4,16 +4,21 @@ use ahash::AHashMap;
 use mail_parser::Message;
 
 use crate::{
-    compiler::grammar::{actions::action_include::Location, command::Command, Capability},
-    Context, Event, Input, Runtime, Script, Sieve,
+    compiler::grammar::{
+        actions::{action_include::Location, action_set::Variable},
+        command::Command,
+        Capability,
+    },
+    Context, Event, Input, Runtime, Script, Sieve, MAX_MATCH_VARIABLES,
 };
 
-use super::{test::TestResult, RuntimeError};
+use super::{actions::include::IncludeResult, test::TestResult, RuntimeError};
 
 pub(crate) struct ScriptStack {
-    script: Arc<Sieve>,
-    prev_pos: usize,
-    prev_vars_local: Vec<Vec<u8>>,
+    pub(crate) script: Arc<Sieve>,
+    pub(crate) prev_pos: usize,
+    pub(crate) prev_vars_local: Vec<String>,
+    pub(crate) prev_vars_match: Vec<String>,
 }
 
 impl<'x, 'y> Context<'x, 'y> {
@@ -31,6 +36,7 @@ impl<'x, 'y> Context<'x, 'y> {
             script_stack: Vec::with_capacity(0),
             vars_global: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
+            vars_match: Vec::with_capacity(0),
         }
     }
 
@@ -52,9 +58,11 @@ impl<'x, 'y> Context<'x, 'y> {
                     script,
                     prev_pos: self.pos,
                     prev_vars_local: std::mem::take(&mut self.vars_local),
+                    prev_vars_match: std::mem::take(&mut self.vars_match),
                 });
                 self.pos = 0;
-                self.vars_local = vec![Vec::with_capacity(0); num_vars];
+                self.vars_local = vec![String::with_capacity(0); num_vars];
+                self.vars_match = vec![String::with_capacity(0); MAX_MATCH_VARIABLES];
                 self.test_result = false;
             }
         }
@@ -98,6 +106,40 @@ impl<'x, 'y> Context<'x, 'y> {
                         return Some(Err(err));
                     }
                 },
+                Command::Clear(clear) => {
+                    if clear.local_vars_num > 0 {
+                        if let Some(local_vars) = self.vars_local.get_mut(
+                            clear.local_vars_idx as usize
+                                ..(clear.local_vars_idx + clear.local_vars_num) as usize,
+                        ) {
+                            for local_var in local_vars.iter_mut() {
+                                if !local_var.is_empty() {
+                                    *local_var = String::with_capacity(0);
+                                }
+                            }
+                        } else {
+                            debug_assert!(false, "Failed to clear local variables: {:?}", clear);
+                        }
+                    }
+                    if clear.match_vars != 0 {
+                        let mut match_vars = clear.match_vars;
+                        while match_vars != 0 {
+                            let index = 63 - match_vars.leading_zeros();
+                            match_vars ^= 1 << index;
+                            if let Some(match_var) = self.vars_match.get_mut(index as usize) {
+                                if !match_var.is_empty() {
+                                    *match_var = String::with_capacity(0);
+                                }
+                            } else {
+                                debug_assert!(
+                                    false,
+                                    "Failed to clear match variable at index {}: {:?}",
+                                    index, clear
+                                );
+                            }
+                        }
+                    }
+                }
                 Command::Keep(_) => {
                     println!("Test passed!");
                 }
@@ -107,6 +149,7 @@ impl<'x, 'y> Context<'x, 'y> {
                 Command::Redirect(_) => (),
                 Command::Discard => (),
                 Command::Stop => (),
+                Command::Reject(_) => (),
                 Command::ForEveryPart(_) => (),
                 Command::Replace(_) => (),
                 Command::Enclose(_) => (),
@@ -114,57 +157,56 @@ impl<'x, 'y> Context<'x, 'y> {
                 Command::Convert(_) => (),
                 Command::AddHeader(_) => (),
                 Command::DeleteHeader(_) => (),
-                Command::Set(_) => (),
+                Command::Set(set) => {
+                    let value = set.exec(self);
+                    match &set.name {
+                        Variable::Local(var_id) => {
+                            if let Some(var) = self.vars_local.get_mut(*var_id) {
+                                *var = value;
+                            } else {
+                                debug_assert!(false, "Non-existent local variable {}", var_id);
+                            }
+                        }
+                        Variable::Global(var_name) => {
+                            self.vars_global.insert(var_name.clone(), value);
+                        }
+                    }
+                }
                 Command::Notify(_) => (),
-                Command::Reject(_) => (),
                 Command::Vacation(_) => (),
                 Command::SetFlag(_) => (),
                 Command::AddFlag(_) => (),
                 Command::RemoveFlag(_) => (),
-                Command::Include(include) => match self.eval_string(&include.value) {
-                    Ok(script_name) => {
-                        if !script_name.is_empty() {
-                            let script_name = if include.location == Location::Global {
-                                Script::Global(script_name)
-                            } else {
-                                Script::Personal(script_name)
-                            };
-
-                            let cached_script = self.script_cache.get(&script_name);
-                            if !include.once || cached_script.is_none() {
-                                if self.script_stack.len() < self.runtime.max_include_scripts {
-                                    if let Some(script) = cached_script.or_else(|| {
-                                        self.runtime.include_scripts.get(script_name.as_str())
-                                    }) {
-                                        let num_vars = script.num_vars;
-                                        self.script_stack.push(ScriptStack {
-                                            script: script.clone(),
-                                            prev_pos: self.pos + 1,
-                                            prev_vars_local: std::mem::take(&mut self.vars_local),
-                                        });
-                                        self.pos = 0;
-                                        self.vars_local = vec![Vec::with_capacity(0); num_vars];
-                                        current_script = self.script_stack.last()?;
-                                        iter = current_script.script.commands.iter();
-                                        continue;
-                                    } else {
-                                        self.pos += 1;
-                                        return Some(Ok(Event::IncludeScript {
-                                            name: script_name,
-                                        }));
-                                    }
-                                } else {
-                                    return Some(Err(RuntimeError::TooManyIncludes));
-                                }
-                            }
-                        }
+                Command::Include(include) => match include.exec(self) {
+                    IncludeResult::Cached(script) => {
+                        let num_vars = script.num_vars;
+                        self.script_stack.push(ScriptStack {
+                            script,
+                            prev_pos: self.pos + 1,
+                            prev_vars_local: std::mem::take(&mut self.vars_local),
+                            prev_vars_match: std::mem::take(&mut self.vars_match),
+                        });
+                        self.pos = 0;
+                        self.vars_local = vec![String::with_capacity(0); num_vars];
+                        self.vars_match = vec![String::with_capacity(0); MAX_MATCH_VARIABLES];
+                        current_script = self.script_stack.last()?;
+                        iter = current_script.script.commands.iter();
+                        continue;
                     }
-                    Err(err) => return Some(Err(err)),
+                    IncludeResult::Event(event) => {
+                        self.pos += 1;
+                        return Some(Ok(event));
+                    }
+                    IncludeResult::Error(err) => {
+                        return Some(Err(err));
+                    }
+                    IncludeResult::None => (),
                 },
                 Command::Return => {
                     if let Some(prev_script) = self.script_stack.pop() {
                         self.pos = prev_script.prev_pos;
                         self.vars_local = prev_script.prev_vars_local;
+                        self.vars_match = prev_script.prev_vars_match;
                     }
                     current_script = self.script_stack.last()?;
                     iter = current_script.script.commands.get(self.pos..)?.iter();
@@ -184,10 +226,9 @@ impl<'x, 'y> Context<'x, 'y> {
                     }
                 }
                 Command::Error(err) => {
-                    return Some(Err(match self.eval_string(&err.message) {
-                        Ok(message) => RuntimeError::ScriptErrorMessage(message),
-                        Err(err) => err,
-                    }))
+                    return Some(Err(RuntimeError::ScriptErrorMessage(
+                        self.eval_string(&err.message).into_owned(),
+                    )))
                 }
                 Command::Invalid(invalid) => {
                     return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));

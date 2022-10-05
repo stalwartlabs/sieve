@@ -2,7 +2,11 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{grammar::command::CompilerState, ErrorType};
+use crate::{
+    compiler::{grammar::command::CompilerState, ErrorType},
+    runtime::eval::IntoString,
+    MAX_MATCH_VARIABLES,
+};
 
 enum State {
     None,
@@ -15,7 +19,7 @@ enum State {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum StringItem {
-    Text(Vec<u8>),
+    Text(String),
     LocalVariable(usize),
     MatchVariable(usize),
     GlobalVariable(String),
@@ -26,7 +30,7 @@ pub(crate) enum StringItem {
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn tokenize_string(
-        &self,
+        &mut self,
         bytes: &[u8],
         parse_decoded: bool,
         parse_matches: bool,
@@ -93,11 +97,18 @@ impl<'x> CompilerState<'x> {
                                     }
                                 }
                             } else {
-                                let num = std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
-                                items.push(StringItem::MatchVariable(
-                                    num.parse()
-                                        .map_err(|_| ErrorType::InvalidNumber(num.to_string()))?,
-                                ));
+                                let num_str =
+                                    std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
+                                let num = num_str
+                                    .parse()
+                                    .map_err(|_| ErrorType::InvalidNumber(num_str.to_string()))?;
+                                if num < MAX_MATCH_VARIABLES {
+                                    if self.register_match_var(num) {
+                                        items.push(StringItem::MatchVariable(num));
+                                    }
+                                } else {
+                                    return Err(ErrorType::InvalidMatchVariable(num));
+                                }
                             }
                             state = State::None;
                         } else {
@@ -209,14 +220,14 @@ impl<'x> CompilerState<'x> {
 
         Ok(match items.len() {
             1 => items.pop().unwrap(),
-            0 => StringItem::Text(Vec::new()),
+            0 => StringItem::Text(String::new()),
             _ => StringItem::List(items),
         })
     }
 
     #[inline(always)]
     fn add_string_item(
-        &self,
+        &mut self,
         items: &mut Vec<StringItem>,
         buf: &[u8],
         parse_decoded: bool,
@@ -224,7 +235,7 @@ impl<'x> CompilerState<'x> {
     ) -> Result<(), ErrorType> {
         if !parse_decoded {
             if !parse_matches {
-                items.push(StringItem::Text(buf.to_vec()));
+                items.push(StringItem::Text(buf.to_vec().into_string()));
             } else {
                 let mut chars = Vec::with_capacity(buf.len());
                 let items_start = items.len();
@@ -233,7 +244,7 @@ impl<'x> CompilerState<'x> {
                     match ch {
                         b'*' => {
                             if !chars.is_empty() {
-                                items.push(StringItem::Text(chars.to_vec()));
+                                items.push(StringItem::Text(chars.to_vec().into_string()));
                                 chars.clear();
                             }
                             if let Some(StringItem::MatchMany(count)) = items.last_mut() {
@@ -244,7 +255,7 @@ impl<'x> CompilerState<'x> {
                         }
                         b'?' => {
                             if !chars.is_empty() {
-                                items.push(StringItem::Text(chars.to_vec()));
+                                items.push(StringItem::Text(chars.to_vec().into_string()));
                                 chars.clear();
                             }
                             items.push(StringItem::MatchOne);
@@ -256,7 +267,7 @@ impl<'x> CompilerState<'x> {
                 }
 
                 if items_start != items.len() && !chars.is_empty() {
-                    items.push(StringItem::Text(chars.to_vec()));
+                    items.push(StringItem::Text(chars.to_vec().into_string()));
                 }
             }
         } else {
@@ -273,7 +284,7 @@ impl<'x> CompilerState<'x> {
 impl Display for StringItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StringItem::Text(t) => f.write_str(&String::from_utf8_lossy(t)),
+            StringItem::Text(t) => f.write_str(t),
             StringItem::LocalVariable(v) => write!(f, "${{{}}}", v),
             StringItem::MatchVariable(v) => write!(f, "${{{}}}", v),
             StringItem::GlobalVariable(v) => write!(f, "${{global.{}}}", v),

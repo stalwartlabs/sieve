@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 pub mod compiler;
 pub mod runtime;
 
+pub(crate) const MAX_MATCH_VARIABLES: usize = 10;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sieve {
     commands: Vec<Command>,
@@ -26,7 +28,7 @@ pub struct Compiler {
 
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
-    pub(crate) environment: AHashMap<String, Vec<u8>>,
+    pub(crate) environment: AHashMap<String, String>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
@@ -45,8 +47,9 @@ pub struct Context<'x, 'y> {
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
     pub(crate) script_stack: Vec<ScriptStack>,
-    pub(crate) vars_global: AHashMap<String, Vec<u8>>,
-    pub(crate) vars_local: Vec<Vec<u8>>,
+    pub(crate) vars_global: AHashMap<String, String>,
+    pub(crate) vars_local: Vec<String>,
+    pub(crate) vars_match: Vec<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

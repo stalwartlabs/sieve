@@ -38,10 +38,9 @@ impl<'x, 'y> Context<'x, 'y> {
                     .all(|c| self.runtime.allowed_capabilities.contains(c)),
                 Test::HasFlag(_) => todo!(),
                 Test::MailboxExists(me) => {
-                    return match self.eval_strings(&me.mailbox_names) {
-                        Ok(names) => TestResult::Event(Event::MailboxExists { names }),
-                        Err(err) => TestResult::Error(err),
-                    };
+                    return TestResult::Event(Event::MailboxExists {
+                        names: self.eval_strings_owned(&me.mailbox_names),
+                    });
                 }
                 Test::Metadata(_) => todo!(),
                 Test::MetadataExists(_) => todo!(),

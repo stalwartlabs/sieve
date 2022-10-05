@@ -18,6 +18,7 @@ pub struct CompileError {
 pub enum ErrorType {
     InvalidCharacter(u8),
     InvalidNumber(String),
+    InvalidMatchVariable(usize),
     InvalidUnicodeSequence(u32),
     InvalidUtf8String,
     UnterminatedString,

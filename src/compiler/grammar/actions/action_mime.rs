@@ -128,7 +128,10 @@ impl<'x> CompilerState<'x> {
                     | Word::QuoteRegex
                     | Word::Length),
                 ) => {
-                    modifiers.push(word.into());
+                    let modifier = word.into();
+                    if !modifiers.contains(&modifier) {
+                        modifiers.push(modifier);
+                    }
                 }
                 _ => {
                     varname = self.parse_string_token(token_info)?;
@@ -136,6 +139,8 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
+
+        modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
 
         self.commands.push(Command::ExtractText(ExtractText {
             modifiers,

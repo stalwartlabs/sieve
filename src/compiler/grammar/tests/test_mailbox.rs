@@ -105,8 +105,7 @@ impl<'x> CompilerState<'x> {
                     } else if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list =
-                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
                         break;
                     }
                 }
@@ -148,8 +147,7 @@ impl<'x> CompilerState<'x> {
                     if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list =
-                            self.parse_strings_token(token_info, match_type == MatchType::Matches)?;
+                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
                         break;
                     }
                 }

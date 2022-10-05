@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
+        grammar::{test::Test, MatchType},
         lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
@@ -25,7 +26,7 @@ use super::{
         action_vacation::Vacation,
     },
     test::BoolOp,
-    Capability, Invalid,
+    Capability, Clear, Invalid,
 };
 
 use super::tests::test_ihave::Error;
@@ -59,6 +60,7 @@ pub(crate) enum Command {
 
     // RFC 5229
     Set(Set),
+    Clear(Clear),
 
     // RFC 5435
     Notify(Notify),
@@ -83,14 +85,16 @@ pub(crate) enum Command {
 }
 
 pub(crate) struct Block {
-    btype: Word,
-    label: Option<Vec<u8>>,
-    line_num: usize,
-    line_pos: usize,
-    last_block_start: usize,
-    if_jmps: Vec<usize>,
-    break_jmps: Vec<usize>,
-    vars_local: AHashMap<String, usize>,
+    pub(crate) btype: Word,
+    pub(crate) label: Option<Vec<u8>>,
+    pub(crate) line_num: usize,
+    pub(crate) line_pos: usize,
+    pub(crate) last_block_start: usize,
+    pub(crate) if_jmps: Vec<usize>,
+    pub(crate) break_jmps: Vec<usize>,
+    pub(crate) match_test_pos: usize,
+    pub(crate) match_test_vars: usize,
+    pub(crate) vars_local: AHashMap<String, usize>,
 }
 
 pub(crate) struct CompilerState<'x> {
@@ -101,6 +105,8 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) last_block_type: Word,
     pub(crate) vars_global: AHashSet<String>,
     pub(crate) vars_num: usize,
+    pub(crate) vars_num_max: usize,
+    pub(crate) match_test_pos_last: usize,
 }
 
 impl Compiler {
@@ -121,6 +127,8 @@ impl Compiler {
             last_block_type: Word::Not,
             vars_global: AHashSet::new(),
             vars_num: 0,
+            vars_num_max: 0,
+            match_test_pos_last: usize::MAX,
         };
 
         while let Some(token_info) = state.tokens.next() {
@@ -135,14 +143,18 @@ impl Compiler {
                             state.parse_require()?;
                         }
                         Word::If => {
-                            is_new_block = Block::new(Word::If).into();
                             state.parse_test()?;
                             state.block.if_jmps.clear();
+                            is_new_block = Block::new(Word::If)
+                                .with_match_test_pos(state.match_test_pos_last)
+                                .into();
                         }
                         Word::ElsIf => {
                             if let Word::If | Word::ElsIf = &state.last_block_type {
-                                is_new_block = Block::new(Word::ElsIf).into();
                                 state.parse_test()?;
+                                is_new_block = Block::new(Word::ElsIf)
+                                    .with_match_test_pos(state.match_test_pos_last)
+                                    .into();
                             } else {
                                 return Err(token_info.expected("'if' before 'elsif'"));
                             }
@@ -185,7 +197,7 @@ impl Compiler {
                                         )));
                                     }
                                 }
-                                Block::labeled(Word::ForEveryPart, label)
+                                Block::new(Word::ForEveryPart).with_label(label)
                             } else {
                                 Block::new(Word::ForEveryPart)
                             }
@@ -354,6 +366,7 @@ impl Compiler {
                     }
                 }
                 Token::CurlyClose if !state.block_stack.is_empty() => {
+                    state.block_end();
                     let mut prev_block = state.block_stack.pop().unwrap();
                     match &state.block.btype {
                         Word::ForEveryPart => {
@@ -503,6 +516,81 @@ impl<'x> CompilerState<'x> {
             None
         }
     }
+
+    pub(crate) fn register_match_var(&mut self, num: usize) -> bool {
+        let mut match_test_pos = self.block.match_test_pos;
+        let mut block = &mut self.block;
+
+        if match_test_pos == usize::MAX {
+            for block_ in self.block_stack.iter_mut().rev() {
+                if block_.match_test_pos != usize::MAX {
+                    match_test_pos = block_.match_test_pos;
+                    block = block_;
+                    break;
+                }
+            }
+        }
+
+        if match_test_pos != usize::MAX {
+            debug_assert!(num < 63);
+            if let Command::Test(test) = &mut self.commands[match_test_pos] {
+                let match_type = match &mut test.test {
+                    Test::Address(t) => &mut t.match_type,
+                    Test::Body(t) => &mut t.match_type,
+                    Test::Date(t) => &mut t.match_type,
+                    Test::CurrentDate(t) => &mut t.match_type,
+                    Test::Envelope(t) => &mut t.match_type,
+                    Test::Environment(t) => &mut t.match_type,
+                    Test::HasFlag(t) => &mut t.match_type,
+                    Test::Header(t) => &mut t.match_type,
+                    Test::Metadata(t) => &mut t.match_type,
+                    Test::ServerMetadata(t) => &mut t.match_type,
+                    Test::NotifyMethodCapability(t) => &mut t.match_type,
+                    Test::SpamTest(t) => &mut t.match_type,
+                    Test::String(t) => &mut t.match_type,
+                    Test::VirusTest(t) => &mut t.match_type,
+                    _ => {
+                        debug_assert!(false, "This should not have happened: {:?}", test.test);
+                        return false;
+                    }
+                };
+                if let MatchType::Matches(positions) | MatchType::Regex(positions) = match_type {
+                    *positions |= 1 << num;
+                    block.match_test_vars = *positions;
+                    true
+                } else {
+                    debug_assert!(false, "This should not have happened");
+                    false
+                }
+            } else {
+                debug_assert!(false, "This should not have happened");
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn block_end(&mut self) {
+        let vars_num_block = self.block.vars_local.len();
+        if vars_num_block > 0 {
+            if self.vars_num > self.vars_num_max {
+                self.vars_num_max = self.vars_num;
+            }
+            self.vars_num -= vars_num_block;
+            self.commands.push(Command::Clear(Clear {
+                match_vars: self.block.match_test_vars,
+                local_vars_idx: self.vars_num as u32,
+                local_vars_num: vars_num_block as u32,
+            }));
+        } else if self.block.match_test_vars != 0 {
+            self.commands.push(Command::Clear(Clear {
+                match_vars: self.block.match_test_vars,
+                local_vars_idx: 0,
+                local_vars_num: 0,
+            }));
+        }
+    }
 }
 
 impl Block {
@@ -513,22 +601,21 @@ impl Block {
             line_num: 0,
             line_pos: 0,
             last_block_start: 0,
+            match_test_pos: usize::MAX,
+            match_test_vars: 0,
             if_jmps: vec![],
             break_jmps: vec![],
             vars_local: AHashMap::new(),
         }
     }
 
-    pub fn labeled(btype: Word, label: Vec<u8>) -> Self {
-        Block {
-            btype,
-            label: label.into(),
-            line_num: 0,
-            line_pos: 0,
-            last_block_start: 0,
-            if_jmps: vec![],
-            break_jmps: vec![],
-            vars_local: AHashMap::new(),
-        }
+    pub fn with_label(mut self, label: Vec<u8>) -> Self {
+        self.label = label.into();
+        self
+    }
+
+    pub fn with_match_test_pos(mut self, match_test_pos: usize) -> Self {
+        self.match_test_pos = match_test_pos;
+        self
     }
 }
