@@ -434,47 +434,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "("
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": " ["
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "."
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "."
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "."
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "])"
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "*(* [*.*.*.*])*"
               }
             ],
             "match_type": {
@@ -583,7 +543,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 120
+        "match_vars": 0
       }
     }
   ],

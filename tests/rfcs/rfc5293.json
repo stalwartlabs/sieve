@@ -130,28 +130,10 @@
         },
         "value_patterns": [
           {
-            "List": [
-              {
-                "Text": "hello"
-              },
-              {
-                "MatchMany": 1
-              },
-              {
-                "Text": "world"
-              }
-            ]
+            "Text": "hello*world"
           },
           {
-            "List": [
-              {
-                "Text": "hi"
-              },
-              "MatchOne",
-              {
-                "Text": "there"
-              }
-            ]
+            "Text": "hi?there"
           }
         ]
       }

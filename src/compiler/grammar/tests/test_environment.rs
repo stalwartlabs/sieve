@@ -43,7 +43,7 @@ impl<'x> CompilerState<'x> {
                     if name.is_none() {
                         name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }

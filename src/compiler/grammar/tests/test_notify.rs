@@ -25,7 +25,7 @@ pub(crate) struct TestValidNotifyMethod {
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_valid_notify_method(&mut self) -> Result<Test, CompileError> {
         Ok(Test::ValidNotifyMethod(TestValidNotifyMethod {
-            notification_uris: self.parse_strings(false)?,
+            notification_uris: self.parse_strings()?,
         }))
     }
 
@@ -58,7 +58,7 @@ impl<'x> CompilerState<'x> {
                     } else if notification_capability.is_none() {
                         notification_capability = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }

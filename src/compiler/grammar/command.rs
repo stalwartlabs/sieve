@@ -82,6 +82,12 @@ pub(crate) enum Command {
     // RFC 6609
     Include(Include),
     Return,
+
+    // Testing
+    #[cfg(test)]
+    TestStart(String),
+    #[cfg(test)]
+    TestFail(crate::compiler::lexer::string::StringItem),
 }
 
 pub(crate) struct Block {
@@ -92,8 +98,8 @@ pub(crate) struct Block {
     pub(crate) last_block_start: usize,
     pub(crate) if_jmps: Vec<usize>,
     pub(crate) break_jmps: Vec<usize>,
-    pub(crate) match_test_pos: usize,
-    pub(crate) match_test_vars: usize,
+    pub(crate) match_test_pos: Vec<usize>,
+    pub(crate) match_test_vars: u64,
     pub(crate) vars_local: AHashMap<String, usize>,
 }
 
@@ -106,7 +112,7 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) vars_global: AHashSet<String>,
     pub(crate) vars_num: usize,
     pub(crate) vars_num_max: usize,
-    pub(crate) match_test_pos_last: usize,
+    pub(crate) vars_match_max: usize,
 }
 
 impl Compiler {
@@ -128,7 +134,7 @@ impl Compiler {
             vars_global: AHashSet::new(),
             vars_num: 0,
             vars_num_max: 0,
-            match_test_pos_last: usize::MAX,
+            vars_match_max: usize::MAX,
         };
 
         while let Some(token_info) = state.tokens.next() {
@@ -145,16 +151,12 @@ impl Compiler {
                         Word::If => {
                             state.parse_test()?;
                             state.block.if_jmps.clear();
-                            is_new_block = Block::new(Word::If)
-                                .with_match_test_pos(state.match_test_pos_last)
-                                .into();
+                            is_new_block = Block::new(Word::If).into();
                         }
                         Word::ElsIf => {
                             if let Word::If | Word::ElsIf = &state.last_block_type {
                                 state.parse_test()?;
-                                is_new_block = Block::new(Word::ElsIf)
-                                    .with_match_test_pos(state.match_test_pos_last)
-                                    .into();
+                                is_new_block = Block::new(Word::ElsIf).into();
                             } else {
                                 return Err(token_info.expected("'if' before 'elsif'"));
                             }
@@ -439,6 +441,29 @@ impl Compiler {
                     state.block = prev_block;
                 }
                 Token::Invalid(command) => {
+                    #[cfg(test)]
+                    {
+                        use crate::runtime::string::IntoString;
+                        if command == "test" {
+                            state.commands.push(Command::TestStart(
+                                state.tokens.expect_static_string()?.into_string(),
+                            ));
+                            let mut new_block = Block::new(Word::Else);
+                            new_block.line_num = state.tokens.line_num;
+                            new_block.line_pos = state.tokens.pos - state.tokens.line_start;
+                            state.tokens.expect_token(Token::CurlyOpen)?;
+                            state.block.last_block_start = state.commands.len() - 1;
+                            state.block_stack.push(state.block);
+                            state.block = new_block;
+                            continue;
+                        } else if command == "test_fail" {
+                            let message = state.parse_string()?;
+                            state.commands.push(Command::TestFail(message));
+                            state.expect_command_end()?;
+                            continue;
+                        }
+                    }
+
                     state.ignore_command()?;
                     state.commands.push(Command::Invalid(Invalid {
                         name: command,
@@ -456,6 +481,7 @@ impl Compiler {
             Ok(Sieve {
                 commands: state.commands,
                 num_vars: state.vars_num,
+                num_match_vars: state.vars_match_max,
             })
         } else {
             Err(CompileError {
@@ -518,54 +544,56 @@ impl<'x> CompilerState<'x> {
     }
 
     pub(crate) fn register_match_var(&mut self, num: usize) -> bool {
-        let mut match_test_pos = self.block.match_test_pos;
         let mut block = &mut self.block;
 
-        if match_test_pos == usize::MAX {
+        if block.match_test_pos.is_empty() {
             for block_ in self.block_stack.iter_mut().rev() {
-                if block_.match_test_pos != usize::MAX {
-                    match_test_pos = block_.match_test_pos;
+                if !block_.match_test_pos.is_empty() {
                     block = block_;
                     break;
                 }
             }
         }
 
-        if match_test_pos != usize::MAX {
+        if !block.match_test_pos.is_empty() {
             debug_assert!(num < 63);
-            if let Command::Test(test) = &mut self.commands[match_test_pos] {
-                let match_type = match &mut test.test {
-                    Test::Address(t) => &mut t.match_type,
-                    Test::Body(t) => &mut t.match_type,
-                    Test::Date(t) => &mut t.match_type,
-                    Test::CurrentDate(t) => &mut t.match_type,
-                    Test::Envelope(t) => &mut t.match_type,
-                    Test::Environment(t) => &mut t.match_type,
-                    Test::HasFlag(t) => &mut t.match_type,
-                    Test::Header(t) => &mut t.match_type,
-                    Test::Metadata(t) => &mut t.match_type,
-                    Test::ServerMetadata(t) => &mut t.match_type,
-                    Test::NotifyMethodCapability(t) => &mut t.match_type,
-                    Test::SpamTest(t) => &mut t.match_type,
-                    Test::String(t) => &mut t.match_type,
-                    Test::VirusTest(t) => &mut t.match_type,
-                    _ => {
-                        debug_assert!(false, "This should not have happened: {:?}", test.test);
+
+            for pos in &block.match_test_pos {
+                if let Command::Test(test) = &mut self.commands[*pos] {
+                    let match_type = match &mut test.test {
+                        Test::Address(t) => &mut t.match_type,
+                        Test::Body(t) => &mut t.match_type,
+                        Test::Date(t) => &mut t.match_type,
+                        Test::CurrentDate(t) => &mut t.match_type,
+                        Test::Envelope(t) => &mut t.match_type,
+                        Test::Environment(t) => &mut t.match_type,
+                        Test::HasFlag(t) => &mut t.match_type,
+                        Test::Header(t) => &mut t.match_type,
+                        Test::Metadata(t) => &mut t.match_type,
+                        Test::ServerMetadata(t) => &mut t.match_type,
+                        Test::NotifyMethodCapability(t) => &mut t.match_type,
+                        Test::SpamTest(t) => &mut t.match_type,
+                        Test::String(t) => &mut t.match_type,
+                        Test::VirusTest(t) => &mut t.match_type,
+                        _ => {
+                            debug_assert!(false, "This should not have happened: {:?}", test.test);
+                            return false;
+                        }
+                    };
+                    if let MatchType::Matches(positions) | MatchType::Regex(positions) = match_type
+                    {
+                        *positions |= 1 << num;
+                        block.match_test_vars = *positions;
+                    } else {
+                        debug_assert!(false, "This should not have happened");
                         return false;
                     }
-                };
-                if let MatchType::Matches(positions) | MatchType::Regex(positions) = match_type {
-                    *positions |= 1 << num;
-                    block.match_test_vars = *positions;
-                    true
                 } else {
                     debug_assert!(false, "This should not have happened");
-                    false
+                    return false;
                 }
-            } else {
-                debug_assert!(false, "This should not have happened");
-                false
             }
+            true
         } else {
             false
         }
@@ -601,7 +629,7 @@ impl Block {
             line_num: 0,
             line_pos: 0,
             last_block_start: 0,
-            match_test_pos: usize::MAX,
+            match_test_pos: vec![],
             match_test_vars: 0,
             if_jmps: vec![],
             break_jmps: vec![],
@@ -611,11 +639,6 @@ impl Block {
 
     pub fn with_label(mut self, label: Vec<u8>) -> Self {
         self.label = label.into();
-        self
-    }
-
-    pub fn with_match_test_pos(mut self, match_test_pos: usize) -> Self {
-        self.match_test_pos = match_test_pos;
         self
     }
 }

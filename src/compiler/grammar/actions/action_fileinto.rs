@@ -35,7 +35,7 @@ impl<'x> CompilerState<'x> {
                     create = true;
                 }
                 Token::Tag(Word::Flags) => {
-                    flags = self.parse_strings(false)?;
+                    flags = self.parse_strings()?;
                 }
                 Token::Tag(Word::MailboxId) => {
                     mailbox_id = self.parse_string()?.into();

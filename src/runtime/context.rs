@@ -4,15 +4,11 @@ use ahash::AHashMap;
 use mail_parser::Message;
 
 use crate::{
-    compiler::grammar::{
-        actions::{action_include::Location, action_set::Variable},
-        command::Command,
-        Capability,
-    },
-    Context, Event, Input, Runtime, Script, Sieve, MAX_MATCH_VARIABLES,
+    compiler::grammar::{command::Command, Capability},
+    Context, Event, Input, Runtime, Sieve, MAX_MATCH_VARIABLES,
 };
 
-use super::{actions::include::IncludeResult, test::TestResult, RuntimeError};
+use super::{actions::include::IncludeResult, tests::TestResult, RuntimeError};
 
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
@@ -37,6 +33,8 @@ impl<'x, 'y> Context<'x, 'y> {
             vars_global: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
+            #[cfg(test)]
+            test_name: String::new(),
         }
     }
 
@@ -53,6 +51,7 @@ impl<'x, 'y> Context<'x, 'y> {
             Input::False => self.test_result = false,
             Input::Script { name, script } => {
                 let num_vars = script.num_vars;
+                let num_match_vars = script.num_match_vars;
                 self.script_cache.insert(name, script.clone());
                 self.script_stack.push(ScriptStack {
                     script,
@@ -62,13 +61,13 @@ impl<'x, 'y> Context<'x, 'y> {
                 });
                 self.pos = 0;
                 self.vars_local = vec![String::with_capacity(0); num_vars];
-                self.vars_match = vec![String::with_capacity(0); MAX_MATCH_VARIABLES];
+                self.vars_match = vec![String::with_capacity(0); num_match_vars];
                 self.test_result = false;
             }
         }
 
-        let mut current_script = self.script_stack.last()?;
-        let mut iter = current_script.script.commands.get(self.pos..)?.iter();
+        let mut current_script = self.script_stack.last()?.script.clone();
+        let mut iter = current_script.commands.get(self.pos..)?.iter();
 
         while let Some(command) = iter.next() {
             match command {
@@ -76,7 +75,7 @@ impl<'x, 'y> Context<'x, 'y> {
                     if !self.test_result {
                         debug_assert!(*jmp_pos > self.pos);
                         self.pos = *jmp_pos;
-                        iter = current_script.script.commands.get(self.pos..)?.iter();
+                        iter = current_script.commands.get(self.pos..)?.iter();
                         continue;
                     }
                 }
@@ -84,17 +83,17 @@ impl<'x, 'y> Context<'x, 'y> {
                     if self.test_result {
                         debug_assert!(*jmp_pos > self.pos);
                         self.pos = *jmp_pos;
-                        iter = current_script.script.commands.get(self.pos..)?.iter();
+                        iter = current_script.commands.get(self.pos..)?.iter();
                         continue;
                     }
                 }
                 Command::Jmp(jmp_pos) => {
                     debug_assert_ne!(*jmp_pos, self.pos);
                     self.pos = *jmp_pos;
-                    iter = current_script.script.commands.get(self.pos..)?.iter();
+                    iter = current_script.commands.get(self.pos..)?.iter();
                     continue;
                 }
-                Command::Test(test) => match self.eval_test(test) {
+                Command::Test(test) => match test.exec(self) {
                     TestResult::Bool(result) => {
                         self.test_result = result;
                     }
@@ -122,22 +121,7 @@ impl<'x, 'y> Context<'x, 'y> {
                         }
                     }
                     if clear.match_vars != 0 {
-                        let mut match_vars = clear.match_vars;
-                        while match_vars != 0 {
-                            let index = 63 - match_vars.leading_zeros();
-                            match_vars ^= 1 << index;
-                            if let Some(match_var) = self.vars_match.get_mut(index as usize) {
-                                if !match_var.is_empty() {
-                                    *match_var = String::with_capacity(0);
-                                }
-                            } else {
-                                debug_assert!(
-                                    false,
-                                    "Failed to clear match variable at index {}: {:?}",
-                                    index, clear
-                                );
-                            }
-                        }
+                        self.clear_match_variables(clear.match_vars);
                     }
                 }
                 Command::Keep(_) => {
@@ -158,19 +142,7 @@ impl<'x, 'y> Context<'x, 'y> {
                 Command::AddHeader(_) => (),
                 Command::DeleteHeader(_) => (),
                 Command::Set(set) => {
-                    let value = set.exec(self);
-                    match &set.name {
-                        Variable::Local(var_id) => {
-                            if let Some(var) = self.vars_local.get_mut(*var_id) {
-                                *var = value;
-                            } else {
-                                debug_assert!(false, "Non-existent local variable {}", var_id);
-                            }
-                        }
-                        Variable::Global(var_name) => {
-                            self.vars_global.insert(var_name.clone(), value);
-                        }
-                    }
+                    set.exec(self);
                 }
                 Command::Notify(_) => (),
                 Command::Vacation(_) => (),
@@ -179,18 +151,17 @@ impl<'x, 'y> Context<'x, 'y> {
                 Command::RemoveFlag(_) => (),
                 Command::Include(include) => match include.exec(self) {
                     IncludeResult::Cached(script) => {
-                        let num_vars = script.num_vars;
                         self.script_stack.push(ScriptStack {
-                            script,
+                            script: script.clone(),
                             prev_pos: self.pos + 1,
                             prev_vars_local: std::mem::take(&mut self.vars_local),
                             prev_vars_match: std::mem::take(&mut self.vars_match),
                         });
                         self.pos = 0;
-                        self.vars_local = vec![String::with_capacity(0); num_vars];
-                        self.vars_match = vec![String::with_capacity(0); MAX_MATCH_VARIABLES];
-                        current_script = self.script_stack.last()?;
-                        iter = current_script.script.commands.iter();
+                        self.vars_local = vec![String::with_capacity(0); script.num_vars];
+                        self.vars_match = vec![String::with_capacity(0); script.num_match_vars];
+                        current_script = script;
+                        iter = current_script.commands.iter();
                         continue;
                     }
                     IncludeResult::Event(event) => {
@@ -208,8 +179,8 @@ impl<'x, 'y> Context<'x, 'y> {
                         self.vars_local = prev_script.prev_vars_local;
                         self.vars_match = prev_script.prev_vars_match;
                     }
-                    current_script = self.script_stack.last()?;
-                    iter = current_script.script.commands.get(self.pos..)?.iter();
+                    current_script = self.script_stack.last()?.script.clone();
+                    iter = current_script.commands.get(self.pos..)?.iter();
                     continue;
                 }
                 Command::Require(capabilities) => {
@@ -232,6 +203,20 @@ impl<'x, 'y> Context<'x, 'y> {
                 }
                 Command::Invalid(invalid) => {
                     return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
+                }
+
+                #[cfg(test)]
+                Command::TestStart(test_name) => {
+                    println!("Starting test {:?}...", test_name);
+                    self.test_name = test_name.clone();
+                }
+                #[cfg(test)]
+                Command::TestFail(reason) => {
+                    panic!(
+                        "Test {} failed: {}",
+                        self.test_name,
+                        self.eval_string(reason)
+                    );
                 }
             }
 

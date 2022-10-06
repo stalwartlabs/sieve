@@ -14,8 +14,6 @@ pub(crate) struct TestString {
     pub comparator: Comparator,
     pub source: Vec<StringItem>,
     pub key_list: Vec<StringItem>,
-
-    pub list: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -24,8 +22,6 @@ impl<'x> CompilerState<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut source = None;
         let key_list: Vec<StringItem>;
-
-        let mut list = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -36,21 +32,19 @@ impl<'x> CompilerState<'x> {
                     | Word::Matches
                     | Word::Value
                     | Word::Count
-                    | Word::Regex),
+                    | Word::Regex
+                    | Word::List),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::Tag(Word::List) => {
-                    list = true;
-                }
                 _ => {
                     if source.is_none() {
-                        source = self.parse_strings_token(token_info, false)?.into();
+                        source = self.parse_strings_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -62,7 +56,6 @@ impl<'x> CompilerState<'x> {
             key_list,
             match_type,
             comparator,
-            list,
         }))
     }
 }

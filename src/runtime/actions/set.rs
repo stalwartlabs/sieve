@@ -1,18 +1,30 @@
 use crate::{
-    compiler::grammar::actions::action_set::{Modifier, Set},
+    compiler::grammar::actions::action_set::{Modifier, Set, Variable},
     Context,
 };
 use std::fmt::Write;
 
 impl Set {
-    pub(crate) fn exec(&self, ctx: &Context) -> String {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut value = ctx.eval_string(&self.value).into_owned();
         if !value.is_empty() {
             for modifier in &self.modifiers {
                 value = modifier.apply(&value);
             }
         }
-        value
+
+        match &self.name {
+            Variable::Local(var_id) => {
+                if let Some(var) = ctx.vars_local.get_mut(*var_id) {
+                    *var = value;
+                } else {
+                    debug_assert!(false, "Non-existent local variable {}", var_id);
+                }
+            }
+            Variable::Global(var_name) => {
+                ctx.vars_global.insert(var_name.clone(), value);
+            }
+        }
     }
 }
 

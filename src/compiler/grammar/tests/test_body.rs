@@ -36,7 +36,7 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::Raw) => body_transform = BodyTransform::Raw,
                 Token::Tag(Word::Text) => body_transform = BodyTransform::Text,
                 Token::Tag(Word::Content) => {
-                    body_transform = BodyTransform::Content(self.parse_strings(false)?);
+                    body_transform = BodyTransform::Content(self.parse_strings()?);
                 }
                 Token::Tag(
                     word @ (Word::Is
@@ -52,7 +52,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
-                    key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                    key_list = self.parse_strings_token(token_info)?;
                     break;
                 }
             }

@@ -116,23 +116,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "<"
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "@"
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "*<*@*"
               }
             ],
             "match_type": {
@@ -154,7 +138,7 @@
   [
     7,
     {
-      "Jz": 11
+      "Jz": 10
     }
   ],
   [
@@ -186,16 +170,6 @@
   [
     10,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 4
-      }
-    }
-  ],
-  [
-    11,
-    {
       "Test": {
         "test": {
           "Header": {
@@ -206,24 +180,11 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "Text": "["
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "] "
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "[*] *"
               }
             ],
             "match_type": {
-              "Matches": 0
+              "Matches": 4
             },
             "comparator": "AsciiCaseMap",
             "index": null,
@@ -239,13 +200,13 @@
     }
   ],
   [
-    12,
+    11,
     {
-      "Jz": 15
+      "Jz": 14
     }
   ],
   [
-    13,
+    12,
     {
       "Invalid": {
         "name": "fileinfo",
@@ -255,11 +216,11 @@
     }
   ],
   [
-    14,
+    13,
     "Stop"
   ],
   [
-    15,
+    14,
     {
       "Test": {
         "test": {
@@ -274,30 +235,10 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "Text": "coyote@"
-                  },
-                  {
-                    "MatchMany": 2
-                  },
-                  {
-                    "Text": ".com"
-                  }
-                ]
+                "Text": "coyote@**.com"
               },
               {
-                "List": [
-                  {
-                    "Text": "wile@"
-                  },
-                  {
-                    "MatchMany": 2
-                  },
-                  {
-                    "Text": ".com"
-                  }
-                ]
+                "Text": "wile@**.com"
               }
             ],
             "address_part": "All",
@@ -317,13 +258,13 @@
     }
   ],
   [
-    16,
+    15,
     {
-      "Jz": 21
+      "Jz": 19
     }
   ],
   [
-    17,
+    16,
     {
       "FileInto": {
         "copy": false,
@@ -345,27 +286,17 @@
     }
   ],
   [
-    18,
+    17,
     "Stop"
   ],
   [
+    18,
+    {
+      "Jmp": 19
+    }
+  ],
+  [
     19,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 4
-      }
-    }
-  ],
-  [
-    20,
-    {
-      "Jmp": 21
-    }
-  ],
-  [
-    21,
     {
       "Test": {
         "test": "True",
@@ -374,13 +305,13 @@
     }
   ],
   [
-    22,
+    20,
     {
-      "Jnz": 24
+      "Jnz": 22
     }
   ],
   [
-    23,
+    21,
     {
       "Test": {
         "test": {
@@ -392,14 +323,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".com"
-                  }
-                ]
+                "Text": "*.com"
               }
             ],
             "address_part": "Domain",
@@ -419,17 +343,17 @@
     }
   ],
   [
-    24,
+    22,
     {
-      "Jz": 26
+      "Jz": 24
     }
   ],
   [
-    25,
+    23,
     "Stop"
   ],
   [
-    26,
+    24,
     {
       "Set": {
         "modifiers": [],
@@ -443,7 +367,7 @@
     }
   ],
   [
-    27,
+    25,
     {
       "Set": {
         "modifiers": [],
@@ -457,7 +381,7 @@
     }
   ],
   [
-    28,
+    26,
     {
       "Set": {
         "modifiers": [],
@@ -471,7 +395,7 @@
     }
   ],
   [
-    29,
+    27,
     {
       "Set": {
         "modifiers": [],
@@ -501,7 +425,7 @@
     }
   ],
   [
-    30,
+    28,
     {
       "Set": {
         "modifiers": [],
@@ -515,7 +439,7 @@
     }
   ],
   [
-    31,
+    29,
     {
       "Set": {
         "modifiers": [
@@ -531,7 +455,7 @@
     }
   ],
   [
-    32,
+    30,
     {
       "Set": {
         "modifiers": [
@@ -547,7 +471,7 @@
     }
   ],
   [
-    33,
+    31,
     {
       "Set": {
         "modifiers": [
@@ -563,7 +487,7 @@
     }
   ],
   [
-    34,
+    32,
     {
       "Set": {
         "modifiers": [
@@ -580,7 +504,7 @@
     }
   ],
   [
-    35,
+    33,
     {
       "Set": {
         "modifiers": [
@@ -596,7 +520,7 @@
     }
   ],
   [
-    36,
+    34,
     {
       "Set": {
         "modifiers": [],
@@ -617,7 +541,7 @@
     }
   ],
   [
-    37,
+    35,
     {
       "Test": {
         "test": {
@@ -643,17 +567,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": " pending "
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "* pending *"
               }
             ],
             "list": false
@@ -664,9 +578,9 @@
     }
   ],
   [
-    38,
+    36,
     {
-      "Jz": 39
+      "Jz": 37
     }
   ]
 ]

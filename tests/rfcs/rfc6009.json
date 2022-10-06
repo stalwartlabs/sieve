@@ -132,22 +132,12 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "Text": "rfc822;"
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "@example.com"
-                  }
-                ]
+                "Text": "rfc822;*@example.com"
               }
             ],
             "address_part": "All",
             "match_type": {
-              "Matches": 0
+              "Matches": 5
             },
             "comparator": "AsciiCaseMap",
             "zone": null,
@@ -240,13 +230,13 @@
           "CurrentDate": {
             "zone": null,
             "match_type": {
-              "Matches": 1
+              "Matches": 5
             },
             "comparator": "AsciiCaseMap",
             "date_part": "Iso8601",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -317,7 +307,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 1
+        "match_vars": 0
       }
     }
   ],
@@ -334,29 +324,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "T"
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ":"
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ":"
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "*T*:*:*"
               }
             ],
             "address_part": "All",
@@ -464,7 +432,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 2,
-        "match_vars": 5
+        "match_vars": 0
       }
     }
   ],
@@ -603,7 +571,7 @@
   [
     34,
     {
-      "Jz": 44
+      "Jz": 45
     }
   ],
   [
@@ -620,7 +588,7 @@
             "date_part": "Date",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -656,7 +624,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 1
+        "match_vars": 0
       }
     }
   ],
@@ -674,7 +642,7 @@
             "date_part": "Zone",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -710,7 +678,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 1
+        "match_vars": 0
       }
     }
   ],
@@ -734,6 +702,16 @@
           }
         },
         "list": false
+      }
+    }
+  ],
+  [
+    44,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 1
       }
     }
   ]

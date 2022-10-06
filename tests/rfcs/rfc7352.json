@@ -77,11 +77,11 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
-              "Matches": 1
+              "Matches": 3
             },
             "comparator": "AsciiCaseMap",
             "index": null,
@@ -99,7 +99,7 @@
   [
     8,
     {
-      "Jz": 13
+      "Jz": 12
     }
   ],
   [
@@ -135,16 +135,6 @@
   [
     12,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 1
-      }
-    }
-  ],
-  [
-    13,
-    {
       "Test": {
         "test": {
           "Duplicate": {
@@ -159,13 +149,13 @@
     }
   ],
   [
-    14,
+    13,
     {
-      "Jz": 16
+      "Jz": 15
     }
   ],
   [
-    15,
+    14,
     {
       "FileInto": {
         "copy": false,
@@ -180,7 +170,7 @@
     }
   ],
   [
-    16,
+    15,
     {
       "Test": {
         "test": {
@@ -192,14 +182,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "Text": "ALERT: "
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "ALERT: *"
               }
             ],
             "match_type": {
@@ -219,13 +202,13 @@
     }
   ],
   [
-    17,
+    16,
     {
-      "Jz": 23
+      "Jz": 21
     }
   ],
   [
-    18,
+    17,
     {
       "Test": {
         "test": {
@@ -245,13 +228,13 @@
     }
   ],
   [
-    19,
+    18,
     {
-      "Jz": 21
+      "Jz": 20
     }
   ],
   [
-    20,
+    19,
     {
       "SetFlag": {
         "varname": null,
@@ -264,7 +247,7 @@
     }
   ],
   [
-    21,
+    20,
     {
       "FileInto": {
         "copy": false,
@@ -279,17 +262,7 @@
     }
   ],
   [
-    22,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 2
-      }
-    }
-  ],
-  [
-    23,
+    21,
     {
       "Test": {
         "test": {
@@ -301,7 +274,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "address_part": "All",
@@ -318,13 +291,13 @@
     }
   ],
   [
-    24,
+    22,
     {
-      "Jz": 27
+      "Jz": 25
     }
   ],
   [
-    25,
+    23,
     {
       "Set": {
         "modifiers": [],
@@ -338,17 +311,17 @@
     }
   ],
   [
-    26,
+    24,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    27,
+    25,
     {
       "Test": {
         "test": {
@@ -360,7 +333,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -380,13 +353,13 @@
     }
   ],
   [
-    28,
+    26,
     {
-      "Jz": 31
+      "Jz": 29
     }
   ],
   [
-    29,
+    27,
     {
       "Set": {
         "modifiers": [],
@@ -400,17 +373,17 @@
     }
   ],
   [
-    30,
+    28,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    31,
+    29,
     {
       "Test": {
         "test": {
@@ -430,13 +403,13 @@
     }
   ],
   [
-    32,
+    30,
     {
-      "Jz": 34
+      "Jz": 32
     }
   ],
   [
-    33,
+    31,
     {
       "Notify": {
         "from": null,
@@ -460,7 +433,7 @@
     }
   ],
   [
-    34,
+    32,
     {
       "Test": {
         "test": {
@@ -472,7 +445,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "address_part": "All",
@@ -489,13 +462,13 @@
     }
   ],
   [
-    35,
+    33,
     {
-      "Jz": 38
+      "Jz": 36
     }
   ],
   [
-    36,
+    34,
     {
       "Set": {
         "modifiers": [],
@@ -509,17 +482,17 @@
     }
   ],
   [
-    37,
+    35,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    38,
+    36,
     {
       "Test": {
         "test": {
@@ -531,7 +504,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -551,13 +524,13 @@
     }
   ],
   [
-    39,
+    37,
     {
-      "Jz": 42
+      "Jz": 40
     }
   ],
   [
-    40,
+    38,
     {
       "Set": {
         "modifiers": [],
@@ -571,17 +544,17 @@
     }
   ],
   [
-    41,
+    39,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    42,
+    40,
     {
       "Test": {
         "test": {
@@ -597,14 +570,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "Text": "Re:"
-                  },
-                  {
-                    "MatchMany": 1
-                  }
-                ]
+                "Text": "Re:*"
               }
             ],
             "list": false
@@ -615,13 +581,13 @@
     }
   ],
   [
-    43,
+    41,
     {
-      "Jz": 46
+      "Jz": 44
     }
   ],
   [
-    44,
+    42,
     {
       "Set": {
         "modifiers": [],
@@ -635,17 +601,17 @@
     }
   ],
   [
-    45,
+    43,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    46,
+    44,
     {
       "Test": {
         "test": {
@@ -665,13 +631,13 @@
     }
   ],
   [
-    47,
+    45,
     {
-      "Jz": 49
+      "Jz": 47
     }
   ],
   [
-    48,
+    46,
     {
       "Notify": {
         "from": null,
@@ -695,7 +661,7 @@
     }
   ],
   [
-    49,
+    47,
     {
       "Test": {
         "test": {
@@ -717,17 +683,17 @@
     }
   ],
   [
-    50,
+    48,
     {
-      "Jz": 52
+      "Jz": 50
     }
   ],
   [
-    51,
+    49,
     "Discard"
   ],
   [
-    52,
+    50,
     {
       "Test": {
         "test": {
@@ -749,13 +715,13 @@
     }
   ],
   [
-    53,
+    51,
     {
-      "Jz": 57
+      "Jz": 55
     }
   ],
   [
-    54,
+    52,
     {
       "Test": {
         "test": {
@@ -785,13 +751,13 @@
     }
   ],
   [
-    55,
+    53,
     {
-      "Jz": 57
+      "Jz": 55
     }
   ],
   [
-    56,
+    54,
     {
       "Test": {
         "test": {
@@ -821,13 +787,13 @@
     }
   ],
   [
-    57,
+    55,
     {
-      "Jz": 59
+      "Jz": 57
     }
   ],
   [
-    58,
+    56,
     {
       "SetFlag": {
         "varname": null,

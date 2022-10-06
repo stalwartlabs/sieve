@@ -96,7 +96,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -118,7 +118,7 @@
   [
     7,
     {
-      "Jz": 10
+      "Jz": 9
     }
   ],
   [
@@ -150,16 +150,6 @@
   [
     9,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 2
-      }
-    }
-  ],
-  [
-    10,
-    {
       "Test": {
         "test": {
           "Header": {
@@ -188,13 +178,13 @@
     }
   ],
   [
-    11,
+    10,
     {
-      "Jz": 14
+      "Jz": 13
     }
   ],
   [
-    12,
+    11,
     {
       "Vacation": {
         "period": "Default",
@@ -213,13 +203,13 @@
     }
   ],
   [
-    13,
+    12,
     {
-      "Jmp": 15
+      "Jmp": 14
     }
   ],
   [
-    14,
+    13,
     {
       "Vacation": {
         "period": "Default",
@@ -238,7 +228,7 @@
     }
   ],
   [
-    15,
+    14,
     {
       "Vacation": {
         "period": "Default",
@@ -255,7 +245,7 @@
     }
   ],
   [
-    16,
+    15,
     {
       "Vacation": {
         "period": {
@@ -281,7 +271,7 @@
     }
   ],
   [
-    17,
+    16,
     {
       "Test": {
         "test": {
@@ -311,13 +301,13 @@
     }
   ],
   [
-    18,
+    17,
     {
-      "Jz": 21
+      "Jz": 20
     }
   ],
   [
-    19,
+    18,
     {
       "Redirect": {
         "copy": false,
@@ -332,13 +322,13 @@
     }
   ],
   [
-    20,
+    19,
     {
-      "Jmp": 22
+      "Jmp": 21
     }
   ],
   [
-    21,
+    20,
     {
       "Vacation": {
         "period": "Default",
@@ -355,7 +345,7 @@
     }
   ],
   [
-    22,
+    21,
     {
       "Test": {
         "test": {
@@ -388,13 +378,13 @@
     }
   ],
   [
-    23,
+    22,
     {
-      "Jz": 26
+      "Jz": 25
     }
   ],
   [
-    24,
+    23,
     {
       "Vacation": {
         "period": "Default",
@@ -411,13 +401,13 @@
     }
   ],
   [
-    25,
+    24,
     {
-      "Jmp": 27
+      "Jmp": 26
     }
   ],
   [
-    26,
+    25,
     {
       "Vacation": {
         "period": "Default",
@@ -434,7 +424,7 @@
     }
   ],
   [
-    27,
+    26,
     {
       "Test": {
         "test": {
@@ -446,14 +436,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "@ourdivision.example.com"
-                  }
-                ]
+                "Text": "*@ourdivision.example.com"
               }
             ],
             "address_part": "All",
@@ -473,13 +456,13 @@
     }
   ],
   [
-    28,
+    27,
     {
-      "Jz": 31
+      "Jz": 30
     }
   ],
   [
-    29,
+    28,
     {
       "Vacation": {
         "period": "Default",
@@ -498,13 +481,13 @@
     }
   ],
   [
-    30,
+    29,
     {
-      "Jmp": 32
+      "Jmp": 31
     }
   ],
   [
-    31,
+    30,
     {
       "Vacation": {
         "period": "Default",
@@ -523,7 +506,7 @@
     }
   ],
   [
-    32,
+    31,
     {
       "Vacation": {
         "period": {
@@ -549,7 +532,7 @@
     }
   ],
   [
-    33,
+    32,
     {
       "Vacation": {
         "period": {

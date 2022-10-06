@@ -54,7 +54,7 @@ impl<'x> CompilerState<'x> {
                     importance = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Options) => {
-                    options = self.parse_strings(false)?;
+                    options = self.parse_strings()?;
                 }
                 Token::Tag(Word::Create) => {
                     create = true;
@@ -69,7 +69,7 @@ impl<'x> CompilerState<'x> {
                     fcc = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Flags) => {
-                    flags = self.parse_strings(false)?;
+                    flags = self.parse_strings()?;
                 }
                 _ => {
                     method = self.parse_string_token(token_info)?;

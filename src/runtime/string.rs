@@ -62,17 +62,15 @@ impl<'x, 'y> Context<'x, 'y> {
                 }
                 data.into()
             }
-            _ => {
-                debug_assert!(false, "This should not have happened: {:?}", string);
-                ""[..].into()
-            }
         }
     }
 
+    #[inline(always)]
     pub(crate) fn eval_strings<'z: 'y>(&'z self, strings: &'y [StringItem]) -> Vec<Cow<'y, str>> {
         strings.iter().map(|s| self.eval_string(s)).collect()
     }
 
+    #[inline(always)]
     pub(crate) fn eval_strings_owned(&self, strings: &[StringItem]) -> Vec<String> {
         strings
             .iter()

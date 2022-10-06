@@ -18,14 +18,7 @@
             },
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".example.com"
-                  }
-                ]
+                "Text": "*.example.com"
               }
             ],
             "match_type": {

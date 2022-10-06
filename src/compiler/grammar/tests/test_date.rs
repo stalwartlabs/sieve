@@ -125,7 +125,7 @@ impl<'x> CompilerState<'x> {
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -199,7 +199,7 @@ impl<'x> CompilerState<'x> {
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }

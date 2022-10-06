@@ -91,7 +91,7 @@ impl<'x> CompilerState<'x> {
                     subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Headers) => {
-                    headers = self.parse_string_list(false)?;
+                    headers = self.parse_string_list()?;
                 }
                 _ => {
                     value = self.parse_string_token(token_info)?;
@@ -155,7 +155,7 @@ impl<'x> CompilerState<'x> {
             Word::Type => MimeOpts::Type,
             Word::Subtype => MimeOpts::Subtype,
             Word::ContentType => MimeOpts::ContentType,
-            Word::Param => MimeOpts::Param(self.parse_strings(false)?),
+            Word::Param => MimeOpts::Param(self.parse_strings()?),
             _ => MimeOpts::None,
         })
     }

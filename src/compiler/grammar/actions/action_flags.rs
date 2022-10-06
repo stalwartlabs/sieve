@@ -14,14 +14,14 @@ pub(crate) struct FlagAction {
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_flag_action(&mut self, word: Word) -> Result<(), CompileError> {
-        let mut maybe_flags = self.parse_strings(false)?;
+        let mut maybe_flags = self.parse_strings()?;
 
         let action = match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
             Some(Ok(Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen)) => {
                 if maybe_flags.len() == 1 {
                     FlagAction {
                         varname: maybe_flags.pop(),
-                        flags: self.parse_strings(false)?,
+                        flags: self.parse_strings()?,
                     }
                 } else {
                     return Err(self

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{grammar::command::CompilerState, ErrorType},
-    runtime::eval::IntoString,
+    runtime::string::IntoString,
     MAX_MATCH_VARIABLES,
 };
 
@@ -23,8 +23,6 @@ pub(crate) enum StringItem {
     LocalVariable(usize),
     MatchVariable(usize),
     GlobalVariable(String),
-    MatchMany(usize),
-    MatchOne,
     List(Vec<StringItem>),
 }
 
@@ -33,7 +31,6 @@ impl<'x> CompilerState<'x> {
         &mut self,
         bytes: &[u8],
         parse_decoded: bool,
-        parse_matches: bool,
     ) -> Result<StringItem, ErrorType> {
         let mut state = State::None;
         let mut items = Vec::with_capacity(3);
@@ -68,12 +65,7 @@ impl<'x> CompilerState<'x> {
                         if pos > var_start_pos {
                             // Add any text before the variable
                             if !decode_buf.is_empty() {
-                                self.add_string_item(
-                                    &mut items,
-                                    &decode_buf,
-                                    parse_decoded,
-                                    parse_matches,
-                                )?;
+                                self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
                                 decode_buf.clear();
                             }
 
@@ -104,6 +96,12 @@ impl<'x> CompilerState<'x> {
                                     .map_err(|_| ErrorType::InvalidNumber(num_str.to_string()))?;
                                 if num < MAX_MATCH_VARIABLES {
                                     if self.register_match_var(num) {
+                                        let total_vars = num + 1;
+                                        if self.vars_match_max == usize::MAX
+                                            || total_vars > self.vars_match_max
+                                        {
+                                            self.vars_match_max = total_vars;
+                                        }
                                         items.push(StringItem::MatchVariable(num));
                                     }
                                 } else {
@@ -215,7 +213,7 @@ impl<'x> CompilerState<'x> {
         }
 
         if !decode_buf.is_empty() {
-            self.add_string_item(&mut items, &decode_buf, parse_decoded, parse_matches)?;
+            self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
         }
 
         Ok(match items.len() {
@@ -231,47 +229,11 @@ impl<'x> CompilerState<'x> {
         items: &mut Vec<StringItem>,
         buf: &[u8],
         parse_decoded: bool,
-        parse_matches: bool,
     ) -> Result<(), ErrorType> {
         if !parse_decoded {
-            if !parse_matches {
-                items.push(StringItem::Text(buf.to_vec().into_string()));
-            } else {
-                let mut chars = Vec::with_capacity(buf.len());
-                let items_start = items.len();
-
-                for &ch in buf {
-                    match ch {
-                        b'*' => {
-                            if !chars.is_empty() {
-                                items.push(StringItem::Text(chars.to_vec().into_string()));
-                                chars.clear();
-                            }
-                            if let Some(StringItem::MatchMany(count)) = items.last_mut() {
-                                *count += 1;
-                            } else {
-                                items.push(StringItem::MatchMany(1));
-                            }
-                        }
-                        b'?' => {
-                            if !chars.is_empty() {
-                                items.push(StringItem::Text(chars.to_vec().into_string()));
-                                chars.clear();
-                            }
-                            items.push(StringItem::MatchOne);
-                        }
-                        _ => {
-                            chars.push(ch);
-                        }
-                    }
-                }
-
-                if items_start != items.len() && !chars.is_empty() {
-                    items.push(StringItem::Text(chars.to_vec().into_string()));
-                }
-            }
+            items.push(StringItem::Text(buf.to_vec().into_string()));
         } else {
-            match self.tokenize_string(buf, false, parse_matches)? {
+            match self.tokenize_string(buf, false)? {
                 StringItem::List(new_items) => items.extend(new_items),
                 item => items.push(item),
             }
@@ -288,8 +250,6 @@ impl Display for StringItem {
             StringItem::LocalVariable(v) => write!(f, "${{{}}}", v),
             StringItem::MatchVariable(v) => write!(f, "${{{}}}", v),
             StringItem::GlobalVariable(v) => write!(f, "${{global.{}}}", v),
-            StringItem::MatchMany(_) => f.write_str("*"),
-            StringItem::MatchOne => f.write_str("?"),
             StringItem::List(l) => {
                 for i in l {
                     i.fmt(f)?;
@@ -321,7 +281,7 @@ mod tests {
             vars_num: 0,
             vars_num_max: 0,
             tokens: Tokenizer::new(&c, b""),
-            match_test_pos_last: 0,
+            vars_match_max: usize::MAX,
         };
 
         for (input, expected_result) in [
@@ -409,9 +369,7 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                compiler
-                    .tokenize_string(input.as_bytes(), true, false)
-                    .unwrap(),
+                compiler.tokenize_string(input.as_bytes(), true).unwrap(),
                 expected_result,
                 "Failed for {}",
                 input
@@ -419,9 +377,7 @@ mod tests {
         }
 
         for input in ["${unicode:200000}", "${Unicode:DF01}"] {
-            assert!(compiler
-                .tokenize_string(input.as_bytes(), true, false)
-                .is_err());
+            assert!(compiler.tokenize_string(input.as_bytes(), true).is_err());
         }
     }
 }

@@ -802,14 +802,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".com"
-                  }
-                ]
+                "Text": "*.com"
               }
             ],
             "match_type": {
@@ -883,84 +876,28 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".com"
-                  }
-                ]
+                "Text": "*.com"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".exe"
-                  }
-                ]
+                "Text": "*.exe"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".vbs"
-                  }
-                ]
+                "Text": "*.vbs"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".scr"
-                  }
-                ]
+                "Text": "*.scr"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".pif"
-                  }
-                ]
+                "Text": "*.pif"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".hta"
-                  }
-                ]
+                "Text": "*.hta"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".bat"
-                  }
-                ]
+                "Text": "*.bat"
               },
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".zip"
-                  }
-                ]
+                "Text": "*.zip"
               }
             ],
             "match_type": {
@@ -1050,7 +987,7 @@
   [
     98,
     {
-      "Jz": 111
+      "Jz": 112
     }
   ],
   [
@@ -1066,7 +1003,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -1111,7 +1048,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
@@ -1217,6 +1154,16 @@
     110,
     {
       "Jz": 111
+    }
+  ],
+  [
+    111,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 2
+      }
     }
   ]
 ]

@@ -17,7 +17,7 @@ impl<'x> CompilerState<'x> {
             flags: match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
                 Some(Ok(Token::Tag(Word::Flags))) => {
                     self.tokens.next();
-                    self.parse_strings(false)?
+                    self.parse_strings()?
                 }
                 _ => Vec::new(),
             },

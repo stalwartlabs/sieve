@@ -204,7 +204,7 @@
   [
     14,
     {
-      "Jz": 25
+      "Jz": 26
     }
   ],
   [
@@ -220,7 +220,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -265,7 +265,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
@@ -282,7 +282,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -327,7 +327,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
@@ -375,6 +375,16 @@
   [
     25,
     {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    26,
+    {
       "Test": {
         "test": {
           "Header": {
@@ -385,20 +395,7 @@
             ],
             "key_list": [
               {
-                "List": [
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": "@"
-                  },
-                  {
-                    "MatchMany": 1
-                  },
-                  {
-                    "Text": ".example.org"
-                  }
-                ]
+                "Text": "*@*.example.org"
               }
             ],
             "match_type": {
@@ -418,13 +415,13 @@
     }
   ],
   [
-    26,
+    27,
     {
-      "Jz": 40
+      "Jz": 42
     }
   ],
   [
-    27,
+    28,
     {
       "Test": {
         "test": {
@@ -436,7 +433,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "address_part": "All",
@@ -453,13 +450,13 @@
     }
   ],
   [
-    28,
+    29,
     {
-      "Jz": 31
+      "Jz": 32
     }
   ],
   [
-    29,
+    30,
     {
       "Set": {
         "modifiers": [],
@@ -483,17 +480,17 @@
     }
   ],
   [
-    30,
+    31,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    31,
+    32,
     {
       "Test": {
         "test": {
@@ -505,7 +502,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -525,13 +522,13 @@
     }
   ],
   [
-    32,
+    33,
     {
-      "Jz": 35
+      "Jz": 36
     }
   ],
   [
-    33,
+    34,
     {
       "Set": {
         "modifiers": [],
@@ -545,17 +542,17 @@
     }
   ],
   [
-    34,
+    35,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    35,
+    36,
     {
       "Test": {
         "test": {
@@ -567,7 +564,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "address_part": "All",
@@ -587,13 +584,13 @@
     }
   ],
   [
-    36,
+    37,
     {
-      "Jz": 39
+      "Jz": 40
     }
   ],
   [
-    37,
+    38,
     {
       "Set": {
         "modifiers": [],
@@ -607,17 +604,17 @@
     }
   ],
   [
-    38,
+    39,
     {
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    39,
+    40,
     {
       "Notify": {
         "from": null,
@@ -634,7 +631,17 @@
     }
   ],
   [
-    40,
+    41,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 2
+      }
+    }
+  ],
+  [
+    42,
     {
       "Set": {
         "modifiers": [],
@@ -648,7 +655,7 @@
     }
   ],
   [
-    41,
+    43,
     {
       "Test": {
         "test": {
@@ -678,13 +685,13 @@
     }
   ],
   [
-    42,
+    44,
     {
-      "Jz": 44
+      "Jz": 46
     }
   ],
   [
-    43,
+    45,
     {
       "Set": {
         "modifiers": [],
@@ -698,7 +705,7 @@
     }
   ],
   [
-    44,
+    46,
     {
       "Test": {
         "test": {
@@ -728,13 +735,13 @@
     }
   ],
   [
-    45,
+    47,
     {
-      "Jz": 47
+      "Jz": 49
     }
   ],
   [
-    46,
+    48,
     {
       "Set": {
         "modifiers": [],
@@ -748,7 +755,7 @@
     }
   ],
   [
-    47,
+    49,
     {
       "Test": {
         "test": {
@@ -773,13 +780,13 @@
     }
   ],
   [
-    48,
+    50,
     {
-      "Jz": 50
+      "Jz": 52
     }
   ],
   [
-    49,
+    51,
     {
       "Notify": {
         "from": null,
@@ -794,7 +801,7 @@
     }
   ],
   [
-    50,
+    52,
     {
       "Test": {
         "test": {
@@ -824,13 +831,13 @@
     }
   ],
   [
-    51,
+    53,
     {
-      "Jz": 59
+      "Jz": 62
     }
   ],
   [
-    52,
+    54,
     {
       "Test": {
         "test": {
@@ -842,7 +849,7 @@
             ],
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "match_type": {
@@ -862,13 +869,13 @@
     }
   ],
   [
-    53,
+    55,
     {
-      "Jz": 56
+      "Jz": 58
     }
   ],
   [
-    54,
+    56,
     {
       "Set": {
         "modifiers": [],
@@ -882,17 +889,17 @@
     }
   ],
   [
-    55,
+    57,
     {
       "Clear": {
         "local_vars_idx": 1,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
   [
-    56,
+    58,
     {
       "Test": {
         "test": {
@@ -922,13 +929,13 @@
     }
   ],
   [
-    57,
+    59,
     {
-      "Jz": 59
+      "Jz": 61
     }
   ],
   [
-    58,
+    60,
     {
       "Notify": {
         "from": null,
@@ -943,6 +950,16 @@
         "method": {
           "Text": "tel:+14085551212"
         }
+      }
+    }
+  ],
+  [
+    61,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 0,
+        "match_vars": 2
       }
     }
   ]

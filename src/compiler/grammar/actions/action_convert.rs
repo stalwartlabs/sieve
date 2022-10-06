@@ -21,7 +21,7 @@ impl<'x> CompilerState<'x> {
         Ok(Test::Convert(Convert {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
-            transcoding_params: self.parse_strings(false)?,
+            transcoding_params: self.parse_strings()?,
         }))
     }
 
@@ -29,7 +29,7 @@ impl<'x> CompilerState<'x> {
         let cmd = Command::Convert(Convert {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
-            transcoding_params: self.parse_strings(false)?,
+            transcoding_params: self.parse_strings()?,
         });
         self.commands.push(cmd);
         Ok(())

@@ -9,12 +9,13 @@ use serde::{Deserialize, Serialize};
 pub mod compiler;
 pub mod runtime;
 
-pub(crate) const MAX_MATCH_VARIABLES: usize = 10;
+pub(crate) const MAX_MATCH_VARIABLES: usize = 30;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sieve {
     commands: Vec<Command>,
     num_vars: usize,
+    num_match_vars: usize,
 }
 
 pub struct Compiler {
@@ -50,6 +51,9 @@ pub struct Context<'x, 'y> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
+
+    #[cfg(test)]
+    pub(crate) test_name: String,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

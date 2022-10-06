@@ -430,13 +430,13 @@
           "CurrentDate": {
             "zone": null,
             "match_type": {
-              "Matches": 2
+              "Matches": 3
             },
             "comparator": "AsciiCaseMap",
             "date_part": "Month",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -472,7 +472,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
@@ -484,13 +484,13 @@
           "CurrentDate": {
             "zone": null,
             "match_type": {
-              "Matches": 2
+              "Matches": 3
             },
             "comparator": "AsciiCaseMap",
             "date_part": "Year",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -526,7 +526,7 @@
       "Clear": {
         "local_vars_idx": 0,
         "local_vars_num": 1,
-        "match_vars": 2
+        "match_vars": 0
       }
     }
   ],
@@ -559,7 +559,7 @@
             "date_part": "Std11",
             "key_list": [
               {
-                "MatchMany": 1
+                "Text": "*"
               }
             ],
             "list": false
@@ -572,7 +572,7 @@
   [
     37,
     {
-      "Jz": 40
+      "Jz": 39
     }
   ],
   [
@@ -591,16 +591,6 @@
   ],
   [
     39,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 0,
-        "match_vars": 1
-      }
-    }
-  ],
-  [
-    40,
     {
       "Test": {
         "test": {
@@ -631,13 +621,13 @@
     }
   ],
   [
-    41,
+    40,
     {
-      "Jz": 43
+      "Jz": 42
     }
   ],
   [
-    42,
+    41,
     {
       "Redirect": {
         "copy": false,

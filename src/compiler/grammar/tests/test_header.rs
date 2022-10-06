@@ -77,9 +77,9 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     if header_list.is_none() {
-                        header_list = self.parse_strings_token(token_info, false)?.into();
+                        header_list = self.parse_strings_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }
