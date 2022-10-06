@@ -127,10 +127,10 @@ impl<'x> CompilerState<'x> {
                     fcc = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Flags) => {
-                    flags = self.parse_strings(false)?;
+                    flags = self.parse_strings()?;
                 }
                 Token::Tag(Word::Addresses) => {
-                    addresses = self.parse_strings(false)?;
+                    addresses = self.parse_strings()?;
                 }
                 _ => {
                     reason = self.parse_string_token(token_info)?;

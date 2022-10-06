@@ -21,14 +21,14 @@ pub(crate) struct TestSpecialUseExists {
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_specialuseexists(&mut self) -> Result<Test, CompileError> {
-        let mut maybe_attributes = self.parse_strings(false)?;
+        let mut maybe_attributes = self.parse_strings()?;
 
         match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
             Some(Ok(Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen)) => {
                 if maybe_attributes.len() == 1 {
                     Ok(Test::SpecialUseExists(TestSpecialUseExists {
                         mailbox: maybe_attributes.pop(),
-                        attributes: self.parse_strings(false)?,
+                        attributes: self.parse_strings()?,
                     }))
                 } else {
                     Err(self

@@ -59,20 +59,20 @@ pub(crate) struct TestServerMetadata {
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxExists(TestMailboxExists {
-            mailbox_names: self.parse_strings(false)?,
+            mailbox_names: self.parse_strings()?,
         }))
     }
 
     pub(crate) fn parse_test_metadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MetadataExists(TestMetadataExists {
             mailbox: self.parse_string()?,
-            annotation_names: self.parse_strings(false)?,
+            annotation_names: self.parse_strings()?,
         }))
     }
 
     pub(crate) fn parse_test_servermetadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::ServerMetadataExists(TestServerMetadataExists {
-            annotation_names: self.parse_strings(false)?,
+            annotation_names: self.parse_strings()?,
         }))
     }
 
@@ -105,7 +105,7 @@ impl<'x> CompilerState<'x> {
                     } else if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -147,7 +147,7 @@ impl<'x> CompilerState<'x> {
                     if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info, match_type.is_matches())?;
+                        key_list = self.parse_strings_token(token_info)?;
                         break;
                     }
                 }

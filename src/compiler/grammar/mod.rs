@@ -1,7 +1,7 @@
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
-use crate::runtime::eval::IntoString;
+use crate::runtime::string::IntoString;
 
 use self::command::CompilerState;
 
@@ -77,10 +77,11 @@ pub(crate) enum AddressPart {
 pub(crate) enum MatchType {
     Is,
     Contains,
-    Matches(usize),
-    Regex(usize),
+    Matches(u64),
+    Regex(u64),
     Value(RelationalMatch),
     Count(RelationalMatch),
+    List,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -106,7 +107,7 @@ pub enum Comparator {
 pub struct Clear {
     pub(crate) local_vars_idx: u32,
     pub(crate) local_vars_num: u32,
-    pub(crate) match_vars: usize,
+    pub(crate) match_vars: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,13 +186,14 @@ impl<'x> CompilerState<'x> {
             Word::Is => Ok(MatchType::Is),
             Word::Contains => Ok(MatchType::Contains),
             Word::Matches => {
-                self.match_test_pos_last = self.commands.len();
+                self.block.match_test_pos.push(self.commands.len());
                 Ok(MatchType::Matches(0))
             }
             Word::Regex => {
-                self.match_test_pos_last = self.commands.len();
+                self.block.match_test_pos.push(self.commands.len());
                 Ok(MatchType::Regex(0))
             }
+            Word::List => Ok(MatchType::List),
             _ => {
                 let token_info = self.tokens.unwrap_next()?;
                 if let Token::StringConstant(text) = &token_info.token {
@@ -263,7 +265,7 @@ impl<'x> CompilerState<'x> {
         match next_token.token {
             Token::StringConstant(s) => Ok(StringItem::Text(s.into_string())),
             Token::StringVariable(s) => {
-                self.tokenize_string(&s, true, false)
+                self.tokenize_string(&s, true)
                     .map_err(|error_type| CompileError {
                         line_num: next_token.line_num,
                         line_pos: next_token.line_pos,
@@ -271,7 +273,7 @@ impl<'x> CompilerState<'x> {
                     })
             }
             Token::BracketOpen => {
-                let mut items = self.parse_string_list(false)?;
+                let mut items = self.parse_string_list()?;
                 match items.pop() {
                     Some(s) if items.is_empty() => Ok(s),
                     _ => Err(next_token.expected("string")),
@@ -281,24 +283,20 @@ impl<'x> CompilerState<'x> {
         }
     }
 
-    pub(crate) fn parse_strings(
-        &mut self,
-        parse_matches: bool,
-    ) -> Result<Vec<StringItem>, CompileError> {
+    pub(crate) fn parse_strings(&mut self) -> Result<Vec<StringItem>, CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
-            Token::BracketOpen => self.parse_string_list(parse_matches),
-            Token::StringConstant(s) if !parse_matches => {
-                Ok(vec![StringItem::Text(s.into_string())])
+            Token::BracketOpen => self.parse_string_list(),
+            Token::StringConstant(s) => Ok(vec![StringItem::Text(s.into_string())]),
+            Token::StringVariable(s) => {
+                self.tokenize_string(&s, true)
+                    .map(|s| vec![s])
+                    .map_err(|error_type| CompileError {
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                        error_type,
+                    })
             }
-            Token::StringConstant(s) | Token::StringVariable(s) => self
-                .tokenize_string(&s, true, parse_matches)
-                .map(|s| vec![s])
-                .map_err(|error_type| CompileError {
-                    line_num: token_info.line_num,
-                    line_pos: token_info.line_pos,
-                    error_type,
-                }),
             _ => Err(token_info.expected("'[' or string")),
         }
     }
@@ -310,7 +308,7 @@ impl<'x> CompilerState<'x> {
         match token_info.token {
             Token::StringConstant(s) => Ok(StringItem::Text(s.into_string())),
             Token::StringVariable(s) => {
-                self.tokenize_string(&s, true, false)
+                self.tokenize_string(&s, true)
                     .map_err(|error_type| CompileError {
                         line_num: token_info.line_num,
                         line_pos: token_info.line_pos,
@@ -324,44 +322,39 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_strings_token(
         &mut self,
         token_info: TokenInfo,
-        parse_matches: bool,
     ) -> Result<Vec<StringItem>, CompileError> {
         match token_info.token {
-            Token::StringConstant(s) if !parse_matches => {
-                Ok(vec![StringItem::Text(s.into_string())])
+            Token::StringConstant(s) => Ok(vec![StringItem::Text(s.into_string())]),
+            Token::StringVariable(s) => {
+                self.tokenize_string(&s, true)
+                    .map(|s| vec![s])
+                    .map_err(|error_type| CompileError {
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                        error_type,
+                    })
             }
-            Token::StringConstant(s) | Token::StringVariable(s) => self
-                .tokenize_string(&s, true, parse_matches)
-                .map(|s| vec![s])
-                .map_err(|error_type| CompileError {
-                    line_num: token_info.line_num,
-                    line_pos: token_info.line_pos,
-                    error_type,
-                }),
-            Token::BracketOpen => self.parse_string_list(parse_matches),
+            Token::BracketOpen => self.parse_string_list(),
             _ => Err(token_info.expected("string")),
         }
     }
 
-    pub(crate) fn parse_string_list(
-        &mut self,
-        parse_matches: bool,
-    ) -> Result<Vec<StringItem>, CompileError> {
+    pub(crate) fn parse_string_list(&mut self) -> Result<Vec<StringItem>, CompileError> {
         let mut strings = Vec::new();
         loop {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
-                Token::StringConstant(s) if !parse_matches => {
+                Token::StringConstant(s) => {
                     strings.push(StringItem::Text(s.into_string()));
                 }
-                Token::StringConstant(s) | Token::StringVariable(s) => {
-                    strings.push(self.tokenize_string(&s, true, parse_matches).map_err(
-                        |error_type| CompileError {
+                Token::StringVariable(s) => {
+                    strings.push(self.tokenize_string(&s, true).map_err(|error_type| {
+                        CompileError {
                             line_num: token_info.line_num,
                             line_pos: token_info.line_pos,
                             error_type,
-                        },
-                    )?);
+                        }
+                    })?);
                 }
                 Token::Comma => (),
                 Token::BracketClose if !strings.is_empty() => break,
@@ -369,12 +362,6 @@ impl<'x> CompilerState<'x> {
             }
         }
         Ok(strings)
-    }
-}
-
-impl MatchType {
-    pub fn is_matches(&self) -> bool {
-        matches!(self, MatchType::Matches(_))
     }
 }
 

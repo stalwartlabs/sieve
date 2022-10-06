@@ -32,7 +32,7 @@ impl<'x> CompilerState<'x> {
                     mime_anychild = true;
                 }
                 _ => {
-                    header_names = self.parse_strings_token(token_info, false)?.into();
+                    header_names = self.parse_strings_token(token_info)?.into();
                 }
             }
         }

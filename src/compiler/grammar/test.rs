@@ -119,11 +119,9 @@ impl<'x> CompilerState<'x> {
             jmps: Vec::new(),
         };
         let mut is_not = false;
-        self.match_test_pos_last = usize::MAX;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
-            //println!("{:?} {:?} {}", token_info.token, block, block_stack.len());
             let test = match token_info.token {
                 Token::Comma if !block_stack.is_empty() => {
                     is_not = block.is_not;

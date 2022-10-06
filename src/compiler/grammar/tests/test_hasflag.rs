@@ -46,7 +46,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
-                    maybe_flags = self.parse_strings_token(token_info, match_type.is_matches())?;
+                    maybe_flags = self.parse_strings_token(token_info)?;
                     break;
                 }
             }
@@ -59,7 +59,7 @@ impl<'x> CompilerState<'x> {
                         comparator,
                         match_type,
                         variable_list: maybe_flags,
-                        flags: self.parse_strings(match_type.is_matches())?,
+                        flags: self.parse_strings()?,
                     }))
                 } else {
                     Err(self
