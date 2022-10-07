@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -36,10 +36,10 @@ impl<'x> CompilerState<'x> {
             },
         };
 
-        self.commands.push(match word {
-            Word::SetFlag => Command::SetFlag(action),
-            Word::AddFlag => Command::AddFlag(action),
-            Word::RemoveFlag => Command::RemoveFlag(action),
+        self.instructions.push(match word {
+            Word::SetFlag => Instruction::SetFlag(action),
+            Word::AddFlag => Instruction::AddFlag(action),
+            Word::RemoveFlag => Instruction::RemoveFlag(action),
             _ => unreachable!(),
         });
         Ok(())

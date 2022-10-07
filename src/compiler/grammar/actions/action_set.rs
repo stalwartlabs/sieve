@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
     CompileError,
 };
@@ -104,7 +104,7 @@ impl<'x> CompilerState<'x> {
 
         modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
 
-        self.commands.push(Command::Set(Set {
+        self.instructions.push(Instruction::Set(Set {
             modifiers,
             name: name.unwrap(),
             value,
@@ -117,7 +117,7 @@ impl From<Word> for Modifier {
     fn from(word: Word) -> Self {
         match word {
             Word::Lower => Modifier::Lower,
-            Word::Under => Modifier::Upper,
+            Word::Upper => Modifier::Upper,
             Word::LowerFirst => Modifier::LowerFirst,
             Word::UpperFirst => Modifier::UpperFirst,
             Word::QuoteWildcard => Modifier::QuoteWildcard,

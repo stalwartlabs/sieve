@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::grammar::command::CompilerState;
+use crate::compiler::grammar::instruction::CompilerState;
 use crate::compiler::lexer::string::StringItem;
 use crate::compiler::CompileError;
 

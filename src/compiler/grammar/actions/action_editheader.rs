@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{
-        command::{Command, CompilerState},
+        instruction::{CompilerState, Instruction},
         Comparator,
     },
     lexer::{string::StringItem, word::Word, Token},
@@ -27,8 +27,7 @@ pub(crate) struct AddHeader {
 */
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct DeleteHeader {
-    pub index: Option<u16>,
-    pub index_last: bool,
+    pub index: Option<i32>,
     pub comparator: Comparator,
     pub match_type: MatchType,
     pub field_name: StringItem,
@@ -58,7 +57,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
-        self.commands.push(Command::AddHeader(AddHeader {
+        self.instructions.push(Instruction::AddHeader(AddHeader {
             last,
             field_name: field_name.unwrap(),
             value,
@@ -90,7 +89,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
@@ -102,9 +101,8 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        let cmd = Command::DeleteHeader(DeleteHeader {
-            index,
-            index_last,
+        let cmd = Instruction::DeleteHeader(DeleteHeader {
+            index: if index_last { index.map(|i| -i) } else { index },
             comparator,
             match_type,
             field_name,
@@ -117,7 +115,7 @@ impl<'x> CompilerState<'x> {
                 Vec::new()
             },
         });
-        self.commands.push(cmd);
+        self.instructions.push(cmd);
         Ok(())
     }
 }

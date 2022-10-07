@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 test_config_set "sieve_max_cpu_time" "2";
 test_config_reload;

@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 test_set "message" text:
 From: stephan+sieve@friep.example.com

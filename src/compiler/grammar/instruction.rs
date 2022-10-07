@@ -32,7 +32,7 @@ use super::{
 use super::tests::test_ihave::Error;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) enum Command {
+pub(crate) enum Instruction {
     Require(Vec<Capability>),
     Keep(Keep),
     FileInto(FileInto),
@@ -88,6 +88,8 @@ pub(crate) enum Command {
     TestStart(String),
     #[cfg(test)]
     TestFail(crate::compiler::lexer::string::StringItem),
+    #[cfg(test)]
+    TestSet((String, crate::compiler::lexer::string::StringItem)),
 }
 
 pub(crate) struct Block {
@@ -105,7 +107,7 @@ pub(crate) struct Block {
 
 pub(crate) struct CompilerState<'x> {
     pub(crate) tokens: Tokenizer<'x>,
-    pub(crate) commands: Vec<Command>,
+    pub(crate) instructions: Vec<Instruction>,
     pub(crate) block_stack: Vec<Block>,
     pub(crate) block: Block,
     pub(crate) last_block_type: Word,
@@ -127,24 +129,24 @@ impl Compiler {
 
         let mut state = CompilerState {
             tokens: Tokenizer::new(self, script),
-            commands: Vec::new(),
+            instructions: Vec::new(),
             block_stack: Vec::new(),
             block: Block::new(Word::Not),
             last_block_type: Word::Not,
             vars_global: AHashSet::new(),
             vars_num: 0,
             vars_num_max: 0,
-            vars_match_max: usize::MAX,
+            vars_match_max: 0,
         };
 
         while let Some(token_info) = state.tokens.next() {
             let token_info = token_info?;
 
             match token_info.token {
-                Token::Identifier(command) => {
+                Token::Identifier(instruction) => {
                     let mut is_new_block = None;
 
-                    match command {
+                    match instruction {
                         Word::Require => {
                             state.parse_require()?;
                         }
@@ -178,10 +180,10 @@ impl Compiler {
                             state.parse_redirect()?;
                         }
                         Word::Discard => {
-                            state.commands.push(Command::Discard);
+                            state.instructions.push(Instruction::Discard);
                         }
                         Word::Stop => {
-                            state.commands.push(Command::Stop);
+                            state.instructions.push(Instruction::Stop);
                         }
 
                         // RFC 5703
@@ -205,8 +207,10 @@ impl Compiler {
                             }
                             .into();
                             state
-                                .commands
-                                .push(Command::ForEveryPart(ForEveryPart { jz_pos: usize::MAX }));
+                                .instructions
+                                .push(Instruction::ForEveryPart(ForEveryPart {
+                                    jz_pos: usize::MAX,
+                                }));
                         }
                         Word::Break => {
                             if let Some(Ok(Token::Tag(Word::Name))) =
@@ -220,7 +224,7 @@ impl Compiler {
                                     state.block_stack.iter_mut().chain([&mut state.block]).rev()
                                 {
                                     if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
-                                        block.break_jmps.push(state.commands.len());
+                                        block.break_jmps.push(state.instructions.len());
                                         label_found = true;
                                         break;
                                     }
@@ -235,12 +239,12 @@ impl Compiler {
                             } else {
                                 let mut label_found = false;
                                 if let Word::ForEveryPart = &state.block.btype {
-                                    state.block.break_jmps.push(state.commands.len());
+                                    state.block.break_jmps.push(state.instructions.len());
                                     label_found = true;
                                 } else {
                                     for block in state.block_stack.iter_mut().rev() {
                                         if let Word::ForEveryPart = &block.btype {
-                                            block.break_jmps.push(state.commands.len());
+                                            block.break_jmps.push(state.instructions.len());
                                             label_found = true;
                                             break;
                                         }
@@ -251,7 +255,7 @@ impl Compiler {
                                 }
                             }
 
-                            state.commands.push(Command::Jmp(usize::MAX));
+                            state.instructions.push(Instruction::Jmp(usize::MAX));
                         }
                         Word::Replace => {
                             state.parse_replace()?;
@@ -306,7 +310,7 @@ impl Compiler {
 
                         // RFC 5232
                         Word::SetFlag | Word::AddFlag | Word::RemoveFlag => {
-                            state.parse_flag_action(command)?;
+                            state.parse_flag_action(instruction)?;
                         }
 
                         // RFC 6609
@@ -314,7 +318,7 @@ impl Compiler {
                             state.parse_include()?;
                         }
                         Word::Return => {
-                            state.commands.push(Command::Return);
+                            state.instructions.push(Instruction::Return);
                         }
                         Word::Global => {
                             for global in state.parse_static_strings()? {
@@ -337,9 +341,9 @@ impl Compiler {
                         }
 
                         _ => {
-                            state.ignore_command()?;
-                            state.commands.push(Command::Invalid(Invalid {
-                                name: command.to_string(),
+                            state.ignore_instruction()?;
+                            state.instructions.push(Instruction::Invalid(Invalid {
+                                name: instruction.to_string(),
                                 line_num: token_info.line_num,
                                 line_pos: token_info.line_pos,
                             }));
@@ -353,7 +357,7 @@ impl Compiler {
 
                         state.tokens.expect_token(Token::CurlyOpen)?;
                         if state.block_stack.len() < self.max_nested_blocks {
-                            state.block.last_block_start = state.commands.len() - 1;
+                            state.block.last_block_start = state.instructions.len() - 1;
                             state.block_stack.push(state.block);
                             state.block = new_block;
                         } else {
@@ -364,7 +368,7 @@ impl Compiler {
                             });
                         }
                     } else {
-                        state.expect_command_end()?;
+                        state.expect_instruction_end()?;
                     }
                 }
                 Token::CurlyClose if !state.block_stack.is_empty() => {
@@ -373,18 +377,18 @@ impl Compiler {
                     match &state.block.btype {
                         Word::ForEveryPart => {
                             state
-                                .commands
-                                .push(Command::Jmp(prev_block.last_block_start));
-                            let cur_pos = state.commands.len();
-                            if let Command::ForEveryPart(fep) =
-                                &mut state.commands[prev_block.last_block_start]
+                                .instructions
+                                .push(Instruction::Jmp(prev_block.last_block_start));
+                            let cur_pos = state.instructions.len();
+                            if let Instruction::ForEveryPart(fep) =
+                                &mut state.instructions[prev_block.last_block_start]
                             {
                                 fep.jz_pos = cur_pos;
                             } else {
                                 debug_assert!(false, "This should not have happened.");
                             }
                             for pos in state.block.break_jmps {
-                                if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
                                     *jmp_pos = cur_pos;
                                 } else {
                                     debug_assert!(false, "This should not have happened.");
@@ -398,12 +402,12 @@ impl Compiler {
                                 Some(Ok(Token::Identifier(Word::ElsIf | Word::Else)))
                             );
                             if next_is_block {
-                                prev_block.if_jmps.push(state.commands.len());
-                                state.commands.push(Command::Jmp(usize::MAX));
+                                prev_block.if_jmps.push(state.instructions.len());
+                                state.instructions.push(Instruction::Jmp(usize::MAX));
                             }
-                            let cur_pos = state.commands.len();
-                            if let Command::Jz(jmp_pos) =
-                                &mut state.commands[prev_block.last_block_start]
+                            let cur_pos = state.instructions.len();
+                            if let Instruction::Jz(jmp_pos) =
+                                &mut state.instructions[prev_block.last_block_start]
                             {
                                 *jmp_pos = cur_pos;
                             } else {
@@ -411,7 +415,8 @@ impl Compiler {
                             }
                             if !next_is_block {
                                 for pos in prev_block.if_jmps.drain(..) {
-                                    if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                    if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos]
+                                    {
                                         *jmp_pos = cur_pos;
                                     } else {
                                         debug_assert!(false, "This should not have happened.");
@@ -423,9 +428,9 @@ impl Compiler {
                             }
                         }
                         Word::Else => {
-                            let cur_pos = state.commands.len();
+                            let cur_pos = state.instructions.len();
                             for pos in prev_block.if_jmps.drain(..) {
-                                if let Command::Jmp(jmp_pos) = &mut state.commands[pos] {
+                                if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
                                     *jmp_pos = cur_pos;
                                 } else {
                                     debug_assert!(false, "This should not have happened.");
@@ -440,47 +445,51 @@ impl Compiler {
 
                     state.block = prev_block;
                 }
-                Token::Invalid(command) => {
+                Token::Invalid(instruction) => {
                     #[cfg(test)]
-                    {
+                    if instruction.contains("test") {
                         use crate::runtime::string::IntoString;
-                        if command == "test" {
-                            state.commands.push(Command::TestStart(
+                        if instruction == "test" {
+                            state.instructions.push(Instruction::TestStart(
                                 state.tokens.expect_static_string()?.into_string(),
                             ));
                             let mut new_block = Block::new(Word::Else);
                             new_block.line_num = state.tokens.line_num;
                             new_block.line_pos = state.tokens.pos - state.tokens.line_start;
                             state.tokens.expect_token(Token::CurlyOpen)?;
-                            state.block.last_block_start = state.commands.len() - 1;
+                            state.block.last_block_start = state.instructions.len() - 1;
                             state.block_stack.push(state.block);
                             state.block = new_block;
                             continue;
-                        } else if command == "test_fail" {
-                            let message = state.parse_string()?;
-                            state.commands.push(Command::TestFail(message));
-                            state.expect_command_end()?;
-                            continue;
+                        } else if instruction == "test_fail" {
+                            let reason = state.parse_string()?;
+                            state.instructions.push(Instruction::TestFail(reason));
+                        } else if instruction == "test_set" {
+                            let name = state.tokens.expect_static_string()?.into_string();
+                            let value = state.parse_string()?;
+                            state.instructions.push(Instruction::TestSet((name, value)));
                         }
+                        state.expect_instruction_end()?;
+                        continue;
                     }
 
-                    state.ignore_command()?;
-                    state.commands.push(Command::Invalid(Invalid {
-                        name: command,
+                    state.ignore_instruction()?;
+                    state.instructions.push(Instruction::Invalid(Invalid {
+                        name: instruction,
                         line_num: token_info.line_num,
                         line_pos: token_info.line_pos,
                     }));
                 }
                 _ => {
-                    return Err(token_info.expected("command"));
+                    return Err(token_info.expected("instruction"));
                 }
             }
         }
 
         if state.block_stack.is_empty() {
             Ok(Sieve {
-                commands: state.commands,
-                num_vars: state.vars_num,
+                instructions: state.instructions,
+                num_vars: std::cmp::max(state.vars_num_max, state.vars_num),
                 num_match_vars: state.vars_match_max,
             })
         } else {
@@ -559,7 +568,7 @@ impl<'x> CompilerState<'x> {
             debug_assert!(num < 63);
 
             for pos in &block.match_test_pos {
-                if let Command::Test(test) = &mut self.commands[*pos] {
+                if let Instruction::Test(test) = &mut self.instructions[*pos] {
                     let match_type = match &mut test.test {
                         Test::Address(t) => &mut t.match_type,
                         Test::Body(t) => &mut t.match_type,
@@ -606,13 +615,13 @@ impl<'x> CompilerState<'x> {
                 self.vars_num_max = self.vars_num;
             }
             self.vars_num -= vars_num_block;
-            self.commands.push(Command::Clear(Clear {
+            self.instructions.push(Instruction::Clear(Clear {
                 match_vars: self.block.match_test_vars,
                 local_vars_idx: self.vars_num as u32,
                 local_vars_num: vars_num_block as u32,
             }));
         } else if self.block.match_test_vars != 0 {
-            self.commands.push(Command::Clear(Clear {
+            self.instructions.push(Instruction::Clear(Clear {
                 match_vars: self.block.match_test_vars,
                 local_vars_idx: 0,
                 local_vars_num: 0,

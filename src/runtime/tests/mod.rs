@@ -7,6 +7,7 @@ use super::RuntimeError;
 
 pub mod glob;
 pub mod match_type;
+pub mod test_header;
 pub mod test_string;
 
 pub(crate) enum TestResult {

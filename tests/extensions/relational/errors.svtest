@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 # A bit awkward to test the extension with itself
 require "relational";

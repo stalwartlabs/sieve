@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::CompilerState,
+    grammar::instruction::CompilerState,
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -11,7 +11,6 @@ use crate::compiler::grammar::test::Test;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestExists {
     pub header_names: Vec<StringItem>,
-    pub mime: bool,
     pub mime_anychild: bool,
 }
 
@@ -37,9 +36,12 @@ impl<'x> CompilerState<'x> {
             }
         }
 
+        if !mime && mime_anychild {
+            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+        }
+
         Ok(Test::Exists(TestExists {
             header_names: header_names.unwrap(),
-            mime,
             mime_anychild,
         }))
     }

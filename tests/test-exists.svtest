@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 /* "The "exists" test is true if the headers listed in the header-names
  *  argument exist within the message.  All of the headers must exist or

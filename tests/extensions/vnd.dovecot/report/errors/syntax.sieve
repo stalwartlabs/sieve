@@ -1,4 +1,4 @@
-require "vnd.dovecot.report";
+require "vnd.stalwart.report";
 
 # 1: Too few arguments
 report;

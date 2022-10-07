@@ -1,6 +1,6 @@
-require "vnd.dovecot.testsuite";
-require "vnd.dovecot.execute";
-require "vnd.dovecot.debug";
+require "vnd.stalwart.testsuite";
+require "vnd.stalwart.execute";
+require "vnd.stalwart.debug";
 require "variables";
 require "relational";
 require "environment";
@@ -16,7 +16,7 @@ Frop!
 ;
 
 test_config_set "sieve_execute_bin_dir" "${tst.path}/../bin";
-test_config_reload :extension "vnd.dovecot.execute";
+test_config_reload :extension "vnd.stalwart.execute";
 test_result_reset;
 
 test "Execute - bare" {
@@ -126,7 +126,7 @@ test "Execute - used as test" {
 }
 	
 test_config_set "sieve_execute_input_eol" "crlf";
-test_config_reload :extension "vnd.dovecot.execute";
+test_config_reload :extension "vnd.stalwart.execute";
 test_result_reset;
 set "out" "";
 
@@ -142,7 +142,7 @@ test "Execute - CRLF" {
 }
 
 test_config_set "sieve_execute_input_eol" "lf";
-test_config_reload :extension "vnd.dovecot.execute";
+test_config_reload :extension "vnd.stalwart.execute";
 test_result_reset;
 set "out" "";
 
@@ -162,7 +162,7 @@ set "D" "${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}${D}";
 set "data" "${D}${D}";
 
 test_config_set "sieve_execute_input_eol" "crlf";
-test_config_reload :extension "vnd.dovecot.execute";
+test_config_reload :extension "vnd.stalwart.execute";
 test_result_reset;
 set "out" "";
 

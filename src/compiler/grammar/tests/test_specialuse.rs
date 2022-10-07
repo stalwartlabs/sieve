@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::CompilerState,
+    grammar::instruction::CompilerState,
     lexer::{string::StringItem, Token},
     CompileError,
 };

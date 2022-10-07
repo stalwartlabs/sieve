@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 require "relational";
 require "comparator-i;ascii-numeric";
@@ -8,7 +8,7 @@ require "comparator-i;ascii-numeric";
  */
 
 test_config_set "sieve_filter_bin_dir" "${tst.path}/../bin";
-test_config_reload :extension "vnd.dovecot.filter";
+test_config_reload :extension "vnd.stalwart.filter";
 
 test "Command syntax" {
         if test_script_compile "errors/syntax.sieve" {

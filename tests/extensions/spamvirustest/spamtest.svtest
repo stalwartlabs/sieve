@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "spamtest";
 require "relational";
 require "comparator-i;ascii-numeric";

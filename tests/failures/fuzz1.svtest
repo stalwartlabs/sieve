@@ -1,6 +1,6 @@
 # Used to cause the test suite to segfault
 
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "fileinto";
 require "imap4flags";
 require "mailbox";

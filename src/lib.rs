@@ -1,7 +1,7 @@
 use std::{sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::grammar::{command::Command, Capability};
+use compiler::grammar::{instruction::Instruction, Capability};
 use mail_parser::Message;
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
@@ -9,11 +9,12 @@ use serde::{Deserialize, Serialize};
 pub mod compiler;
 pub mod runtime;
 
-pub(crate) const MAX_MATCH_VARIABLES: usize = 30;
+pub(crate) const MAX_MATCH_VARIABLES: usize = 63;
+pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sieve {
-    commands: Vec<Command>,
+    instructions: Vec<Instruction>,
     num_vars: usize,
     num_match_vars: usize,
 }
@@ -25,6 +26,8 @@ pub struct Compiler {
     pub(crate) max_variable_len: usize,
     pub(crate) max_nested_blocks: usize,
     pub(crate) max_nested_tests: usize,
+    pub(crate) max_match_variables: usize,
+    pub(crate) max_local_variables: usize,
 }
 
 pub struct Runtime {
@@ -101,10 +104,10 @@ mod tests {
     }*/
 
     #[test]
-    fn parse_all() {
+    fn test_suite() {
         let compiler = Compiler::new();
         let script = compiler
-            .compile(&fs::read("tests/_deleteme.svtest").unwrap())
+            .compile(&fs::read("tests/lexer.svtest").unwrap())
             .unwrap();
 
         let runtime = Runtime::new();

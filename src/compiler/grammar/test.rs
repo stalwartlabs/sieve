@@ -7,7 +7,7 @@ use crate::compiler::{
 
 use super::{
     actions::action_convert::Convert,
-    command::{Command, CompilerState},
+    instruction::{CompilerState, Instruction},
     tests::{
         test_address::TestAddress,
         test_body::TestBody,
@@ -125,11 +125,11 @@ impl<'x> CompilerState<'x> {
             let test = match token_info.token {
                 Token::Comma if !block_stack.is_empty() => {
                     is_not = block.is_not;
-                    block.jmps.push(self.commands.len());
-                    self.commands.push(if block.is_all {
-                        Command::Jz(usize::MAX)
+                    block.jmps.push(self.instructions.len());
+                    self.instructions.push(if block.is_all {
+                        Instruction::Jz(usize::MAX)
                     } else {
-                        Command::Jnz(usize::MAX)
+                        Instruction::Jnz(usize::MAX)
                     });
                     continue;
                     /*if !is_not {
@@ -147,10 +147,10 @@ impl<'x> CompilerState<'x> {
                         block.p_count -= 1;
                         continue;
                     } else if let Some(prev_block) = block_stack.pop() {
-                        let cur_pos = self.commands.len();
+                        let cur_pos = self.instructions.len();
                         for jmp_pos in block.jmps {
-                            if let Command::Jnz(jmp_pos) | Command::Jz(jmp_pos) =
-                                &mut self.commands[jmp_pos]
+                            if let Instruction::Jnz(jmp_pos) | Instruction::Jz(jmp_pos) =
+                                &mut self.instructions[jmp_pos]
                             {
                                 *jmp_pos = cur_pos;
                             } else {
@@ -305,14 +305,15 @@ impl<'x> CompilerState<'x> {
                 block.p_count -= 1;
             }
 
-            self.commands.push(Command::Test(BoolOp { test, is_not }));
+            self.instructions
+                .push(Instruction::Test(BoolOp { test, is_not }));
 
             if block_stack.is_empty() {
                 break;
             }
         }
 
-        self.commands.push(Command::Jz(usize::MAX));
+        self.instructions.push(Instruction::Jz(usize::MAX));
         Ok(())
     }
 }

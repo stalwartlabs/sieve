@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 /*
  * ## RFC 5228, Section 3.1. Control if (page 21) ##

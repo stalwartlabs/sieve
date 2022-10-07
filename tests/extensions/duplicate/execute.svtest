@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "duplicate";
 
 # Simple execution tests; no duplicate verification can be tested yet.

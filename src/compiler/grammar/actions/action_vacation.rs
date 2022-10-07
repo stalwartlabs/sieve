@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -145,7 +145,7 @@ impl<'x> CompilerState<'x> {
             return Err(self.tokens.unwrap_next()?.invalid("missing ':fcc' tag"));
         }
 
-        self.commands.push(Command::Vacation(Vacation {
+        self.instructions.push(Instruction::Vacation(Vacation {
             reason,
             period,
             subject,

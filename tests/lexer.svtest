@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "variables";
 
 /* Test conformance to RFC 5228 - 2.4.2. Strings */

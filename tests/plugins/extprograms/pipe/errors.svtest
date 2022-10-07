@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "variables";
 
 require "relational";
@@ -30,7 +30,7 @@ Frop!
 ;
 
 test_config_set "sieve_pipe_bin_dir" "${tst.path}/../bin";
-test_config_reload :extension "vnd.dovecot.pipe";
+test_config_reload :extension "vnd.stalwart.pipe";
 test_result_reset;
 
 test "Unknown program" {
@@ -68,7 +68,7 @@ Frop!
 
 test_config_set "sieve_pipe_bin_dir" "${tst.path}/../bin";
 test_config_set "sieve_pipe_exec_timeout" "1s";
-test_config_reload :extension "vnd.dovecot.pipe";
+test_config_reload :extension "vnd.stalwart.pipe";
 test_result_reset;
 
 test "Timeout" {

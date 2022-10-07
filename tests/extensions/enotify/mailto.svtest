@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "encoded-character";
 require "enotify";
 require "relational";

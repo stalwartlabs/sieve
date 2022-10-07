@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use ahash::{AHashMap, AHashSet};
 
 use crate::{
-    compiler::grammar::{Capability, Invalid},
+    compiler::grammar::{Capability, Comparator, Invalid},
     Context, Input, Runtime, Script, Sieve,
 };
 
@@ -25,8 +25,60 @@ pub enum RuntimeError {
 
 impl Runtime {
     pub fn new() -> Self {
+        let allowed_capabilities = AHashSet::from_iter([
+            Capability::Envelope,
+            Capability::EnvelopeDsn,
+            Capability::EnvelopeDeliverBy,
+            Capability::FileInto,
+            Capability::EncodedCharacter,
+            Capability::Comparator(Comparator::Elbonia),
+            Capability::Comparator(Comparator::AsciiCaseMap),
+            Capability::Comparator(Comparator::AsciiNumeric),
+            Capability::Comparator(Comparator::Octet),
+            Capability::Body,
+            Capability::Convert,
+            Capability::Copy,
+            Capability::Relational,
+            Capability::Date,
+            Capability::Index,
+            Capability::Duplicate,
+            Capability::Variables,
+            Capability::EditHeader,
+            Capability::ForEveryPart,
+            Capability::Mime,
+            Capability::Replace,
+            Capability::Enclose,
+            Capability::ExtractText,
+            Capability::Enotify,
+            Capability::RedirectDsn,
+            Capability::RedirectDeliverBy,
+            Capability::Environment,
+            Capability::Reject,
+            Capability::Ereject,
+            Capability::ExtLists,
+            Capability::SubAddress,
+            Capability::Vacation,
+            Capability::VacationSeconds,
+            Capability::Fcc,
+            Capability::Mailbox,
+            Capability::MailboxId,
+            Capability::MboxMetadata,
+            Capability::ServerMetadata,
+            Capability::SpecialUse,
+            Capability::Imap4Flags,
+            Capability::Ihave,
+            Capability::ImapSieve,
+            Capability::Include,
+            Capability::Regex,
+            Capability::SpamTest,
+            Capability::SpamTestPlus,
+            Capability::VirusTest,
+            #[cfg(test)]
+            Capability::Other("vnd.stalwart.testsuite".to_string()),
+        ]);
+
         Runtime {
-            allowed_capabilities: AHashSet::new(),
+            allowed_capabilities,
             environment: AHashMap::new(),
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,

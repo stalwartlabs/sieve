@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 /*
  * ## RFC 5228, Section 5.3. Test anyof (page 27) ##

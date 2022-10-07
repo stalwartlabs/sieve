@@ -1,4 +1,4 @@
-require "vnd.dovecot.filter";
+require "vnd.stalwart.filter";
 
 # 1: error: no arguments
 filter;

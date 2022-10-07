@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 test "RFC example 1" {
 	if not test_script_compile "rfc-ex1-default.sieve" {

@@ -1,4 +1,4 @@
-require "vnd.dovecot.execute";
+require "vnd.stalwart.execute";
 require "variables";
 
 # 1: invalid variable name

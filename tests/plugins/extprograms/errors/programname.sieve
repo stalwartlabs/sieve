@@ -1,6 +1,6 @@
 require "variables";
 require "encoded-character";
-require "vnd.dovecot.pipe";
+require "vnd.stalwart.pipe";
 
 # Slash
 pipe "../frop";

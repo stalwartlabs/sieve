@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -50,7 +50,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        self.commands.push(Command::FileInto(FileInto {
+        self.instructions.push(Instruction::FileInto(FileInto {
             folder,
             copy,
             create,

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{command::CompilerState, test::Test, Comparator},
+    grammar::{instruction::CompilerState, test::Test, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -15,13 +15,9 @@ pub(crate) struct TestAddress {
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub index: Option<u16>,
-    pub index_last: bool,
+    pub index: Option<i32>,
 
-    pub mime: bool,
     pub mime_anychild: bool,
-
-    pub list: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -37,8 +33,6 @@ impl<'x> CompilerState<'x> {
         let mut mime = false;
         let mut mime_anychild = false;
 
-        let mut list = false;
-
         loop {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
@@ -53,7 +47,8 @@ impl<'x> CompilerState<'x> {
                     | Word::Matches
                     | Word::Value
                     | Word::Count
-                    | Word::Regex),
+                    | Word::Regex
+                    | Word::List),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
@@ -61,13 +56,10 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
-                }
-                Token::Tag(Word::List) => {
-                    list = true;
                 }
                 Token::Tag(Word::Mime) => {
                     mime = true;
@@ -86,17 +78,18 @@ impl<'x> CompilerState<'x> {
             }
         }
 
+        if !mime && mime_anychild {
+            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+        }
+
         Ok(Test::Address(TestAddress {
             header_list: header_list.unwrap(),
             key_list,
             address_part,
             match_type,
             comparator,
-            index,
-            index_last,
-            mime,
+            index: if index_last { index.map(|i| -i) } else { index },
             mime_anychild,
-            list,
         }))
     }
 }

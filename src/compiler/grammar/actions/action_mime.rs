@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -70,7 +70,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        self.commands.push(Command::Replace(Replace {
+        self.instructions.push(Instruction::Replace(Replace {
             subject,
             from,
             replacement,
@@ -100,7 +100,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        self.commands.push(Command::Enclose(Enclose {
+        self.instructions.push(Instruction::Enclose(Enclose {
             subject,
             headers,
             value,
@@ -142,11 +142,12 @@ impl<'x> CompilerState<'x> {
 
         modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
 
-        self.commands.push(Command::ExtractText(ExtractText {
-            modifiers,
-            first,
-            varname,
-        }));
+        self.instructions
+            .push(Instruction::ExtractText(ExtractText {
+                modifiers,
+                first,
+                varname,
+            }));
         Ok(())
     }
 

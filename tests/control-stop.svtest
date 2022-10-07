@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 /*
  * ## RFC 5228, Section 3.3. Control stop (page 22) ##

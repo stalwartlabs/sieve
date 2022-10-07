@@ -1,4 +1,4 @@
-require "vnd.dovecot.execute";
+require "vnd.stalwart.execute";
 
 # 1: error: no arguments
 execute;

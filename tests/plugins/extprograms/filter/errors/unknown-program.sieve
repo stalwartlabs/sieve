@@ -1,3 +1,3 @@
-require "vnd.dovecot.filter";
+require "vnd.stalwart.filter";
 
 filter "unknown";

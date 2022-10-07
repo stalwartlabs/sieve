@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{
-        command::{Command, CompilerState},
+        instruction::{CompilerState, Instruction},
         test::Test,
     },
     lexer::string::StringItem,
@@ -26,12 +26,12 @@ impl<'x> CompilerState<'x> {
     }
 
     pub(crate) fn parse_convert(&mut self) -> Result<(), CompileError> {
-        let cmd = Command::Convert(Convert {
+        let cmd = Instruction::Convert(Convert {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
             transcoding_params: self.parse_strings()?,
         });
-        self.commands.push(cmd);
+        self.instructions.push(cmd);
         Ok(())
     }
 }

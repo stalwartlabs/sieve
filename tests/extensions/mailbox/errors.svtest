@@ -1,6 +1,6 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 require "variables";
-require "vnd.dovecot.debug";
+require "vnd.stalwart.debug";
 
 require "relational";
 require "comparator-i;ascii-numeric";

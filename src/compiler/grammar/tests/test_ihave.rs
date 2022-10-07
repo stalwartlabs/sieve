@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::grammar::command::{Command, CompilerState};
+use crate::compiler::grammar::instruction::{CompilerState, Instruction};
 use crate::compiler::grammar::Capability;
 use crate::compiler::lexer::string::StringItem;
 use crate::compiler::CompileError;
@@ -29,10 +29,10 @@ impl<'x> CompilerState<'x> {
     }
 
     pub(crate) fn parse_error(&mut self) -> Result<(), CompileError> {
-        let cmd = Command::Error(Error {
+        let cmd = Instruction::Error(Error {
             message: self.parse_string()?,
         });
-        self.commands.push(cmd);
+        self.instructions.push(cmd);
         Ok(())
     }
 }

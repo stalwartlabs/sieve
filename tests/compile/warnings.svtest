@@ -1,4 +1,4 @@
-require "vnd.dovecot.testsuite";
+require "vnd.stalwart.testsuite";
 
 test "EOF Warnings" {
 	if not test_script_compile "warnings/eof.sieve" {

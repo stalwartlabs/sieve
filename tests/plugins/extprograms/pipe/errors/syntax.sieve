@@ -1,4 +1,4 @@
-require "vnd.dovecot.pipe";
+require "vnd.stalwart.pipe";
 
 # 1: error: no arguments
 pipe;

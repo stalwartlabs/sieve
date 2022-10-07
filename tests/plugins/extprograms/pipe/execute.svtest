@@ -1,6 +1,6 @@
-require "vnd.dovecot.testsuite";
-require "vnd.dovecot.pipe";
-require "vnd.dovecot.debug";
+require "vnd.stalwart.testsuite";
+require "vnd.stalwart.pipe";
+require "vnd.stalwart.debug";
 require "variables";
 
 test_set "message" text:
@@ -15,7 +15,7 @@ Frop!
 /* Basic pipe */
 
 test_config_set "sieve_pipe_bin_dir" "${tst.path}/../bin";
-test_config_reload :extension "vnd.dovecot.pipe";
+test_config_reload :extension "vnd.stalwart.pipe";
 test_result_reset;
 
 test "Pipe" {
@@ -30,7 +30,7 @@ test "Pipe" {
 
 test_config_set "sieve_pipe_bin_dir" "${tst.path}/../bin";
 test_config_set "sieve_pipe_exec_timeout" "3s";
-test_config_reload :extension "vnd.dovecot.pipe";
+test_config_reload :extension "vnd.stalwart.pipe";
 test_result_reset;
 
 test "Timeout 3s" {
@@ -44,7 +44,7 @@ test "Timeout 3s" {
 test_result_reset;
 test_config_set "sieve_pipe_bin_dir" "${tst.path}/../bin";
 test_config_set "sieve_pipe_exec_timeout" "0";
-test_config_reload :extension "vnd.dovecot.pipe";
+test_config_reload :extension "vnd.stalwart.pipe";
 test_result_reset;
 
 test "Timeout infinite" {

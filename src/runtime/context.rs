@@ -4,11 +4,11 @@ use ahash::AHashMap;
 use mail_parser::Message;
 
 use crate::{
-    compiler::grammar::{command::Command, Capability},
-    Context, Event, Input, Runtime, Sieve, MAX_MATCH_VARIABLES,
+    compiler::grammar::{instruction::Instruction, Capability},
+    Context, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
-use super::{actions::include::IncludeResult, tests::TestResult, RuntimeError};
+use super::{actions::action_include::IncludeResult, tests::TestResult, RuntimeError};
 
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
@@ -52,6 +52,11 @@ impl<'x, 'y> Context<'x, 'y> {
             Input::Script { name, script } => {
                 let num_vars = script.num_vars;
                 let num_match_vars = script.num_match_vars;
+
+                if num_match_vars > MAX_MATCH_VARIABLES || num_vars > MAX_LOCAL_VARIABLES {
+                    return Some(Err(RuntimeError::IllegalAction));
+                }
+
                 self.script_cache.insert(name, script.clone());
                 self.script_stack.push(ScriptStack {
                     script,
@@ -67,33 +72,34 @@ impl<'x, 'y> Context<'x, 'y> {
         }
 
         let mut current_script = self.script_stack.last()?.script.clone();
-        let mut iter = current_script.commands.get(self.pos..)?.iter();
+        let mut iter = current_script.instructions.get(self.pos..)?.iter();
 
-        while let Some(command) = iter.next() {
-            match command {
-                Command::Jz(jmp_pos) => {
+        while let Some(instruction) = iter.next() {
+            //println!("{:?}", instruction);
+            match instruction {
+                Instruction::Jz(jmp_pos) => {
                     if !self.test_result {
                         debug_assert!(*jmp_pos > self.pos);
                         self.pos = *jmp_pos;
-                        iter = current_script.commands.get(self.pos..)?.iter();
+                        iter = current_script.instructions.get(self.pos..)?.iter();
                         continue;
                     }
                 }
-                Command::Jnz(jmp_pos) => {
+                Instruction::Jnz(jmp_pos) => {
                     if self.test_result {
                         debug_assert!(*jmp_pos > self.pos);
                         self.pos = *jmp_pos;
-                        iter = current_script.commands.get(self.pos..)?.iter();
+                        iter = current_script.instructions.get(self.pos..)?.iter();
                         continue;
                     }
                 }
-                Command::Jmp(jmp_pos) => {
+                Instruction::Jmp(jmp_pos) => {
                     debug_assert_ne!(*jmp_pos, self.pos);
                     self.pos = *jmp_pos;
-                    iter = current_script.commands.get(self.pos..)?.iter();
+                    iter = current_script.instructions.get(self.pos..)?.iter();
                     continue;
                 }
-                Command::Test(test) => match test.exec(self) {
+                Instruction::Test(test) => match test.exec(self) {
                     TestResult::Bool(result) => {
                         self.test_result = result;
                     }
@@ -105,7 +111,7 @@ impl<'x, 'y> Context<'x, 'y> {
                         return Some(Err(err));
                     }
                 },
-                Command::Clear(clear) => {
+                Instruction::Clear(clear) => {
                     if clear.local_vars_num > 0 {
                         if let Some(local_vars) = self.vars_local.get_mut(
                             clear.local_vars_idx as usize
@@ -124,32 +130,32 @@ impl<'x, 'y> Context<'x, 'y> {
                         self.clear_match_variables(clear.match_vars);
                     }
                 }
-                Command::Keep(_) => {
+                Instruction::Keep(_) => {
                     println!("Test passed!");
                 }
-                Command::FileInto(_) => {
+                Instruction::FileInto(_) => {
                     println!("All passed!");
                 }
-                Command::Redirect(_) => (),
-                Command::Discard => (),
-                Command::Stop => (),
-                Command::Reject(_) => (),
-                Command::ForEveryPart(_) => (),
-                Command::Replace(_) => (),
-                Command::Enclose(_) => (),
-                Command::ExtractText(_) => (),
-                Command::Convert(_) => (),
-                Command::AddHeader(_) => (),
-                Command::DeleteHeader(_) => (),
-                Command::Set(set) => {
+                Instruction::Redirect(_) => (),
+                Instruction::Discard => (),
+                Instruction::Stop => (),
+                Instruction::Reject(_) => (),
+                Instruction::ForEveryPart(_) => (),
+                Instruction::Replace(_) => (),
+                Instruction::Enclose(_) => (),
+                Instruction::ExtractText(_) => (),
+                Instruction::Convert(_) => (),
+                Instruction::AddHeader(_) => (),
+                Instruction::DeleteHeader(_) => (),
+                Instruction::Set(set) => {
                     set.exec(self);
                 }
-                Command::Notify(_) => (),
-                Command::Vacation(_) => (),
-                Command::SetFlag(_) => (),
-                Command::AddFlag(_) => (),
-                Command::RemoveFlag(_) => (),
-                Command::Include(include) => match include.exec(self) {
+                Instruction::Notify(_) => (),
+                Instruction::Vacation(_) => (),
+                Instruction::SetFlag(_) => (),
+                Instruction::AddFlag(_) => (),
+                Instruction::RemoveFlag(_) => (),
+                Instruction::Include(include) => match include.exec(self) {
                     IncludeResult::Cached(script) => {
                         self.script_stack.push(ScriptStack {
                             script: script.clone(),
@@ -161,7 +167,7 @@ impl<'x, 'y> Context<'x, 'y> {
                         self.vars_local = vec![String::with_capacity(0); script.num_vars];
                         self.vars_match = vec![String::with_capacity(0); script.num_match_vars];
                         current_script = script;
-                        iter = current_script.commands.iter();
+                        iter = current_script.instructions.iter();
                         continue;
                     }
                     IncludeResult::Event(event) => {
@@ -173,17 +179,17 @@ impl<'x, 'y> Context<'x, 'y> {
                     }
                     IncludeResult::None => (),
                 },
-                Command::Return => {
+                Instruction::Return => {
                     if let Some(prev_script) = self.script_stack.pop() {
                         self.pos = prev_script.prev_pos;
                         self.vars_local = prev_script.prev_vars_local;
                         self.vars_match = prev_script.prev_vars_match;
                     }
                     current_script = self.script_stack.last()?.script.clone();
-                    iter = current_script.commands.get(self.pos..)?.iter();
+                    iter = current_script.instructions.get(self.pos..)?.iter();
                     continue;
                 }
-                Command::Require(capabilities) => {
+                Instruction::Require(capabilities) => {
                     for capability in capabilities {
                         if !self.runtime.allowed_capabilities.contains(capability) {
                             return Some(Err(
@@ -196,28 +202,30 @@ impl<'x, 'y> Context<'x, 'y> {
                         }
                     }
                 }
-                Command::Error(err) => {
+                Instruction::Error(err) => {
                     return Some(Err(RuntimeError::ScriptErrorMessage(
                         self.eval_string(&err.message).into_owned(),
                     )))
                 }
-                Command::Invalid(invalid) => {
+                Instruction::Invalid(invalid) => {
                     return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
                 }
 
                 #[cfg(test)]
-                Command::TestStart(test_name) => {
+                Instruction::TestStart(test_name) => {
                     println!("Starting test {:?}...", test_name);
                     self.test_name = test_name.clone();
                 }
                 #[cfg(test)]
-                Command::TestFail(reason) => {
+                Instruction::TestFail(reason) => {
                     panic!(
                         "Test {} failed: {}",
                         self.test_name,
                         self.eval_string(reason)
                     );
                 }
+                #[cfg(test)]
+                Instruction::TestSet((name, value)) => {}
             }
 
             self.pos += 1;

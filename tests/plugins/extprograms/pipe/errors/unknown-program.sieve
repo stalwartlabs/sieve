@@ -1,3 +1,3 @@
-require "vnd.dovecot.pipe";
+require "vnd.stalwart.pipe";
 
 pipe "unknown";

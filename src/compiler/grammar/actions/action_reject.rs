@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::string::StringItem,
     CompileError,
 };
@@ -14,11 +14,11 @@ pub(crate) struct Reject {
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_reject(&mut self, ereject: bool) -> Result<(), CompileError> {
-        let cmd = Command::Reject(Reject {
+        let cmd = Instruction::Reject(Reject {
             ereject,
             reason: self.parse_string()?,
         });
-        self.commands.push(cmd);
+        self.instructions.push(cmd);
         Ok(())
     }
 }

@@ -1,3 +1,3 @@
-require "vnd.dovecot.execute";
+require "vnd.stalwart.execute";
 
 execute "unknown";

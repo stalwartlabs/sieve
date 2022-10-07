@@ -53,6 +53,8 @@ impl Compiler {
             max_variable_len: 32,
             max_nested_blocks: 15,
             max_nested_tests: 15,
+            max_match_variables: 30,
+            max_local_variables: 128,
         }
     }
 }
@@ -133,7 +135,11 @@ mod tests {
 
                 let sieve = Compiler::new().compile(&script).unwrap();
                 let json_sieve = serde_json::to_string_pretty(
-                    &sieve.commands.into_iter().enumerate().collect::<Vec<_>>(),
+                    &sieve
+                        .instructions
+                        .into_iter()
+                        .enumerate()
+                        .collect::<Vec<_>>(),
                 )
                 .unwrap();
 

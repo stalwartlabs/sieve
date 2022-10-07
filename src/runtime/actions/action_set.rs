@@ -7,10 +7,8 @@ use std::fmt::Write;
 impl Set {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut value = ctx.eval_string(&self.value).into_owned();
-        if !value.is_empty() {
-            for modifier in &self.modifiers {
-                value = modifier.apply(&value);
-            }
+        for modifier in &self.modifiers {
+            value = modifier.apply(&value);
         }
 
         match &self.name {
@@ -52,7 +50,7 @@ impl Modifier {
                     if pos != 0 {
                         result.push(char);
                     } else {
-                        for char in char.to_lowercase() {
+                        for char in char.to_uppercase() {
                             result.push(char);
                         }
                     }
@@ -84,7 +82,7 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::Length => input.len().to_string(),
+            Modifier::Length => input.chars().count().to_string(),
             Modifier::EncodeUrl => {
                 let mut result = String::with_capacity(input.len());
                 for char in input.as_bytes() {

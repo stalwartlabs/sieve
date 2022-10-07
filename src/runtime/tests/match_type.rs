@@ -1,3 +1,5 @@
+use regex::Regex;
+
 use crate::compiler::grammar::{Comparator, MatchType, RelationalMatch};
 
 use super::glob::{glob_match, glob_match_with_values};
@@ -49,7 +51,32 @@ impl MatchType {
                     glob_match_with_values(haystack, needle, to_lower, *positions, matched_values)
                 }
             }
-            MatchType::Regex(vars) => false,
+            MatchType::Regex(positions) => match Regex::new(needle) {
+                Ok(re) => {
+                    let todo = "cache compilation";
+                    if *positions == 0 {
+                        re.is_match(haystack)
+                    } else if let Some(captures) = re.captures(haystack) {
+                        matched_values.clear();
+                        let mut positions = *positions;
+                        while positions != 0 {
+                            let index = 63 - positions.leading_zeros();
+                            positions ^= 1 << index;
+                            if let Some(match_var) = captures.get(index as usize) {
+                                matched_values
+                                    .push((index as usize, match_var.as_str().to_string()));
+                            }
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
+                Err(err) => {
+                    debug_assert!(false, "Failed to compile regex: {:?}", err);
+                    false
+                }
+            },
             MatchType::Count(_) | MatchType::List => false,
         }
     }

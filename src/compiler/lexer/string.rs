@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    compiler::{grammar::command::CompilerState, ErrorType},
+    compiler::{grammar::instruction::CompilerState, ErrorType},
     runtime::string::IntoString,
     MAX_MATCH_VARIABLES,
 };
@@ -38,6 +38,7 @@ impl<'x> CompilerState<'x> {
 
         let mut var_start_pos = usize::MAX;
         let mut var_is_number = true;
+        let mut var_has_namespace = false;
 
         let mut hex_start = usize::MAX;
         let mut decode_buf = Vec::with_capacity(bytes.len());
@@ -51,14 +52,19 @@ impl<'x> CompilerState<'x> {
                         decode_buf.pop();
                         var_start_pos = pos + 1;
                         var_is_number = true;
+                        var_has_namespace = false;
                         state = State::Variable;
                     } else {
                         decode_buf.push(ch);
                     }
                 }
                 State::Variable => match ch {
-                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'.' => {
+                    b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
                         var_is_number = false;
+                    }
+                    b'.' => {
+                        var_is_number = false;
+                        var_has_namespace = true;
                     }
                     b'0'..=b'9' => {}
                     b'}' => {
@@ -69,16 +75,8 @@ impl<'x> CompilerState<'x> {
                                 decode_buf.clear();
                             }
 
-                            if !var_is_number {
-                                if pos - var_start_pos > 7
-                                    && bytes[var_start_pos..var_start_pos + 7]
-                                        .eq_ignore_ascii_case(b"global.")
-                                {
-                                    items.push(StringItem::GlobalVariable(
-                                        String::from_utf8(bytes[var_start_pos + 7..pos].to_vec())
-                                            .unwrap(),
-                                    ));
-                                } else {
+                            if !var_has_namespace {
+                                if !var_is_number {
                                     let var_name =
                                         String::from_utf8(bytes[var_start_pos..pos].to_vec())
                                             .unwrap();
@@ -87,27 +85,36 @@ impl<'x> CompilerState<'x> {
                                     } else if let Some(var_id) = self.get_local_var(&var_name) {
                                         items.push(StringItem::LocalVariable(var_id));
                                     }
-                                }
-                            } else {
-                                let num_str =
-                                    std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
-                                let num = num_str
-                                    .parse()
-                                    .map_err(|_| ErrorType::InvalidNumber(num_str.to_string()))?;
-                                if num < MAX_MATCH_VARIABLES {
-                                    if self.register_match_var(num) {
-                                        let total_vars = num + 1;
-                                        if self.vars_match_max == usize::MAX
-                                            || total_vars > self.vars_match_max
-                                        {
-                                            self.vars_match_max = total_vars;
-                                        }
-                                        items.push(StringItem::MatchVariable(num));
-                                    }
                                 } else {
-                                    return Err(ErrorType::InvalidMatchVariable(num));
+                                    let num_str =
+                                        std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
+                                    let num = num_str.parse().map_err(|_| {
+                                        ErrorType::InvalidNumber(num_str.to_string())
+                                    })?;
+                                    if num < MAX_MATCH_VARIABLES {
+                                        if self.register_match_var(num) {
+                                            let total_vars = num + 1;
+                                            if total_vars > self.vars_match_max {
+                                                self.vars_match_max = total_vars;
+                                            }
+                                            items.push(StringItem::MatchVariable(num));
+                                        }
+                                    } else {
+                                        return Err(ErrorType::InvalidMatchVariable(num));
+                                    }
                                 }
-                            }
+                            } else if pos - var_start_pos > 7
+                                && bytes[var_start_pos..var_start_pos + 7]
+                                    .eq_ignore_ascii_case(b"global.")
+                            {
+                                items.push(StringItem::GlobalVariable(
+                                    String::from_utf8(bytes[var_start_pos + 7..pos].to_vec())
+                                        .unwrap(),
+                                ));
+                            } else {
+                                is_var_error = true;
+                            };
+
                             state = State::None;
                         } else {
                             is_var_error = true;
@@ -264,7 +271,7 @@ impl Display for StringItem {
 mod tests {
 
     use super::StringItem;
-    use crate::compiler::grammar::command::{Block, CompilerState};
+    use crate::compiler::grammar::instruction::{Block, CompilerState};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
     use crate::{AHashSet, Compiler};
@@ -273,7 +280,7 @@ mod tests {
     fn tokenize_string() {
         let c = Compiler::new();
         let mut compiler = CompilerState {
-            commands: Vec::new(),
+            instructions: Vec::new(),
             block_stack: Vec::new(),
             block: Block::new(Word::Not),
             last_block_type: Word::Not,
