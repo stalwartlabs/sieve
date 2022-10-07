@@ -25,6 +25,7 @@ impl TestString {
             for key in &self.key_list {
                 let key = ctx.eval_string(key);
                 for source in &sources {
+                    //println!("-> {:?} {:?}", key, source);
                     if self.match_type.match_value(
                         source.as_ref(),
                         key.as_ref(),

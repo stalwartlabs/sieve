@@ -389,7 +389,6 @@ impl<'x> Iterator for Tokenizer<'x> {
                     }
                 }
                 State::QuotedString(maybe_variable) => match ch {
-                    b'\\' => (),
                     b'"' if last_ch != b'\\' => {
                         self.state = State::None;
                         return Some(self.get_string(maybe_variable));
@@ -401,6 +400,11 @@ impl<'x> Iterator for Tokenizer<'x> {
                     b'{' if last_ch == b'$' => {
                         self.state = State::QuotedString(true);
                         self.push_byte(ch);
+                    }
+                    b'\\' => {
+                        if last_ch == b'\\' {
+                            self.push_byte(ch);
+                        }
                     }
                     _ => {
                         self.push_byte(ch);

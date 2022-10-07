@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -150,7 +150,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        self.commands.push(Command::Redirect(Redirect {
+        self.instructions.push(Instruction::Redirect(Redirect {
             address,
             copy,
             notify,

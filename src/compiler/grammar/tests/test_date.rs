@@ -2,7 +2,7 @@ use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{command::CompilerState, Comparator},
+    grammar::{instruction::CompilerState, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -15,8 +15,7 @@ pub(crate) struct TestDate {
     pub key_list: Vec<StringItem>,
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub index: Option<u16>,
-    pub index_last: bool,
+    pub index: Option<i32>,
     pub zone: Zone,
     pub date_part: DatePart,
     pub list: bool,
@@ -86,7 +85,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
-                    index = (self.tokens.expect_number(u16::MAX as usize)? as u16).into();
+                    index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
                     index_last = true;
@@ -138,8 +137,7 @@ impl<'x> CompilerState<'x> {
             date_part: date_part.unwrap(),
             match_type,
             comparator,
-            index,
-            index_last,
+            index: if index_last { index.map(|i| -i) } else { index },
             zone,
             list,
         }))

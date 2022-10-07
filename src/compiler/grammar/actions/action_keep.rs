@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::command::{Command, CompilerState},
+    grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -13,7 +13,7 @@ pub(crate) struct Keep {
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_keep(&mut self) -> Result<(), CompileError> {
-        let cmd = Command::Keep(Keep {
+        let cmd = Instruction::Keep(Keep {
             flags: match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
                 Some(Ok(Token::Tag(Word::Flags))) => {
                     self.tokens.next();
@@ -22,7 +22,7 @@ impl<'x> CompilerState<'x> {
                 _ => Vec::new(),
             },
         });
-        self.commands.push(cmd);
+        self.instructions.push(cmd);
         Ok(())
     }
 }

@@ -53,6 +53,8 @@ impl Compiler {
             max_variable_len: 32,
             max_nested_blocks: 15,
             max_nested_tests: 15,
+            max_match_variables: 30,
+            max_local_variables: 128,
         }
     }
 }

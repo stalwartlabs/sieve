@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::runtime::string::IntoString;
 
-use self::command::CompilerState;
+use self::instruction::CompilerState;
 
 use super::{
     lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
@@ -11,7 +11,7 @@ use super::{
 };
 
 pub mod actions;
-pub mod command;
+pub mod instruction;
 pub mod test;
 pub mod tests;
 
@@ -119,12 +119,12 @@ pub struct Invalid {
 
 impl<'x> CompilerState<'x> {
     #[inline(always)]
-    pub fn expect_command_end(&mut self) -> Result<(), CompileError> {
+    pub fn expect_instruction_end(&mut self) -> Result<(), CompileError> {
         self.tokens.expect_token(Token::Semicolon)
     }
 
-    pub fn ignore_command(&mut self) -> Result<(), CompileError> {
-        // Skip entire command
+    pub fn ignore_instruction(&mut self) -> Result<(), CompileError> {
+        // Skip entire instruction
         let mut curly_count = 0;
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -137,7 +137,7 @@ impl<'x> CompilerState<'x> {
                 }
                 Token::CurlyClose => match curly_count {
                     0 => {
-                        return Err(token_info.expected("command"));
+                        return Err(token_info.expected("instruction"));
                     }
                     1 => {
                         break;
@@ -186,11 +186,11 @@ impl<'x> CompilerState<'x> {
             Word::Is => Ok(MatchType::Is),
             Word::Contains => Ok(MatchType::Contains),
             Word::Matches => {
-                self.block.match_test_pos.push(self.commands.len());
+                self.block.match_test_pos.push(self.instructions.len());
                 Ok(MatchType::Matches(0))
             }
             Word::Regex => {
-                self.block.match_test_pos.push(self.commands.len());
+                self.block.match_test_pos.push(self.instructions.len());
                 Ok(MatchType::Regex(0))
             }
             Word::List => Ok(MatchType::List),

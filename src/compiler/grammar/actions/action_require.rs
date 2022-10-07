@@ -1,6 +1,6 @@
 use crate::compiler::{
     grammar::{
-        command::{Command, CompilerState},
+        instruction::{CompilerState, Instruction},
         Capability,
     },
     lexer::Token,
@@ -9,16 +9,17 @@ use crate::compiler::{
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_require(&mut self) -> Result<(), CompileError> {
-        let capabilities = if let Some(Command::Require(capabilties)) = self.commands.last_mut() {
-            capabilties
-        } else {
-            self.commands.push(Command::Require(vec![]));
-            if let Some(Command::Require(capabilties)) = self.commands.last_mut() {
+        let capabilities =
+            if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
                 capabilties
             } else {
-                unreachable!();
-            }
-        };
+                self.instructions.push(Instruction::Require(vec![]));
+                if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
+                    capabilties
+                } else {
+                    unreachable!();
+                }
+            };
 
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
