@@ -12,6 +12,7 @@ use crate::compiler::grammar::test::Test;
 pub(crate) struct TestExists {
     pub header_names: Vec<StringItem>,
     pub mime_anychild: bool,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -43,6 +44,7 @@ impl<'x> CompilerState<'x> {
         Ok(Test::Exists(TestExists {
             header_names: header_names.unwrap(),
             mime_anychild,
+            is_not: false,
         }))
     }
 }

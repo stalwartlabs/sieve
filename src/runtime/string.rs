@@ -2,8 +2,8 @@ use std::borrow::Cow;
 
 use crate::{compiler::lexer::string::StringItem, Context};
 
-impl<'x, 'y> Context<'x, 'y> {
-    pub(crate) fn eval_string<'z: 'y>(&'z self, string: &'y StringItem) -> Cow<'y, str> {
+impl<'x> Context<'x> {
+    pub(crate) fn eval_string<'z: 'y, 'y>(&'z self, string: &'y StringItem) -> Cow<'y, str> {
         match string {
             StringItem::Text(text) => text.into(),
             StringItem::LocalVariable(var_num) => {
@@ -66,7 +66,10 @@ impl<'x, 'y> Context<'x, 'y> {
     }
 
     #[inline(always)]
-    pub(crate) fn eval_strings<'z: 'y>(&'z self, strings: &'y [StringItem]) -> Vec<Cow<'y, str>> {
+    pub(crate) fn eval_strings<'z: 'y, 'y>(
+        &'z self,
+        strings: &'y [StringItem],
+    ) -> Vec<Cow<'y, str>> {
         strings.iter().map(|s| self.eval_string(s)).collect()
     }
 

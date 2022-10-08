@@ -12,6 +12,7 @@ use crate::compiler::grammar::test::Test;
 pub(crate) struct TestSize {
     pub over: bool,
     pub limit: usize,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -26,7 +27,11 @@ impl<'x> CompilerState<'x> {
         };
         let token_info = self.tokens.unwrap_next()?;
         if let Token::Number(limit) = token_info.token {
-            Ok(Test::Size(TestSize { over, limit }))
+            Ok(Test::Size(TestSize {
+                over,
+                limit,
+                is_not: false,
+            }))
         } else {
             Err(token_info.expected("number"))
         }

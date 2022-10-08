@@ -1,4 +1,4 @@
-use std::{sync::Arc, vec::IntoIter};
+use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{instruction::Instruction, Capability};
@@ -39,10 +39,9 @@ pub struct Runtime {
     pub(crate) max_instructions: usize,
 }
 
-pub struct Context<'x, 'y> {
-    pub(crate) runtime: &'y Runtime,
-    pub(crate) raw_message: &'x [u8],
-    pub(crate) message: Option<Message<'x>>,
+#[derive(Clone)]
+pub struct Context<'x> {
+    pub(crate) runtime: &'x Runtime,
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
@@ -65,8 +64,13 @@ pub enum Script {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Event {
-    IncludeScript { name: Script },
-    MailboxExists { names: Vec<String> },
+    IncludeScript {
+        name: Script,
+    },
+    MailboxExists {
+        names: Vec<String>,
+    },
+
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

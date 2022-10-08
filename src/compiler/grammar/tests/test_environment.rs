@@ -14,6 +14,7 @@ pub(crate) struct TestEnvironment {
     pub key_list: Vec<StringItem>,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -55,6 +56,7 @@ impl<'x> CompilerState<'x> {
             key_list,
             match_type,
             comparator,
+            is_not: false,
         }))
     }
 }

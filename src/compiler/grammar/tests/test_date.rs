@@ -19,6 +19,7 @@ pub(crate) struct TestDate {
     pub zone: Zone,
     pub date_part: DatePart,
     pub list: bool,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,6 +30,7 @@ pub(crate) struct TestCurrentDate {
     pub date_part: DatePart,
     pub key_list: Vec<StringItem>,
     pub list: bool,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,6 +142,7 @@ impl<'x> CompilerState<'x> {
             index: if index_last { index.map(|i| -i) } else { index },
             zone,
             list,
+            is_not: false,
         }))
     }
 
@@ -211,6 +214,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             zone,
             list,
+            is_not: false,
         }))
     }
 }

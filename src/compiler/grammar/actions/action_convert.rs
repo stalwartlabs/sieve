@@ -14,6 +14,7 @@ pub(crate) struct Convert {
     pub from_media_type: StringItem,
     pub to_media_type: StringItem,
     pub transcoding_params: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -22,6 +23,7 @@ impl<'x> CompilerState<'x> {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
             transcoding_params: self.parse_strings()?,
+            is_not: false,
         }))
     }
 
@@ -30,6 +32,7 @@ impl<'x> CompilerState<'x> {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
             transcoding_params: self.parse_strings()?,
+            is_not: false,
         });
         self.instructions.push(cmd);
         Ok(())

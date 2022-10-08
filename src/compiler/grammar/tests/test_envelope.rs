@@ -17,6 +17,7 @@ pub(crate) struct TestEnvelope {
     pub comparator: Comparator,
     pub zone: Option<i32>,
     pub list: bool,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -85,6 +86,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             zone,
             list,
+            is_not: false,
         }))
     }
 }

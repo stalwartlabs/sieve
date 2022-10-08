@@ -17,6 +17,7 @@ use crate::compiler::grammar::test::Test;
 pub(crate) struct TestSpecialUseExists {
     pub mailbox: Option<StringItem>,
     pub attributes: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -29,6 +30,7 @@ impl<'x> CompilerState<'x> {
                     Ok(Test::SpecialUseExists(TestSpecialUseExists {
                         mailbox: maybe_attributes.pop(),
                         attributes: self.parse_strings()?,
+                        is_not: false,
                     }))
                 } else {
                     Err(self
@@ -40,6 +42,7 @@ impl<'x> CompilerState<'x> {
             _ => Ok(Test::SpecialUseExists(TestSpecialUseExists {
                 mailbox: None,
                 attributes: maybe_attributes,
+                is_not: false,
             })),
         }
     }

@@ -14,6 +14,7 @@ pub(crate) struct TestDuplicate {
     pub dup_match: DupMatch,
     pub seconds: Option<u64>,
     pub last: bool,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,6 +62,7 @@ impl<'x> CompilerState<'x> {
             dup_match,
             seconds,
             last,
+            is_not: false,
         }))
     }
 }

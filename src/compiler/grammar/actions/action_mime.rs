@@ -36,11 +36,11 @@ pub(crate) struct ExtractText {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum MimeOpts {
+pub(crate) enum MimeOpts<T> {
     Type,
     Subtype,
     ContentType,
-    Param(Vec<StringItem>),
+    Param(Vec<T>),
     None,
 }
 
@@ -151,7 +151,10 @@ impl<'x> CompilerState<'x> {
         Ok(())
     }
 
-    pub(crate) fn parse_mimeopts(&mut self, opts: Word) -> Result<MimeOpts, CompileError> {
+    pub(crate) fn parse_mimeopts(
+        &mut self,
+        opts: Word,
+    ) -> Result<MimeOpts<StringItem>, CompileError> {
         Ok(match opts {
             Word::Type => MimeOpts::Type,
             Word::Subtype => MimeOpts::Subtype,

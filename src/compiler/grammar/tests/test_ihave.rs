@@ -10,6 +10,7 @@ use crate::compiler::grammar::test::Test;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestIhave {
     pub capabilities: Vec<Capability>,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,6 +26,7 @@ impl<'x> CompilerState<'x> {
                 .into_iter()
                 .map(|n| n.into())
                 .collect(),
+            is_not: false,
         }))
     }
 
