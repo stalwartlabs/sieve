@@ -1,4 +1,4 @@
-use std::{sync::Arc, vec::IntoIter};
+use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{instruction::Instruction, Capability};
@@ -39,10 +39,9 @@ pub struct Runtime {
     pub(crate) max_instructions: usize,
 }
 
-pub struct Context<'x, 'y> {
-    pub(crate) runtime: &'y Runtime,
-    pub(crate) raw_message: &'x [u8],
-    pub(crate) message: Option<Message<'x>>,
+#[derive(Clone)]
+pub struct Context<'x> {
+    pub(crate) runtime: &'x Runtime,
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
@@ -67,8 +66,17 @@ pub enum Script {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Event {
-    IncludeScript { name: Script },
-    MailboxExists { names: Vec<String> },
+    IncludeScript {
+        name: Script,
+    },
+    MailboxExists {
+        names: Vec<String>,
+    },
+
+    #[cfg(test)]
+    SetMessage {
+        bytes: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -87,6 +95,8 @@ mod tests {
         pin::Pin,
         sync::Arc,
     };
+
+    use mail_parser::Message;
 
     use crate::{Compiler, Context, Event, Input, Runtime};
 
@@ -107,26 +117,37 @@ mod tests {
     fn test_suite() {
         let compiler = Compiler::new();
         let script = compiler
-            .compile(&fs::read("tests/lexer.svtest").unwrap())
+            .compile(&fs::read("tests/test-header.svtest").unwrap())
             .unwrap();
 
         let runtime = Runtime::new();
         let mut instance = runtime.instance();
         let mut input = Input::script("", script);
+        let mut raw_message = Vec::new();
 
-        while let Some(event) = instance.run(input) {
-            match event.unwrap() {
-                Event::IncludeScript { name } => {
-                    //include_script = compiler.compile(&fs::read(&name).unwrap()).unwrap().into();
-                    //input = Input::Script(included_scripts.last().unwrap());
-                    //input = Input::Script(include_script.as_ref().unwrap());
-                    let script = compiler.compile(&fs::read(name.as_str()).unwrap()).unwrap();
-                    input = Input::script(name, script);
-                }
-                Event::MailboxExists { names } => {
-                    input = Input::True;
+        'outer: loop {
+            let message = Message::parse(&raw_message).unwrap_or_default();
+
+            while let Some(event) = instance.run(&message, input) {
+                match event.unwrap() {
+                    Event::IncludeScript { name } => {
+                        //include_script = compiler.compile(&fs::read(&name).unwrap()).unwrap().into();
+                        //input = Input::Script(included_scripts.last().unwrap());
+                        //input = Input::Script(include_script.as_ref().unwrap());
+                        let script = compiler.compile(&fs::read(name.as_str()).unwrap()).unwrap();
+                        input = Input::script(name, script);
+                    }
+                    Event::MailboxExists { names } => {
+                        input = Input::True;
+                    }
+                    Event::SetMessage { bytes } => {
+                        raw_message = bytes;
+                        input = Input::True;
+                        continue 'outer;
+                    }
                 }
             }
+            break;
         }
 
         //let mut files = Vec::new();

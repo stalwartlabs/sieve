@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use ahash::AHashMap;
 use mail_parser::Message;
@@ -10,6 +10,7 @@ use crate::{
 
 use super::{actions::action_include::IncludeResult, tests::TestResult, RuntimeError};
 
+#[derive(Clone)]
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
     pub(crate) prev_pos: usize,
@@ -17,12 +18,10 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<String>,
 }
 
-impl<'x, 'y> Context<'x, 'y> {
-    pub(crate) fn new(runtime: &'y Runtime) -> Self {
+impl<'x> Context<'x> {
+    pub(crate) fn new(runtime: &'x Runtime) -> Self {
         Context {
             runtime,
-            raw_message: b""[..].into(),
-            message: None,
             part_iter: Vec::new().into_iter(),
             part: 0,
             part_iter_stack: Vec::new(),
@@ -38,17 +37,11 @@ impl<'x, 'y> Context<'x, 'y> {
         }
     }
 
-    pub fn with_message(&mut self, raw_message: &'x [u8]) {
-        self.raw_message = raw_message;
-        self.message = Message::parse(self.raw_message).unwrap().into();
-        //self.part_iter = self.message.as_ref().unwrap().html_body.clone().into_iter();
-    }
-
     #[allow(clippy::while_let_on_iterator)]
-    pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
+    pub fn run(&mut self, message: &Message, input: Input) -> Option<Result<Event, RuntimeError>> {
         match input {
-            Input::True => self.test_result = true,
-            Input::False => self.test_result = false,
+            Input::True => self.test_result ^= true,
+            Input::False => self.test_result ^= false,
             Input::Script { name, script } => {
                 let num_vars = script.num_vars;
                 let num_match_vars = script.num_match_vars;
@@ -61,12 +54,16 @@ impl<'x, 'y> Context<'x, 'y> {
                 self.script_stack.push(ScriptStack {
                     script,
                     prev_pos: self.pos,
-                    prev_vars_local: std::mem::take(&mut self.vars_local),
-                    prev_vars_match: std::mem::take(&mut self.vars_match),
+                    prev_vars_local: std::mem::replace(
+                        &mut self.vars_local,
+                        vec![String::with_capacity(0); num_vars],
+                    ),
+                    prev_vars_match: std::mem::replace(
+                        &mut self.vars_match,
+                        vec![String::with_capacity(0); num_match_vars],
+                    ),
                 });
                 self.pos = 0;
-                self.vars_local = vec![String::with_capacity(0); num_vars];
-                self.vars_match = vec![String::with_capacity(0); num_match_vars];
                 self.test_result = false;
             }
         }
@@ -99,12 +96,13 @@ impl<'x, 'y> Context<'x, 'y> {
                     iter = current_script.instructions.get(self.pos..)?.iter();
                     continue;
                 }
-                Instruction::Test(test) => match test.exec(self) {
+                Instruction::Test(test) => match test.exec(self, message) {
                     TestResult::Bool(result) => {
                         self.test_result = result;
                     }
-                    TestResult::Event(event) => {
+                    TestResult::Event { event, is_not } => {
                         self.pos += 1;
+                        self.test_result = is_not;
                         return Some(Ok(event));
                     }
                     TestResult::Error(err) => {
@@ -160,12 +158,16 @@ impl<'x, 'y> Context<'x, 'y> {
                         self.script_stack.push(ScriptStack {
                             script: script.clone(),
                             prev_pos: self.pos + 1,
-                            prev_vars_local: std::mem::take(&mut self.vars_local),
-                            prev_vars_match: std::mem::take(&mut self.vars_match),
+                            prev_vars_local: std::mem::replace(
+                                &mut self.vars_local,
+                                vec![String::with_capacity(0); script.num_vars],
+                            ),
+                            prev_vars_match: std::mem::replace(
+                                &mut self.vars_match,
+                                vec![String::with_capacity(0); script.num_match_vars],
+                            ),
                         });
                         self.pos = 0;
-                        self.vars_local = vec![String::with_capacity(0); script.num_vars];
-                        self.vars_match = vec![String::with_capacity(0); script.num_match_vars];
                         current_script = script;
                         iter = current_script.instructions.iter();
                         continue;
@@ -225,7 +227,19 @@ impl<'x, 'y> Context<'x, 'y> {
                     );
                 }
                 #[cfg(test)]
-                Instruction::TestSet((name, value)) => {}
+                Instruction::TestSet((name, value)) => {
+                    if name == "message" {
+                        self.part = 0;
+                        self.part_iter = vec![].into_iter();
+                        self.part_iter_stack = Vec::new();
+                        self.pos += 1;
+                        return Some(Ok(Event::SetMessage {
+                            bytes: self.eval_string(value).as_bytes().to_vec(),
+                        }));
+                    } else {
+                        panic!("Set {:?} not implemented", name);
+                    }
+                }
             }
 
             self.pos += 1;

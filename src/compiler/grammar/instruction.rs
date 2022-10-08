@@ -25,7 +25,6 @@ use super::{
         action_set::Set,
         action_vacation::Vacation,
     },
-    test::BoolOp,
     Capability, Clear, Invalid,
 };
 
@@ -40,7 +39,7 @@ pub(crate) enum Instruction {
     Discard,
     Stop,
     Invalid(Invalid),
-    Test(BoolOp),
+    Test(Test),
     Jmp(usize),
     Jz(usize),
     Jnz(usize),
@@ -569,7 +568,7 @@ impl<'x> CompilerState<'x> {
 
             for pos in &block.match_test_pos {
                 if let Instruction::Test(test) = &mut self.instructions[*pos] {
-                    let match_type = match &mut test.test {
+                    let match_type = match test {
                         Test::Address(t) => &mut t.match_type,
                         Test::Body(t) => &mut t.match_type,
                         Test::Date(t) => &mut t.match_type,
@@ -585,7 +584,7 @@ impl<'x> CompilerState<'x> {
                         Test::String(t) => &mut t.match_type,
                         Test::VirusTest(t) => &mut t.match_type,
                         _ => {
-                            debug_assert!(false, "This should not have happened: {:?}", test.test);
+                            debug_assert!(false, "This should not have happened: {:?}", test);
                             return false;
                         }
                     };

@@ -11,17 +11,20 @@ use crate::compiler::grammar::{test::Test, MatchType};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMailboxExists {
     pub mailbox_names: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMetadataExists {
     pub mailbox: StringItem,
     pub annotation_names: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestServerMetadataExists {
     pub annotation_names: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 /*
@@ -39,6 +42,7 @@ pub(crate) struct TestMetadata {
     pub mailbox: StringItem,
     pub annotation_name: StringItem,
     pub key_list: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 /*
@@ -54,12 +58,14 @@ pub(crate) struct TestServerMetadata {
     pub comparator: Comparator,
     pub annotation_name: StringItem,
     pub key_list: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxExists(TestMailboxExists {
             mailbox_names: self.parse_strings()?,
+            is_not: false,
         }))
     }
 
@@ -67,12 +73,14 @@ impl<'x> CompilerState<'x> {
         Ok(Test::MetadataExists(TestMetadataExists {
             mailbox: self.parse_string()?,
             annotation_names: self.parse_strings()?,
+            is_not: false,
         }))
     }
 
     pub(crate) fn parse_test_servermetadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::ServerMetadataExists(TestServerMetadataExists {
             annotation_names: self.parse_strings()?,
+            is_not: false,
         }))
     }
 
@@ -118,6 +126,7 @@ impl<'x> CompilerState<'x> {
             mailbox: mailbox.unwrap(),
             annotation_name: annotation_name.unwrap(),
             key_list,
+            is_not: false,
         }))
     }
 
@@ -159,6 +168,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             annotation_name: annotation_name.unwrap(),
             key_list,
+            is_not: false,
         }))
     }
 }

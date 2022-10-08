@@ -1,3 +1,5 @@
+use std::char::REPLACEMENT_CHARACTER;
+
 use crate::MAX_MATCH_VARIABLES;
 
 #[derive(Debug)]
@@ -92,18 +94,35 @@ pub(crate) fn glob_match(value: &str, pattern: &str, to_lower: bool) -> bool {
     true
 }
 
-pub(crate) fn glob_match_with_values(
+pub(crate) fn glob_match_capture(
     value_: &str,
     pattern: &str,
     to_lower: bool,
-    positions: u64,
-    matched_values: &mut Vec<(usize, String)>,
+    capture_positions: u64,
+    captured_values: &mut Vec<(usize, String)>,
 ) -> bool {
     let mut pattern = compile(pattern, to_lower);
     let value = if to_lower {
-        value_.to_lowercase().chars().collect::<Vec<_>>()
+        let mut value = Vec::with_capacity(value_.len());
+        for char in value_.chars() {
+            if char.is_uppercase() {
+                for (pos, lowerchar) in char.to_lowercase().into_iter().enumerate() {
+                    value.push((
+                        lowerchar,
+                        if pos == 0 {
+                            char
+                        } else {
+                            REPLACEMENT_CHARACTER
+                        },
+                    ));
+                }
+            } else {
+                value.push((char, char));
+            }
+        }
+        value
     } else {
-        value_.chars().collect::<Vec<_>>()
+        value_.chars().map(|char| (char, char)).collect::<Vec<_>>()
     };
 
     let mut px = 0;
@@ -114,7 +133,7 @@ pub(crate) fn glob_match_with_values(
     while px < pattern.len() || nx < value.len() {
         match pattern.get_mut(px) {
             Some(PatternChar::Char { char, match_pos }) => {
-                if matches!(value.get(nx), Some(nc) if nc == char ) {
+                if matches!(value.get(nx), Some(nc) if &nc.0 == char ) {
                     *match_pos = nx;
                     px += 1;
                     nx += 1;
@@ -148,9 +167,9 @@ pub(crate) fn glob_match_with_values(
 
     let mut last_pos = 0;
 
-    matched_values.clear();
-    if positions & 1 != 0 {
-        matched_values.push((0usize, value_.to_string()));
+    captured_values.clear();
+    if capture_positions & 1 != 0 {
+        captured_values.push((0usize, value_.to_string()));
     }
 
     let mut wildcard_pos = 1;
@@ -158,9 +177,21 @@ pub(crate) fn glob_match_with_values(
         if wildcard_pos <= MAX_MATCH_VARIABLES {
             last_pos = match item {
                 PatternChar::WildcardMany { mut num, match_pos } => {
-                    if positions & (1 << wildcard_pos) != 0 {
+                    if capture_positions & (1 << wildcard_pos) != 0 {
                         if let Some(range) = value.get(last_pos..match_pos) {
-                            matched_values.push((wildcard_pos, range.iter().collect::<String>()));
+                            captured_values.push((
+                                wildcard_pos,
+                                range
+                                    .iter()
+                                    .filter_map(|(_, char)| {
+                                        if char != &REPLACEMENT_CHARACTER {
+                                            Some(char)
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .collect::<String>(),
+                            ));
                         } else {
                             debug_assert!(false, "Glob pattern failure.");
                             return false;
@@ -169,8 +200,8 @@ pub(crate) fn glob_match_with_values(
                     num -= 1;
                     wildcard_pos += 1;
                     while num > 0 {
-                        if positions & (1 << wildcard_pos) != 0 {
-                            matched_values.push((wildcard_pos, String::with_capacity(0)));
+                        if capture_positions & (1 << wildcard_pos) != 0 {
+                            captured_values.push((wildcard_pos, String::with_capacity(0)));
                         }
                         wildcard_pos += 1;
                         num -= 1;
@@ -178,9 +209,17 @@ pub(crate) fn glob_match_with_values(
                     match_pos
                 }
                 PatternChar::WildcardSingle { match_pos } => {
-                    if positions & (1 << wildcard_pos) != 0 {
-                        if let Some(char) = value.get(match_pos) {
-                            matched_values.push((wildcard_pos, char.to_string()));
+                    if capture_positions & (1 << wildcard_pos) != 0 {
+                        if let Some((char, orig_char)) = value.get(match_pos) {
+                            captured_values.push((
+                                wildcard_pos,
+                                (if orig_char != &REPLACEMENT_CHARACTER {
+                                    orig_char
+                                } else {
+                                    char
+                                })
+                                .to_string(),
+                            ));
                         } else {
                             debug_assert!(false, "Glob pattern failure.");
                             return false;
@@ -222,16 +261,15 @@ mod tests {
                 vec!["klop", "o", "p", "strop"],
             ),
             ("toptoptop", "*top", vec!["toptop"]),
+            (
+                "Fehlende Straße zur Karte hinzufügen",
+                "FEHLENDE * ZUR Karte HINZUFÜGEN",
+                vec!["Straße"],
+            ),
         ] {
             let mut match_values = Vec::new();
             assert!(
-                super::glob_match_with_values(
-                    value,
-                    pattern,
-                    true,
-                    u64::MAX ^ 1,
-                    &mut match_values
-                ),
+                super::glob_match_capture(value, pattern, true, u64::MAX ^ 1, &mut match_values),
                 "{:?} {:?}",
                 value,
                 pattern

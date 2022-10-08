@@ -15,17 +15,20 @@ pub(crate) struct TestNotifyMethodCapability {
     pub notification_uri: StringItem,
     pub notification_capability: StringItem,
     pub key_list: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestValidNotifyMethod {
     pub notification_uris: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_valid_notify_method(&mut self) -> Result<Test, CompileError> {
         Ok(Test::ValidNotifyMethod(TestValidNotifyMethod {
             notification_uris: self.parse_strings()?,
+            is_not: false,
         }))
     }
 
@@ -71,6 +74,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             notification_uri: notification_uri.unwrap(),
             notification_capability: notification_capability.unwrap(),
+            is_not: false,
         }))
     }
 }

@@ -19,6 +19,7 @@ pub(crate) struct TestSpamTest {
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub percent: bool,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +27,7 @@ pub(crate) struct TestVirusTest {
     pub value: StringItem,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -66,6 +68,7 @@ impl<'x> CompilerState<'x> {
             percent,
             match_type,
             comparator,
+            is_not: false,
         }))
     }
 
@@ -101,6 +104,7 @@ impl<'x> CompilerState<'x> {
             value,
             match_type,
             comparator,
+            is_not: false,
         }))
     }
 }

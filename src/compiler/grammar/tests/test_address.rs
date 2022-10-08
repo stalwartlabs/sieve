@@ -18,6 +18,7 @@ pub(crate) struct TestAddress {
     pub index: Option<i32>,
 
     pub mime_anychild: bool,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -90,6 +91,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             index: if index_last { index.map(|i| -i) } else { index },
             mime_anychild,
+            is_not: false,
         }))
     }
 }

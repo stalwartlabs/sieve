@@ -16,8 +16,9 @@ pub(crate) struct TestHeader {
     pub comparator: Comparator,
     pub index: Option<i32>,
 
-    pub mime_opts: MimeOpts,
+    pub mime_opts: MimeOpts<StringItem>,
     pub mime_anychild: bool,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -90,6 +91,7 @@ impl<'x> CompilerState<'x> {
             index: if index_last { index.map(|i| -i) } else { index },
             mime_opts,
             mime_anychild,
+            is_not: false,
         }))
     }
 }

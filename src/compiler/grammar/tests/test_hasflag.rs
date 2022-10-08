@@ -20,6 +20,7 @@ pub(crate) struct TestHasFlag {
     pub match_type: MatchType,
     pub variable_list: Vec<StringItem>,
     pub flags: Vec<StringItem>,
+    pub is_not: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -60,6 +61,7 @@ impl<'x> CompilerState<'x> {
                         match_type,
                         variable_list: maybe_flags,
                         flags: self.parse_strings()?,
+                        is_not: false,
                     }))
                 } else {
                     Err(self
@@ -73,6 +75,7 @@ impl<'x> CompilerState<'x> {
                 match_type,
                 variable_list: Vec::new(),
                 flags: maybe_flags,
+                is_not: false,
             })),
         }
     }

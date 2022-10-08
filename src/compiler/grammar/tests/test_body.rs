@@ -14,6 +14,7 @@ pub(crate) struct TestBody {
     pub body_transform: BodyTransform,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +64,7 @@ impl<'x> CompilerState<'x> {
             body_transform,
             match_type,
             comparator,
+            is_not: false,
         }))
     }
 }

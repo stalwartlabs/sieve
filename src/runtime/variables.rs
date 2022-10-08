@@ -1,6 +1,6 @@
 use crate::Context;
 
-impl<'x, 'y> Context<'x, 'y> {
+impl<'x> Context<'x> {
     pub(crate) fn set_match_variables(&mut self, set_vars: Vec<(usize, String)>) {
         for (var_num, value) in set_vars {
             if let Some(var) = self.vars_match.get_mut(var_num) {

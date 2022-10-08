@@ -95,12 +95,6 @@ pub(crate) enum Test {
     SpecialUseExists(TestSpecialUseExists),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct BoolOp {
-    pub(crate) test: Test,
-    pub(crate) is_not: bool,
-}
-
 #[derive(Debug)]
 struct Block {
     is_all: bool,
@@ -305,8 +299,11 @@ impl<'x> CompilerState<'x> {
                 block.p_count -= 1;
             }
 
-            self.instructions
-                .push(Instruction::Test(BoolOp { test, is_not }));
+            self.instructions.push(Instruction::Test(if !is_not {
+                test
+            } else {
+                test.set_not()
+            }));
 
             if block_stack.is_empty() {
                 break;
@@ -315,5 +312,94 @@ impl<'x> CompilerState<'x> {
 
         self.instructions.push(Instruction::Jz(usize::MAX));
         Ok(())
+    }
+}
+
+impl Test {
+    pub fn set_not(mut self) -> Self {
+        match &mut self {
+            Test::True => return Test::False,
+            Test::False => return Test::True,
+            Test::Address(op) => {
+                op.is_not = true;
+            }
+            Test::Envelope(op) => {
+                op.is_not = true;
+            }
+            Test::Exists(op) => {
+                op.is_not = true;
+            }
+            Test::Header(op) => {
+                op.is_not = true;
+            }
+            Test::Size(op) => {
+                op.is_not = true;
+            }
+            Test::Body(op) => {
+                op.is_not = true;
+            }
+            Test::Convert(op) => {
+                op.is_not = true;
+            }
+            Test::Date(op) => {
+                op.is_not = true;
+            }
+            Test::CurrentDate(op) => {
+                op.is_not = true;
+            }
+            Test::Duplicate(op) => {
+                op.is_not = true;
+            }
+            Test::String(op) => {
+                op.is_not = true;
+            }
+            Test::NotifyMethodCapability(op) => {
+                op.is_not = true;
+            }
+            Test::ValidNotifyMethod(op) => {
+                op.is_not = true;
+            }
+            Test::Environment(op) => {
+                op.is_not = true;
+            }
+            Test::ValidExtList(op) => {
+                op.is_not = true;
+            }
+            Test::Ihave(op) => {
+                op.is_not = true;
+            }
+            Test::HasFlag(op) => {
+                op.is_not = true;
+            }
+            Test::MailboxExists(op) => {
+                op.is_not = true;
+            }
+            Test::Metadata(op) => {
+                op.is_not = true;
+            }
+            Test::MetadataExists(op) => {
+                op.is_not = true;
+            }
+            Test::ServerMetadata(op) => {
+                op.is_not = true;
+            }
+            Test::ServerMetadataExists(op) => {
+                op.is_not = true;
+            }
+            Test::MailboxIdExists(op) => {
+                op.is_not = true;
+            }
+            Test::SpamTest(op) => {
+                op.is_not = true;
+            }
+            Test::VirusTest(op) => {
+                op.is_not = true;
+            }
+            Test::SpecialUseExists(op) => {
+                op.is_not = true;
+            }
+            Test::Invalid(_) => {}
+        }
+        self
     }
 }
