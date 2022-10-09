@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{test::Test, MatchType},
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
+        lexer::{string::StringItem, tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
     Compiler, Sieve,
@@ -84,11 +84,7 @@ pub(crate) enum Instruction {
 
     // Testing
     #[cfg(test)]
-    TestStart(String),
-    #[cfg(test)]
-    TestFail(crate::compiler::lexer::string::StringItem),
-    #[cfg(test)]
-    TestSet((String, crate::compiler::lexer::string::StringItem)),
+    External((String, Vec<crate::compiler::lexer::string::StringItem>)),
 }
 
 pub(crate) struct Block {
@@ -449,9 +445,10 @@ impl Compiler {
                     if instruction.contains("test") {
                         use crate::runtime::string::IntoString;
                         if instruction == "test" {
-                            state.instructions.push(Instruction::TestStart(
-                                state.tokens.expect_static_string()?.into_string(),
-                            ));
+                            let param = state.parse_string()?;
+                            state
+                                .instructions
+                                .push(Instruction::External((instruction, vec![param])));
                             let mut new_block = Block::new(Word::Else);
                             new_block.line_num = state.tokens.line_num;
                             new_block.line_pos = state.tokens.pos - state.tokens.line_start;
@@ -459,16 +456,25 @@ impl Compiler {
                             state.block.last_block_start = state.instructions.len() - 1;
                             state.block_stack.push(state.block);
                             state.block = new_block;
-                            continue;
-                        } else if instruction == "test_fail" {
-                            let reason = state.parse_string()?;
-                            state.instructions.push(Instruction::TestFail(reason));
-                        } else if instruction == "test_set" {
-                            let name = state.tokens.expect_static_string()?.into_string();
-                            let value = state.parse_string()?;
-                            state.instructions.push(Instruction::TestSet((name, value)));
+                        } else {
+                            let mut params = Vec::new();
+                            loop {
+                                params.push(match state.tokens.unwrap_next()?.token {
+                                    Token::StringConstant(s) | Token::StringVariable(s) => {
+                                        StringItem::Text(s.into_string())
+                                    }
+                                    Token::Number(n) => StringItem::Text(n.to_string()),
+                                    Token::Identifier(s) => StringItem::Text(s.to_string()),
+                                    Token::Tag(s) => StringItem::Text(format!(":{}", s)),
+                                    Token::Invalid(s) => StringItem::Text(s),
+                                    Token::Semicolon => break,
+                                    other => panic!("Invalid test param {:?}", other),
+                                });
+                            }
+                            state
+                                .instructions
+                                .push(Instruction::External((instruction, params)));
                         }
-                        state.expect_instruction_end()?;
                         continue;
                     }
 

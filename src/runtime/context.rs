@@ -5,7 +5,7 @@ use mail_parser::Message;
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Context, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
+    Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
 use super::{actions::action_include::IncludeResult, tests::TestResult, RuntimeError};
@@ -32,8 +32,7 @@ impl<'x> Context<'x> {
             vars_global: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
-            #[cfg(test)]
-            test_name: String::new(),
+            envelope: Vec::new(),
         }
     }
 
@@ -214,31 +213,15 @@ impl<'x> Context<'x> {
                 }
 
                 #[cfg(test)]
-                Instruction::TestStart(test_name) => {
-                    println!("Starting test {:?}...", test_name);
-                    self.test_name = test_name.clone();
-                }
-                #[cfg(test)]
-                Instruction::TestFail(reason) => {
-                    panic!(
-                        "Test {} failed: {}",
-                        self.test_name,
-                        self.eval_string(reason)
-                    );
-                }
-                #[cfg(test)]
-                Instruction::TestSet((name, value)) => {
-                    if name == "message" {
-                        self.part = 0;
-                        self.part_iter = vec![].into_iter();
-                        self.part_iter_stack = Vec::new();
-                        self.pos += 1;
-                        return Some(Ok(Event::SetMessage {
-                            bytes: self.eval_string(value).as_bytes().to_vec(),
-                        }));
-                    } else {
-                        panic!("Set {:?} not implemented", name);
-                    }
+                Instruction::External((command, params)) => {
+                    self.pos += 1;
+                    return Some(Ok(Event::TestCommand {
+                        command: command.to_string(),
+                        params: params
+                            .iter()
+                            .map(|p| self.eval_string(p).to_string())
+                            .collect(),
+                    }));
                 }
             }
 
@@ -246,5 +229,26 @@ impl<'x> Context<'x> {
         }
 
         None
+    }
+
+    pub fn set_envelope(
+        &mut self,
+        envelope: impl Into<Envelope<'x>>,
+        value: impl Into<Cow<'x, str>>,
+    ) {
+        self.envelope.push((envelope.into(), value.into()));
+    }
+
+    pub fn with_envelope(
+        mut self,
+        envelope: impl Into<Envelope<'x>>,
+        value: impl Into<Cow<'x, str>>,
+    ) -> Self {
+        self.envelope.push((envelope.into(), value.into()));
+        self
+    }
+
+    pub fn clear_envelope(&mut self) {
+        self.envelope.clear()
     }
 }

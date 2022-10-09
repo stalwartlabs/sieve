@@ -42,6 +42,7 @@ pub struct Runtime {
 #[derive(Clone)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
+    pub(crate) envelope: Vec<(Envelope<'x>, Cow<'x, str>)>,
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
@@ -53,15 +54,23 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
-
-    #[cfg(test)]
-    pub(crate) test_name: String,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Script {
     Personal(String),
     Global(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Envelope<'x> {
+    From,
+    To,
+    ByTimeAbsolute,
+    ByTimeRelative,
+    ByMode,
+    ByTrace,
+    Other(Cow<'x, str>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -74,8 +83,9 @@ pub enum Event {
     },
 
     #[cfg(test)]
-    SetMessage {
-        bytes: Vec<u8>,
+    TestCommand {
+        command: String,
+        params: Vec<String>,
     },
 }
 
@@ -88,17 +98,11 @@ pub enum Input {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::{BTreeSet, HashSet},
-        fs,
-        path::PathBuf,
-        pin::Pin,
-        sync::Arc,
-    };
+    use std::fs;
 
     use mail_parser::Message;
 
-    use crate::{Compiler, Context, Event, Input, Runtime};
+    use crate::{Compiler, Event, Input, Runtime};
 
     /*fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
         for entry in fs::read_dir(path).unwrap() {
@@ -117,13 +121,15 @@ mod tests {
     fn test_suite() {
         let compiler = Compiler::new();
         let script = compiler
-            .compile(&fs::read("tests/test-header.svtest").unwrap())
+            .compile(&fs::read("tests/extensions/body/text.svtest").unwrap())
             .unwrap();
+        //tests/test-header.svtest
 
         let runtime = Runtime::new();
         let mut instance = runtime.instance();
         let mut input = Input::script("", script);
         let mut raw_message = Vec::new();
+        let mut current_test = String::new();
 
         'outer: loop {
             let message = Message::parse(&raw_message).unwrap_or_default();
@@ -140,10 +146,38 @@ mod tests {
                     Event::MailboxExists { names } => {
                         input = Input::True;
                     }
-                    Event::SetMessage { bytes } => {
-                        raw_message = bytes;
+                    Event::TestCommand {
+                        command,
+                        mut params,
+                    } => {
                         input = Input::True;
-                        continue 'outer;
+
+                        match command.as_str() {
+                            "test" => {
+                                current_test = params.pop().unwrap();
+                                println!("Running test '{}'...", current_test);
+                            }
+                            "test_set" => {
+                                let target = params.first().expect("test_set parameter");
+                                if target == "message" {
+                                    instance.part = 0;
+                                    instance.part_iter = vec![].into_iter();
+                                    instance.part_iter_stack = Vec::new();
+
+                                    raw_message = params.pop().unwrap().into_bytes();
+                                    continue 'outer;
+                                } else if let Some(envelope) = target.strip_prefix("envelope.") {
+                                    instance
+                                        .set_envelope(envelope.to_string(), params.pop().unwrap());
+                                } else {
+                                    panic!("test_set {} not implemented.", target);
+                                }
+                            }
+                            "test_fail" => {
+                                panic!("Test '{}' failed: {}", current_test, params.pop().unwrap());
+                            }
+                            _ => panic!("Test command {} not implemented.", command),
+                        }
                     }
                 }
             }

@@ -1,10 +1,11 @@
 use std::{ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
+use phf::phf_map;
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
-    Context, Input, Runtime, Script, Sieve,
+    Context, Envelope, Input, Runtime, Script, Sieve,
 };
 
 pub mod actions;
@@ -159,3 +160,32 @@ impl From<&str> for Script {
         Script::Personal(name.to_string())
     }
 }
+
+impl<'x> From<String> for Envelope<'x> {
+    fn from(name: String) -> Self {
+        if let Some(envelope) = ENVELOPE.get(&name) {
+            envelope.clone()
+        } else {
+            Envelope::Other(name.into())
+        }
+    }
+}
+
+impl<'x> From<&'x str> for Envelope<'x> {
+    fn from(name: &'x str) -> Self {
+        if let Some(envelope) = ENVELOPE.get(name) {
+            envelope.clone()
+        } else {
+            Envelope::Other(name.into())
+        }
+    }
+}
+
+pub(crate) static ENVELOPE: phf::Map<&'static str, Envelope> = phf_map! {
+    "from" => Envelope::From,
+    "to" => Envelope::To,
+    "bytimeabsolute" => Envelope::ByTimeAbsolute,
+    "bytimerelative" => Envelope::ByTimeRelative,
+    "bymode" => Envelope::ByMode,
+    "bytrace" => Envelope::ByTrace,
+};

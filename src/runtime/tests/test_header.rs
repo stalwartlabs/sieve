@@ -13,6 +13,8 @@ use crate::{
     Context,
 };
 
+use super::mime::SubpartIterator;
+
 impl TestHeader {
     pub(crate) fn exec(&self, ctx: &mut Context, message: &Message) -> bool {
         let key_list = ctx.eval_strings(&self.key_list);
@@ -26,38 +28,29 @@ impl TestHeader {
         };
 
         (match &self.match_type {
-            MatchType::Is => message.find_headers(
-                ctx.part,
-                &header_list,
-                self.index,
-                self.mime_anychild,
-                |header| {
-                    message.find_header_values(header, &mime_opts, |value| {
-                        for key in &key_list {
-                            if self.comparator.is(value, key.as_ref()) {
-                                return true;
+            MatchType::Is | MatchType::Contains => {
+                let is_is = matches!(&self.match_type, MatchType::Is);
+                message.find_headers(
+                    ctx.part,
+                    &header_list,
+                    self.index,
+                    self.mime_anychild,
+                    |header| {
+                        message.find_header_values(header, &mime_opts, |value| {
+                            for key in &key_list {
+                                if is_is {
+                                    if self.comparator.is(value, key.as_ref()) {
+                                        return true;
+                                    }
+                                } else if self.comparator.contains(value, key.as_ref()) {
+                                    return true;
+                                }
                             }
-                        }
-                        false
-                    })
-                },
-            ),
-            MatchType::Contains => message.find_headers(
-                ctx.part,
-                &header_list,
-                self.index,
-                self.mime_anychild,
-                |header| {
-                    message.find_header_values(header, &mime_opts, |value| {
-                        for key in &key_list {
-                            if self.comparator.contains(value, key.as_ref()) {
-                                return true;
-                            }
-                        }
-                        false
-                    })
-                },
-            ),
+                            false
+                        })
+                    },
+                )
+            }
             MatchType::Value(rel_match) => message.find_headers(
                 ctx.part,
                 &header_list,
@@ -74,8 +67,9 @@ impl TestHeader {
                     })
                 },
             ),
-            MatchType::Matches(capture_positions) => {
+            MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
                 let mut captured_positions = Vec::new();
+                let is_matches = matches!(&self.match_type, MatchType::Matches(_));
                 let result = message.find_headers(
                     ctx.part,
                     &header_list,
@@ -84,35 +78,16 @@ impl TestHeader {
                     |header| {
                         message.find_header_values(header, &mime_opts, |value| {
                             for key in &key_list {
-                                if self.comparator.matches(
-                                    value,
-                                    key.as_ref(),
-                                    *capture_positions,
-                                    &mut captured_positions,
-                                ) {
-                                    return true;
-                                }
-                            }
-                            false
-                        })
-                    },
-                );
-                if !captured_positions.is_empty() {
-                    ctx.set_match_variables(captured_positions);
-                }
-                result
-            }
-            MatchType::Regex(capture_positions) => {
-                let mut captured_positions = Vec::new();
-                let result = message.find_headers(
-                    ctx.part,
-                    &header_list,
-                    self.index,
-                    self.mime_anychild,
-                    |header| {
-                        message.find_header_values(header, &mime_opts, |value| {
-                            for key in &key_list {
-                                if self.comparator.regex(
+                                if is_matches {
+                                    if self.comparator.matches(
+                                        value,
+                                        key.as_ref(),
+                                        *capture_positions,
+                                        &mut captured_positions,
+                                    ) {
+                                        return true;
+                                    }
+                                } else if self.comparator.regex(
                                     value,
                                     key.as_ref(),
                                     *capture_positions,
@@ -167,12 +142,14 @@ impl TestHeader {
                     },
                 );
 
+                let mut result = false;
                 for key in &key_list {
                     if rel_match.cmp_num(count as f64, key.as_ref()) {
-                        return true;
+                        result = true;
+                        break;
                     }
                 }
-                false
+                result
             }
             MatchType::List => false, //TODO: implement
         }) ^ self.is_not
@@ -180,7 +157,7 @@ impl TestHeader {
 }
 
 impl<'x> Context<'x> {
-    fn parse_header_names<'z: 'y, 'y>(
+    pub(crate) fn parse_header_names<'z: 'y, 'y>(
         &'z self,
         header_names: &'y [StringItem],
     ) -> Vec<HeaderName<'y>> {
@@ -226,17 +203,10 @@ impl<'x> MessageHeaders for Message<'x> {
         any_child: bool,
         mut visitor_fnc: impl FnMut(&Header) -> bool,
     ) -> bool {
-        let mut subparts = if any_child {
-            self.get_subparts_recursive(part_id)
-        } else {
-            None
-        };
-        let mut message_part = self.parts.get(part_id);
+        let parts = [part_id];
+        let mut part_iter = SubpartIterator::new(self, &parts, any_child);
 
-        while let Some(message_part) = message_part
-            .take()
-            .or_else(|| subparts.as_mut().and_then(|sp| sp.next()))
-        {
+        while let Some(message_part) = part_iter.next() {
             for header_name in header_names {
                 match index {
                     None => {
@@ -245,8 +215,6 @@ impl<'x> MessageHeaders for Message<'x> {
                             .iter()
                             .filter(|h| &h.name == header_name)
                         {
-                            //println!("header {:?}", header);
-
                             if visitor_fnc(header) {
                                 return true;
                             }

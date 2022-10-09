@@ -10,13 +10,12 @@ use crate::compiler::grammar::{test::Test, AddressPart, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestEnvelope {
-    pub header_list: Vec<StringItem>,
+    pub envelope_list: Vec<StringItem>,
     pub key_list: Vec<StringItem>,
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub zone: Option<i32>,
-    pub list: bool,
     pub is_not: bool,
 }
 
@@ -25,11 +24,9 @@ impl<'x> CompilerState<'x> {
         let mut address_part = AddressPart::All;
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
-        let mut header_list = None;
+        let mut envelope_list = None;
         let key_list;
         let mut zone = None;
-
-        let mut list = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -45,15 +42,13 @@ impl<'x> CompilerState<'x> {
                     | Word::Matches
                     | Word::Value
                     | Word::Count
-                    | Word::Regex),
+                    | Word::Regex
+                    | Word::List),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
-                }
-                Token::Tag(Word::List) => {
-                    list = true;
                 }
                 Token::Tag(Word::Zone) => {
                     let token_info = self.tokens.unwrap_next()?;
@@ -68,8 +63,8 @@ impl<'x> CompilerState<'x> {
                     return Err(token_info.expected("string containing time zone"));
                 }
                 _ => {
-                    if header_list.is_none() {
-                        header_list = self.parse_strings_token(token_info)?.into();
+                    if envelope_list.is_none() {
+                        envelope_list = self.parse_strings_token(token_info)?.into();
                     } else {
                         key_list = self.parse_strings_token(token_info)?;
                         break;
@@ -79,13 +74,12 @@ impl<'x> CompilerState<'x> {
         }
 
         Ok(Test::Envelope(TestEnvelope {
-            header_list: header_list.unwrap(),
+            envelope_list: envelope_list.unwrap(),
             key_list,
             address_part,
             match_type,
             comparator,
             zone,
-            list,
             is_not: false,
         }))
     }

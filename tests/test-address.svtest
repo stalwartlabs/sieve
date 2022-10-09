@@ -474,7 +474,7 @@ test "Invalid addresses" {
 		test_fail ":all failed to match invalid address";
 	}
 
-	if not address :is :all "resent-cc" "<jürgen@example.com>" {
+	if not address :is :all "resent-cc" "jürgen@example.com" {
 		test_fail ":all failed to match invalid UTF-8 address";
 	}
 
