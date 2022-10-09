@@ -42,6 +42,7 @@ pub struct Runtime {
 #[derive(Clone)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
+    pub(crate) envelope: Vec<(Envelope<'x>, Cow<'x, str>)>,
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
@@ -53,13 +54,23 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
-
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Script {
     Personal(String),
     Global(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Envelope<'x> {
+    From,
+    To,
+    ByTimeAbsolute,
+    ByTimeRelative,
+    ByMode,
+    ByTrace,
+    Other(Cow<'x, str>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

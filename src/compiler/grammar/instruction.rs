@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{test::Test, MatchType},
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
+        lexer::{string::StringItem, tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
     Compiler, Sieve,

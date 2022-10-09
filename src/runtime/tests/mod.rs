@@ -6,7 +6,13 @@ use super::RuntimeError;
 
 pub mod comparator;
 pub mod glob;
+pub mod mime;
+pub mod test_address;
+pub mod test_body;
+pub mod test_envelope;
+pub mod test_exists;
 pub mod test_header;
+pub mod test_size;
 pub mod test_string;
 
 pub(crate) enum TestResult {
@@ -18,12 +24,12 @@ pub(crate) enum TestResult {
 impl Test {
     pub(crate) fn exec(&self, ctx: &mut Context, message: &Message) -> TestResult {
         TestResult::Bool(match &self {
-            Test::Address(_) => todo!(),
-            Test::Envelope(_) => todo!(),
-            Test::Exists(_) => todo!(),
             Test::Header(test) => test.exec(ctx, message),
-            Test::Size(_) => todo!(),
-            Test::Body(_) => todo!(),
+            Test::Address(test) => test.exec(ctx, message),
+            Test::Envelope(test) => test.exec(ctx),
+            Test::Exists(test) => test.exec(ctx, message),
+            Test::Size(test) => test.exec(message),
+            Test::Body(test) => test.exec(ctx, message),
             Test::String(test) => test.exec(ctx),
             Test::Date(_) => todo!(),
             Test::CurrentDate(_) => todo!(),
@@ -32,12 +38,11 @@ impl Test {
             Test::ValidNotifyMethod(_) => todo!(),
             Test::Environment(_) => todo!(),
             Test::ValidExtList(_) => todo!(),
-            Test::Ihave(ihave) => {
-                ihave
-                    .capabilities
+            Test::Ihave(test) => {
+                test.capabilities
                     .iter()
                     .all(|c| ctx.runtime.allowed_capabilities.contains(c))
-                    ^ ihave.is_not
+                    ^ test.is_not
             }
             Test::HasFlag(_) => todo!(),
             Test::MailboxExists(test) => {

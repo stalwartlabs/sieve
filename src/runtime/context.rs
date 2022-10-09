@@ -5,7 +5,7 @@ use mail_parser::Message;
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Context, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
+    Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
 use super::{actions::action_include::IncludeResult, tests::TestResult, RuntimeError};
@@ -32,6 +32,7 @@ impl<'x> Context<'x> {
             vars_global: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
+            envelope: Vec::new(),
         }
     }
 
@@ -217,5 +218,26 @@ impl<'x> Context<'x> {
         }
 
         None
+    }
+
+    pub fn set_envelope(
+        &mut self,
+        envelope: impl Into<Envelope<'x>>,
+        value: impl Into<Cow<'x, str>>,
+    ) {
+        self.envelope.push((envelope.into(), value.into()));
+    }
+
+    pub fn with_envelope(
+        mut self,
+        envelope: impl Into<Envelope<'x>>,
+        value: impl Into<Cow<'x, str>>,
+    ) -> Self {
+        self.envelope.push((envelope.into(), value.into()));
+        self
+    }
+
+    pub fn clear_envelope(&mut self) {
+        self.envelope.clear()
     }
 }
