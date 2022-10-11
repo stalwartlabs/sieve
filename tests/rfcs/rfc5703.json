@@ -14,10 +14,7 @@
   [
     1,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -33,10 +30,7 @@
   [
     4,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -48,10 +42,7 @@
   [
     6,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -63,10 +54,7 @@
   [
     8,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -82,10 +70,7 @@
   [
     11,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -97,10 +82,7 @@
   [
     13,
     {
-      "Test": {
-        "test": "False",
-        "is_not": false
-      }
+      "Test": "False"
     }
   ],
   [
@@ -112,10 +94,7 @@
   [
     15,
     {
-      "Test": {
-        "test": "False",
-        "is_not": false
-      }
+      "Test": "False"
     }
   ],
   [
@@ -131,10 +110,7 @@
   [
     18,
     {
-      "Test": {
-        "test": "False",
-        "is_not": false
-      }
+      "Test": "False"
     }
   ],
   [
@@ -146,10 +122,7 @@
   [
     20,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -161,10 +134,7 @@
   [
     22,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -180,10 +150,7 @@
   [
     25,
     {
-      "Test": {
-        "test": "False",
-        "is_not": false
-      }
+      "Test": "False"
     }
   ],
   [
@@ -195,10 +162,7 @@
   [
     27,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -210,10 +174,7 @@
   [
     29,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -228,30 +189,58 @@
   ],
   [
     32,
-    {
-      "ForEveryPart": {
-        "jz_pos": 62
-      }
-    }
+    "ForEveryPartPush"
   ],
   [
     33,
     {
       "ForEveryPart": {
-        "jz_pos": 50
+        "jz_pos": 74
       }
     }
   ],
   [
     34,
+    "ForEveryPartPush"
+  ],
+  [
+    35,
     {
       "ForEveryPart": {
-        "jz_pos": 48
+        "jz_pos": 61
       }
     }
   ],
   [
-    35,
+    36,
+    "ForEveryPartPush"
+  ],
+  [
+    37,
+    {
+      "ForEveryPart": {
+        "jz_pos": 58
+      }
+    }
+  ],
+  [
+    38,
+    "ForEveryPartPush"
+  ],
+  [
+    39,
+    {
+      "ForEveryPart": {
+        "jz_pos": 55
+      }
+    }
+  ],
+  [
+    40,
+    "ForEveryPartPush"
+  ],
+  [
+    41,
     {
       "ForEveryPart": {
         "jz_pos": 46
@@ -259,145 +248,165 @@
     }
   ],
   [
-    36,
-    {
-      "ForEveryPart": {
-        "jz_pos": 40
-      }
-    }
-  ],
-  [
-    37,
-    {
-      "Jmp": 62
-    }
-  ],
-  [
-    38,
-    "Return"
-  ],
-  [
-    39,
-    {
-      "Jmp": 36
-    }
-  ],
-  [
-    40,
-    {
-      "ForEveryPart": {
-        "jz_pos": 44
-      }
-    }
-  ],
-  [
-    41,
-    {
-      "Jmp": 50
-    }
-  ],
-  [
     42,
-    "Return"
+    {
+      "ForEveryPartPop": 5
+    }
   ],
   [
     43,
     {
-      "Jmp": 40
+      "Jmp": 74
     }
   ],
   [
     44,
-    {
-      "Jmp": 62
-    }
+    "Return"
   ],
   [
     45,
     {
-      "Jmp": 35
+      "Jmp": 41
     }
   ],
   [
     46,
-    {
-      "Jmp": 62
-    }
+    "ForEveryPartPush"
   ],
   [
     47,
     {
-      "Jmp": 34
+      "ForEveryPart": {
+        "jz_pos": 52
+      }
     }
   ],
   [
     48,
     {
-      "Jmp": 62
+      "ForEveryPartPop": 4
     }
   ],
   [
     49,
     {
-      "Jmp": 33
+      "Jmp": 61
     }
   ],
   [
     50,
-    {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
-    }
+    "Return"
   ],
   [
     51,
     {
-      "Jz": 54
+      "Jmp": 47
     }
   ],
   [
     52,
-    "Discard"
+    {
+      "ForEveryPartPop": 4
+    }
   ],
   [
     53,
     {
-      "Jmp": 59
+      "Jmp": 74
     }
   ],
   [
     54,
     {
-      "Test": {
-        "test": "False",
-        "is_not": false
-      }
+      "Jmp": 39
     }
   ],
   [
     55,
     {
-      "Jz": 58
+      "ForEveryPartPop": 3
     }
   ],
   [
     56,
-    "Stop"
+    {
+      "Jmp": 74
+    }
   ],
   [
     57,
     {
-      "Jmp": 59
+      "Jmp": 37
     }
   ],
   [
     58,
-    "Discard"
+    {
+      "ForEveryPartPop": 2
+    }
   ],
   [
     59,
+    {
+      "Jmp": 74
+    }
+  ],
+  [
+    60,
+    {
+      "Jmp": 35
+    }
+  ],
+  [
+    61,
+    {
+      "Test": "True"
+    }
+  ],
+  [
+    62,
+    {
+      "Jz": 65
+    }
+  ],
+  [
+    63,
+    "Discard"
+  ],
+  [
+    64,
+    {
+      "Jmp": 70
+    }
+  ],
+  [
+    65,
+    {
+      "Test": "False"
+    }
+  ],
+  [
+    66,
+    {
+      "Jz": 69
+    }
+  ],
+  [
+    67,
+    "Stop"
+  ],
+  [
+    68,
+    {
+      "Jmp": 70
+    }
+  ],
+  [
+    69,
+    "Discard"
+  ],
+  [
+    70,
     {
       "Keep": {
         "flags": []
@@ -405,55 +414,56 @@
     }
   ],
   [
-    60,
+    71,
     {
-      "Jmp": 62
+      "ForEveryPartPop": 1
     }
   ],
   [
-    61,
+    72,
     {
-      "Jmp": 32
+      "Jmp": 74
     }
   ],
   [
-    62,
+    73,
+    {
+      "Jmp": 33
+    }
+  ],
+  [
+    74,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "image"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": "Type",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "image"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "Type",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    63,
+    75,
     {
-      "Jz": 65
+      "Jz": 77
     }
   ],
   [
-    64,
+    76,
     {
       "FileInto": {
         "copy": false,
@@ -468,43 +478,38 @@
     }
   ],
   [
-    65,
+    77,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "text/html"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": "ContentType",
-            "mime_anychild": true,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "text/html"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "ContentType",
+          "mime_anychild": true,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    66,
+    78,
     {
-      "Jz": 68
+      "Jz": 80
     }
   ],
   [
-    67,
+    79,
     {
       "FileInto": {
         "copy": false,
@@ -519,113 +524,105 @@
     }
   ],
   [
-    68,
+    80,
+    "ForEveryPartPush"
+  ],
+  [
+    81,
     {
       "ForEveryPart": {
-        "jz_pos": 78
+        "jz_pos": 92
       }
     }
   ],
   [
-    69,
+    82,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Disposition"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "important"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": {
+            "Param": [
               {
-                "Text": "Content-Disposition"
+                "Text": "filename"
               }
-            ],
-            "key_list": [
-              {
-                "Text": "important"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": {
-              "Param": [
-                {
-                  "Text": "filename"
-                }
-              ]
-            },
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            ]
+          },
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    70,
+    83,
     {
-      "Jz": 74
+      "Jz": 87
     }
   ],
   [
-    71,
+    84,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "pdf"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": "Subtype",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "pdf"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "Subtype",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    72,
+    85,
     {
-      "Jz": 74
+      "Jz": 87
     }
   ],
   [
-    73,
+    86,
     {
       "Test": {
-        "test": {
-          "Size": {
-            "over": true,
-            "limit": 102400
-          }
-        },
-        "is_not": false
+        "Size": {
+          "over": true,
+          "limit": 102400,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    74,
+    87,
     {
-      "Jz": 77
+      "Jz": 91
     }
   ],
   [
-    75,
+    88,
     {
       "FileInto": {
         "copy": false,
@@ -640,55 +637,56 @@
     }
   ],
   [
-    76,
+    89,
     {
-      "Jmp": 78
+      "ForEveryPartPop": 1
     }
   ],
   [
-    77,
+    90,
     {
-      "Jmp": 68
+      "Jmp": 92
     }
   ],
   [
-    78,
+    91,
+    {
+      "Jmp": 81
+    }
+  ],
+  [
+    92,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "content-from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "tim@example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "content-from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "tim@example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    79,
+    93,
     {
-      "Jz": 81
+      "Jz": 95
     }
   ],
   [
-    80,
+    94,
     {
       "FileInto": {
         "copy": false,
@@ -703,32 +701,29 @@
     }
   ],
   [
-    81,
+    95,
     {
       "Test": {
-        "test": {
-          "Exists": {
-            "header_names": [
-              {
-                "Text": "content-md5"
-              }
-            ],
-            "mime": true,
-            "mime_anychild": true
-          }
-        },
-        "is_not": false
+        "Exists": {
+          "header_names": [
+            {
+              "Text": "content-md5"
+            }
+          ],
+          "mime_anychild": true,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    82,
+    96,
     {
-      "Jz": 84
+      "Jz": 98
     }
   ],
   [
-    83,
+    97,
     {
       "FileInto": {
         "copy": false,
@@ -743,98 +738,92 @@
     }
   ],
   [
-    84,
+    98,
+    "ForEveryPartPush"
+  ],
+  [
+    99,
     {
       "ForEveryPart": {
-        "jz_pos": 91
+        "jz_pos": 106
       }
     }
   ],
   [
-    85,
+    100,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "application/exe"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": "ContentType",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "application/exe"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "ContentType",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    86,
+    101,
     {
-      "Jnz": 88
+      "Jnz": 103
     }
   ],
   [
-    87,
+    102,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              },
-              {
-                "Text": "Content-Disposition"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*.com"
-              }
-            ],
-            "match_type": {
-              "Matches": 0
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
             },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": {
-              "Param": [
-                {
-                  "Text": "filename"
-                }
-              ]
-            },
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            {
+              "Text": "Content-Disposition"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*.com"
+            }
+          ],
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": {
+            "Param": [
+              {
+                "Text": "filename"
+              }
+            ]
+          },
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    88,
+    103,
     {
-      "Jz": 90
+      "Jz": 105
     }
   ],
   [
-    89,
+    104,
     {
       "Replace": {
         "subject": null,
@@ -847,89 +836,88 @@
     }
   ],
   [
-    90,
+    105,
     {
-      "Jmp": 84
+      "Jmp": 99
     }
   ],
   [
-    91,
+    106,
+    "ForEveryPartPush"
+  ],
+  [
+    107,
     {
       "ForEveryPart": {
-        "jz_pos": 97
+        "jz_pos": 114
       }
     }
   ],
   [
-    92,
+    108,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              },
-              {
-                "Text": "Content-Disposition"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*.com"
-              },
-              {
-                "Text": "*.exe"
-              },
-              {
-                "Text": "*.vbs"
-              },
-              {
-                "Text": "*.scr"
-              },
-              {
-                "Text": "*.pif"
-              },
-              {
-                "Text": "*.hta"
-              },
-              {
-                "Text": "*.bat"
-              },
-              {
-                "Text": "*.zip"
-              }
-            ],
-            "match_type": {
-              "Matches": 0
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
             },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": {
-              "Param": [
-                {
-                  "Text": "filename"
-                }
-              ]
+            {
+              "Text": "Content-Disposition"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*.com"
             },
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            {
+              "Text": "*.exe"
+            },
+            {
+              "Text": "*.vbs"
+            },
+            {
+              "Text": "*.scr"
+            },
+            {
+              "Text": "*.pif"
+            },
+            {
+              "Text": "*.hta"
+            },
+            {
+              "Text": "*.bat"
+            },
+            {
+              "Text": "*.zip"
+            }
+          ],
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": {
+            "Param": [
+              {
+                "Text": "filename"
+              }
+            ]
+          },
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    93,
+    109,
     {
-      "Jz": 96
+      "Jz": 113
     }
   ],
   [
-    94,
+    110,
     {
       "Enclose": {
         "subject": {
@@ -943,93 +931,89 @@
     }
   ],
   [
-    95,
+    111,
     {
-      "Jmp": 97
+      "ForEveryPartPop": 1
     }
   ],
   [
-    96,
+    112,
     {
-      "Jmp": 91
+      "Jmp": 114
     }
   ],
   [
-    97,
+    113,
+    {
+      "Jmp": 107
+    }
+  ],
+  [
+    114,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@example.org"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@example.org"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    98,
+    115,
     {
-      "Jz": 112
+      "Jz": 131
     }
   ],
   [
-    99,
+    116,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    100,
+    117,
     {
-      "Jz": 103
+      "Jz": 120
     }
   ],
   [
-    101,
+    118,
     {
       "Set": {
         "modifiers": [],
@@ -1043,7 +1027,7 @@
     }
   ],
   [
-    102,
+    119,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -1053,51 +1037,50 @@
     }
   ],
   [
-    103,
+    120,
+    "ForEveryPartPush"
+  ],
+  [
+    121,
     {
       "ForEveryPart": {
-        "jz_pos": 109
+        "jz_pos": 128
       }
     }
   ],
   [
-    104,
+    122,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "text"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": "Type",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "text"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "Type",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
   [
-    105,
+    123,
     {
-      "Jz": 108
+      "Jz": 127
     }
   ],
   [
-    106,
+    124,
     {
       "ExtractText": {
         "modifiers": [],
@@ -1109,55 +1092,56 @@
     }
   ],
   [
-    107,
+    125,
     {
-      "Jmp": 109
+      "ForEveryPartPop": 1
     }
   ],
   [
-    108,
+    126,
     {
-      "Jmp": 103
+      "Jmp": 128
     }
   ],
   [
-    109,
+    127,
+    {
+      "Jmp": 121
+    }
+  ],
+  [
+    128,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "FYI:"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": true
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "FYI:"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": true
+        }
       }
     }
   ],
   [
-    110,
+    129,
     {
-      "Jz": 111
+      "Jz": 130
     }
   ],
   [
-    111,
+    130,
     {
       "Clear": {
         "local_vars_idx": 0,

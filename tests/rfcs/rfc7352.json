@@ -12,15 +12,13 @@
     1,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": "Default",
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": null,
+          "dup_match": "Default",
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -38,19 +36,17 @@
     4,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": {
-              "Header": {
-                "Text": "message-id"
-              }
-            },
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": null,
+          "dup_match": {
+            "Header": {
+              "Text": "message-id"
+            }
+          },
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -68,31 +64,26 @@
     7,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "message-id"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 3
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "message-id"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 3
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -106,19 +97,17 @@
     9,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": {
-              "UniqueId": {
-                "MatchVariable": 0
-              }
-            },
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": null,
+          "dup_match": {
+            "UniqueId": {
+              "MatchVariable": 0
+            }
+          },
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -136,15 +125,13 @@
     12,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": "Default",
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": null,
+          "dup_match": "Default",
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -173,31 +160,26 @@
     15,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "ALERT: *"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "ALERT: *"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -211,19 +193,17 @@
     17,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": {
-              "UniqueId": {
-                "MatchVariable": 1
-              }
-            },
-            "seconds": 60,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": null,
+          "dup_match": {
+            "UniqueId": {
+              "MatchVariable": 1
+            }
+          },
+          "seconds": 60,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -240,7 +220,7 @@
         "varname": null,
         "flags": [
           {
-            "Text": "seen"
+            "Text": "\\seen"
           }
         ]
       }
@@ -265,28 +245,25 @@
     21,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -324,31 +301,26 @@
     25,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -386,19 +358,17 @@
     29,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": {
-              "UniqueId": {
-                "Text": ""
-              }
-            },
-            "seconds": 1800,
-            "last": false
-          }
-        },
-        "is_not": true
+        "Duplicate": {
+          "handle": null,
+          "dup_match": {
+            "UniqueId": {
+              "Text": ""
+            }
+          },
+          "seconds": 1800,
+          "last": false,
+          "is_not": true
+        }
       }
     }
   ],
@@ -436,28 +406,25 @@
     32,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -495,31 +462,26 @@
     36,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -557,26 +519,23 @@
     40,
     {
       "Test": {
-        "test": {
-          "String": {
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "source": [
-              {
-                "Text": ""
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "Re:*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "String": {
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "Text": ""
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "Re:*"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -614,19 +573,17 @@
     44,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": null,
-            "dup_match": {
-              "UniqueId": {
-                "Text": " "
-              }
-            },
-            "seconds": 1800,
-            "last": false
-          }
-        },
-        "is_not": true
+        "Duplicate": {
+          "handle": null,
+          "dup_match": {
+            "UniqueId": {
+              "Text": " "
+            }
+          },
+          "seconds": 1800,
+          "last": false,
+          "is_not": true
+        }
       }
     }
   ],
@@ -664,21 +621,19 @@
     47,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": {
-              "Text": "notifier"
-            },
-            "dup_match": {
-              "Header": {
-                "Text": "X-Event-ID"
-              }
-            },
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": {
+            "Text": "notifier"
+          },
+          "dup_match": {
+            "Header": {
+              "Text": "X-Event-ID"
+            }
+          },
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -696,21 +651,19 @@
     50,
     {
       "Test": {
-        "test": {
-          "Duplicate": {
-            "handle": {
-              "Text": "support"
-            },
-            "dup_match": {
-              "Header": {
-                "Text": "X-Ticket-ID"
-              }
-            },
-            "seconds": null,
-            "last": false
-          }
-        },
-        "is_not": false
+        "Duplicate": {
+          "handle": {
+            "Text": "support"
+          },
+          "dup_match": {
+            "Header": {
+              "Text": "X-Ticket-ID"
+            }
+          },
+          "seconds": null,
+          "last": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -724,29 +677,24 @@
     52,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "to"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "support@example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "to"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "support@example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -760,29 +708,24 @@
     54,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "fileserver"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "fileserver"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -799,7 +742,7 @@
         "varname": null,
         "flags": [
           {
-            "Text": "seen"
+            "Text": "\\seen"
           }
         ]
       }

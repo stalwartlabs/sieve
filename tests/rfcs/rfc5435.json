@@ -13,19 +13,17 @@
     1,
     {
       "Test": {
-        "test": {
-          "ValidNotifyMethod": {
-            "notification_uris": [
-              {
-                "Text": "mailto:"
-              },
-              {
-                "Text": "http://gw.example.net/notify?test"
-              }
-            ]
-          }
-        },
-        "is_not": true
+        "ValidNotifyMethod": {
+          "notification_uris": [
+            {
+              "Text": "mailto:"
+            },
+            {
+              "Text": "http://gw.example.net/notify?test"
+            }
+          ],
+          "is_not": true
+        }
       }
     }
   ],
@@ -43,24 +41,22 @@
     4,
     {
       "Test": {
-        "test": {
-          "NotifyMethodCapability": {
-            "comparator": "AsciiCaseMap",
-            "match_type": "Is",
-            "notification_uri": {
-              "Text": "xmpp:tim@example.com?message;subject=SIEVE"
-            },
-            "notification_capability": {
-              "Text": "Online"
-            },
-            "key_list": [
-              {
-                "Text": "yes"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "NotifyMethodCapability": {
+          "comparator": "AsciiCaseMap",
+          "match_type": "Is",
+          "notification_uri": {
+            "Text": "xmpp:tim@example.com?message;subject=SIEVE"
+          },
+          "notification_capability": {
+            "Text": "Online"
+          },
+          "key_list": [
+            {
+              "Text": "yes"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -116,29 +112,24 @@
     9,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@example.org"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@example.org"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -175,29 +166,24 @@
     13,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "to"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "sievemailinglist@example.org"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "to"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "sievemailinglist@example.org"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -211,31 +197,26 @@
     15,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -273,31 +254,26 @@
     19,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "From"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "From"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -386,31 +362,26 @@
     26,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*@*.example.org"
-              }
-            ],
-            "match_type": {
-              "Matches": 0
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*@*.example.org"
+            }
+          ],
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -424,28 +395,25 @@
     28,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -493,31 +461,26 @@
     32,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -555,31 +518,26 @@
     36,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -658,29 +616,24 @@
     43,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "Your dog"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "Your dog"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -708,29 +661,24 @@
     46,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "to"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "sievemailinglist@example.org"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "to"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "sievemailinglist@example.org"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -758,24 +706,21 @@
     49,
     {
       "Test": {
-        "test": {
-          "String": {
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "source": [
-              {
-                "LocalVariable": 0
-              }
-            ],
-            "key_list": [
-              {
-                "Text": ""
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": true
+        "String": {
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "LocalVariable": 0
+            }
+          ],
+          "key_list": [
+            {
+              "Text": ""
+            }
+          ],
+          "is_not": true
+        }
       }
     }
   ],
@@ -804,29 +749,24 @@
     52,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@example.org"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@example.org"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -840,31 +780,26 @@
     54,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -902,29 +837,24 @@
     58,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "FYI:"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": true
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "FYI:"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": true
+        }
       }
     }
   ],

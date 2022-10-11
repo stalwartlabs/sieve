@@ -321,6 +321,7 @@ test "Content-Type: message/rfc822" {
 From: Someone Else
 Subject: Hello, this is an elaborate request for you to finally say hello
  already!
+
 .
 	{
 		test_fail "header content does not match exactly";

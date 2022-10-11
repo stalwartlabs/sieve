@@ -17,19 +17,17 @@
     1,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -64,19 +62,17 @@
     5,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "3"
-            },
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "3"
+          },
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -105,19 +101,17 @@
     8,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -152,19 +146,17 @@
     12,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": true
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -199,19 +191,17 @@
     16,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "37"
-            },
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": true
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "37"
+          },
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -250,19 +240,17 @@
     21,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Count": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": true
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Count": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -297,19 +285,17 @@
     25,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": true
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -344,19 +330,17 @@
     29,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "37"
-            },
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": true
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "37"
+          },
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -395,18 +379,16 @@
     34,
     {
       "Test": {
-        "test": {
-          "VirusTest": {
-            "value": {
-              "Text": "0"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric"
-          }
-        },
-        "is_not": false
+        "VirusTest": {
+          "value": {
+            "Text": "0"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "is_not": false
+        }
       }
     }
   ],
@@ -435,18 +417,16 @@
     37,
     {
       "Test": {
-        "test": {
-          "VirusTest": {
-            "value": {
-              "Text": "4"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric"
-          }
-        },
-        "is_not": false
+        "VirusTest": {
+          "value": {
+            "Text": "4"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "is_not": false
+        }
       }
     }
   ],
@@ -481,18 +461,16 @@
     41,
     {
       "Test": {
-        "test": {
-          "VirusTest": {
-            "value": {
-              "Text": "5"
-            },
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric"
-          }
-        },
-        "is_not": false
+        "VirusTest": {
+          "value": {
+            "Text": "5"
+          },
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "is_not": false
+        }
       }
     }
   ],

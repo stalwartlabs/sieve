@@ -15,31 +15,26 @@
     1,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "x-priority"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "3"
-              }
-            ],
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiNumeric",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "x-priority"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "3"
+            }
+          ],
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiNumeric",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -74,31 +69,26 @@
     5,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "to"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "5"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Count": "Gt"
-            },
-            "comparator": "AsciiNumeric",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "to"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "5"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Count": "Gt"
+          },
+          "comparator": "AsciiNumeric",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -133,31 +123,26 @@
     9,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "M"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Value": "Gt"
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "M"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Value": "Gt"
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -207,34 +192,29 @@
     14,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "to"
-              },
-              {
-                "Text": "cc"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "1"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Count": "Eq"
+        "Address": {
+          "header_list": [
+            {
+              "Text": "to"
             },
-            "comparator": "AsciiNumeric",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            {
+              "Text": "cc"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "1"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Count": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -248,32 +228,27 @@
     16,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "to"
-              },
-              {
-                "Text": "cc"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "me@foo.example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "to"
+            },
+            {
+              "Text": "cc"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "me@foo.example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],

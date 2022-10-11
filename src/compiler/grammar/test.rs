@@ -93,6 +93,15 @@ pub(crate) enum Test {
 
     // RFC 8579
     SpecialUseExists(TestSpecialUseExists),
+
+    #[cfg(test)]
+    External(
+        (
+            String,
+            Vec<crate::compiler::lexer::string::StringItem>,
+            bool,
+        ),
+    ),
 }
 
 #[derive(Debug)]
@@ -283,6 +292,38 @@ impl<'x> CompilerState<'x> {
                         line_pos: token_info.line_pos,
                     })
                 }
+                #[cfg(test)]
+                Token::Invalid(name) if name.contains("test") => {
+                    use crate::compiler::lexer::string::StringItem;
+                    use crate::runtime::string::IntoString;
+
+                    let mut params = Vec::new();
+                    while !matches!(
+                        self.tokens.peek().map(|r| r.map(|t| &t.token)),
+                        Some(Ok(Token::Comma
+                            | Token::ParenthesisClose
+                            | Token::CurlyOpen))
+                    ) {
+                        params.push(match self.tokens.unwrap_next()?.token {
+                            Token::StringConstant(s) => StringItem::Text(s.into_string()),
+                            Token::StringVariable(s) => {
+                                self.tokenize_string(&s, true).map_err(|error_type| {
+                                    CompileError {
+                                        line_num: 0,
+                                        line_pos: 0,
+                                        error_type,
+                                    }
+                                })?
+                            }
+                            Token::Number(n) => StringItem::Text(n.to_string()),
+                            Token::Identifier(s) => StringItem::Text(s.to_string()),
+                            Token::Tag(s) => StringItem::Text(format!(":{}", s)),
+                            Token::Invalid(s) => StringItem::Text(s),
+                            other => panic!("Invalid test param {:?}", other),
+                        });
+                    }
+                    Test::External((name, params, false))
+                }
                 Token::Invalid(name) => {
                     self.ignore_test()?;
                     Test::Invalid(Invalid {
@@ -399,6 +440,11 @@ impl Test {
                 op.is_not = true;
             }
             Test::Invalid(_) => {}
+
+            #[cfg(test)]
+            Test::External((_, _, is_not)) => {
+                *is_not = true;
+            }
         }
         self
     }

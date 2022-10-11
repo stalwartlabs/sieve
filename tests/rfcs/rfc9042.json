@@ -12,29 +12,24 @@
     1,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "coyote"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "coyote"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -109,29 +104,24 @@
     6,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "coyote"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "coyote"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -145,16 +135,14 @@
     8,
     {
       "Test": {
-        "test": {
-          "MailboxIdExists": {
-            "mailbox_ids": [
-              {
-                "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "MailboxIdExists": {
+          "mailbox_ids": [
+            {
+              "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],

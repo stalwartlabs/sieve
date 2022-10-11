@@ -70,8 +70,8 @@ test "Configured protected" {
 		test_fail "protected delivery-date header was deleted";
 	}
 
-	if exists "subject" {
-		test_fail "subject header cannot be protected, but it was not deleted";
+	if not exists "subject" {
+		test_fail "subject header was deleted";
 	}
 
 	if exists "x-frop" {
@@ -110,7 +110,7 @@ test "Configured forbid_add/forbid_delete" {
 		test_fail "unprotected delivery-date header was not deleted";
 	}
 
-	if exists "subject" {
+	if not exists "subject" {
 		test_fail "subject header cannot be protected, but it was not deleted";
 	}
 
@@ -132,7 +132,7 @@ id 3jhl22khhf23f; Mon, 24 Aug 2015 04:11:54 -0600;
 		test_fail "unprotected delivery-date header was not added";
 	}
 
-	if not header "subject" "Fropfrop!" {
+	if header "subject" "Fropfrop!" {
 		test_fail "subject header cannot be protected, but it was not added";
 	}
 

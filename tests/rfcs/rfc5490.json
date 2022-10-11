@@ -13,16 +13,14 @@
     1,
     {
       "Test": {
-        "test": {
-          "MailboxExists": {
-            "mailbox_names": [
-              {
-                "Text": "Partners"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "MailboxExists": {
+          "mailbox_names": [
+            {
+              "Text": "Partners"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -68,24 +66,22 @@
     6,
     {
       "Test": {
-        "test": {
-          "Metadata": {
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "mailbox": {
-              "Text": "INBOX"
-            },
-            "annotation_name": {
-              "Text": "/private/vendor/vendor.isode/auto-replies"
-            },
-            "key_list": [
-              {
-                "Text": "on"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "Metadata": {
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "mailbox": {
+            "Text": "INBOX"
+          },
+          "annotation_name": {
+            "Text": "/private/vendor/vendor.isode/auto-replies"
+          },
+          "key_list": [
+            {
+              "Text": "on"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -116,23 +112,21 @@
     9,
     {
       "Test": {
-        "test": {
-          "ServerMetadata": {
-            "match_type": {
-              "Matches": 1
-            },
-            "comparator": "AsciiCaseMap",
-            "annotation_name": {
-              "Text": "/private/vendor/vendor.isode/notification-uri"
-            },
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "ServerMetadata": {
+          "match_type": {
+            "Matches": 1
+          },
+          "comparator": "AsciiCaseMap",
+          "annotation_name": {
+            "Text": "/private/vendor/vendor.isode/notification-uri"
+          },
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -170,24 +164,21 @@
     13,
     {
       "Test": {
-        "test": {
-          "String": {
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "source": [
-              {
-                "Text": ""
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "none"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": true
+        "String": {
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "Text": ""
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "none"
+            }
+          ],
+          "is_not": true
+        }
       }
     }
   ],
@@ -201,28 +192,25 @@
     15,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -270,31 +258,26 @@
     19,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -332,31 +315,26 @@
     23,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 2
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 2
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -421,19 +399,17 @@
     29,
     {
       "Test": {
-        "test": {
-          "ServerMetadataExists": {
-            "annotation_names": [
-              {
-                "Text": "hello"
-              },
-              {
-                "Text": "world"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "ServerMetadataExists": {
+          "annotation_names": [
+            {
+              "Text": "hello"
+            },
+            {
+              "Text": "world"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -451,22 +427,20 @@
     32,
     {
       "Test": {
-        "test": {
-          "MetadataExists": {
-            "mailbox": {
-              "Text": "INBOX"
+        "MetadataExists": {
+          "mailbox": {
+            "Text": "INBOX"
+          },
+          "annotation_names": [
+            {
+              "Text": "hi"
             },
-            "annotation_names": [
-              {
-                "Text": "hi"
-              },
-              {
-                "Text": "there"
-              }
-            ]
-          }
-        },
-        "is_not": false
+            {
+              "Text": "there"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],

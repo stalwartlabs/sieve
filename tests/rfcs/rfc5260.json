@@ -14,29 +14,24 @@
     1,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@example.com"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@example.com"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -50,28 +45,25 @@
     3,
     {
       "Test": {
-        "test": {
-          "Date": {
-            "header_name": {
-              "Text": "date"
-            },
-            "key_list": [
-              {
-                "Text": "09"
-              }
-            ],
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "zone": "Original",
-            "date_part": "Hour",
-            "list": false
-          }
-        },
-        "is_not": false
+        "Date": {
+          "header_name": {
+            "Text": "date"
+          },
+          "key_list": [
+            {
+              "Text": "09"
+            }
+          ],
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "zone": "Original",
+          "date_part": "Hour",
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -85,28 +77,25 @@
     5,
     {
       "Test": {
-        "test": {
-          "Date": {
-            "header_name": {
-              "Text": "date"
-            },
-            "key_list": [
-              {
-                "Text": "17"
-              }
-            ],
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "zone": "Original",
-            "date_part": "Hour",
-            "list": false
-          }
-        },
-        "is_not": false
+        "Date": {
+          "header_name": {
+            "Text": "date"
+          },
+          "key_list": [
+            {
+              "Text": "17"
+            }
+          ],
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "zone": "Original",
+          "date_part": "Hour",
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -135,26 +124,23 @@
     8,
     {
       "Test": {
-        "test": {
-          "Date": {
-            "header_name": {
-              "Text": "received"
-            },
-            "key_list": [
-              {
-                "Text": "0"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "zone": "Local",
-            "date_part": "Weekday",
-            "list": false
-          }
-        },
-        "is_not": false
+        "Date": {
+          "header_name": {
+            "Text": "received"
+          },
+          "key_list": [
+            {
+              "Text": "0"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "zone": "Local",
+          "date_part": "Weekday",
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -168,26 +154,23 @@
     10,
     {
       "Test": {
-        "test": {
-          "Date": {
-            "header_name": {
-              "Text": "received"
-            },
-            "key_list": [
-              {
-                "Text": "6"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "zone": "Local",
-            "date_part": "Weekday",
-            "list": false
-          }
-        },
-        "is_not": false
+        "Date": {
+          "header_name": {
+            "Text": "received"
+          },
+          "key_list": [
+            {
+              "Text": "6"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "zone": "Local",
+          "date_part": "Weekday",
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -216,21 +199,19 @@
     13,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "date_part": "Weekday",
-            "key_list": [
-              {
-                "Text": "0"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "date_part": "Weekday",
+          "key_list": [
+            {
+              "Text": "0"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -244,21 +225,19 @@
     15,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "date_part": "Weekday",
-            "key_list": [
-              {
-                "Text": "6"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "date_part": "Weekday",
+          "key_list": [
+            {
+              "Text": "6"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -272,23 +251,21 @@
     17,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Hour",
-            "key_list": [
-              {
-                "Text": "09"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Hour",
+          "key_list": [
+            {
+              "Text": "09"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -302,23 +279,21 @@
     19,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Hour",
-            "key_list": [
-              {
-                "Text": "17"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Hour",
+          "key_list": [
+            {
+              "Text": "17"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -347,23 +322,21 @@
     22,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Date",
-            "key_list": [
-              {
-                "Text": "2007-06-30"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Date",
+          "key_list": [
+            {
+              "Text": "2007-06-30"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -377,23 +350,21 @@
     24,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Value": "Le"
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Date",
-            "key_list": [
-              {
-                "Text": "2007-07-07"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Value": "Le"
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Date",
+          "key_list": [
+            {
+              "Text": "2007-07-07"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -426,23 +397,21 @@
     27,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 3
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Month",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 3
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Month",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -480,23 +449,21 @@
     31,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 3
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Year",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 3
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Year",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -549,23 +516,21 @@
     36,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 1
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Std11",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 1
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Std11",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -593,30 +558,27 @@
     39,
     {
       "Test": {
-        "test": {
-          "Date": {
-            "header_name": {
-              "Text": "received"
-            },
-            "key_list": [
-              {
-                "Text": "2007-02-26T09:00:00-05:00"
-              }
-            ],
-            "match_type": {
-              "Value": "Gt"
-            },
-            "comparator": "AsciiCaseMap",
-            "index": 2,
-            "index_last": false,
-            "zone": {
-              "Time": -500
-            },
-            "date_part": "Iso8601",
-            "list": false
-          }
-        },
-        "is_not": false
+        "Date": {
+          "header_name": {
+            "Text": "received"
+          },
+          "key_list": [
+            {
+              "Text": "2007-02-26T09:00:00-05:00"
+            }
+          ],
+          "match_type": {
+            "Value": "Gt"
+          },
+          "comparator": "AsciiCaseMap",
+          "index": 2,
+          "zone": {
+            "Time": -500
+          },
+          "date_part": "Iso8601",
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],

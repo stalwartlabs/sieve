@@ -25,7 +25,7 @@ impl TestAddress {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
                 message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -46,7 +46,7 @@ impl TestAddress {
                 )
             }
             MatchType::Value(rel_match) => message.find_headers(
-                ctx.part,
+                ctx,
                 &header_list,
                 self.index,
                 self.mime_anychild,
@@ -65,7 +65,7 @@ impl TestAddress {
                 let mut captured_positions = Vec::new();
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
                 let result = message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -102,7 +102,7 @@ impl TestAddress {
             MatchType::Count(rel_match) => {
                 let mut count = 0;
                 message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -152,12 +152,18 @@ impl<'x> MessageAddresses for Message<'x> {
             value_ = None;
             &header.value
         } else {
-            value_ = parse_address(&mut MessageStream::new(
+            let bytes = if header.offset_end > 0 {
                 self.raw_message
-                    .get(header.offset_start..header.offset_end + 2)
-                    .unwrap_or(b""),
-            ))
-            .into();
+                    .get(header.offset_start..header.offset_end)
+                    .unwrap_or(b"")
+            } else if let HeaderValue::Text(text) = &header.value {
+                // Inserted header
+                text.as_bytes()
+            } else {
+                b""
+            };
+
+            value_ = parse_address(&mut MessageStream::new(bytes)).into();
             value_.as_ref().unwrap()
         };
 
@@ -228,12 +234,16 @@ impl<'x> MessageAddresses for Message<'x> {
 
 impl AddressPart {
     pub(crate) fn eval<'x>(&self, addr: &'x str) -> Option<&'x str> {
-        match self {
-            AddressPart::All => addr.into(),
-            AddressPart::LocalPart => parse_address_local_part(addr),
-            AddressPart::Domain => parse_address_domain(addr),
-            AddressPart::User => parse_address_user_part(addr),
-            AddressPart::Detail => parse_address_detail_part(addr),
+        if !addr.is_empty() {
+            match self {
+                AddressPart::All => addr.into(),
+                AddressPart::LocalPart => parse_address_local_part(addr),
+                AddressPart::Domain => parse_address_domain(addr),
+                AddressPart::User => parse_address_user_part(addr),
+                AddressPart::Detail => parse_address_detail_part(addr),
+            }
+        } else {
+            addr.into()
         }
     }
 }

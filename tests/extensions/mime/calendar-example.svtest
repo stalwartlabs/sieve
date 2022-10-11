@@ -121,8 +121,12 @@ test "Multipart message" {
 		}
 	}
 
-	if not header "x-ical" "request" {
-		test_fail "Failed to parse message correctly";
+	if header "x-ical" "request" {
+		test_fail "Header added to the wrong part";
+	}
+
+	if not header :mime :anychild "x-ical" "request" {
+		test_fail "Header was not added";
 	}
 }
 

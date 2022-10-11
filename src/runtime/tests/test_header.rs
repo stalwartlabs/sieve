@@ -31,7 +31,7 @@ impl TestHeader {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
                 message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -52,7 +52,7 @@ impl TestHeader {
                 )
             }
             MatchType::Value(rel_match) => message.find_headers(
-                ctx.part,
+                ctx,
                 &header_list,
                 self.index,
                 self.mime_anychild,
@@ -71,7 +71,7 @@ impl TestHeader {
                 let mut captured_positions = Vec::new();
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
                 let result = message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -108,7 +108,7 @@ impl TestHeader {
             MatchType::Count(rel_match) => {
                 let mut count = 0;
                 message.find_headers(
-                    ctx.part,
+                    ctx,
                     &header_list,
                     self.index,
                     self.mime_anychild,
@@ -179,7 +179,7 @@ impl<'x> Context<'x> {
 pub(crate) trait MessageHeaders {
     fn find_headers(
         &self,
-        part_id: usize,
+        ctx: &Context,
         header_names: &[HeaderName],
         index: Option<i32>,
         any_child: bool,
@@ -197,33 +197,102 @@ pub(crate) trait MessageHeaders {
 impl<'x> MessageHeaders for Message<'x> {
     fn find_headers(
         &self,
-        part_id: usize,
+        ctx: &Context,
         header_names: &[HeaderName],
         index: Option<i32>,
         any_child: bool,
         mut visitor_fnc: impl FnMut(&Header) -> bool,
     ) -> bool {
-        let parts = [part_id];
-        let mut part_iter = SubpartIterator::new(self, &parts, any_child);
+        let parts = [ctx.part];
+        let mut part_iter = SubpartIterator::new(ctx, self, &parts, any_child);
 
-        while let Some(message_part) = part_iter.next() {
-            for header_name in header_names {
+        while let Some((part_id, message_part)) = part_iter.next() {
+            'outer: for header_name in header_names {
                 match index {
                     None => {
+                        for header in ctx.get_inserted_headers_top(part_id) {
+                            if &header.name == header_name && visitor_fnc(header) {
+                                return true;
+                            }
+                        }
+
                         for header in message_part
                             .headers
                             .iter()
                             .filter(|h| &h.name == header_name)
                         {
-                            if visitor_fnc(header) {
+                            if !ctx.is_header_deleted(header.offset_field) && visitor_fnc(header) {
+                                return true;
+                            }
+                        }
+
+                        for header in ctx.get_inserted_headers_bottom(part_id) {
+                            if &header.name == header_name && visitor_fnc(header) {
                                 return true;
                             }
                         }
                     }
                     Some(index) if index >= 0 => {
                         let mut header_count = 0;
-                        for header in &message_part.headers {
+
+                        for header in ctx.get_inserted_headers_top(part_id) {
                             if &header.name == header_name {
+                                header_count += 1;
+                                if header_count == index {
+                                    if visitor_fnc(header) {
+                                        return true;
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+
+                        for header in &message_part.headers {
+                            if &header.name == header_name
+                                && !ctx.is_header_deleted(header.offset_field)
+                            {
+                                header_count += 1;
+                                if header_count == index {
+                                    if visitor_fnc(header) {
+                                        return true;
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+
+                        for header in ctx.get_inserted_headers_bottom(part_id) {
+                            if &header.name == header_name {
+                                header_count += 1;
+                                if header_count == index {
+                                    if visitor_fnc(header) {
+                                        return true;
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                    }
+                    Some(index) => {
+                        let index = -index;
+                        let mut header_count = 0;
+
+                        for header in ctx.get_inserted_headers_bottom_rev(part_id) {
+                            if &header.name == header_name {
+                                header_count += 1;
+                                if header_count == index {
+                                    if visitor_fnc(header) {
+                                        return true;
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+
+                        for header in message_part.headers.iter().rev() {
+                            if &header.name == header_name
+                                && !ctx.is_header_deleted(header.offset_field)
+                            {
                                 header_count += 1;
                                 if header_count == index {
                                     if visitor_fnc(header) {
@@ -233,18 +302,15 @@ impl<'x> MessageHeaders for Message<'x> {
                                 }
                             }
                         }
-                    }
-                    Some(index) => {
-                        let index = -index;
-                        let mut header_count = 0;
-                        for header in message_part.headers.iter().rev() {
+
+                        for header in ctx.get_inserted_headers_top_rev(part_id) {
                             if &header.name == header_name {
                                 header_count += 1;
                                 if header_count == index {
                                     if visitor_fnc(header) {
                                         return true;
                                     }
-                                    break;
+                                    continue 'outer;
                                 }
                             }
                         }
@@ -272,14 +338,14 @@ impl<'x> MessageHeaders for Message<'x> {
                             | RfcHeader::ContentLocation
                             | RfcHeader::ContentTransferEncoding,
                     )
-                ) =>
+                ) || header.offset_end == 0 =>
             {
                 visitor_fnc(text.as_ref())
             }
             (MimeOpts::None, _) => {
                 if let HeaderValue::Text(text) = parse_unstructured(&mut MessageStream::new(
                     self.raw_message
-                        .get(header.offset_start..header.offset_end + 2)
+                        .get(header.offset_start..header.offset_end)
                         .unwrap_or(b""),
                 )) {
                     visitor_fnc(text.as_ref())

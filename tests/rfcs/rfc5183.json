@@ -11,23 +11,21 @@
     1,
     {
       "Test": {
-        "test": {
-          "Environment": {
-            "name": {
-              "Text": "remote-host"
-            },
-            "key_list": [
-              {
-                "Text": "*.example.com"
-              }
-            ],
-            "match_type": {
-              "Matches": 0
-            },
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+        "Environment": {
+          "name": {
+            "Text": "remote-host"
+          },
+          "key_list": [
+            {
+              "Text": "*.example.com"
+            }
+          ],
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],

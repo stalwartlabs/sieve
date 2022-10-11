@@ -22,26 +22,23 @@
     1,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "notify"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "SUCCESS"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "notify"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "SUCCESS"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -55,26 +52,23 @@
     3,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "notify"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "FAILURE"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "notify"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "FAILURE"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -88,28 +82,25 @@
     5,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "notify"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "1"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Count": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "notify"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "1"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Count": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -123,28 +114,25 @@
     7,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "orcpt"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "rfc822;*@example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 5
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "orcpt"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "rfc822;*@example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 5
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -158,26 +146,23 @@
     9,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "bytimerelative"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "-"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "bytimerelative"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "-"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -191,28 +176,25 @@
     11,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "bytimerelative"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "0"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Value": "Eq"
-            },
-            "comparator": "AsciiNumeric",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "bytimerelative"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "0"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Value": "Eq"
+          },
+          "comparator": "AsciiNumeric",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -226,23 +208,21 @@
     13,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 5
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Iso8601",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 5
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Iso8601",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -270,28 +250,25 @@
     16,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "bytimeabsolute"
-              }
-            ],
-            "key_list": [
-              {
-                "LocalVariable": 0
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "bytimeabsolute"
+            }
+          ],
+          "key_list": [
+            {
+              "LocalVariable": 0
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -315,28 +292,25 @@
     19,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "bytimeabsolute"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*T*:*:*"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 5
-            },
-            "comparator": "AsciiCaseMap",
-            "zone": 0,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "bytimeabsolute"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*T*:*:*"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 5
+          },
+          "comparator": "AsciiCaseMap",
+          "zone": 0,
+          "is_not": false
+        }
       }
     }
   ],
@@ -378,23 +352,21 @@
     23,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": 0,
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Iso8601",
-            "key_list": [
-              {
-                "LocalVariable": 0
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": 0,
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Iso8601",
+          "key_list": [
+            {
+              "LocalVariable": 0
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -440,29 +412,24 @@
     27,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "user@example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "user@example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -491,29 +458,24 @@
     30,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "user@example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "user@example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -548,23 +510,21 @@
     33,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Value": "Lt"
-            },
-            "comparator": "AsciiNumeric",
-            "date_part": "Hour",
-            "key_list": [
-              {
-                "Text": "22"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Value": "Lt"
+          },
+          "comparator": "AsciiNumeric",
+          "date_part": "Hour",
+          "key_list": [
+            {
+              "Text": "22"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -578,23 +538,21 @@
     35,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 1
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Date",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 1
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Date",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -632,23 +590,21 @@
     39,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": {
-              "Matches": 1
-            },
-            "comparator": "AsciiCaseMap",
-            "date_part": "Zone",
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": {
+            "Matches": 1
+          },
+          "comparator": "AsciiCaseMap",
+          "date_part": "Zone",
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "list": false,
+          "is_not": false
+        }
       }
     }
   ],

@@ -18,26 +18,23 @@
     1,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": ":addrbook:default"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": true
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": ":addrbook:default"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -51,19 +48,17 @@
     3,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "8"
-            },
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "8"
+          },
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -98,19 +93,17 @@
     7,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": "3"
-            },
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": "3"
+          },
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -139,16 +132,14 @@
     10,
     {
       "Test": {
-        "test": {
-          "ValidExtList": {
-            "list_names": [
-              {
-                "Text": "addrbook"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "ValidExtList": {
+          "list_names": [
+            {
+              "Text": "addrbook"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -170,26 +161,23 @@
     13,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": ":addrbook:default"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": true
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": ":addrbook:default"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -257,19 +245,17 @@
     20,
     {
       "Test": {
-        "test": {
-          "SpamTest": {
-            "value": {
-              "Text": ""
-            },
-            "match_type": {
-              "Value": "Ge"
-            },
-            "comparator": "AsciiNumeric",
-            "percent": false
-          }
-        },
-        "is_not": false
+        "SpamTest": {
+          "value": {
+            "Text": ""
+          },
+          "match_type": {
+            "Value": "Ge"
+          },
+          "comparator": "AsciiNumeric",
+          "percent": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -298,21 +284,19 @@
     23,
     {
       "Test": {
-        "test": {
-          "CurrentDate": {
-            "zone": null,
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "date_part": "Date",
-            "key_list": [
-              {
-                "Text": "tag:example.com,2011-01-01:localHolidays"
-              }
-            ],
-            "list": true
-          }
-        },
-        "is_not": false
+        "CurrentDate": {
+          "zone": null,
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "date_part": "Date",
+          "key_list": [
+            {
+              "Text": "tag:example.com,2011-01-01:localHolidays"
+            }
+          ],
+          "list": true,
+          "is_not": false
+        }
       }
     }
   ],
@@ -341,26 +325,23 @@
     26,
     {
       "Test": {
-        "test": {
-          "Envelope": {
-            "header_list": [
-              {
-                "Text": "to"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "mylist"
-              }
-            ],
-            "address_part": "Detail",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "zone": null,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Envelope": {
+          "envelope_list": [
+            {
+              "Text": "to"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "mylist"
+            }
+          ],
+          "address_part": "Detail",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "zone": null,
+          "is_not": false
+        }
       }
     }
   ],
@@ -374,29 +355,24 @@
     28,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "tag:example.com,2010-05-28:mylist"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": true
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "tag:example.com,2010-05-28:mylist"
+            }
+          ],
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -425,31 +401,26 @@
     31,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "received"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*(* [*.*.*.*])*"
-              }
-            ],
-            "match_type": {
-              "Matches": 120
-            },
-            "comparator": "AsciiCaseMap",
-            "index": 1,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "received"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*(* [*.*.*.*])*"
+            }
+          ],
+          "match_type": {
+            "Matches": 120
+          },
+          "comparator": "AsciiCaseMap",
+          "index": 1,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -499,24 +470,21 @@
     34,
     {
       "Test": {
-        "test": {
-          "String": {
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "source": [
-              {
-                "LocalVariable": 0
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "tag:example.com,2011-04-10:DisallowedIPs"
-              }
-            ],
-            "list": true
-          }
-        },
-        "is_not": false
+        "String": {
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "LocalVariable": 0
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "tag:example.com,2011-04-10:DisallowedIPs"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -549,59 +517,58 @@
   ],
   [
     38,
-    {
-      "ForEveryPart": {
-        "jz_pos": 44
-      }
-    }
+    "ForEveryPartPush"
   ],
   [
     39,
     {
-      "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Content-Type"
-              },
-              {
-                "Text": "Content-Disposition"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "tag:example.com,2011-04-10:BadFileNameExts"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": true,
-            "mime_opts": {
-              "Param": [
-                {
-                  "Text": "filename"
-                }
-              ]
-            },
-            "mime_anychild": false,
-            "list": true
-          }
-        },
-        "is_not": false
+      "ForEveryPart": {
+        "jz_pos": 46
       }
     }
   ],
   [
     40,
     {
-      "Jz": 43
+      "Test": {
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Content-Type"
+            },
+            {
+              "Text": "Content-Disposition"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "tag:example.com,2011-04-10:BadFileNameExts"
+            }
+          ],
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": {
+            "Param": [
+              {
+                "Text": "filename"
+              }
+            ]
+          },
+          "mime_anychild": false,
+          "is_not": false
+        }
+      }
     }
   ],
   [
     41,
+    {
+      "Jz": 45
+    }
+  ],
+  [
+    42,
     {
       "Enclose": {
         "subject": {
@@ -615,15 +582,21 @@
     }
   ],
   [
-    42,
+    43,
     {
-      "Jmp": 44
+      "ForEveryPartPop": 1
     }
   ],
   [
-    43,
+    44,
     {
-      "Jmp": 38
+      "Jmp": 46
+    }
+  ],
+  [
+    45,
+    {
+      "Jmp": 39
     }
   ]
 ]

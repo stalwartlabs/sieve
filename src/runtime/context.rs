@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 use ahash::AHashMap;
 use mail_parser::Message;
@@ -8,7 +8,11 @@ use crate::{
     Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
-use super::{actions::action_include::IncludeResult, tests::TestResult, RuntimeError};
+use super::{
+    actions::action_include::IncludeResult,
+    tests::{mime::NestedParts, test_envelope::parse_envelope_address, TestResult},
+    RuntimeError,
+};
 
 #[derive(Clone)]
 pub(crate) struct ScriptStack {
@@ -19,11 +23,15 @@ pub(crate) struct ScriptStack {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn new(runtime: &'x Runtime) -> Self {
+    pub(crate) fn new(runtime: &'x Runtime, raw_message: &'x [u8]) -> Self {
         Context {
+            #[cfg(test)]
+            runtime: runtime.clone(),
+            #[cfg(not(test))]
             runtime,
-            part_iter: Vec::new().into_iter(),
+            message: Message::parse(raw_message).unwrap_or_default(),
             part: 0,
+            part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
             pos: usize::MAX,
             test_result: false,
@@ -33,11 +41,19 @@ impl<'x> Context<'x> {
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
             envelope: Vec::new(),
+            header_insertions: Vec::new(),
+            header_deletions: Vec::new(),
+            message_size: usize::MAX,
+            part_replacements: Vec::new(),
+            part_deletions: Vec::new(),
         }
     }
 
     #[allow(clippy::while_let_on_iterator)]
-    pub fn run(&mut self, message: &Message, input: Input) -> Option<Result<Event, RuntimeError>> {
+    pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
+        let _message = Message::default();
+        let message = &_message;
+
         match input {
             Input::True => self.test_result ^= true,
             Input::False => self.test_result ^= false,
@@ -47,6 +63,10 @@ impl<'x> Context<'x> {
 
                 if num_match_vars > MAX_MATCH_VARIABLES || num_vars > MAX_LOCAL_VARIABLES {
                     return Some(Err(RuntimeError::IllegalAction));
+                }
+
+                if self.message_size == usize::MAX {
+                    self.message_size = message.raw_message.len();
                 }
 
                 self.script_cache.insert(name, script.clone());
@@ -130,23 +150,82 @@ impl<'x> Context<'x> {
                 Instruction::Keep(_) => {
                     println!("Test passed!");
                 }
-                Instruction::FileInto(_) => {
-                    println!("All passed!");
+                Instruction::FileInto(fi) => {
+                    self.pos += 1;
+                    return Some(Ok(Event::FileInto {
+                        folder: self.eval_string(&fi.folder).into_owned(),
+                        flags: fi
+                            .flags
+                            .iter()
+                            .map(|f| self.eval_string(f).into_owned())
+                            .collect(),
+                        mailbox_id: fi
+                            .mailbox_id
+                            .as_ref()
+                            .map(|mi| self.eval_string(mi).into_owned()),
+                        special_use: fi
+                            .special_use
+                            .as_ref()
+                            .map(|su| self.eval_string(su).into_owned()),
+                        copy: fi.copy,
+                        create: fi.create,
+                    }));
                 }
-                Instruction::Redirect(_) => (),
+                Instruction::Redirect(r) => {
+                    self.pos += 1;
+                    return Some(Ok(Event::Redirect {
+                        address: self.eval_string(&r.address).into_owned(),
+                        copy: r.copy,
+                    }));
+                }
                 Instruction::Discard => (),
                 Instruction::Stop => (),
                 Instruction::Reject(_) => (),
-                Instruction::ForEveryPart(_) => (),
+                Instruction::ForEveryPart(fep) => {
+                    if let Some(next_part) = self.part_iter.next() {
+                        self.part = next_part;
+                    } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
+                        debug_assert!(fep.jz_pos > self.pos);
+                        self.part_iter = prev_part_iter;
+                        self.part = prev_part;
+                        self.pos = fep.jz_pos;
+                        iter = current_script.instructions.get(self.pos..)?.iter();
+                        continue;
+                    } else {
+                        self.part = 0;
+                        #[cfg(test)]
+                        panic!("ForEveryPart executed without items on stack.");
+                    }
+                }
+                Instruction::ForEveryPartPush => {
+                    let part_iter = message
+                        .find_nested_parts_ids(self, self.part_iter_stack.is_empty())
+                        .into_iter();
+                    self.part_iter_stack
+                        .push((self.part, std::mem::replace(&mut self.part_iter, part_iter)));
+                }
+                Instruction::ForEveryPartPop(num_pops) => {
+                    debug_assert!(
+                        *num_pops > 0 && *num_pops <= self.part_iter_stack.len(),
+                        "Pop out of range: {} with {} items.",
+                        num_pops,
+                        self.part_iter_stack.len()
+                    );
+                    for _ in 0..*num_pops {
+                        if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
+                            self.part_iter = prev_part_iter;
+                            self.part = prev_part;
+                        } else {
+                            break;
+                        }
+                    }
+                }
                 Instruction::Replace(_) => (),
                 Instruction::Enclose(_) => (),
-                Instruction::ExtractText(_) => (),
-                Instruction::Convert(_) => (),
-                Instruction::AddHeader(_) => (),
-                Instruction::DeleteHeader(_) => (),
-                Instruction::Set(set) => {
-                    set.exec(self);
-                }
+                Instruction::ExtractText(extract) => extract.exec(self, message),
+                Instruction::AddHeader(add_header) => add_header.exec(self),
+                Instruction::DeleteHeader(delete_header) => delete_header.exec(self, message),
+                Instruction::Set(set) => set.exec(self),
                 Instruction::Notify(_) => (),
                 Instruction::Vacation(_) => (),
                 Instruction::SetFlag(_) => (),
@@ -180,6 +259,7 @@ impl<'x> Context<'x> {
                     }
                     IncludeResult::None => (),
                 },
+                Instruction::Convert(_) => (), //TODO
                 Instruction::Return => {
                     if let Some(prev_script) = self.script_stack.pop() {
                         self.pos = prev_script.prev_pos;
@@ -231,20 +311,14 @@ impl<'x> Context<'x> {
         None
     }
 
-    pub fn set_envelope(
-        &mut self,
-        envelope: impl Into<Envelope<'x>>,
-        value: impl Into<Cow<'x, str>>,
-    ) {
-        self.envelope.push((envelope.into(), value.into()));
+    pub fn set_envelope<'y>(&mut self, envelope: impl Into<Envelope<'x>>, value: &'y str) {
+        if let Some(value) = parse_envelope_address(value) {
+            self.envelope.push((envelope.into(), value.into()));
+        }
     }
 
-    pub fn with_envelope(
-        mut self,
-        envelope: impl Into<Envelope<'x>>,
-        value: impl Into<Cow<'x, str>>,
-    ) -> Self {
-        self.envelope.push((envelope.into(), value.into()));
+    pub fn with_envelope(mut self, envelope: impl Into<Envelope<'x>>, value: &str) -> Self {
+        self.set_envelope(envelope, value);
         self
     }
 

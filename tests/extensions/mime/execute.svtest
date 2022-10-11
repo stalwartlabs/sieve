@@ -48,35 +48,9 @@ This is the end of the outer MIME multipart.
 ;
 
 test "Basic - foreverypart" {
-	if not test_script_compile "execute/foreverypart.sieve" {
-		test_fail "script compile failed";
-	}
-
-	if not test_script_run {
-		test_fail "script run failed";
-	}
-
-	if not test_result_execute {
-		test_fail "result execute failed";
-	}
-
-	test_binary_save "ihave-basic";
-	test_binary_load "ihave-basic";
+	include "execute-foreverypart";
 }
 
 test "Basic - mime" {
-	if not test_script_compile "execute/mime.sieve" {
-		test_fail "script compile failed";
-	}
-
-	if not test_script_run {
-		test_fail "script run failed";
-	}
-
-	if not test_result_execute {
-		test_fail "result execute failed";
-	}
-
-	test_binary_save "ihave-basic";
-	test_binary_load "ihave-basic";
+	include "execute-mime";
 }

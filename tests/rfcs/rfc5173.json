@@ -11,19 +11,17 @@
     1,
     {
       "Test": {
-        "test": {
-          "Body": {
-            "key_list": [
-              {
-                "Text": "MAKE MONEY FAST"
-              }
-            ],
-            "body_transform": "Raw",
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+        "Body": {
+          "key_list": [
+            {
+              "Text": "MAKE MONEY FAST"
+            }
+          ],
+          "body_transform": "Raw",
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],
@@ -41,28 +39,26 @@
     4,
     {
       "Test": {
-        "test": {
-          "Body": {
-            "key_list": [
-              {
-                "Text": "missile"
-              },
-              {
-                "Text": "coordinates"
-              }
-            ],
-            "body_transform": {
-              "Content": [
-                {
-                  "Text": "text"
-                }
-              ]
+        "Body": {
+          "key_list": [
+            {
+              "Text": "missile"
             },
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+            {
+              "Text": "coordinates"
+            }
+          ],
+          "body_transform": {
+            "Content": [
+              {
+                "Text": "text"
+              }
+            ]
+          },
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],
@@ -91,25 +87,23 @@
     7,
     {
       "Test": {
-        "test": {
-          "Body": {
-            "key_list": [
+        "Body": {
+          "key_list": [
+            {
+              "Text": ""
+            }
+          ],
+          "body_transform": {
+            "Content": [
               {
-                "Text": ""
+                "Text": "audio/mp3"
               }
-            ],
-            "body_transform": {
-              "Content": [
-                {
-                  "Text": "audio/mp3"
-                }
-              ]
-            },
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+            ]
+          },
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],
@@ -138,19 +132,17 @@
     10,
     {
       "Test": {
-        "test": {
-          "Body": {
-            "key_list": [
-              {
-                "Text": "project schedule"
-              }
-            ],
-            "body_transform": "Text",
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+        "Body": {
+          "key_list": [
+            {
+              "Text": "project schedule"
+            }
+          ],
+          "body_transform": "Text",
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],

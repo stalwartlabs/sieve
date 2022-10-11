@@ -24,7 +24,8 @@
           {
             "Text": "pix-y=240"
           }
-        ]
+        ],
+        "is_not": false
       }
     }
   ],
@@ -32,25 +33,23 @@
     2,
     {
       "Test": {
-        "test": {
-          "Convert": {
-            "from_media_type": {
-              "Text": "image/tiff"
+        "Convert": {
+          "from_media_type": {
+            "Text": "image/tiff"
+          },
+          "to_media_type": {
+            "Text": "image/jpeg"
+          },
+          "transcoding_params": [
+            {
+              "Text": "pix-x=320"
             },
-            "to_media_type": {
-              "Text": "image/jpeg"
-            },
-            "transcoding_params": [
-              {
-                "Text": "pix-x=320"
-              },
-              {
-                "Text": "pix-y=240"
-              }
-            ]
-          }
-        },
-        "is_not": false
+            {
+              "Text": "pix-y=240"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],

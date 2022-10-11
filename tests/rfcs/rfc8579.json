@@ -20,7 +20,7 @@
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "Archive"
+          "Text": "\\Archive"
         }
       }
     }
@@ -37,7 +37,7 @@
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "Junk"
+          "Text": "\\Junk"
         }
       }
     }
@@ -54,7 +54,7 @@
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "Junk"
+          "Text": "\\Junk"
         }
       }
     }
@@ -63,21 +63,19 @@
     4,
     {
       "Test": {
-        "test": {
-          "Environment": {
-            "name": {
-              "Text": "imap.mailbox"
-            },
-            "key_list": [
-              {
-                "Text": "*"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+        "Environment": {
+          "name": {
+            "Text": "imap.mailbox"
+          },
+          "key_list": [
+            {
+              "Text": "*"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],
@@ -115,21 +113,19 @@
     8,
     {
       "Test": {
-        "test": {
-          "Environment": {
-            "name": {
-              "Text": "imap.cause"
-            },
-            "key_list": [
-              {
-                "Text": "COPY"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap"
-          }
-        },
-        "is_not": false
+        "Environment": {
+          "name": {
+            "Text": "imap.cause"
+          },
+          "key_list": [
+            {
+              "Text": "COPY"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "is_not": false
+        }
       }
     }
   ],
@@ -143,19 +139,17 @@
     10,
     {
       "Test": {
-        "test": {
-          "SpecialUseExists": {
-            "mailbox": {
-              "Text": ""
-            },
-            "attributes": [
-              {
-                "Text": "Junk"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "SpecialUseExists": {
+          "mailbox": {
+            "Text": ""
+          },
+          "attributes": [
+            {
+              "Text": "\\Junk"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],

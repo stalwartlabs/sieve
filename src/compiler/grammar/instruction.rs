@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{test::Test, MatchType},
-        lexer::{string::StringItem, tokenizer::Tokenizer, word::Word, Token},
+        lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
     Compiler, Sieve,
@@ -45,7 +45,9 @@ pub(crate) enum Instruction {
     Jnz(usize),
 
     // RFC 5703
+    ForEveryPartPush,
     ForEveryPart(ForEveryPart),
+    ForEveryPartPop(usize),
     Replace(Replace),
     Enclose(Enclose),
     ExtractText(ExtractText),
@@ -201,6 +203,8 @@ impl Compiler {
                                 Block::new(Word::ForEveryPart)
                             }
                             .into();
+
+                            state.instructions.push(Instruction::ForEveryPartPush);
                             state
                                 .instructions
                                 .push(Instruction::ForEveryPart(ForEveryPart {
@@ -214,14 +218,22 @@ impl Compiler {
                                 let tag = state.tokens.next().unwrap().unwrap();
                                 let label = state.tokens.expect_static_string()?;
                                 let mut label_found = false;
+                                let mut num_pops = 0;
 
-                                for block in
-                                    state.block_stack.iter_mut().chain([&mut state.block]).rev()
+                                for block in [&mut state.block]
+                                    .into_iter()
+                                    .chain(state.block_stack.iter_mut().rev())
                                 {
-                                    if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
-                                        block.break_jmps.push(state.instructions.len());
-                                        label_found = true;
-                                        break;
+                                    if let Word::ForEveryPart = &block.btype {
+                                        num_pops += 1;
+                                        if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                            state
+                                                .instructions
+                                                .push(Instruction::ForEveryPartPop(num_pops));
+                                            block.break_jmps.push(state.instructions.len());
+                                            label_found = true;
+                                            break;
+                                        }
                                     }
                                 }
 
@@ -233,6 +245,7 @@ impl Compiler {
                                 }
                             } else {
                                 let mut label_found = false;
+                                state.instructions.push(Instruction::ForEveryPartPop(1));
                                 if let Word::ForEveryPart = &state.block.btype {
                                     state.block.break_jmps.push(state.instructions.len());
                                     label_found = true;
@@ -313,6 +326,23 @@ impl Compiler {
                             state.parse_include()?;
                         }
                         Word::Return => {
+                            let mut num_pops = 0;
+
+                            for block in [&state.block]
+                                .into_iter()
+                                .chain(state.block_stack.iter().rev())
+                            {
+                                if let Word::ForEveryPart = &block.btype {
+                                    num_pops += 1;
+                                }
+                            }
+
+                            if num_pops > 0 {
+                                state
+                                    .instructions
+                                    .push(Instruction::ForEveryPartPop(num_pops));
+                            }
+
                             state.instructions.push(Instruction::Return);
                         }
                         Word::Global => {
@@ -440,44 +470,51 @@ impl Compiler {
 
                     state.block = prev_block;
                 }
-                Token::Invalid(instruction) => {
-                    #[cfg(test)]
-                    if instruction.contains("test") {
-                        use crate::runtime::string::IntoString;
-                        if instruction == "test" {
-                            let param = state.parse_string()?;
-                            state
-                                .instructions
-                                .push(Instruction::External((instruction, vec![param])));
-                            let mut new_block = Block::new(Word::Else);
-                            new_block.line_num = state.tokens.line_num;
-                            new_block.line_pos = state.tokens.pos - state.tokens.line_start;
-                            state.tokens.expect_token(Token::CurlyOpen)?;
-                            state.block.last_block_start = state.instructions.len() - 1;
-                            state.block_stack.push(state.block);
-                            state.block = new_block;
-                        } else {
-                            let mut params = Vec::new();
-                            loop {
-                                params.push(match state.tokens.unwrap_next()?.token {
-                                    Token::StringConstant(s) | Token::StringVariable(s) => {
-                                        StringItem::Text(s.into_string())
-                                    }
-                                    Token::Number(n) => StringItem::Text(n.to_string()),
-                                    Token::Identifier(s) => StringItem::Text(s.to_string()),
-                                    Token::Tag(s) => StringItem::Text(format!(":{}", s)),
-                                    Token::Invalid(s) => StringItem::Text(s),
-                                    Token::Semicolon => break,
-                                    other => panic!("Invalid test param {:?}", other),
-                                });
-                            }
-                            state
-                                .instructions
-                                .push(Instruction::External((instruction, params)));
-                        }
-                        continue;
-                    }
 
+                #[cfg(test)]
+                Token::Invalid(instruction) if instruction.contains("test") => {
+                    use crate::compiler::lexer::string::StringItem;
+                    use crate::runtime::string::IntoString;
+
+                    if instruction == "test" {
+                        let param = state.parse_string()?;
+                        state
+                            .instructions
+                            .push(Instruction::External((instruction, vec![param])));
+                        let mut new_block = Block::new(Word::Else);
+                        new_block.line_num = state.tokens.line_num;
+                        new_block.line_pos = state.tokens.pos - state.tokens.line_start;
+                        state.tokens.expect_token(Token::CurlyOpen)?;
+                        state.block.last_block_start = state.instructions.len() - 1;
+                        state.block_stack.push(state.block);
+                        state.block = new_block;
+                    } else {
+                        let mut params = Vec::new();
+                        loop {
+                            params.push(match state.tokens.unwrap_next()?.token {
+                                Token::StringConstant(s) => StringItem::Text(s.into_string()),
+                                Token::StringVariable(s) => state
+                                    .tokenize_string(&s, true)
+                                    .map_err(|error_type| CompileError {
+                                        line_num: 0,
+                                        line_pos: 0,
+                                        error_type,
+                                    })?,
+                                Token::Number(n) => StringItem::Text(n.to_string()),
+                                Token::Identifier(s) => StringItem::Text(s.to_string()),
+                                Token::Tag(s) => StringItem::Text(format!(":{}", s)),
+                                Token::Invalid(s) => StringItem::Text(s),
+                                Token::Semicolon => break,
+                                other => panic!("Invalid test param {:?}", other),
+                            });
+                        }
+                        state
+                            .instructions
+                            .push(Instruction::External((instruction, params)));
+                    }
+                }
+
+                Token::Invalid(instruction) => {
                     state.ignore_instruction()?;
                     state.instructions.push(Instruction::Invalid(Invalid {
                         name: instruction,

@@ -39,9 +39,7 @@ test "Match values re-enabled" {
 		not string :is "${2}" "example.org" ) {
 		test_fail "match values not re-enabled properly.";
 	}
-}
 
-test "Match values retained" {
 	if not body :raw :matches "The * bad * test*" {
 		test_fail "should have matched";
 	}

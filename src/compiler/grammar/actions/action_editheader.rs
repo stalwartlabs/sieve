@@ -32,6 +32,7 @@ pub(crate) struct DeleteHeader {
     pub match_type: MatchType,
     pub field_name: StringItem,
     pub value_patterns: Vec<StringItem>,
+    pub mime_anychild: bool,
 }
 
 impl<'x> CompilerState<'x> {
@@ -71,6 +72,8 @@ impl<'x> CompilerState<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut index = None;
         let mut index_last = false;
+        let mut mime = false;
+        let mut mime_anychild = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -94,11 +97,21 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::Last) => {
                     index_last = true;
                 }
+                Token::Tag(Word::Mime) => {
+                    mime = true;
+                }
+                Token::Tag(Word::AnyChild) => {
+                    mime_anychild = true;
+                }
                 _ => {
                     field_name = self.parse_string_token(token_info)?;
                     break;
                 }
             }
+        }
+
+        if !mime && mime_anychild {
+            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
         }
 
         let cmd = Instruction::DeleteHeader(DeleteHeader {
@@ -114,6 +127,7 @@ impl<'x> CompilerState<'x> {
             } else {
                 Vec::new()
             },
+            mime_anychild,
         });
         self.instructions.push(cmd);
         Ok(())

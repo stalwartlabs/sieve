@@ -13,13 +13,11 @@
     1,
     {
       "Test": {
-        "test": {
-          "Size": {
-            "over": true,
-            "limit": 512000
-          }
-        },
-        "is_not": false
+        "Size": {
+          "over": true,
+          "limit": 512000,
+          "is_not": false
+        }
       }
     }
   ],
@@ -36,7 +34,7 @@
         "varname": null,
         "flags": [
           {
-            "Text": "Deleted"
+            "Text": "\\Deleted"
           }
         ]
       }
@@ -46,29 +44,24 @@
     4,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@frobnitzm.example.edu"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@frobnitzm.example.edu"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -87,7 +80,7 @@
         },
         "flags": [
           {
-            "Text": "Flagged"
+            "Text": "\\Flagged"
           }
         ]
       }
@@ -121,7 +114,7 @@
         },
         "flags": [
           {
-            "Text": "Deleted"
+            "Text": "\\Deleted"
           }
         ]
       }
@@ -136,7 +129,7 @@
         },
         "flags": [
           {
-            "Text": "Answered"
+            "Text": "\\Answered"
           }
         ]
       }
@@ -151,10 +144,10 @@
         },
         "flags": [
           {
-            "Text": "Deleted"
+            "Text": "\\Deleted"
           },
           {
-            "Text": "Answered"
+            "Text": "\\Answered"
           }
         ]
       }
@@ -169,7 +162,7 @@
         },
         "flags": [
           {
-            "Text": "Deleted Answered"
+            "Text": "\\Deleted \\Answered"
           }
         ]
       }
@@ -179,29 +172,24 @@
     12,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Disposition-Notification-To"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "mel@example.com"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Disposition-Notification-To"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "mel@example.com"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -230,29 +218,24 @@
     15,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "from"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "imap@cac.washington.example.edu"
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "imap@cac.washington.example.edu"
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -300,23 +283,21 @@
     19,
     {
       "Test": {
-        "test": {
-          "HasFlag": {
-            "comparator": "AsciiCaseMap",
-            "match_type": "Contains",
-            "variable_list": [
-              {
-                "Text": "MyVar"
-              }
-            ],
-            "flags": [
-              {
-                "Text": "Junk"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "HasFlag": {
+          "comparator": "AsciiCaseMap",
+          "match_type": "Contains",
+          "variable_list": [
+            {
+              "Text": "MyVar"
+            }
+          ],
+          "flags": [
+            {
+              "Text": "Junk"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -330,26 +311,24 @@
     21,
     {
       "Test": {
-        "test": {
-          "HasFlag": {
-            "comparator": "AsciiCaseMap",
-            "match_type": "Contains",
-            "variable_list": [
-              {
-                "Text": "MyVar"
-              }
-            ],
-            "flags": [
-              {
-                "Text": "label"
-              },
-              {
-                "Text": "forward"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "HasFlag": {
+          "comparator": "AsciiCaseMap",
+          "match_type": "Contains",
+          "variable_list": [
+            {
+              "Text": "MyVar"
+            }
+          ],
+          "flags": [
+            {
+              "Text": "label"
+            },
+            {
+              "Text": "forward"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -363,25 +342,23 @@
     23,
     {
       "Test": {
-        "test": {
-          "HasFlag": {
-            "comparator": "AsciiNumeric",
-            "match_type": {
-              "Count": "Ge"
-            },
-            "variable_list": [
-              {
-                "Text": "MyFlags"
-              }
-            ],
-            "flags": [
-              {
-                "Text": "2"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "HasFlag": {
+          "comparator": "AsciiNumeric",
+          "match_type": {
+            "Count": "Ge"
+          },
+          "variable_list": [
+            {
+              "Text": "MyFlags"
+            }
+          ],
+          "flags": [
+            {
+              "Text": "2"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
@@ -402,7 +379,7 @@
         },
         "flags": [
           {
-            "Text": "Deleted"
+            "Text": "\\Deleted"
           }
         ],
         "mailbox_id": null,
@@ -426,13 +403,11 @@
     27,
     {
       "Test": {
-        "test": {
-          "Size": {
-            "over": true,
-            "limit": 1048576
-          }
-        },
-        "is_not": false
+        "Size": {
+          "over": true,
+          "limit": 1048576,
+          "is_not": false
+        }
       }
     }
   ],
@@ -461,29 +436,24 @@
     30,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "From"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "boss@company.example.com"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "From"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "boss@company.example.com"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -502,7 +472,7 @@
         },
         "flags": [
           {
-            "Text": "Flagged"
+            "Text": "\\Flagged"
           }
         ]
       }
@@ -531,29 +501,24 @@
     34,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "From"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "grandma@example.net"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "From"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "grandma@example.net"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -572,7 +537,7 @@
         },
         "flags": [
           {
-            "Text": "Answered"
+            "Text": "\\Answered"
           },
           {
             "Text": "$MDNSent"
@@ -604,29 +569,24 @@
     38,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Sender"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "owner-ietf-mta-filters@example.org"
-              }
-            ],
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Sender"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "owner-ietf-mta-filters@example.org"
+            }
+          ],
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -645,7 +605,7 @@
           "Local": 0
         },
         "value": {
-          "Text": "Flagged $Work"
+          "Text": "\\Flagged $Work"
         }
       }
     }
@@ -682,32 +642,27 @@
     44,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "From"
-              },
-              {
-                "Text": "To"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "company.example.com"
-              }
-            ],
-            "address_part": "Domain",
-            "match_type": "Is",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "From"
+            },
+            {
+              "Text": "To"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "company.example.com"
+            }
+          ],
+          "address_part": "Domain",
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -739,32 +694,27 @@
     48,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "To"
-              },
-              {
-                "Text": "Cc"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "me@company.example.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": true
+        "Address": {
+          "header_list": [
+            {
+              "Text": "To"
+            },
+            {
+              "Text": "Cc"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "me@company.example.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": true
+        }
       }
     }
   ],
@@ -778,34 +728,29 @@
     50,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*make*money*fast*"
-              },
-              {
-                "Text": "*university*dipl*mas*"
-              }
-            ],
-            "match_type": {
-              "Matches": 0
+        "Header": {
+          "header_list": [
+            {
+              "Text": "subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*make*money*fast*"
             },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            {
+              "Text": "*university*dipl*mas*"
+            }
+          ],
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],

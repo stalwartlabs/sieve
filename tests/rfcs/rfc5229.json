@@ -64,36 +64,31 @@
     4,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "List": [
-                  {
-                    "Text": "dear "
-                  },
-                  {
-                    "LocalVariable": 2
-                  }
-                ]
-              }
-            ],
-            "match_type": "Contains",
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "List": [
+                {
+                  "Text": "dear "
+                },
+                {
+                  "LocalVariable": 2
+                }
+              ]
+            }
+          ],
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -107,31 +102,26 @@
     6,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "List-ID"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*<*@*"
-              }
-            ],
-            "match_type": {
-              "Matches": 4
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "List-ID"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*<*@*"
+            }
+          ],
+          "match_type": {
+            "Matches": 4
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -171,31 +161,26 @@
     10,
     {
       "Test": {
-        "test": {
-          "Header": {
-            "header_list": [
-              {
-                "Text": "Subject"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "[*] *"
-              }
-            ],
-            "match_type": {
-              "Matches": 4
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_opts": "None",
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Header": {
+          "header_list": [
+            {
+              "Text": "Subject"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "[*] *"
+            }
+          ],
+          "match_type": {
+            "Matches": 4
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -223,37 +208,32 @@
     14,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "To"
-              },
-              {
-                "Text": "Cc"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "coyote@**.com"
-              },
-              {
-                "Text": "wile@**.com"
-              }
-            ],
-            "address_part": "All",
-            "match_type": {
-              "Matches": 4
+        "Address": {
+          "header_list": [
+            {
+              "Text": "To"
             },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+            {
+              "Text": "Cc"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "coyote@**.com"
+            },
+            {
+              "Text": "wile@**.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Matches": 4
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -298,10 +278,7 @@
   [
     19,
     {
-      "Test": {
-        "test": "True",
-        "is_not": false
-      }
+      "Test": "True"
     }
   ],
   [
@@ -314,31 +291,26 @@
     21,
     {
       "Test": {
-        "test": {
-          "Address": {
-            "header_list": [
-              {
-                "Text": "To"
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "*.com"
-              }
-            ],
-            "address_part": "Domain",
-            "match_type": {
-              "Matches": 0
-            },
-            "comparator": "AsciiCaseMap",
-            "index": null,
-            "index_last": false,
-            "mime": false,
-            "mime_anychild": false,
-            "list": false
-          }
-        },
-        "is_not": false
+        "Address": {
+          "header_list": [
+            {
+              "Text": "To"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "*.com"
+            }
+          ],
+          "address_part": "Domain",
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
       }
     }
   ],
@@ -544,36 +516,33 @@
     35,
     {
       "Test": {
-        "test": {
-          "String": {
-            "match_type": {
-              "Matches": 0
-            },
-            "comparator": "AsciiCaseMap",
-            "source": [
-              {
-                "List": [
-                  {
-                    "Text": " "
-                  },
-                  {
-                    "LocalVariable": 9
-                  },
-                  {
-                    "Text": " "
-                  }
-                ]
-              }
-            ],
-            "key_list": [
-              {
-                "Text": "* pending *"
-              }
-            ],
-            "list": false
-          }
-        },
-        "is_not": false
+        "String": {
+          "match_type": {
+            "Matches": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "List": [
+                {
+                  "Text": " "
+                },
+                {
+                  "LocalVariable": 9
+                },
+                {
+                  "Text": " "
+                }
+              ]
+            }
+          ],
+          "key_list": [
+            {
+              "Text": "* pending *"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],

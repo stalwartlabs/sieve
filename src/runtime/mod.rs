@@ -1,6 +1,7 @@
-use std::{ops::Deref, sync::Arc};
+use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
+use mail_parser::HeaderName;
 use phf::phf_map;
 
 use crate::{
@@ -84,11 +85,21 @@ impl Runtime {
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,
             max_instructions: 5000,
+            protected_headers: Vec::new(),
         }
     }
 
-    pub fn instance(&self) -> Context {
-        Context::new(self)
+    pub fn add_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
+        self.protected_headers.push(HeaderName::parse(header_name));
+    }
+
+    pub fn with_protected_header(mut self, header_name: impl Into<Cow<'static, str>>) -> Self {
+        self.add_protected_header(header_name);
+        self
+    }
+
+    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
+        Context::new(self, raw_message)
     }
 }
 
@@ -112,6 +123,16 @@ impl Input {
 
     pub fn fail() -> Self {
         Input::False
+    }
+}
+
+impl From<bool> for Input {
+    fn from(value: bool) -> Self {
+        if value {
+            Input::True
+        } else {
+            Input::False
+        }
     }
 }
 
@@ -146,6 +167,12 @@ impl Script {
         match self {
             Script::Personal(name) | Script::Global(name) => name,
         }
+    }
+}
+
+impl Display for Script {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

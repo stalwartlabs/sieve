@@ -63,11 +63,11 @@ test "Basic functionality" {
  */
 
 test "Exact size" {
-	if size :under 210 {
+	if size :under 221 {
 		test_fail "size :under matched exact limit";
 	}
 
-	if size :over 210 {
+	if size :over 221 {
 		test_fail "size :over matched exact limit";
 	}
 }

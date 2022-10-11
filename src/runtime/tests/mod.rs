@@ -28,7 +28,7 @@ impl Test {
             Test::Address(test) => test.exec(ctx, message),
             Test::Envelope(test) => test.exec(ctx),
             Test::Exists(test) => test.exec(ctx, message),
-            Test::Size(test) => test.exec(message),
+            Test::Size(test) => test.exec(ctx),
             Test::Body(test) => test.exec(ctx, message),
             Test::String(test) => test.exec(ctx),
             Test::Date(_) => todo!(),
@@ -66,6 +66,19 @@ impl Test {
             Test::False => false,
             Test::Invalid(invalid) => {
                 return TestResult::Error(RuntimeError::InvalidInstruction(invalid.clone()))
+            }
+            #[cfg(test)]
+            Test::External((command, params, is_not)) => {
+                return TestResult::Event {
+                    event: Event::TestCommand {
+                        command: command.clone(),
+                        params: params
+                            .iter()
+                            .map(|p| ctx.eval_string(p).into_owned())
+                            .collect(),
+                    },
+                    is_not: *is_not,
+                };
             }
         })
     }

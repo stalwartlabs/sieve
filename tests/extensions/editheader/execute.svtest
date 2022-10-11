@@ -29,13 +29,9 @@ Frop.
 
 test_result_reset;
 test "Multi script" {
-	if not test_multiscript [
-		"execute/multiscript-before.sieve",
-		"execute/multiscript-personal.sieve",
-		"execute/multiscript-after.sieve"
-	] {
-		test_fail "failed to run all scripts";
-	}
+	include "multiscript-before";
+	include "multiscript-personal";
+	include "multiscript-after";
 
 	test_message :folder "INBOX" 0;
 

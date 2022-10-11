@@ -32,11 +32,11 @@
           "create": true,
           "flags": [
             {
-              "Text": "Seen"
+              "Text": "\\Seen"
             }
           ],
           "special_use": {
-            "Text": "Sent"
+            "Text": "\\Sent"
           },
           "mailbox_id": null
         },
@@ -75,24 +75,22 @@
     3,
     {
       "Test": {
-        "test": {
-          "NotifyMethodCapability": {
-            "comparator": "AsciiCaseMap",
-            "match_type": "Is",
-            "notification_uri": {
-              "Text": "xmpp:"
-            },
-            "notification_capability": {
-              "Text": "fcc"
-            },
-            "key_list": [
-              {
-                "Text": "yes"
-              }
-            ]
-          }
-        },
-        "is_not": false
+        "NotifyMethodCapability": {
+          "comparator": "AsciiCaseMap",
+          "match_type": "Is",
+          "notification_uri": {
+            "Text": "xmpp:"
+          },
+          "notification_capability": {
+            "Text": "fcc"
+          },
+          "key_list": [
+            {
+              "Text": "yes"
+            }
+          ],
+          "is_not": false
+        }
       }
     }
   ],
