@@ -138,3 +138,92 @@ impl<'x> Context<'x> {
         result
     }
 }
+
+pub(crate) fn parse_envelope_address(addr: &str) -> Option<&str> {
+    let addr = addr.as_bytes();
+    let mut addr_start_pos = 0;
+    let mut addr_end_pos = addr.len();
+    let mut last_ch = 0;
+    let mut at_pos = 0;
+    let mut has_bracket = false;
+    let mut in_path = false;
+
+    if addr.is_empty() {
+        return "".into();
+    }
+
+    for (pos, &ch) in addr.iter().enumerate() {
+        match ch {
+            b'<' => {
+                if pos == 0 {
+                    addr_start_pos = pos + 1;
+                    has_bracket = true;
+                } else {
+                    return None;
+                }
+            }
+            b'>' => {
+                if has_bracket && pos == addr.len() - 1 {
+                    if addr.len() > 2 {
+                        has_bracket = false;
+                        addr_end_pos = pos;
+                    } else {
+                        // <>
+                        return "".into();
+                    }
+                } else {
+                    return None;
+                }
+            }
+            b':' => {
+                if at_pos != 0 {
+                    at_pos = 0;
+                    addr_start_pos = pos + 1;
+                    in_path = false;
+                } else {
+                    return None;
+                }
+            }
+            b',' => {
+                if at_pos != 0 {
+                    at_pos = 0;
+                    in_path = true;
+                } else {
+                    return None;
+                }
+            }
+            b'@' => {
+                if at_pos == 0 && pos != addr.len() - 1 {
+                    at_pos = pos;
+                } else {
+                    return None;
+                }
+            }
+            b'.' => {
+                if (at_pos != 0 && last_ch == b'.') || last_ch == b'@' {
+                    return None;
+                }
+            }
+            _ => {
+                if ch.is_ascii_whitespace() || !ch.is_ascii() {
+                    return None;
+                }
+            }
+        }
+
+        last_ch = ch;
+    }
+
+    if !has_bracket && !in_path && at_pos > addr_start_pos && addr_end_pos - 1 > at_pos {
+        std::str::from_utf8(&addr[addr_start_pos..addr_end_pos])
+            .unwrap()
+            .into()
+    } else {
+        match addr.get(addr_start_pos..addr_end_pos) {
+            Some(addr) if at_pos == 0 && addr.eq_ignore_ascii_case(b"mailer-daemon") => {
+                std::str::from_utf8(addr).unwrap().into()
+            }
+            _ => None,
+        }
+    }
+}

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{test::Test, MatchType},
-        lexer::{string::StringItem, tokenizer::Tokenizer, word::Word, Token},
+        lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
     Compiler, Sieve,
@@ -45,7 +45,9 @@ pub(crate) enum Instruction {
     Jnz(usize),
 
     // RFC 5703
+    ForEveryPartPush,
     ForEveryPart(ForEveryPart),
+    ForEveryPartPop(usize),
     Replace(Replace),
     Enclose(Enclose),
     ExtractText(ExtractText),
@@ -199,6 +201,8 @@ impl Compiler {
                                 Block::new(Word::ForEveryPart)
                             }
                             .into();
+
+                            state.instructions.push(Instruction::ForEveryPartPush);
                             state
                                 .instructions
                                 .push(Instruction::ForEveryPart(ForEveryPart {
@@ -212,14 +216,22 @@ impl Compiler {
                                 let tag = state.tokens.next().unwrap().unwrap();
                                 let label = state.tokens.expect_static_string()?;
                                 let mut label_found = false;
+                                let mut num_pops = 0;
 
-                                for block in
-                                    state.block_stack.iter_mut().chain([&mut state.block]).rev()
+                                for block in [&mut state.block]
+                                    .into_iter()
+                                    .chain(state.block_stack.iter_mut().rev())
                                 {
-                                    if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
-                                        block.break_jmps.push(state.instructions.len());
-                                        label_found = true;
-                                        break;
+                                    if let Word::ForEveryPart = &block.btype {
+                                        num_pops += 1;
+                                        if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                            state
+                                                .instructions
+                                                .push(Instruction::ForEveryPartPop(num_pops));
+                                            block.break_jmps.push(state.instructions.len());
+                                            label_found = true;
+                                            break;
+                                        }
                                     }
                                 }
 
@@ -231,6 +243,7 @@ impl Compiler {
                                 }
                             } else {
                                 let mut label_found = false;
+                                state.instructions.push(Instruction::ForEveryPartPop(1));
                                 if let Word::ForEveryPart = &state.block.btype {
                                     state.block.break_jmps.push(state.instructions.len());
                                     label_found = true;
@@ -311,6 +324,23 @@ impl Compiler {
                             state.parse_include()?;
                         }
                         Word::Return => {
+                            let mut num_pops = 0;
+
+                            for block in [&state.block]
+                                .into_iter()
+                                .chain(state.block_stack.iter().rev())
+                            {
+                                if let Word::ForEveryPart = &block.btype {
+                                    num_pops += 1;
+                                }
+                            }
+
+                            if num_pops > 0 {
+                                state
+                                    .instructions
+                                    .push(Instruction::ForEveryPartPop(num_pops));
+                            }
+
                             state.instructions.push(Instruction::Return);
                         }
                         Word::Global => {
@@ -438,8 +468,8 @@ impl Compiler {
 
                     state.block = prev_block;
                 }
-                Token::Invalid(instruction) => {
 
+                Token::Invalid(instruction) => {
                     state.ignore_instruction()?;
                     state.instructions.push(Instruction::Invalid(Invalid {
                         name: instruction,

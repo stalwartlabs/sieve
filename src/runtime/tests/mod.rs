@@ -28,7 +28,7 @@ impl Test {
             Test::Address(test) => test.exec(ctx, message),
             Test::Envelope(test) => test.exec(ctx),
             Test::Exists(test) => test.exec(ctx, message),
-            Test::Size(test) => test.exec(message),
+            Test::Size(test) => test.exec(ctx),
             Test::Body(test) => test.exec(ctx, message),
             Test::String(test) => test.exec(ctx),
             Test::Date(_) => todo!(),

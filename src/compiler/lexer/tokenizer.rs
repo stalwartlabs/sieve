@@ -88,6 +88,8 @@ impl<'x> Tokenizer<'x> {
 
                 if let Ok(number) = word.parse::<usize>() {
                     Token::Number(number * multiplier)
+                } else if self.token_is_tag {
+                    Token::Invalid(format!(":{}", word))
                 } else {
                     Token::Invalid(word.to_string())
                 }

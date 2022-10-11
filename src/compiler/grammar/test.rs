@@ -93,6 +93,7 @@ pub(crate) enum Test {
 
     // RFC 8579
     SpecialUseExists(TestSpecialUseExists),
+
 }
 
 #[derive(Debug)]
@@ -399,6 +400,7 @@ impl Test {
                 op.is_not = true;
             }
             Test::Invalid(_) => {}
+
         }
         self
     }

@@ -1,13 +1,11 @@
-use mail_parser::Message;
-
-use crate::compiler::grammar::tests::test_size::TestSize;
+use crate::{compiler::grammar::tests::test_size::TestSize, Context};
 
 impl TestSize {
-    pub(crate) fn exec(&self, message: &Message) -> bool {
+    pub(crate) fn exec(&self, ctx: &Context) -> bool {
         (if self.over {
-            message.raw_message.len() > self.limit
+            ctx.message_size > self.limit
         } else {
-            message.raw_message.len() < self.limit
+            ctx.message_size < self.limit
         }) ^ self.is_not
     }
 }

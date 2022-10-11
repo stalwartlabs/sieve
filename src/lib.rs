@@ -2,8 +2,11 @@ use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{instruction::Instruction, Capability};
-use mail_parser::Message;
-use runtime::context::ScriptStack;
+use mail_parser::{HeaderName, Message};
+use runtime::{
+    actions::{action_editheader::InsertHeader, action_mime::ReplacePart},
+    context::ScriptStack,
+};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -30,8 +33,10 @@ pub struct Compiler {
     pub(crate) max_local_variables: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
+    pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, String>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
@@ -42,10 +47,12 @@ pub struct Runtime {
 #[derive(Clone)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
-    pub(crate) envelope: Vec<(Envelope<'x>, Cow<'x, str>)>,
+    pub(crate) message: Message<'x>,
+    pub(crate) envelope: Vec<(Envelope<'x>, String)>,
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
+    pub(crate) message_size: usize,
 
     pub(crate) pos: usize,
     pub(crate) test_result: bool,
@@ -54,6 +61,11 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
+
+    pub(crate) header_insertions: Vec<InsertHeader<'x>>,
+    pub(crate) header_deletions: Vec<usize>,
+    pub(crate) part_replacements: Vec<ReplacePart<'x>>,
+    pub(crate) part_deletions: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -80,6 +92,18 @@ pub enum Event {
     },
     MailboxExists {
         names: Vec<String>,
+    },
+    FileInto {
+        folder: String,
+        flags: Vec<String>,
+        mailbox_id: Option<String>,
+        special_use: Option<String>,
+        copy: bool,
+        create: bool,
+    },
+    Redirect {
+        address: String,
+        copy: bool,
     },
 
 }

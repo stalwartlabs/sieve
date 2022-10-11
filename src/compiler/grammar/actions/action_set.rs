@@ -57,43 +57,7 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     if name.is_none() {
-                        match token_info.token {
-                            Token::StringConstant(value) => {
-                                name = if value.len() > 7
-                                    && value[..7].eq_ignore_ascii_case(b"global.")
-                                {
-                                    Variable::Global(
-                                        String::from_utf8(value[7..].to_vec()).map_err(|_| {
-                                            TokenInfo {
-                                                token: Token::StringConstant(value),
-                                                line_num: token_info.line_num,
-                                                line_pos: token_info.line_pos,
-                                            }
-                                            .invalid_utf8()
-                                        })?,
-                                    )
-                                } else {
-                                    let name = String::from_utf8(value).map_err(|err| {
-                                        TokenInfo {
-                                            token: Token::StringConstant(err.into_bytes()),
-                                            line_num: token_info.line_num,
-                                            line_pos: token_info.line_pos,
-                                        }
-                                        .invalid_utf8()
-                                    })?;
-
-                                    if !self.is_var_global(&name) {
-                                        Variable::Local(self.register_local_var(&name))
-                                    } else {
-                                        Variable::Global(name.to_ascii_lowercase())
-                                    }
-                                }
-                                .into();
-                            }
-                            _ => {
-                                return Err(token_info.invalid("variable name must be a constant"));
-                            }
-                        }
+                        name = self.parse_variable_name(token_info)?.into();
                     } else {
                         value = self.parse_string_token(token_info)?;
                         break;
@@ -110,6 +74,42 @@ impl<'x> CompilerState<'x> {
             value,
         }));
         Ok(())
+    }
+
+    pub(crate) fn parse_variable_name(
+        &mut self,
+        token_info: TokenInfo,
+    ) -> Result<Variable, CompileError> {
+        match token_info.token {
+            Token::StringConstant(value) => Ok(
+                if value.len() > 7 && value[..7].eq_ignore_ascii_case(b"global.") {
+                    Variable::Global(String::from_utf8(value[7..].to_vec()).map_err(|_| {
+                        TokenInfo {
+                            token: Token::StringConstant(value),
+                            line_num: token_info.line_num,
+                            line_pos: token_info.line_pos,
+                        }
+                        .invalid_utf8()
+                    })?)
+                } else {
+                    let name = String::from_utf8(value).map_err(|err| {
+                        TokenInfo {
+                            token: Token::StringConstant(err.into_bytes()),
+                            line_num: token_info.line_num,
+                            line_pos: token_info.line_pos,
+                        }
+                        .invalid_utf8()
+                    })?;
+
+                    if !self.is_var_global(&name) {
+                        Variable::Local(self.register_local_var(&name))
+                    } else {
+                        Variable::Global(name.to_ascii_lowercase())
+                    }
+                },
+            ),
+            _ => Err(token_info.invalid("variable name must be a constant")),
+        }
     }
 }
 

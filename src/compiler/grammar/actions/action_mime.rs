@@ -6,7 +6,7 @@ use crate::compiler::{
     CompileError,
 };
 
-use super::action_set::Modifier;
+use super::action_set::{Modifier, Variable};
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct ForEveryPart {
@@ -32,7 +32,7 @@ pub(crate) struct Enclose {
 pub(crate) struct ExtractText {
     pub modifiers: Vec<Modifier>,
     pub first: Option<usize>,
-    pub varname: StringItem,
+    pub name: Variable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,7 +111,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_extracttext(&mut self) -> Result<(), CompileError> {
         let mut modifiers = Vec::new();
         let mut first = None;
-        let varname;
+        let name;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -134,7 +134,7 @@ impl<'x> CompilerState<'x> {
                     }
                 }
                 _ => {
-                    varname = self.parse_string_token(token_info)?;
+                    name = self.parse_variable_name(token_info)?;
                     break;
                 }
             }
@@ -146,7 +146,7 @@ impl<'x> CompilerState<'x> {
             .push(Instruction::ExtractText(ExtractText {
                 modifiers,
                 first,
-                varname,
+                name,
             }));
         Ok(())
     }
