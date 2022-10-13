@@ -1,9 +1,6 @@
 use std::borrow::Cow;
 
-use mail_parser::{
-    parsers::{fields::unstructured::parse_unstructured, message::MessageStream},
-    Header, HeaderName, HeaderValue, Message, RfcHeader,
-};
+use mail_parser::{parsers::MessageStream, Header, HeaderName, HeaderValue, RfcHeader};
 
 use crate::{
     compiler::{
@@ -16,7 +13,7 @@ use crate::{
 use super::mime::SubpartIterator;
 
 impl TestHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context, message: &Message) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
         let key_list = ctx.eval_strings(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
         let mime_opts = match &self.mime_opts {
@@ -30,13 +27,12 @@ impl TestHeader {
         (match &self.match_type {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
-                message.find_headers(
-                    ctx,
+                ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
-                        message.find_header_values(header, &mime_opts, |value| {
+                    |header, _, _| {
+                        ctx.find_header_values(header, &mime_opts, |value| {
                             for key in &key_list {
                                 if is_is {
                                     if self.comparator.is(value, key.as_ref()) {
@@ -51,13 +47,12 @@ impl TestHeader {
                     },
                 )
             }
-            MatchType::Value(rel_match) => message.find_headers(
-                ctx,
+            MatchType::Value(rel_match) => ctx.find_headers(
                 &header_list,
                 self.index,
                 self.mime_anychild,
-                |header| {
-                    message.find_header_values(header, &mime_opts, |value| {
+                |header, _, _| {
+                    ctx.find_header_values(header, &mime_opts, |value| {
                         for key in &key_list {
                             if self.comparator.relational(rel_match, value, key.as_ref()) {
                                 return true;
@@ -70,13 +65,12 @@ impl TestHeader {
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
                 let mut captured_positions = Vec::new();
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
-                let result = message.find_headers(
-                    ctx,
+                let result = ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
-                        message.find_header_values(header, &mime_opts, |value| {
+                    |header, _, _| {
+                        ctx.find_header_values(header, &mime_opts, |value| {
                             for key in &key_list {
                                 if is_matches {
                                     if self.comparator.matches(
@@ -107,12 +101,11 @@ impl TestHeader {
             }
             MatchType::Count(rel_match) => {
                 let mut count = 0;
-                message.find_headers(
-                    ctx,
+                ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
+                    |header, _, _| {
                         match &mime_opts {
                             MimeOpts::None => {
                                 count += 1;
@@ -174,60 +167,28 @@ impl<'x> Context<'x> {
         }
         result
     }
-}
 
-pub(crate) trait MessageHeaders {
-    fn find_headers(
+    pub(crate) fn find_headers(
         &self,
-        ctx: &Context,
         header_names: &[HeaderName],
         index: Option<i32>,
         any_child: bool,
-        visitor_fnc: impl FnMut(&Header) -> bool,
-    ) -> bool;
-
-    fn find_header_values(
-        &self,
-        header: &Header,
-        mime_opts: &MimeOpts<Cow<str>>,
-        visitor_fnc: impl FnMut(&str) -> bool,
-    ) -> bool;
-}
-
-impl<'x> MessageHeaders for Message<'x> {
-    fn find_headers(
-        &self,
-        ctx: &Context,
-        header_names: &[HeaderName],
-        index: Option<i32>,
-        any_child: bool,
-        mut visitor_fnc: impl FnMut(&Header) -> bool,
+        mut visitor_fnc: impl FnMut(&Header, usize, usize) -> bool,
     ) -> bool {
-        let parts = [ctx.part];
-        let mut part_iter = SubpartIterator::new(ctx, self, &parts, any_child);
+        let parts = [self.part];
+        let mut part_iter = SubpartIterator::new(self, &parts, any_child);
 
         while let Some((part_id, message_part)) = part_iter.next() {
             'outer: for header_name in header_names {
                 match index {
                     None => {
-                        for header in ctx.get_inserted_headers_top(part_id) {
-                            if &header.name == header_name && visitor_fnc(header) {
-                                return true;
-                            }
-                        }
-
-                        for header in message_part
+                        for (pos, header) in message_part
                             .headers
                             .iter()
-                            .filter(|h| &h.name == header_name)
+                            .enumerate()
+                            .filter(|(_, h)| &h.name == header_name)
                         {
-                            if !ctx.is_header_deleted(header.offset_field) && visitor_fnc(header) {
-                                return true;
-                            }
-                        }
-
-                        for header in ctx.get_inserted_headers_bottom(part_id) {
-                            if &header.name == header_name && visitor_fnc(header) {
+                            if visitor_fnc(header, part_id, pos) {
                                 return true;
                             }
                         }
@@ -235,37 +196,11 @@ impl<'x> MessageHeaders for Message<'x> {
                     Some(index) if index >= 0 => {
                         let mut header_count = 0;
 
-                        for header in ctx.get_inserted_headers_top(part_id) {
+                        for (pos, header) in message_part.headers.iter().enumerate() {
                             if &header.name == header_name {
                                 header_count += 1;
                                 if header_count == index {
-                                    if visitor_fnc(header) {
-                                        return true;
-                                    }
-                                    continue 'outer;
-                                }
-                            }
-                        }
-
-                        for header in &message_part.headers {
-                            if &header.name == header_name
-                                && !ctx.is_header_deleted(header.offset_field)
-                            {
-                                header_count += 1;
-                                if header_count == index {
-                                    if visitor_fnc(header) {
-                                        return true;
-                                    }
-                                    continue 'outer;
-                                }
-                            }
-                        }
-
-                        for header in ctx.get_inserted_headers_bottom(part_id) {
-                            if &header.name == header_name {
-                                header_count += 1;
-                                if header_count == index {
-                                    if visitor_fnc(header) {
+                                    if visitor_fnc(header, part_id, pos) {
                                         return true;
                                     }
                                     continue 'outer;
@@ -277,40 +212,14 @@ impl<'x> MessageHeaders for Message<'x> {
                         let index = -index;
                         let mut header_count = 0;
 
-                        for header in ctx.get_inserted_headers_bottom_rev(part_id) {
+                        for (pos, header) in message_part.headers.iter().enumerate().rev() {
                             if &header.name == header_name {
                                 header_count += 1;
                                 if header_count == index {
-                                    if visitor_fnc(header) {
-                                        return true;
-                                    }
-                                    continue 'outer;
-                                }
-                            }
-                        }
-
-                        for header in message_part.headers.iter().rev() {
-                            if &header.name == header_name
-                                && !ctx.is_header_deleted(header.offset_field)
-                            {
-                                header_count += 1;
-                                if header_count == index {
-                                    if visitor_fnc(header) {
+                                    if visitor_fnc(header, part_id, pos) {
                                         return true;
                                     }
                                     break;
-                                }
-                            }
-                        }
-
-                        for header in ctx.get_inserted_headers_top_rev(part_id) {
-                            if &header.name == header_name {
-                                header_count += 1;
-                                if header_count == index {
-                                    if visitor_fnc(header) {
-                                        return true;
-                                    }
-                                    continue 'outer;
                                 }
                             }
                         }
@@ -321,13 +230,38 @@ impl<'x> MessageHeaders for Message<'x> {
         false
     }
 
-    fn find_header_values(
+    #[allow(unused_assignments)]
+    pub(crate) fn find_header_values(
         &self,
         header: &Header,
         mime_opts: &MimeOpts<Cow<str>>,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
-        match (mime_opts, &header.value) {
+        let mut raw_header = None;
+        let mut header_value_ = None;
+        let header_value = if header.offset_end != 0 {
+            &header.value
+        } else {
+            let value = if let HeaderValue::Text(text) = &header.value {
+                text.as_ref()
+            } else {
+                #[cfg(test)]
+                panic!("Unexpected value.");
+                #[cfg(not(test))]
+                return false;
+            };
+            if mime_opts == &MimeOpts::None {
+                return visitor_fnc(value);
+            } else {
+                raw_header = format!("{}\n", value).into_bytes().into();
+                header_value_ = MessageStream::new(raw_header.as_ref().unwrap())
+                    .parse_content_type()
+                    .into();
+                header_value_.as_ref().unwrap()
+            }
+        };
+
+        match (mime_opts, header_value) {
             (MimeOpts::None, HeaderValue::Text(text))
                 if matches!(
                     &header.name,
@@ -338,16 +272,19 @@ impl<'x> MessageHeaders for Message<'x> {
                             | RfcHeader::ContentLocation
                             | RfcHeader::ContentTransferEncoding,
                     )
-                ) || header.offset_end == 0 =>
+                ) =>
             {
                 visitor_fnc(text.as_ref())
             }
             (MimeOpts::None, _) => {
-                if let HeaderValue::Text(text) = parse_unstructured(&mut MessageStream::new(
-                    self.raw_message
+                if let HeaderValue::Text(text) = MessageStream::new(
+                    self.message
+                        .raw_message
                         .get(header.offset_start..header.offset_end)
                         .unwrap_or(b""),
-                )) {
+                )
+                .parse_unstructured()
+                {
                     visitor_fnc(text.as_ref())
                 } else {
                     visitor_fnc("")

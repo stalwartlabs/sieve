@@ -1,10 +1,8 @@
 use std::slice::Iter;
 
-use mail_parser::{Message, MessageAttachment, MessagePart, MimeHeaders, PartType};
+use mail_parser::{Message, MessagePart, MimeHeaders, PartType};
 
 use crate::Context;
-
-use super::test_body::MAX_NEST_LEVELS;
 
 #[derive(Debug)]
 pub(crate) enum ContentTypeFilter {
@@ -13,7 +11,6 @@ pub(crate) enum ContentTypeFilter {
 }
 
 pub(crate) struct SubpartIterator<'x> {
-    message: &'x Message<'x>,
     ctx: &'x Context<'x>,
     iter: Iter<'x, usize>,
     iter_stack: Vec<Iter<'x, usize>>,
@@ -21,15 +18,9 @@ pub(crate) struct SubpartIterator<'x> {
 }
 
 impl<'x> SubpartIterator<'x> {
-    pub(crate) fn new(
-        ctx: &'x Context<'x>,
-        message: &'x Message<'x>,
-        parts: &'x [usize],
-        anychild: bool,
-    ) -> Self {
+    pub(crate) fn new(ctx: &'x Context<'x>, parts: &'x [usize], anychild: bool) -> Self {
         SubpartIterator {
             ctx,
-            message,
             iter: parts.iter(),
             iter_stack: Vec::new(),
             anychild,
@@ -40,20 +31,7 @@ impl<'x> SubpartIterator<'x> {
     pub fn next(&mut self) -> Option<(usize, &MessagePart<'x>)> {
         loop {
             if let Some(&part_id) = self.iter.next() {
-                if self.ctx.part_deletions.contains(&part_id) {
-                    if let Some(replaced_part) = self
-                        .ctx
-                        .part_replacements
-                        .iter()
-                        .find(|p| p.part_id == part_id)
-                    {
-                        return Some((part_id, &replaced_part.part));
-                    } else {
-                        continue;
-                    }
-                }
-
-                let subpart = self.message.parts.get(part_id)?;
+                let subpart = self.ctx.message.parts.get(part_id)?;
                 match &subpart.body {
                     PartType::Multipart(subparts) if self.anychild => {
                         self.iter_stack
@@ -72,46 +50,19 @@ impl<'x> SubpartIterator<'x> {
     }
 }
 
-pub(crate) trait NestedParts {
-    fn find_nested_parts(
-        &self,
-        ctx: &Context,
+impl<'x> Context<'x> {
+    pub(crate) fn find_nested_parts<'z: 'x>(
+        &'z self,
+        mut message: &'x Message<'x>,
         ct_filter: &[ContentTypeFilter],
-        max_nest_levels: usize,
-        visitor_fnc: &mut impl FnMut(&MessagePart, &[u8]) -> bool,
-    ) -> bool;
-
-    fn find_nested_parts_ids(&self, ctx: &Context, include_current: bool) -> Vec<usize>;
-}
-
-impl<'x> NestedParts for Message<'x> {
-    fn find_nested_parts(
-        &self,
-        ctx: &Context,
-        ct_filter: &[ContentTypeFilter],
-        max_nest_levels: usize,
         visitor_fnc: &mut impl FnMut(&MessagePart, &[u8]) -> bool,
     ) -> bool {
-        let mut message = self;
-        let raw_bytes = message.raw_message.as_ref();
         let mut iter_stack = Vec::new();
-        let mut iter = vec![if max_nest_levels == MAX_NEST_LEVELS {
-            ctx.part
-        } else {
-            0
-        }]
-        .into_iter();
-        let mut nest_levels = MAX_NEST_LEVELS - max_nest_levels;
+        let mut iter = vec![self.part].into_iter();
 
         loop {
             while let Some(part_id) = iter.next() {
-                let subpart = if nest_levels == 0 {
-                    ctx.get_part(message, part_id)
-                } else {
-                    message.parts.get(part_id)
-                };
-
-                if let Some(subpart) = subpart {
+                if let Some(subpart) = message.parts.get(part_id) {
                     let process_part = if !ct_filter.is_empty() {
                         let mut process_part = false;
                         let (ct, cst) = if let Some(ct) = subpart.get_content_type() {
@@ -149,7 +100,7 @@ impl<'x> NestedParts for Message<'x> {
                     } else {
                         true
                     };
-                    if process_part && visitor_fnc(subpart, raw_bytes) {
+                    if process_part && visitor_fnc(subpart, message.raw_message.as_ref()) {
                         return true;
                     }
                     match &subpart.body {
@@ -159,27 +110,12 @@ impl<'x> NestedParts for Message<'x> {
                                 None,
                             ));
                         }
-                        PartType::Message(MessageAttachment::Parsed(next_message)) => {
+                        PartType::Message(next_message) => {
                             iter_stack.push((
                                 std::mem::replace(&mut iter, vec![0].into_iter()),
                                 Some(message),
                             ));
-                            message = next_message.as_ref();
-                            nest_levels += 1;
-                        }
-                        PartType::Message(MessageAttachment::Raw(raw_message))
-                            if max_nest_levels > 0 =>
-                        {
-                            if let Some(message) = Message::parse(raw_message) {
-                                if message.find_nested_parts(
-                                    ctx,
-                                    ct_filter,
-                                    max_nest_levels - 1,
-                                    visitor_fnc,
-                                ) {
-                                    return true;
-                                }
-                            }
+                            message = next_message;
                         }
                         _ => (),
                     }
@@ -189,7 +125,6 @@ impl<'x> NestedParts for Message<'x> {
                 iter = prev_iter;
                 if let Some(prev_message) = prev_message {
                     message = prev_message;
-                    nest_levels -= 1;
                 }
             } else {
                 break;
@@ -198,27 +133,12 @@ impl<'x> NestedParts for Message<'x> {
         false
     }
 
-    fn find_nested_parts_ids(&self, ctx: &Context, include_current: bool) -> Vec<usize> {
-        if ctx.part == 0 {
-            if !ctx.part_deletions.is_empty() {
-                let mut part_ids = Vec::new();
-                if include_current {
-                    part_ids.push(0);
-                }
-                if self.parts.len() > 1 {
-                    for part_id in 1..self.parts.len() {
-                        if !ctx.part_deletions.contains(&part_id)
-                            || ctx.part_replacements.iter().any(|p| p.part_id == part_id)
-                        {
-                            part_ids.push(part_id);
-                        }
-                    }
-                }
-                part_ids
-            } else if include_current {
-                (0..self.parts.len()).collect()
-            } else if self.parts.len() > 1 {
-                (1..self.parts.len()).collect()
+    pub(crate) fn find_nested_parts_ids(&self, include_current: bool) -> Vec<usize> {
+        if self.part == 0 {
+            if include_current {
+                (0..self.message.parts.len()).collect()
+            } else if self.message.parts.len() > 1 {
+                (1..self.message.parts.len()).collect()
             } else {
                 Vec::new()
             }
@@ -227,22 +147,20 @@ impl<'x> NestedParts for Message<'x> {
             let mut iter_stack = Vec::new();
 
             if include_current {
-                part_ids.push(ctx.part);
+                part_ids.push(self.part);
             }
 
-            if let Some(PartType::Multipart(subparts)) = self.parts.get(ctx.part).map(|p| &p.body) {
+            if let Some(PartType::Multipart(subparts)) =
+                self.message.parts.get(self.part).map(|p| &p.body)
+            {
                 let mut iter = subparts.iter();
                 loop {
                     while let Some(&part_id) = iter.next() {
-                        if !ctx.part_deletions.contains(&part_id)
-                            || ctx.part_replacements.iter().any(|p| p.part_id == part_id)
+                        part_ids.push(part_id);
+                        if let Some(PartType::Multipart(subparts)) =
+                            self.message.parts.get(part_id).map(|p| &p.body)
                         {
-                            part_ids.push(part_id);
-                            if let Some(PartType::Multipart(subparts)) =
-                                self.parts.get(part_id).map(|p| &p.body)
-                            {
-                                iter_stack.push(std::mem::replace(&mut iter, subparts.iter()));
-                            }
+                            iter_stack.push(std::mem::replace(&mut iter, subparts.iter()));
                         }
                     }
                     if let Some(prev_iter) = iter_stack.pop() {

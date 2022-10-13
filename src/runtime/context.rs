@@ -10,11 +10,11 @@ use crate::{
 
 use super::{
     actions::action_include::IncludeResult,
-    tests::{mime::NestedParts, test_envelope::parse_envelope_address, TestResult},
+    tests::{test_envelope::parse_envelope_address, TestResult},
     RuntimeError,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
     pub(crate) prev_pos: usize,
@@ -41,19 +41,12 @@ impl<'x> Context<'x> {
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
             envelope: Vec::new(),
-            header_insertions: Vec::new(),
-            header_deletions: Vec::new(),
             message_size: usize::MAX,
-            part_replacements: Vec::new(),
-            part_deletions: Vec::new(),
         }
     }
 
     #[allow(clippy::while_let_on_iterator)]
     pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
-        let _message = Message::default();
-        let message = &_message;
-
         match input {
             Input::True => self.test_result ^= true,
             Input::False => self.test_result ^= false,
@@ -66,7 +59,7 @@ impl<'x> Context<'x> {
                 }
 
                 if self.message_size == usize::MAX {
-                    self.message_size = message.raw_message.len();
+                    self.message_size = self.message.raw_message.len();
                 }
 
                 self.script_cache.insert(name, script.clone());
@@ -115,7 +108,7 @@ impl<'x> Context<'x> {
                     iter = current_script.instructions.get(self.pos..)?.iter();
                     continue;
                 }
-                Instruction::Test(test) => match test.exec(self, message) {
+                Instruction::Test(test) => match test.exec(self) {
                     TestResult::Bool(result) => {
                         self.test_result = result;
                     }
@@ -179,7 +172,7 @@ impl<'x> Context<'x> {
                     }));
                 }
                 Instruction::Discard => (),
-                Instruction::Stop => (),
+                Instruction::Stop => return None,
                 Instruction::Reject(_) => (),
                 Instruction::ForEveryPart(fep) => {
                     if let Some(next_part) = self.part_iter.next() {
@@ -198,8 +191,8 @@ impl<'x> Context<'x> {
                     }
                 }
                 Instruction::ForEveryPartPush => {
-                    let part_iter = message
-                        .find_nested_parts_ids(self, self.part_iter_stack.is_empty())
+                    let part_iter = self
+                        .find_nested_parts_ids(self.part_iter_stack.is_empty())
                         .into_iter();
                     self.part_iter_stack
                         .push((self.part, std::mem::replace(&mut self.part_iter, part_iter)));
@@ -220,11 +213,11 @@ impl<'x> Context<'x> {
                         }
                     }
                 }
-                Instruction::Replace(_) => (),
-                Instruction::Enclose(_) => (),
-                Instruction::ExtractText(extract) => extract.exec(self, message),
+                Instruction::Replace(replace) => replace.exec(self),
+                Instruction::Enclose(enclose) => enclose.exec(self),
+                Instruction::ExtractText(extract) => extract.exec(self),
                 Instruction::AddHeader(add_header) => add_header.exec(self),
-                Instruction::DeleteHeader(delete_header) => delete_header.exec(self, message),
+                Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
                 Instruction::Set(set) => set.exec(self),
                 Instruction::Notify(_) => (),
                 Instruction::Vacation(_) => (),
@@ -312,8 +305,13 @@ impl<'x> Context<'x> {
     }
 
     pub fn set_envelope<'y>(&mut self, envelope: impl Into<Envelope<'x>>, value: &'y str) {
-        if let Some(value) = parse_envelope_address(value) {
-            self.envelope.push((envelope.into(), value.into()));
+        let envelope = envelope.into();
+        if matches!(&envelope, Envelope::From | Envelope::To) {
+            if let Some(value) = parse_envelope_address(value) {
+                self.envelope.push((envelope, value.into()));
+            }
+        } else {
+            self.envelope.push((envelope, value.into()));
         }
     }
 

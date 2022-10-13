@@ -45,10 +45,10 @@ test "Default protected" {
 	}
 }
 
+test_set "message" "${message}";
 test_config_set "sieve_editheader_protected" "subject delivery-date x-frop";
 test_config_reload :extension "editheader";
 
-test_set "message" "${message}";
 test "Configured protected" {
 	if not exists "delivery-date" {
 		test_fail "received header did not exist in the first place";
@@ -79,12 +79,12 @@ test "Configured protected" {
 	}
 }
 
+test_set "message" "${message}";
 test_config_set "sieve_editheader_protected" "";
 test_config_set "sieve_editheader_forbid_add" "subject x-frop";
 test_config_set "sieve_editheader_forbid_delete" "subject x-friep";
 test_config_reload :extension "editheader";
 
-test_set "message" "${message}";
 test "Configured forbid_add/forbid_delete" {
 	if not exists "delivery-date" {
 		test_fail "received header did not exist in the first place";
@@ -153,10 +153,10 @@ id 3jhl22khhf23f; Mon, 24 Aug 2015 04:11:54 -0600;
  * TEST - Bad header configuration
  */
 
+test_set "message" "${message}";
 test_config_set "sieve_editheader_protected" "${unicode:1F4A9} delivery-date";
 test_config_reload :extension "editheader";
 
-test_set "message" "${message}";
 test "Bad header configuration" {
 	if not exists "delivery-date" {
 		test_fail "delivery-date header did not exist in the first place";

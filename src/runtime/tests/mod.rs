@@ -1,5 +1,3 @@
-use mail_parser::Message;
-
 use crate::{compiler::grammar::test::Test, Context, Event};
 
 use super::RuntimeError;
@@ -22,14 +20,14 @@ pub(crate) enum TestResult {
 }
 
 impl Test {
-    pub(crate) fn exec(&self, ctx: &mut Context, message: &Message) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         TestResult::Bool(match &self {
-            Test::Header(test) => test.exec(ctx, message),
-            Test::Address(test) => test.exec(ctx, message),
+            Test::Header(test) => test.exec(ctx),
+            Test::Address(test) => test.exec(ctx),
             Test::Envelope(test) => test.exec(ctx),
-            Test::Exists(test) => test.exec(ctx, message),
+            Test::Exists(test) => test.exec(ctx),
             Test::Size(test) => test.exec(ctx),
-            Test::Body(test) => test.exec(ctx, message),
+            Test::Body(test) => test.exec(ctx),
             Test::String(test) => test.exec(ctx),
             Test::Date(_) => todo!(),
             Test::CurrentDate(_) => todo!(),

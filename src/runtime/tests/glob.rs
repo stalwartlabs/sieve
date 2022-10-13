@@ -32,6 +32,9 @@ fn compile(str: &str, to_lower: bool) -> Vec<PatternChar> {
                 continue;
             }
             _ => {
+                if is_escaped {
+                    is_escaped = false;
+                }
                 if to_lower && char.is_uppercase() {
                     for char in char.to_lowercase() {
                         chars.push(PatternChar::Char { char, match_pos: 0 });
@@ -177,6 +180,14 @@ pub(crate) fn glob_match_capture(
         if wildcard_pos <= MAX_MATCH_VARIABLES {
             last_pos = match item {
                 PatternChar::WildcardMany { mut num, match_pos } => {
+                    while num > 1 {
+                        if capture_positions & (1 << wildcard_pos) != 0 {
+                            captured_values.push((wildcard_pos, String::with_capacity(0)));
+                        }
+                        wildcard_pos += 1;
+                        num -= 1;
+                    }
+
                     if capture_positions & (1 << wildcard_pos) != 0 {
                         if let Some(range) = value.get(last_pos..match_pos) {
                             captured_values.push((
@@ -197,15 +208,7 @@ pub(crate) fn glob_match_capture(
                             return false;
                         }
                     }
-                    num -= 1;
                     wildcard_pos += 1;
-                    while num > 0 {
-                        if capture_positions & (1 << wildcard_pos) != 0 {
-                            captured_values.push((wildcard_pos, String::with_capacity(0)));
-                        }
-                        wildcard_pos += 1;
-                        num -= 1;
-                    }
                     match_pos
                 }
                 PatternChar::WildcardSingle { match_pos } => {

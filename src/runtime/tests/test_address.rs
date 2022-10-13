@@ -1,12 +1,12 @@
 use mail_parser::{
     parsers::{
         fields::address::{
-            parse_address, parse_address_detail_part, parse_address_domain,
-            parse_address_local_part, parse_address_user_part,
+            parse_address_detail_part, parse_address_domain, parse_address_local_part,
+            parse_address_user_part,
         },
-        message::MessageStream,
+        MessageStream,
     },
-    Header, HeaderName, HeaderValue, Message,
+    Header, HeaderName, HeaderValue,
 };
 
 use crate::{
@@ -14,23 +14,20 @@ use crate::{
     Context,
 };
 
-use super::test_header::MessageHeaders;
-
 impl TestAddress {
-    pub(crate) fn exec(&self, ctx: &mut Context, message: &Message) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
         let key_list = ctx.eval_strings(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
 
         (match &self.match_type {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
-                message.find_headers(
-                    ctx,
+                ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
-                        message.find_addresses(header, &self.address_part, |value| {
+                    |header, _, _| {
+                        ctx.find_addresses(header, &self.address_part, |value| {
                             for key in &key_list {
                                 if is_is {
                                     if self.comparator.is(value, key.as_ref()) {
@@ -45,13 +42,12 @@ impl TestAddress {
                     },
                 )
             }
-            MatchType::Value(rel_match) => message.find_headers(
-                ctx,
+            MatchType::Value(rel_match) => ctx.find_headers(
                 &header_list,
                 self.index,
                 self.mime_anychild,
-                |header| {
-                    message.find_addresses(header, &self.address_part, |value| {
+                |header, _, _| {
+                    ctx.find_addresses(header, &self.address_part, |value| {
                         for key in &key_list {
                             if self.comparator.relational(rel_match, value, key.as_ref()) {
                                 return true;
@@ -64,13 +60,12 @@ impl TestAddress {
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
                 let mut captured_positions = Vec::new();
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
-                let result = message.find_headers(
-                    ctx,
+                let result = ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
-                        message.find_addresses(header, &self.address_part, |value| {
+                    |header, _, _| {
+                        ctx.find_addresses(header, &self.address_part, |value| {
                             for key in &key_list {
                                 if is_matches {
                                     if self.comparator.matches(
@@ -101,13 +96,12 @@ impl TestAddress {
             }
             MatchType::Count(rel_match) => {
                 let mut count = 0;
-                message.find_headers(
-                    ctx,
+                ctx.find_headers(
                     &header_list,
                     self.index,
                     self.mime_anychild,
-                    |header| {
-                        message.find_addresses(header, &self.address_part, |value| {
+                    |header, _, _| {
+                        ctx.find_addresses(header, &self.address_part, |value| {
                             if !value.is_empty() {
                                 count += 1;
                             }
@@ -130,40 +124,34 @@ impl TestAddress {
     }
 }
 
-pub(crate) trait MessageAddresses {
-    fn find_addresses(
-        &self,
-        header: &Header,
-        part: &AddressPart,
-        visitor_fnc: impl FnMut(&str) -> bool,
-    ) -> bool;
-}
-
-impl<'x> MessageAddresses for Message<'x> {
+impl<'x> Context<'x> {
     #[allow(unused_assignments)]
-    fn find_addresses(
+    pub(crate) fn find_addresses(
         &self,
         header: &Header,
         part: &AddressPart,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
+        let mut raw_header = None;
         let value_;
         let value = if let HeaderName::Rfc(_) = &header.name {
             value_ = None;
             &header.value
         } else {
             let bytes = if header.offset_end > 0 {
-                self.raw_message
+                self.message
+                    .raw_message
                     .get(header.offset_start..header.offset_end)
                     .unwrap_or(b"")
             } else if let HeaderValue::Text(text) = &header.value {
                 // Inserted header
-                text.as_bytes()
+                raw_header = format!("{}\n", text).into_bytes().into();
+                raw_header.as_deref().unwrap()
             } else {
                 b""
             };
 
-            value_ = parse_address(&mut MessageStream::new(bytes)).into();
+            value_ = MessageStream::new(bytes).parse_address().into();
             value_.as_ref().unwrap()
         };
 
