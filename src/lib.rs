@@ -3,10 +3,7 @@ use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{instruction::Instruction, Capability};
 use mail_parser::{HeaderName, Message};
-use runtime::{
-    actions::{action_editheader::InsertHeader, action_mime::ReplacePart},
-    context::ScriptStack,
-};
+use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -44,7 +41,7 @@ pub struct Runtime {
     pub(crate) max_instructions: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
     pub(crate) message: Message<'x>,
@@ -61,11 +58,6 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
-
-    pub(crate) header_insertions: Vec<InsertHeader<'x>>,
-    pub(crate) header_deletions: Vec<usize>,
-    pub(crate) part_replacements: Vec<ReplacePart<'x>>,
-    pub(crate) part_deletions: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

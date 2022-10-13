@@ -8,13 +8,7 @@ impl Comparator {
     pub(crate) fn is(&self, a: &str, b: &str) -> bool {
         match self {
             Comparator::Octet => a == b,
-            Comparator::AsciiNumeric => {
-                if let (Ok(a), Ok(b)) = (a.parse::<f64>(), b.parse::<f64>()) {
-                    a == b
-                } else {
-                    false
-                }
-            }
+            Comparator::AsciiNumeric => a.parse::<f64>() == b.parse::<f64>(),
             _ => a.to_lowercase() == b.to_lowercase(),
         }
     }
@@ -30,13 +24,10 @@ impl Comparator {
     pub(crate) fn relational(&self, relation: &RelationalMatch, a: &str, b: &str) -> bool {
         match self {
             Comparator::Octet => relation.cmp(a, b.as_ref()),
-            Comparator::AsciiNumeric => {
-                if let (Ok(a), Ok(b)) = (a.parse::<f64>(), b.parse::<f64>()) {
-                    relation.cmp(&a, &b)
-                } else {
-                    false
-                }
-            }
+            Comparator::AsciiNumeric => relation.cmp(
+                &a.parse::<f64>().unwrap_or(f64::MAX),
+                &b.parse::<f64>().unwrap_or(f64::MAX),
+            ),
             _ => relation.cmp(&a.to_lowercase(), &b.to_lowercase()),
         }
     }
@@ -52,13 +43,9 @@ impl Comparator {
             Comparator::AsciiCaseMap if capture_positions == 0 => {
                 glob_match(&value.to_lowercase(), pattern, true)
             }
-            Comparator::AsciiCaseMap => glob_match_capture(
-                &value.to_lowercase(),
-                &pattern.to_lowercase(),
-                true,
-                capture_positions,
-                captured_values,
-            ),
+            Comparator::AsciiCaseMap => {
+                glob_match_capture(value, pattern, true, capture_positions, captured_values)
+            }
             _ if capture_positions == 0 => glob_match(value, pattern, false),
             _ => glob_match_capture(value, pattern, false, capture_positions, captured_values),
         }
@@ -73,7 +60,7 @@ impl Comparator {
     ) -> bool {
         match Regex::new(pattern) {
             Ok(re) => {
-                let todo = "cache compilation";
+                //TODO cache compilation
                 if capture_positions == 0 {
                     re.is_match(value)
                 } else if let Some(captures) = re.captures(value) {
