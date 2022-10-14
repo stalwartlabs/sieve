@@ -85,7 +85,10 @@ impl Runtime {
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,
             max_instructions: 5000,
-            protected_headers: Vec::new(),
+            protected_headers: vec![
+                HeaderName::Other("Original-Subject".into()),
+                HeaderName::Other("Original-From".into()),
+            ],
         }
     }
 

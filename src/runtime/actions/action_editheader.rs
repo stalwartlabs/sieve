@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use mail_parser::{Header, HeaderName, HeaderValue};
 
 use crate::{
@@ -26,6 +28,7 @@ impl AddHeader {
             let header_name = HeaderName::parse(header_name);
 
             if !ctx.runtime.protected_headers.contains(&header_name) {
+                ctx.has_changes = true;
                 ctx.insert_header(
                     ctx.part,
                     header_name,
@@ -102,8 +105,11 @@ impl DeleteHeader {
             },
         );
 
-        for (part_id, header_pos) in deleted_headers.iter().rev() {
-            ctx.message.parts[*part_id].headers.remove(*header_pos);
+        if !deleted_headers.is_empty() {
+            ctx.has_changes = true;
+            for (part_id, header_pos) in deleted_headers.iter().rev() {
+                ctx.message.parts[*part_id].headers.remove(*header_pos);
+            }
         }
 
         ctx.message_size -= deleted_bytes;
@@ -131,13 +137,14 @@ impl<'x> Context<'x> {
         &mut self,
         part_id: usize,
         header_name: HeaderName<'x>,
-        header_value: String,
+        header_value: impl Into<Cow<'static, str>>,
         last: bool,
     ) {
+        let header_value = header_value.into();
         self.message_size += header_name.len() + header_value.len() + 4;
         let header = Header {
             name: header_name,
-            value: HeaderValue::Text(header_value.into()),
+            value: HeaderValue::Text(header_value),
             offset_start: 0,
             offset_end: 0,
             offset_field: 0,

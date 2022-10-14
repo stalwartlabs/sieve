@@ -177,6 +177,21 @@ test "Deleteheader - nonexistent (match)" {
 
 test_result_reset;
 test_set "message" "${message}";
+set "expected_message" text:
+X-A: Onzinnige informatie
+X-B: kun je maar beter
+X-C: niet via e-mail versturen
+From: stephan@example.com
+To: timo@example.com
+Subject: Frop!
+X-A: dit terstond te verwijderen,
+X-B: omdat dit anders
+X-C: alleen maar schijfruimte verspilt.
+
+Frop!
+
+.
+;
 test "Deleteheader - one" {
 	if size :over 288 {
 		test_fail "original message is longer than 288 bytes?!";
@@ -215,6 +230,8 @@ test "Deleteheader - one" {
 	if exists "X-D" {
 		test_fail "X-D header not deleted";
 	}
+	
+	test_assert_message "${expected_message}";
 
 	redirect "frop@example.com";
 	fileinto :create "folder2";
@@ -468,6 +485,20 @@ test "Deleteheader - two (last)" {
 
 test_result_reset;
 test_set "message" "${message}";
+set "expected_message" text:
+X-B: kun je maar beter
+X-C: niet via e-mail versturen
+From: stephan@example.com
+X-D: en daarom is het nuttig
+To: timo@example.com
+Subject: Frop!
+X-A: dit terstond te verwijderen,
+X-B: omdat dit anders
+
+Frop!
+
+.
+;
 test "Deleteheader - :index" {
 	if size :over 288 {
 		test_fail "original message is longer than 288 bytes?!";
@@ -511,6 +542,8 @@ test "Deleteheader - :index" {
 	if header :is "X-C" "alleen maar schijfruimte verspilt." {
 		test_fail "original X-C (2) header not deleted";
 	}
+
+	test_assert_message "${expected_message}";
 
 	redirect "frop@example.com";
 	fileinto :create "folder5";
@@ -960,6 +993,13 @@ Frop!
 
 test_result_reset;
 test_set "message" "${message2}";
+set "expected_message" text:
+X-B: First intermittent unfolded header
+X-B: Second intermittent unfolded header
+
+Frop!
+.
+;
 test "Deleteheader - folded" {
 	deleteheader "X-A";
 
@@ -979,6 +1019,8 @@ test "Deleteheader - folded" {
 		test_fail "body not retained in redirected mail";
 	}
 
+	test_assert_message "${expected_message}";
+	
 	redirect "frop@example.com";
 
 	if not test_result_execute {

@@ -47,6 +47,7 @@ pub struct Context<'x> {
     pub(crate) runtime: Runtime,
     #[cfg(not(test))]
     pub(crate) runtime: &'x Runtime,
+    pub(crate) default_from: Cow<'x, str>,
     pub(crate) message: Message<'x>,
     pub(crate) envelope: Vec<(Envelope<'x>, String)>,
     pub(crate) part: usize,
@@ -61,6 +62,9 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
+
+    pub(crate) actions: Vec<Action>,
+    pub(crate) has_changes: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -80,13 +84,17 @@ pub enum Envelope<'x> {
     Other(Cow<'x, str>),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Event {
-    IncludeScript {
-        name: Script,
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Action {
+    Keep {
+        flags: Vec<String>,
     },
-    MailboxExists {
-        names: Vec<String>,
+    Discard,
+    Reject {
+        reason: String,
+    },
+    Ereject {
+        reason: String,
     },
     FileInto {
         folder: String,
@@ -99,6 +107,19 @@ pub enum Event {
     Redirect {
         address: String,
         copy: bool,
+    },
+    UpdateMessage {
+        bytes: Vec<u8>,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Event {
+    IncludeScript {
+        name: Script,
+    },
+    MailboxExists {
+        names: Vec<String>,
     },
 
     #[cfg(test)]
@@ -124,7 +145,7 @@ mod tests {
 
     use mail_parser::{Encoding, Message, MessagePart, PartType};
 
-    use crate::{Compiler, Envelope, Event, Input, Runtime};
+    use crate::{Action, Compiler, Envelope, Event, Input, Runtime, runtime::actions::action_mime::reset_test_boundary};
 
     /*fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
         for entry in fs::read_dir(path).unwrap() {
@@ -273,6 +294,8 @@ mod tests {
             "tests/extensions/mime/execute.svtest",
             "tests/extensions/mime/foreverypart.svtest",
             "tests/extensions/mime/exists.svtest",
+            "tests/extensions/mime/replace.svtest", 
+            "tests/extensions/mime/enclose.svtest", 
             "tests/extensions/regex/match-values.svtest",
             "tests/extensions/regex/basic.svtest",
             "tests/extensions/relational/rfc.svtest",
@@ -301,7 +324,6 @@ mod tests {
 
         let mut input = Input::script("", script);
         let mut current_test = String::new();
-        let mut actions = Vec::new();
         let mut raw_message_: Option<Vec<u8>> = None;
         let mut prev_state = None;
 
@@ -391,14 +413,28 @@ mod tests {
                                 input = match params.next().unwrap().as_str() {
                                     ":folder" => {
                                         let folder_name = params.next().expect("test_message folder name");
-                                        (actions.is_empty() && folder_name.eq_ignore_ascii_case("INBOX")) || 
-                                        actions.iter().any(|a| matches!(a, Event::FileInto { folder, .. } if folder == &folder_name ))
+                                        instance.actions.iter().any(|a| if !folder_name.eq_ignore_ascii_case("INBOX") { 
+                                                matches!(a, Action::FileInto { folder, .. } if folder == &folder_name ) 
+                                            } else { 
+                                                matches!(a, Action::Keep { .. })
+                                            })
                                     }
                                     ":smtp" => {
-                                        actions.iter().any(|a| matches!(a, Event::Redirect { .. } ))
+                                        instance.actions.iter().any(|a| matches!(a, Action::Redirect { .. } ))
                                     }
                                     param => panic!("Invalid test_message param '{}'", param),
                                 }.into();
+                            }
+                            "test_assert_message" => {
+                                let expected_message = params.first().expect("test_set parameter");
+                                let built_message = instance.build_message();
+                                if expected_message.as_bytes() != built_message {
+                                    //fs::write("_deleteme.json", serde_json::to_string_pretty(&Message::parse(&built_message).unwrap()).unwrap()).unwrap();
+                                    print!("<[");
+                                    print!("{}", String::from_utf8(built_message).unwrap());
+                                    println!("]>");
+                                    panic!("Message built incorrectly at '{}'", current_test);
+                                }
                             }
                             "test_config_set" => {
                                 let mut params = params.into_iter();
@@ -421,14 +457,20 @@ mod tests {
                                 }
                             }
                             "test_result_execute" => {
-                                input = (actions.is_empty()
-                                    || actions.iter().any(|a| {
-                                        matches!(a, Event::FileInto { .. } | Event::Redirect { .. })
-                                    }))
+                                input = (instance.actions.iter().any(|a| {
+                                    matches!(
+                                        a,
+                                        Action::Keep { .. }
+                                            | Action::FileInto { .. }
+                                            | Action::Redirect { .. }
+                                    )
+                                }))
                                 .into();
                             }
                             "test_result_reset" => {
-                                actions.clear();
+                                instance.actions = vec![Action::Keep { flags: vec![] }];
+                                instance.has_changes = false;
+                                reset_test_boundary();
                             }
                             "test_config_reload" => (),
                             "test_fail" => {
@@ -436,10 +478,6 @@ mod tests {
                             }
                             _ => panic!("Test command {} not implemented.", command),
                         }
-                    }
-                    action => {
-                        actions.push(action);
-                        input = Input::True;
                     }
                 }
             }

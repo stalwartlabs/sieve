@@ -17,6 +17,17 @@ Frop!
 .
 ;
 
+set "expected_message" text:
+X-Some-Header: Header content
+From: stephan@example.com
+To: timo@example.com
+Subject: Frop!
+
+Frop!
+
+.
+;
+
 test_set "message" "${message}";
 test "Addheader - first" {
 	if size :over 76 {
@@ -48,6 +59,8 @@ test "Addheader - first" {
 	if not header :is "x-some-header" "Header content" {
 		test_fail "wrong content added";
 	}
+
+	test_assert_message "${expected_message}";
 
 	redirect "frop@example.com";
 	fileinto :create "folder1";
@@ -322,6 +335,18 @@ test "Addheader - last" {
 
 test_result_reset;
 test_set "message" "${message}";
+set "expected_message" text:
+X-Some-Other-Header: More header content
+From: stephan@example.com
+To: timo@example.com
+Subject: Frop!
+X-Some-Header: Header content
+
+Frop!
+
+.
+;
+
 test "Addheader - last (two)" {
 	if size :over 76 {
 		test_fail "original message is longer than 76 bytes?!";
@@ -361,6 +386,8 @@ test "Addheader - last (two)" {
 	if not header :is "x-some-other-header" "More header content" {
 		test_fail "wrong content added #2";
 	}
+
+	test_assert_message "${expected_message}";
 
 	redirect "frop@example.com";
 	fileinto :create "folder4";

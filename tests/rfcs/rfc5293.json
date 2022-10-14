@@ -76,7 +76,8 @@
           {
             "Text": "bob@example.com"
           }
-        ]
+        ],
+        "mime_anychild": false
       }
     }
   ],
@@ -104,7 +105,8 @@
         "field_name": {
           "Text": "X-Hello"
         },
-        "value_patterns": []
+        "value_patterns": [],
+        "mime_anychild": false
       }
     }
   ],
@@ -127,7 +129,8 @@
           {
             "Text": "hi?there"
           }
-        ]
+        ],
+        "mime_anychild": false
       }
     }
   ],
@@ -145,7 +148,8 @@
           {
             "Text": "abc"
           }
-        ]
+        ],
+        "mime_anychild": false
       }
     }
   ]

@@ -195,7 +195,7 @@
     33,
     {
       "ForEveryPart": {
-        "jz_pos": 74
+        "jz_pos": 76
       }
     }
   ],
@@ -207,7 +207,7 @@
     35,
     {
       "ForEveryPart": {
-        "jz_pos": 61
+        "jz_pos": 63
       }
     }
   ],
@@ -219,7 +219,7 @@
     37,
     {
       "ForEveryPart": {
-        "jz_pos": 58
+        "jz_pos": 60
       }
     }
   ],
@@ -231,7 +231,7 @@
     39,
     {
       "ForEveryPart": {
-        "jz_pos": 55
+        "jz_pos": 57
       }
     }
   ],
@@ -243,7 +243,7 @@
     41,
     {
       "ForEveryPart": {
-        "jz_pos": 46
+        "jz_pos": 47
       }
     }
   ],
@@ -256,157 +256,169 @@
   [
     43,
     {
-      "Jmp": 74
+      "Jmp": 76
     }
   ],
   [
     44,
-    "Return"
+    {
+      "ForEveryPartPop": 5
+    }
   ],
   [
     45,
+    "Return"
+  ],
+  [
+    46,
     {
       "Jmp": 41
     }
   ],
   [
-    46,
-    "ForEveryPartPush"
-  ],
-  [
     47,
-    {
-      "ForEveryPart": {
-        "jz_pos": 52
-      }
-    }
+    "ForEveryPartPush"
   ],
   [
     48,
     {
-      "ForEveryPartPop": 4
+      "ForEveryPart": {
+        "jz_pos": 54
+      }
     }
   ],
   [
     49,
     {
-      "Jmp": 61
-    }
-  ],
-  [
-    50,
-    "Return"
-  ],
-  [
-    51,
-    {
-      "Jmp": 47
-    }
-  ],
-  [
-    52,
-    {
       "ForEveryPartPop": 4
     }
   ],
   [
+    50,
+    {
+      "Jmp": 63
+    }
+  ],
+  [
+    51,
+    {
+      "ForEveryPartPop": 5
+    }
+  ],
+  [
+    52,
+    "Return"
+  ],
+  [
     53,
     {
-      "Jmp": 74
+      "Jmp": 48
     }
   ],
   [
     54,
     {
-      "Jmp": 39
+      "ForEveryPartPop": 4
     }
   ],
   [
     55,
     {
-      "ForEveryPartPop": 3
+      "Jmp": 76
     }
   ],
   [
     56,
     {
-      "Jmp": 74
+      "Jmp": 39
     }
   ],
   [
     57,
     {
-      "Jmp": 37
+      "ForEveryPartPop": 3
     }
   ],
   [
     58,
     {
-      "ForEveryPartPop": 2
+      "Jmp": 76
     }
   ],
   [
     59,
     {
-      "Jmp": 74
+      "Jmp": 37
     }
   ],
   [
     60,
     {
-      "Jmp": 35
+      "ForEveryPartPop": 2
     }
   ],
   [
     61,
     {
-      "Test": "True"
+      "Jmp": 76
     }
   ],
   [
     62,
     {
-      "Jz": 65
+      "Jmp": 35
     }
   ],
   [
     63,
-    "Discard"
+    {
+      "Test": "True"
+    }
   ],
   [
     64,
     {
-      "Jmp": 70
+      "Jz": 67
     }
   ],
   [
     65,
+    "Discard"
+  ],
+  [
+    66,
+    {
+      "Jmp": 72
+    }
+  ],
+  [
+    67,
     {
       "Test": "False"
     }
   ],
   [
-    66,
-    {
-      "Jz": 69
-    }
-  ],
-  [
-    67,
-    "Stop"
-  ],
-  [
     68,
     {
-      "Jmp": 70
+      "Jz": 71
     }
   ],
   [
     69,
-    "Discard"
+    "Stop"
   ],
   [
     70,
+    {
+      "Jmp": 72
+    }
+  ],
+  [
+    71,
+    "Discard"
+  ],
+  [
+    72,
     {
       "Keep": {
         "flags": []
@@ -414,25 +426,25 @@
     }
   ],
   [
-    71,
+    73,
     {
       "ForEveryPartPop": 1
     }
   ],
   [
-    72,
+    74,
     {
-      "Jmp": 74
+      "Jmp": 76
     }
   ],
   [
-    73,
+    75,
     {
       "Jmp": 33
     }
   ],
   [
-    74,
+    76,
     {
       "Test": {
         "Header": {
@@ -457,13 +469,13 @@
     }
   ],
   [
-    75,
+    77,
     {
-      "Jz": 77
+      "Jz": 79
     }
   ],
   [
-    76,
+    78,
     {
       "FileInto": {
         "copy": false,
@@ -478,7 +490,7 @@
     }
   ],
   [
-    77,
+    79,
     {
       "Test": {
         "Header": {
@@ -503,13 +515,13 @@
     }
   ],
   [
-    78,
+    80,
     {
-      "Jz": 80
+      "Jz": 82
     }
   ],
   [
-    79,
+    81,
     {
       "FileInto": {
         "copy": false,
@@ -524,19 +536,19 @@
     }
   ],
   [
-    80,
+    82,
     "ForEveryPartPush"
   ],
   [
-    81,
+    83,
     {
       "ForEveryPart": {
-        "jz_pos": 92
+        "jz_pos": 94
       }
     }
   ],
   [
-    82,
+    84,
     {
       "Test": {
         "Header": {
@@ -567,13 +579,13 @@
     }
   ],
   [
-    83,
+    85,
     {
-      "Jz": 87
+      "Jz": 89
     }
   ],
   [
-    84,
+    86,
     {
       "Test": {
         "Header": {
@@ -598,13 +610,13 @@
     }
   ],
   [
-    85,
+    87,
     {
-      "Jz": 87
+      "Jz": 89
     }
   ],
   [
-    86,
+    88,
     {
       "Test": {
         "Size": {
@@ -616,13 +628,13 @@
     }
   ],
   [
-    87,
+    89,
     {
-      "Jz": 91
+      "Jz": 93
     }
   ],
   [
-    88,
+    90,
     {
       "FileInto": {
         "copy": false,
@@ -637,25 +649,25 @@
     }
   ],
   [
-    89,
+    91,
     {
       "ForEveryPartPop": 1
     }
   ],
   [
-    90,
-    {
-      "Jmp": 92
-    }
-  ],
-  [
-    91,
-    {
-      "Jmp": 81
-    }
-  ],
-  [
     92,
+    {
+      "Jmp": 94
+    }
+  ],
+  [
+    93,
+    {
+      "Jmp": 83
+    }
+  ],
+  [
+    94,
     {
       "Test": {
         "Address": {
@@ -680,13 +692,13 @@
     }
   ],
   [
-    93,
+    95,
     {
-      "Jz": 95
+      "Jz": 97
     }
   ],
   [
-    94,
+    96,
     {
       "FileInto": {
         "copy": false,
@@ -701,7 +713,7 @@
     }
   ],
   [
-    95,
+    97,
     {
       "Test": {
         "Exists": {
@@ -717,13 +729,13 @@
     }
   ],
   [
-    96,
+    98,
     {
-      "Jz": 98
+      "Jz": 100
     }
   ],
   [
-    97,
+    99,
     {
       "FileInto": {
         "copy": false,
@@ -738,19 +750,19 @@
     }
   ],
   [
-    98,
+    100,
     "ForEveryPartPush"
   ],
   [
-    99,
+    101,
     {
       "ForEveryPart": {
-        "jz_pos": 106
+        "jz_pos": 108
       }
     }
   ],
   [
-    100,
+    102,
     {
       "Test": {
         "Header": {
@@ -775,13 +787,13 @@
     }
   ],
   [
-    101,
+    103,
     {
-      "Jnz": 103
+      "Jnz": 105
     }
   ],
   [
-    102,
+    104,
     {
       "Test": {
         "Header": {
@@ -817,13 +829,13 @@
     }
   ],
   [
-    103,
+    105,
     {
-      "Jz": 105
+      "Jz": 107
     }
   ],
   [
-    104,
+    106,
     {
       "Replace": {
         "subject": null,
@@ -836,25 +848,25 @@
     }
   ],
   [
-    105,
-    {
-      "Jmp": 99
-    }
-  ],
-  [
-    106,
-    "ForEveryPartPush"
-  ],
-  [
     107,
     {
-      "ForEveryPart": {
-        "jz_pos": 114
-      }
+      "Jmp": 101
     }
   ],
   [
     108,
+    "ForEveryPartPush"
+  ],
+  [
+    109,
+    {
+      "ForEveryPart": {
+        "jz_pos": 116
+      }
+    }
+  ],
+  [
+    110,
     {
       "Test": {
         "Header": {
@@ -911,13 +923,13 @@
     }
   ],
   [
-    109,
+    111,
     {
-      "Jz": 113
+      "Jz": 115
     }
   ],
   [
-    110,
+    112,
     {
       "Enclose": {
         "subject": {
@@ -931,25 +943,25 @@
     }
   ],
   [
-    111,
+    113,
     {
       "ForEveryPartPop": 1
     }
   ],
   [
-    112,
-    {
-      "Jmp": 114
-    }
-  ],
-  [
-    113,
-    {
-      "Jmp": 107
-    }
-  ],
-  [
     114,
+    {
+      "Jmp": 116
+    }
+  ],
+  [
+    115,
+    {
+      "Jmp": 109
+    }
+  ],
+  [
+    116,
     {
       "Test": {
         "Header": {
@@ -974,13 +986,13 @@
     }
   ],
   [
-    115,
+    117,
     {
-      "Jz": 131
+      "Jz": 134
     }
   ],
   [
-    116,
+    118,
     {
       "Test": {
         "Header": {
@@ -1007,13 +1019,13 @@
     }
   ],
   [
-    117,
+    119,
     {
-      "Jz": 120
+      "Jz": 122
     }
   ],
   [
-    118,
+    120,
     {
       "Set": {
         "modifiers": [],
@@ -1027,7 +1039,7 @@
     }
   ],
   [
-    119,
+    121,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -1037,19 +1049,19 @@
     }
   ],
   [
-    120,
+    122,
     "ForEveryPartPush"
   ],
   [
-    121,
+    123,
     {
       "ForEveryPart": {
-        "jz_pos": 128
+        "jz_pos": 131
       }
     }
   ],
   [
-    122,
+    124,
     {
       "Test": {
         "Header": {
@@ -1074,43 +1086,53 @@
     }
   ],
   [
-    123,
-    {
-      "Jz": 127
-    }
-  ],
-  [
-    124,
-    {
-      "ExtractText": {
-        "modifiers": [],
-        "first": 100,
-        "varname": {
-          "Text": "msgcontent"
-        }
-      }
-    }
-  ],
-  [
     125,
     {
-      "ForEveryPartPop": 1
+      "Jz": 130
     }
   ],
   [
     126,
     {
-      "Jmp": 128
+      "ExtractText": {
+        "modifiers": [],
+        "first": 100,
+        "name": {
+          "Local": 0
+        }
+      }
     }
   ],
   [
     127,
     {
-      "Jmp": 121
+      "ForEveryPartPop": 1
     }
   ],
   [
     128,
+    {
+      "Jmp": 131
+    }
+  ],
+  [
+    129,
+    {
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 0
+      }
+    }
+  ],
+  [
+    130,
+    {
+      "Jmp": 123
+    }
+  ],
+  [
+    131,
     {
       "Test": {
         "Header": {
@@ -1135,13 +1157,13 @@
     }
   ],
   [
-    129,
+    132,
     {
-      "Jz": 130
+      "Jz": 133
     }
   ],
   [
-    130,
+    133,
     {
       "Clear": {
         "local_vars_idx": 0,

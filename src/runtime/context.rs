@@ -1,11 +1,12 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use ahash::AHashMap;
-use mail_parser::Message;
+use mail_parser::{Encoding, Message, MessagePart, PartType};
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
+    Action, Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES,
+    MAX_MATCH_VARIABLES,
 };
 
 use super::{
@@ -29,7 +30,19 @@ impl<'x> Context<'x> {
             runtime: runtime.clone(),
             #[cfg(not(test))]
             runtime,
-            message: Message::parse(raw_message).unwrap_or_default(),
+            message: Message::parse(raw_message).unwrap_or_else(|| Message {
+                parts: vec![MessagePart {
+                    headers: vec![],
+                    is_encoding_problem: false,
+                    body: PartType::Text("".into()),
+                    encoding: Encoding::None,
+                    offset_header: 0,
+                    offset_body: 0,
+                    offset_end: 0,
+                }],
+                raw_message: b""[..].into(),
+                ..Default::default()
+            }),
             part: 0,
             part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
@@ -42,6 +55,11 @@ impl<'x> Context<'x> {
             vars_match: Vec::with_capacity(0),
             envelope: Vec::new(),
             message_size: usize::MAX,
+            actions: vec![Action::Keep {
+                flags: Vec::with_capacity(0),
+            }],
+            has_changes: false,
+            default_from: "MAILER-DAEMON".into(),
         }
     }
 
@@ -84,7 +102,6 @@ impl<'x> Context<'x> {
         let mut iter = current_script.instructions.get(self.pos..)?.iter();
 
         while let Some(instruction) = iter.next() {
-            //println!("{:?}", instruction);
             match instruction {
                 Instruction::Jz(jmp_pos) => {
                     if !self.test_result {
@@ -140,12 +157,25 @@ impl<'x> Context<'x> {
                         self.clear_match_variables(clear.match_vars);
                     }
                 }
-                Instruction::Keep(_) => {
-                    println!("Test passed!");
+                Instruction::Keep(keep) => {
+                    self.actions
+                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                    self.actions.push(Action::Keep {
+                        flags: keep
+                            .flags
+                            .iter()
+                            .map(|f| self.eval_string(f).into_owned())
+                            .collect(),
+                    });
                 }
                 Instruction::FileInto(fi) => {
-                    self.pos += 1;
-                    return Some(Ok(Event::FileInto {
+                    if self.has_changes {
+                        let bytes = self.build_message();
+                        self.actions.push(Action::UpdateMessage { bytes });
+                    }
+                    self.actions
+                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                    self.actions.push(Action::FileInto {
                         folder: self.eval_string(&fi.folder).into_owned(),
                         flags: fi
                             .flags
@@ -162,18 +192,37 @@ impl<'x> Context<'x> {
                             .map(|su| self.eval_string(su).into_owned()),
                         copy: fi.copy,
                         create: fi.create,
-                    }));
+                    });
                 }
                 Instruction::Redirect(r) => {
-                    self.pos += 1;
-                    return Some(Ok(Event::Redirect {
+                    if self.has_changes {
+                        let bytes = self.build_message();
+                        self.actions.push(Action::UpdateMessage { bytes });
+                    }
+                    self.actions.push(Action::Redirect {
                         address: self.eval_string(&r.address).into_owned(),
                         copy: r.copy,
-                    }));
+                    });
                 }
-                Instruction::Discard => (),
-                Instruction::Stop => return None,
-                Instruction::Reject(_) => (),
+                Instruction::Discard => {
+                    self.actions
+                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                    self.actions.push(Action::Discard);
+                }
+                Instruction::Stop => {
+                    self.script_stack.clear();
+                    break;
+                }
+                Instruction::Reject(reject) => {
+                    let reason = self.eval_string(&reject.reason).into_owned();
+                    self.actions
+                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                    self.actions.push(if reject.ereject {
+                        Action::Ereject { reason }
+                    } else {
+                        Action::Reject { reason }
+                    });
+                }
                 Instruction::ForEveryPart(fep) => {
                     if let Some(next_part) = self.part_iter.next() {
                         self.part = next_part;
@@ -301,6 +350,17 @@ impl<'x> Context<'x> {
             self.pos += 1;
         }
 
+        if self.has_changes {
+            if let Some(pos) = self
+                .actions
+                .iter()
+                .position(|a| matches!(a, Action::Keep { .. }))
+            {
+                let bytes = self.build_message();
+                self.actions.insert(pos, Action::UpdateMessage { bytes });
+            }
+        }
+
         None
     }
 
@@ -322,5 +382,14 @@ impl<'x> Context<'x> {
 
     pub fn clear_envelope(&mut self) {
         self.envelope.clear()
+    }
+
+    pub fn set_from(&mut self, from: impl Into<Cow<'x, str>>) {
+        self.default_from = from.into();
+    }
+
+    pub fn with_from(mut self, from: impl Into<Cow<'x, str>>) -> Self {
+        self.set_from(from);
+        self
     }
 }

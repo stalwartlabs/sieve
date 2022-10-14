@@ -71,6 +71,16 @@ test "Alternating - add; delete" {
 test_result_reset;
 
 test_set "message" "${message}";
+test_set "message" "${message}";
+set "expected_message" text:
+Subject: Friep!
+From: stephan@example.com
+To: timo@example.com
+
+Frop!
+
+.
+;
 test "Alternating - delete; add" {
 	deleteheader "Subject";
 
@@ -89,6 +99,8 @@ test "Alternating - delete; add" {
 	if not header :is "subject" "Friep!" {
 		test_fail "wrong content added";
 	}
+
+	test_assert_message "${expected_message}";
 
 	fileinto :create "folder2";
 
