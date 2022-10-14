@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 #mail-parser = { git = "https://github.com/stalwartlabs/mail-parser", features = ["ludicrous_mode", "full_encoding"] } 
-mail-parser = { path = "/home/vagrant/code/mail-parser", features = ["ludicrous_mode", "full_encoding"] } 
+#mail-builder = { git = "https://github.com/stalwartlabs/mail-builder", features = ["ludicrous_mode", "full_encoding"] } 
+mail-parser = { path = "/home/vagrant/code/mail-parser", features = ["ludicrous_mode", "full_encoding", "serde_support"] } 
+mail-builder = { path = "/home/vagrant/code/mail-builder" } 
 phf = { version = "0.11", features = ["macros"] }
 serde = { version = "1.0", features = ["derive"] }
 ahash = { version = "0.8.0" }

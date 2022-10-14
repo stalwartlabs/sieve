@@ -44,6 +44,7 @@ pub struct Runtime {
 #[derive(Clone, Debug)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
+    pub(crate) default_from: Cow<'x, str>,
     pub(crate) message: Message<'x>,
     pub(crate) envelope: Vec<(Envelope<'x>, String)>,
     pub(crate) part: usize,
@@ -58,6 +59,9 @@ pub struct Context<'x> {
     pub(crate) vars_global: AHashMap<String, String>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
+
+    pub(crate) actions: Vec<Action>,
+    pub(crate) has_changes: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -77,13 +81,17 @@ pub enum Envelope<'x> {
     Other(Cow<'x, str>),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Event {
-    IncludeScript {
-        name: Script,
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Action {
+    Keep {
+        flags: Vec<String>,
     },
-    MailboxExists {
-        names: Vec<String>,
+    Discard,
+    Reject {
+        reason: String,
+    },
+    Ereject {
+        reason: String,
     },
     FileInto {
         folder: String,
@@ -96,6 +104,19 @@ pub enum Event {
     Redirect {
         address: String,
         copy: bool,
+    },
+    UpdateMessage {
+        bytes: Vec<u8>,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Event {
+    IncludeScript {
+        name: Script,
+    },
+    MailboxExists {
+        names: Vec<String>,
     },
 
 }

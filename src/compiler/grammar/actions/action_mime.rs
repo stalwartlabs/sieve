@@ -91,7 +91,7 @@ impl<'x> CompilerState<'x> {
                     subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Headers) => {
-                    headers = self.parse_string_list()?;
+                    headers = self.parse_strings()?;
                 }
                 _ => {
                     value = self.parse_string_token(token_info)?;
