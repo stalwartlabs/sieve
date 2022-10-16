@@ -8,7 +8,7 @@ impl Set {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut value = ctx.eval_string(&self.value).into_owned();
         for modifier in &self.modifiers {
-            value = modifier.apply(&value);
+            value = modifier.apply(&value, ctx.runtime.max_variable_size);
         }
 
         ctx.set_variable(&self.name, value);
@@ -16,7 +16,19 @@ impl Set {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn set_variable(&mut self, var_name: &Variable, variable: String) {
+    pub(crate) fn set_variable(&mut self, var_name: &Variable, mut variable: String) {
+        if variable.len() > self.runtime.max_variable_size {
+            let mut new_variable = String::with_capacity(self.runtime.max_variable_size);
+            for ch in variable.chars() {
+                if ch.len_utf8() + new_variable.len() <= self.runtime.max_variable_size {
+                    new_variable.push(ch);
+                } else {
+                    break;
+                }
+            }
+            variable = new_variable;
+        }
+
         match var_name {
             Variable::Local(var_id) => {
                 if let Some(var) = self.vars_local.get_mut(*var_id) {
@@ -40,19 +52,23 @@ impl<'x> Context<'x> {
 }
 
 impl Modifier {
-    pub(crate) fn apply(&self, input: &str) -> String {
+    pub(crate) fn apply(&self, input: &str, max_len: usize) -> String {
         match self {
             Modifier::Lower => input.to_lowercase(),
             Modifier::Upper => input.to_uppercase(),
             Modifier::LowerFirst => {
                 let mut result = String::with_capacity(input.len());
                 for (pos, char) in input.chars().enumerate() {
-                    if pos != 0 {
-                        result.push(char);
-                    } else {
-                        for char in char.to_lowercase() {
+                    if result.len() + char.len_utf8() <= max_len {
+                        if pos != 0 {
                             result.push(char);
+                        } else {
+                            for char in char.to_lowercase() {
+                                result.push(char);
+                            }
                         }
+                    } else {
+                        return result;
                     }
                 }
                 result
@@ -60,12 +76,16 @@ impl Modifier {
             Modifier::UpperFirst => {
                 let mut result = String::with_capacity(input.len());
                 for (pos, char) in input.chars().enumerate() {
-                    if pos != 0 {
-                        result.push(char);
-                    } else {
-                        for char in char.to_uppercase() {
+                    if result.len() + char.len_utf8() <= max_len {
+                        if pos != 0 {
                             result.push(char);
+                        } else {
+                            for char in char.to_uppercase() {
+                                result.push(char);
+                            }
                         }
+                    } else {
+                        return result;
                     }
                 }
                 result
@@ -74,9 +94,17 @@ impl Modifier {
                 let mut result = String::with_capacity(input.len());
                 for char in input.chars() {
                     if ['*', '\\', '?'].contains(&char) {
-                        result.push('\\');
+                        if result.len() + char.len_utf8() < max_len {
+                            result.push('\\');
+                            result.push(char);
+                        } else {
+                            return result;
+                        }
+                    } else if result.len() + char.len_utf8() <= max_len {
+                        result.push(char);
+                    } else {
+                        return result;
                     }
-                    result.push(char);
                 }
                 result
             }
@@ -89,9 +117,17 @@ impl Modifier {
                     ]
                     .contains(&char)
                     {
-                        result.push('\\');
+                        if result.len() + char.len_utf8() < max_len {
+                            result.push('\\');
+                            result.push(char);
+                        } else {
+                            return result;
+                        }
+                    } else if result.len() + char.len_utf8() <= max_len {
+                        result.push(char);
+                    } else {
+                        return result;
                     }
-                    result.push(char);
                 }
                 result
             }
@@ -100,9 +136,15 @@ impl Modifier {
                 let mut result = String::with_capacity(input.len());
                 for char in input.as_bytes() {
                     if char.is_ascii_alphanumeric() || [b'-', b'.', b'_', b'~'].contains(char) {
-                        result.push(char::from(*char));
-                    } else {
+                        if result.len() < max_len {
+                            result.push(char::from(*char));
+                        } else {
+                            return result;
+                        }
+                    } else if result.len() + 3 <= max_len {
                         write!(result, "%{:02x}", char).ok();
+                    } else {
+                        return result;
                     }
                 }
                 result

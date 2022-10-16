@@ -5,7 +5,7 @@ use mail_parser::HeaderName;
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
-    Context, Input, Runtime, Script, Sieve,
+    Context, Input, Metadata, Runtime, Script, Sieve,
 };
 
 pub mod actions;
@@ -84,15 +84,26 @@ impl Runtime {
                 ("name".into(), "Stalwart Sieve".into()),
                 ("version".into(), env!("CARGO_PKG_VERSION").into()),
             ]),
+            metadata: Vec::new(),
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,
             max_instructions: 5000,
+            max_variable_size: 4096,
             max_redirects: 1,
             protected_headers: vec![
                 HeaderName::Other("Original-Subject".into()),
                 HeaderName::Other("Original-From".into()),
             ],
         }
+    }
+
+    pub fn set_max_variable_size(&mut self, size: usize) {
+        self.max_variable_size = size;
+    }
+
+    pub fn with_max_variable_size(mut self, size: usize) -> Self {
+        self.max_variable_size = size;
+        self
     }
 
     pub fn set_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
@@ -118,6 +129,23 @@ impl Runtime {
         value: impl Into<Cow<'static, str>>,
     ) -> Self {
         self.set_env_variable(name.into(), value.into());
+        self
+    }
+
+    pub fn set_medatata(
+        &mut self,
+        name: impl Into<Metadata<String>>,
+        value: impl Into<Cow<'static, str>>,
+    ) {
+        self.metadata.push((name.into(), value.into()));
+    }
+
+    pub fn with_metadata(
+        mut self,
+        name: impl Into<Metadata<String>>,
+        value: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        self.set_medatata(name, value);
         self
     }
 
@@ -208,5 +236,49 @@ impl From<String> for Script {
 impl From<&str> for Script {
     fn from(name: &str) -> Self {
         Script::Personal(name.to_string())
+    }
+}
+
+impl<T> Metadata<T> {
+    pub fn server(annotation: impl Into<T>) -> Self {
+        Metadata::Server {
+            annotation: annotation.into(),
+        }
+    }
+
+    pub fn mailbox(name: impl Into<T>, annotation: impl Into<T>) -> Self {
+        Metadata::Mailbox {
+            name: name.into(),
+            annotation: annotation.into(),
+        }
+    }
+}
+
+impl From<String> for Metadata<String> {
+    fn from(annotation: String) -> Self {
+        Metadata::Server { annotation }
+    }
+}
+
+impl From<&'_ str> for Metadata<String> {
+    fn from(annotation: &'_ str) -> Self {
+        Metadata::Server {
+            annotation: annotation.to_string(),
+        }
+    }
+}
+
+impl From<(String, String)> for Metadata<String> {
+    fn from((name, annotation): (String, String)) -> Self {
+        Metadata::Mailbox { name, annotation }
+    }
+}
+
+impl From<(&'_ str, &'_ str)> for Metadata<String> {
+    fn from((name, annotation): (&'_ str, &'_ str)) -> Self {
+        Metadata::Mailbox {
+            name: name.to_string(),
+            annotation: annotation.to_string(),
+        }
     }
 }

@@ -617,7 +617,6 @@ impl<'x> CompilerState<'x> {
                         Test::HasFlag(t) => &mut t.match_type,
                         Test::Header(t) => &mut t.match_type,
                         Test::Metadata(t) => &mut t.match_type,
-                        Test::ServerMetadata(t) => &mut t.match_type,
                         Test::NotifyMethodCapability(t) => &mut t.match_type,
                         Test::SpamTest(t) => &mut t.match_type,
                         Test::String(t) | Test::Environment(t) => &mut t.match_type,

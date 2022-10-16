@@ -39,10 +39,12 @@ pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
+    pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
     pub(crate) max_instructions: usize,
+    pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
 }
 
@@ -57,7 +59,8 @@ pub struct Context<'x> {
 
     pub(crate) message: Message<'x>,
     pub(crate) message_size: usize,
-    pub(crate) envelope: Vec<(Envelope, String)>,
+    pub(crate) envelope: Vec<(Envelope, Cow<'x, str>)>,
+    pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
@@ -95,6 +98,12 @@ pub enum Envelope {
     Ret,
     Envid,
     Other(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Metadata<T> {
+    Server { annotation: T },
+    Mailbox { name: T, annotation: T },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -207,7 +216,6 @@ mod tests {
             "tests/compile/compile.svtest",
             "tests/compile/warnings.svtest",
 
-            "tests/extensions/metadata/execute.svtest",
             "tests/extensions/enotify/notify_method_capability.svtest",
             "tests/extensions/enotify/mailto.svtest",
             "tests/extensions/enotify/encodeurl.svtest",
@@ -222,12 +230,10 @@ mod tests {
             "tests/extensions/spamvirustest/spamtest.svtest",
             "tests/extensions/spamvirustest/virustest.svtest",
             "tests/extensions/spamvirustest/spamtestplus.svtest",
-            "tests/extensions/subaddress/config.svtest",
-            "tests/extensions/variables/limits.svtest",
 
 
             */
-            /*"tests/test-size.svtest",
+            "tests/test-size.svtest",
             "tests/test-anyof.svtest",
             "tests/test-allof.svtest",
             "tests/test-exists.svtest",
@@ -251,6 +257,7 @@ mod tests {
             "tests/extensions/variables/basic.svtest",
             "tests/extensions/variables/modifiers.svtest",
             "tests/extensions/variables/quoting.svtest",
+            "tests/extensions/variables/limits.svtest",
             "tests/extensions/editheader/utf8.svtest",
             "tests/extensions/editheader/protected.svtest",
             "tests/extensions/editheader/addheader.svtest",
@@ -302,9 +309,10 @@ mod tests {
             "tests/extensions/environment/variables.svtest",
             "tests/extensions/reject/smtp.svtest",
             "tests/extensions/reject/execute.svtest",
-            "tests/extensions/redirect/basic.svtest",*/
+            "tests/extensions/redirect/basic.svtest",
             "tests/extensions/mailbox/execute.svtest",
             "tests/extensions/special-use/execute.svtest",
+            "tests/extensions/metadata/execute.svtest",
         ] {
             println!("===== {} =====", test);
             run_test(&PathBuf::from(test));
@@ -391,10 +399,7 @@ mod tests {
                         }
                         input = names.iter().all(|n| mailboxes.contains(n)).into();
                     }
-                    Event::SpecialUseExists {
-                        mailbox,
-                        attributes,
-                    } => {
+                    Event::SpecialUseExists { .. } => {
                         input = false.into();
                     }
 
@@ -427,7 +432,7 @@ mod tests {
                                 } else if let Some(envelope) = target.strip_prefix("envelope.") {
                                     let envelope = Envelope::from(envelope.to_string());
                                     instance.envelope.retain(|(e, _)| e != &envelope);
-                                    instance.set_envelope(envelope, &params.pop().unwrap());
+                                    instance.set_envelope(envelope, params.pop().unwrap());
                                 } else if target == "currentdate" {
                                     let bytes = params.pop().unwrap().into_bytes();
                                     if let HeaderValue::DateTime(dt) =
@@ -471,11 +476,13 @@ mod tests {
                             }
                             "test_config_set" => {
                                 let mut params = params.into_iter();
-                                match params.next().unwrap().as_str() {
+                                let name = params.next().unwrap();
+                                let value = params.next().expect("test_config_set value");
+
+                                match name.as_str() {
                                     "sieve_editheader_protected"
                                     | "sieve_editheader_forbid_add"
                                     | "sieve_editheader_forbid_delete" => {
-                                        let value = params.next().expect("test_config_set value");
                                         if !value.is_empty() {
                                             for header_name in value.split(' ') {
                                                 instance
@@ -485,6 +492,11 @@ mod tests {
                                         } else {
                                             instance.runtime.protected_headers.clear();
                                         }
+                                    }
+                                    "sieve_variables_max_variable_size" => {
+                                        instance
+                                            .runtime
+                                            .set_max_variable_size(value.parse().unwrap());
                                     }
                                     param => panic!("Invalid test_config_set param '{}'", param),
                                 }
@@ -520,11 +532,30 @@ mod tests {
                                     panic!("test_result_action {} not implemented", param);
                                 };
                             }
+                            "test_imap_metadata_set" => {
+                                let mut params = params.into_iter();
+                                let first = params.next().expect("metadata parameter");
+                                let (mailbox, annotation) = if first == ":mailbox" {
+                                    (
+                                        params.next().expect("metadata mailbox name").into(),
+                                        params.next().expect("metadata annotation name"),
+                                    )
+                                } else {
+                                    (None, first)
+                                };
+                                let value = params.next().expect("metadata value");
+                                if let Some(mailbox) = mailbox {
+                                    instance.set_medatata((mailbox, annotation), value);
+                                } else {
+                                    instance.set_medatata(annotation, value);
+                                }
+                            }
                             "test_mailbox_create" => {
                                 mailboxes.push(params.pop().expect("mailbox to create"));
                             }
                             "test_result_reset" => {
                                 instance.actions = vec![Action::Keep { flags: vec![] }];
+                                instance.metadata.clear();
                                 instance.has_changes = false;
                                 mailboxes.clear();
                                 reset_test_boundary();

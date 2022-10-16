@@ -5,7 +5,7 @@ use mail_parser::{Encoding, Message, MessagePart, PartType};
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Action, Context, Envelope, Event, Input, Runtime, Sieve, MAX_LOCAL_VARIABLES,
+    Action, Context, Envelope, Event, Input, Metadata, Runtime, Sieve, MAX_LOCAL_VARIABLES,
     MAX_MATCH_VARIABLES,
 };
 
@@ -55,6 +55,7 @@ impl<'x> Context<'x> {
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
             envelope: Vec::new(),
+            metadata: Vec::new(),
             message_size: usize::MAX,
             actions: vec![Action::Keep {
                 flags: Vec::with_capacity(0),
@@ -348,18 +349,23 @@ impl<'x> Context<'x> {
         None
     }
 
-    pub fn set_envelope(&mut self, envelope: impl Into<Envelope>, value: &str) {
+    pub fn set_envelope(&mut self, envelope: impl Into<Envelope>, value: impl Into<Cow<'x, str>>) {
         let envelope = envelope.into();
         if matches!(&envelope, Envelope::From | Envelope::To) {
-            if let Some(value) = parse_envelope_address(value) {
-                self.envelope.push((envelope, value.into()));
+            let value: Cow<str> = value.into();
+            if let Some(value) = parse_envelope_address(value.as_ref()) {
+                self.envelope.push((envelope, value.to_string().into()));
             }
         } else {
             self.envelope.push((envelope, value.into()));
         }
     }
 
-    pub fn with_envelope(mut self, envelope: impl Into<Envelope>, value: &str) -> Self {
+    pub fn with_envelope(
+        mut self,
+        envelope: impl Into<Envelope>,
+        value: impl Into<Cow<'x, str>>,
+    ) -> Self {
         self.set_envelope(envelope, value);
         self
     }
@@ -386,7 +392,24 @@ impl<'x> Context<'x> {
         name: impl Into<String>,
         value: impl Into<Cow<'x, str>>,
     ) -> Self {
-        self.set_env_variable(name.into(), value.into());
+        self.set_env_variable(name, value);
+        self
+    }
+
+    pub fn set_medatata(
+        &mut self,
+        name: impl Into<Metadata<String>>,
+        value: impl Into<Cow<'x, str>>,
+    ) {
+        self.metadata.push((name.into(), value.into()));
+    }
+
+    pub fn with_metadata(
+        mut self,
+        name: impl Into<Metadata<String>>,
+        value: impl Into<Cow<'x, str>>,
+    ) -> Self {
+        self.set_medatata(name, value);
         self
     }
 }

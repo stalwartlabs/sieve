@@ -19,10 +19,7 @@ use super::{
         test_hasflag::TestHasFlag,
         test_header::TestHeader,
         test_ihave::TestIhave,
-        test_mailbox::{
-            TestMailboxExists, TestMetadata, TestMetadataExists, TestServerMetadata,
-            TestServerMetadataExists,
-        },
+        test_mailbox::{TestMailboxExists, TestMetadata, TestMetadataExists},
         test_mailboxid::TestMailboxIdExists,
         test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
         test_size::TestSize,
@@ -78,8 +75,6 @@ pub(crate) enum Test {
     MailboxExists(TestMailboxExists),
     Metadata(TestMetadata),
     MetadataExists(TestMetadataExists),
-    ServerMetadata(TestServerMetadata),
-    ServerMetadataExists(TestServerMetadataExists),
 
     // RFC 9042
     MailboxIdExists(TestMailboxIdExists),
@@ -413,12 +408,6 @@ impl Test {
                 op.is_not = true;
             }
             Test::MetadataExists(op) => {
-                op.is_not = true;
-            }
-            Test::ServerMetadata(op) => {
-                op.is_not = true;
-            }
-            Test::ServerMetadataExists(op) => {
                 op.is_not = true;
             }
             Test::MailboxIdExists(op) => {
