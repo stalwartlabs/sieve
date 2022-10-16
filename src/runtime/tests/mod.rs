@@ -1,4 +1,7 @@
-use crate::{compiler::grammar::test::Test, Context, Event};
+use crate::{
+    compiler::grammar::{test::Test, Capability},
+    Context, Event,
+};
 
 use super::RuntimeError;
 
@@ -7,8 +10,10 @@ pub mod glob;
 pub mod mime;
 pub mod test_address;
 pub mod test_body;
+pub mod test_date;
 pub mod test_envelope;
 pub mod test_exists;
+pub mod test_hasflag;
 pub mod test_header;
 pub mod test_size;
 pub mod test_string;
@@ -28,21 +33,21 @@ impl Test {
             Test::Exists(test) => test.exec(ctx),
             Test::Size(test) => test.exec(ctx),
             Test::Body(test) => test.exec(ctx),
-            Test::String(test) => test.exec(ctx),
-            Test::Date(_) => todo!(),
-            Test::CurrentDate(_) => todo!(),
+            Test::String(test) => test.exec(ctx, false),
+            Test::HasFlag(test) => test.exec(ctx),
+            Test::Date(test) => test.exec(ctx),
+            Test::CurrentDate(test) => test.exec(ctx),
             Test::Duplicate(_) => todo!(),
             Test::NotifyMethodCapability(_) => todo!(),
             Test::ValidNotifyMethod(_) => todo!(),
-            Test::Environment(_) => todo!(),
+            Test::Environment(test) => test.exec(ctx, true),
             Test::ValidExtList(_) => todo!(),
             Test::Ihave(test) => {
-                test.capabilities
-                    .iter()
-                    .all(|c| ctx.runtime.allowed_capabilities.contains(c))
-                    ^ test.is_not
+                test.capabilities.iter().all(|c| {
+                    ![Capability::Variables, Capability::EncodedCharacter].contains(c)
+                        && ctx.runtime.allowed_capabilities.contains(c)
+                }) ^ test.is_not
             }
-            Test::HasFlag(_) => todo!(),
             Test::MailboxExists(test) => {
                 return TestResult::Event {
                     event: Event::MailboxExists {
@@ -58,7 +63,18 @@ impl Test {
             Test::MailboxIdExists(_) => todo!(),
             Test::SpamTest(_) => todo!(),
             Test::VirusTest(_) => todo!(),
-            Test::SpecialUseExists(_) => todo!(),
+            Test::SpecialUseExists(test) => {
+                return TestResult::Event {
+                    event: Event::SpecialUseExists {
+                        mailbox: test
+                            .mailbox
+                            .as_ref()
+                            .map(|m| ctx.eval_string(m).into_owned()),
+                        attributes: ctx.eval_strings_owned(&test.attributes),
+                    },
+                    is_not: test.is_not,
+                };
+            }
             Test::Convert(_) => todo!(),
             Test::True => true,
             Test::False => false,

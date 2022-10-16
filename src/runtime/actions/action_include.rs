@@ -31,7 +31,10 @@ impl Include {
                     {
                         return IncludeResult::Cached(script.clone());
                     } else {
-                        return IncludeResult::Event(Event::IncludeScript { name: script_name });
+                        return IncludeResult::Event(Event::IncludeScript {
+                            name: script_name,
+                            optional: self.optional,
+                        });
                     }
                 } else {
                     return IncludeResult::Error(RuntimeError::TooManyIncludes);

@@ -4,7 +4,7 @@ use crate::{
 };
 
 impl TestString {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context, empty_is_null: bool) -> bool {
         let mut result = false;
         if let MatchType::Count(match_type) = &self.match_type {
             let num_items = self
@@ -12,10 +12,12 @@ impl TestString {
                 .iter()
                 .filter(|x| !ctx.eval_string(x).is_empty())
                 .count() as f64;
-            for key in &self.key_list {
-                if match_type.cmp_num(num_items, ctx.eval_string(key).as_ref()) {
-                    result = true;
-                    break;
+            if !empty_is_null || num_items > 0.0 {
+                for key in &self.key_list {
+                    if match_type.cmp_num(num_items, ctx.eval_string(key).as_ref()) {
+                        result = true;
+                        break;
+                    }
                 }
             }
         } else {
@@ -25,33 +27,34 @@ impl TestString {
             for key in &self.key_list {
                 let key = ctx.eval_string(key);
                 for source in &sources {
-                    //println!("-> {:?} {:?}", key, source);
-                    result = match &self.match_type {
-                        MatchType::Is => self.comparator.is(source.as_ref(), key.as_ref()),
-                        MatchType::Contains => {
-                            self.comparator.contains(source.as_ref(), key.as_ref())
-                        }
-                        MatchType::Value(relation) => {
-                            self.comparator
-                                .relational(relation, source.as_ref(), key.as_ref())
-                        }
-                        MatchType::Matches(capture_positions) => self.comparator.matches(
-                            source.as_ref(),
-                            key.as_ref(),
-                            *capture_positions,
-                            &mut captured_values,
-                        ),
-                        MatchType::Regex(capture_positions) => self.comparator.regex(
-                            source.as_ref(),
-                            key.as_ref(),
-                            *capture_positions,
-                            &mut captured_values,
-                        ),
-                        _ => false,
-                    };
+                    if !empty_is_null || !source.is_empty() {
+                        result = match &self.match_type {
+                            MatchType::Is => self.comparator.is(source.as_ref(), key.as_ref()),
+                            MatchType::Contains => {
+                                self.comparator.contains(source.as_ref(), key.as_ref())
+                            }
+                            MatchType::Value(relation) => {
+                                self.comparator
+                                    .relational(relation, source.as_ref(), key.as_ref())
+                            }
+                            MatchType::Matches(capture_positions) => self.comparator.matches(
+                                source.as_ref(),
+                                key.as_ref(),
+                                *capture_positions,
+                                &mut captured_values,
+                            ),
+                            MatchType::Regex(capture_positions) => self.comparator.regex(
+                                source.as_ref(),
+                                key.as_ref(),
+                                *capture_positions,
+                                &mut captured_values,
+                            ),
+                            _ => false,
+                        };
 
-                    if result {
-                        break;
+                        if result {
+                            break;
+                        }
                     }
                 }
             }
@@ -64,15 +67,3 @@ impl TestString {
         result ^ self.is_not
     }
 }
-
-/*
-
-use crate::{compiler::grammar::tests::test_string::TestString, Context};
-
-impl TestString {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
-        false
-    }
-}
-
-*/

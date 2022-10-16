@@ -1,21 +1,15 @@
-use serde::{Deserialize, Serialize};
-
-use crate::compiler::{
-    grammar::{instruction::CompilerState, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+use crate::{
+    compiler::{
+        grammar::{instruction::CompilerState, Comparator},
+        lexer::{string::StringItem, word::Word, Token},
+        CompileError,
+    },
+    runtime::string::IntoString,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestEnvironment {
-    pub name: StringItem,
-    pub key_list: Vec<StringItem>,
-    pub match_type: MatchType,
-    pub comparator: Comparator,
-    pub is_not: bool,
-}
+use super::test_string::TestString;
 
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_environment(&mut self) -> Result<Test, CompileError> {
@@ -42,7 +36,12 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     if name.is_none() {
-                        name = self.parse_string_token(token_info)?.into();
+                        if let Token::StringConstant(s) = token_info.token {
+                            name = StringItem::EnvironmentVariable(s.into_string().to_lowercase())
+                                .into();
+                        } else {
+                            return Err(token_info.expected("environment variable"));
+                        }
                     } else {
                         key_list = self.parse_strings_token(token_info)?;
                         break;
@@ -51,8 +50,8 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        Ok(Test::Environment(TestEnvironment {
-            name: name.unwrap(),
+        Ok(Test::Environment(TestString {
+            source: vec![name.unwrap()],
             key_list,
             match_type,
             comparator,

@@ -1,7 +1,11 @@
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::grammar::{instruction::Instruction, Capability};
+use compiler::grammar::{
+    actions::action_redirect::{ByTime, Notify, Ret},
+    instruction::Instruction,
+    Capability,
+};
 use mail_parser::{HeaderName, Message};
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
@@ -34,29 +38,34 @@ pub struct Compiler {
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
-    pub(crate) environment: AHashMap<String, String>,
+    pub(crate) environment: AHashMap<String, Cow<'static, str>>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
     pub(crate) max_instructions: usize,
+    pub(crate) max_redirects: usize,
 }
 
 #[derive(Clone, Debug)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
     pub(crate) default_from: Cow<'x, str>,
+    pub(crate) current_time: i64,
+
     pub(crate) message: Message<'x>,
-    pub(crate) envelope: Vec<(Envelope<'x>, String)>,
+    pub(crate) message_size: usize,
+    pub(crate) envelope: Vec<(Envelope, String)>,
+
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
-    pub(crate) message_size: usize,
 
     pub(crate) pos: usize,
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
     pub(crate) script_stack: Vec<ScriptStack>,
     pub(crate) vars_global: AHashMap<String, String>,
+    pub(crate) vars_env: AHashMap<String, Cow<'x, str>>,
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
 
@@ -70,15 +79,19 @@ pub enum Script {
     Global(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Envelope<'x> {
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Envelope {
     From,
     To,
     ByTimeAbsolute,
     ByTimeRelative,
     ByMode,
     ByTrace,
-    Other(Cow<'x, str>),
+    Notify,
+    Orcpt,
+    Ret,
+    Envid,
+    Other(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -104,6 +117,9 @@ pub enum Action {
     Redirect {
         address: String,
         copy: bool,
+        notify: Notify,
+        return_of_content: Ret,
+        by_time: ByTime<i64>,
     },
     UpdateMessage {
         bytes: Vec<u8>,
@@ -114,9 +130,14 @@ pub enum Action {
 pub enum Event {
     IncludeScript {
         name: Script,
+        optional: bool,
     },
     MailboxExists {
         names: Vec<String>,
+    },
+    SpecialUseExists {
+        mailbox: Option<String>,
+        attributes: Vec<String>,
     },
 
 }

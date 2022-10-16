@@ -63,7 +63,7 @@ impl TestHeader {
                 },
             ),
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
-                let mut captured_positions = Vec::new();
+                let mut captured_values = Vec::new();
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
                 let result = ctx.find_headers(
                     &header_list,
@@ -77,7 +77,7 @@ impl TestHeader {
                                         value,
                                         key.as_ref(),
                                         *capture_positions,
-                                        &mut captured_positions,
+                                        &mut captured_values,
                                     ) {
                                         return true;
                                     }
@@ -85,7 +85,7 @@ impl TestHeader {
                                     value,
                                     key.as_ref(),
                                     *capture_positions,
-                                    &mut captured_positions,
+                                    &mut captured_values,
                                 ) {
                                     return true;
                                 }
@@ -94,8 +94,8 @@ impl TestHeader {
                         })
                     },
                 );
-                if !captured_positions.is_empty() {
-                    ctx.set_match_variables(captured_positions);
+                if !captured_values.is_empty() {
+                    ctx.set_match_variables(captured_values);
                 }
                 result
             }
@@ -156,16 +156,21 @@ impl<'x> Context<'x> {
     ) -> Vec<HeaderName<'y>> {
         let mut result = Vec::with_capacity(header_names.len());
         for header_name in header_names {
-            let header_name = self.eval_string(header_name);
-            result.push(
-                if let Some(rfc_header) = RfcHeader::parse(header_name.as_ref()) {
-                    HeaderName::Rfc(rfc_header)
-                } else {
-                    HeaderName::Other(header_name)
-                },
-            );
+            result.push(self.parse_header_name(header_name));
         }
         result
+    }
+
+    pub(crate) fn parse_header_name<'z: 'y, 'y>(
+        &'z self,
+        header_name: &'y StringItem,
+    ) -> HeaderName<'y> {
+        let header_name = self.eval_string(header_name);
+        if let Some(rfc_header) = RfcHeader::parse(header_name.as_ref()) {
+            HeaderName::Rfc(rfc_header)
+        } else {
+            HeaderName::Other(header_name)
+        }
     }
 
     pub(crate) fn find_headers(

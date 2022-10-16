@@ -11,17 +11,30 @@ impl Set {
             value = modifier.apply(&value);
         }
 
-        match &self.name {
+        ctx.set_variable(&self.name, value);
+    }
+}
+
+impl<'x> Context<'x> {
+    pub(crate) fn set_variable(&mut self, var_name: &Variable, variable: String) {
+        match var_name {
             Variable::Local(var_id) => {
-                if let Some(var) = ctx.vars_local.get_mut(*var_id) {
-                    *var = value;
+                if let Some(var) = self.vars_local.get_mut(*var_id) {
+                    *var = variable;
                 } else {
                     debug_assert!(false, "Non-existent local variable {}", var_id);
                 }
             }
             Variable::Global(var_name) => {
-                ctx.vars_global.insert(var_name.clone(), value);
+                self.vars_global.insert(var_name.clone(), variable);
             }
+        }
+    }
+
+    pub(crate) fn get_variable(&self, var_name: &Variable) -> Option<&String> {
+        match var_name {
+            Variable::Local(var_id) => self.vars_local.get(*var_id),
+            Variable::Global(var_name) => self.vars_global.get(var_name),
         }
     }
 }
