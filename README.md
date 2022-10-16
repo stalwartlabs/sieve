@@ -1,2 +1,2 @@
-# sieve-rs
+# sieve
 Sieve filter interpreter for Rust
