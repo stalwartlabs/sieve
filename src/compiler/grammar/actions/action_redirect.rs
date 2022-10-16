@@ -10,28 +10,28 @@ use crate::compiler::{
 pub(crate) struct Redirect {
     pub copy: bool,
     pub address: StringItem,
-    pub notify: NotifyValue,
-    pub ret: Ret,
-    pub by_time: ByTime,
+    pub notify: Notify,
+    pub return_of_content: Ret,
+    pub by_time: ByTime<StringItem>,
     pub list: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum NotifyItem {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum NotifyItem {
     Success,
     Failure,
     Delay,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum NotifyValue {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum Notify {
     Never,
     Items(Vec<NotifyItem>),
     Default,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Ret {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum Ret {
     Full,
     Hdrs,
     Default,
@@ -46,23 +46,23 @@ pub(crate) enum Ret {
 
 */
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum ByTime {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum ByTime<T> {
     Relative {
         rlimit: u64,
         mode: ByMode,
         trace: bool,
     },
     Absolute {
-        alimit: StringItem,
+        alimit: T,
         mode: ByMode,
         trace: bool,
     },
     None,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum ByMode {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum ByMode {
     Notify,
     Return,
     Default,
@@ -73,7 +73,7 @@ impl<'x> CompilerState<'x> {
         let address;
         let mut copy = false;
         let mut ret = Ret::Default;
-        let mut notify = NotifyValue::Default;
+        let mut notify = Notify::Default;
         let mut list = false;
         let mut by_mode = ByMode::Default;
         let mut by_trace = false;
@@ -121,7 +121,7 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::Notify) => {
                     let notify_ = self.tokens.expect_static_string()?;
                     if notify_.eq_ignore_ascii_case(b"never") {
-                        notify = NotifyValue::Never;
+                        notify = Notify::Never;
                     } else {
                         let mut items = Vec::new();
                         for item in String::from_utf8_lossy(&notify_).split(',') {
@@ -135,7 +135,7 @@ impl<'x> CompilerState<'x> {
                             }
                         }
                         if !items.is_empty() {
-                            notify = NotifyValue::Items(items);
+                            notify = Notify::Items(items);
                         } else {
                             return Err(
                                 token_info.expected("\"NEVER\" or \"SUCCESS, FAILURE, DELAY, ..\"")
@@ -154,7 +154,7 @@ impl<'x> CompilerState<'x> {
             address,
             copy,
             notify,
-            ret,
+            return_of_content: ret,
             by_time: if let Some(alimit) = by_alimit {
                 ByTime::Absolute {
                     alimit,

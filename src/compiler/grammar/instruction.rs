@@ -15,7 +15,7 @@ use super::{
         action_convert::Convert,
         action_editheader::{AddHeader, DeleteHeader},
         action_fileinto::FileInto,
-        action_flags::FlagAction,
+        action_flags::EditFlags,
         action_include::Include,
         action_keep::Keep,
         action_mime::{Enclose, ExtractText, ForEveryPart, Replace},
@@ -76,9 +76,7 @@ pub(crate) enum Instruction {
     Error(Error),
 
     // RFC 5232
-    SetFlag(FlagAction),
-    AddFlag(FlagAction),
-    RemoveFlag(FlagAction),
+    EditFlags(EditFlags),
 
     // RFC 6609
     Include(Include),
@@ -564,8 +562,7 @@ impl<'x> CompilerState<'x> {
         self.vars_global.contains(&name)
     }
 
-    pub(crate) fn register_local_var(&mut self, name: &str) -> usize {
-        let name = name.to_ascii_lowercase();
+    pub(crate) fn register_local_var(&mut self, name: String) -> usize {
         if let Some(var_id) = self.get_local_var(&name) {
             var_id
         } else {
@@ -617,14 +614,13 @@ impl<'x> CompilerState<'x> {
                         Test::Date(t) => &mut t.match_type,
                         Test::CurrentDate(t) => &mut t.match_type,
                         Test::Envelope(t) => &mut t.match_type,
-                        Test::Environment(t) => &mut t.match_type,
                         Test::HasFlag(t) => &mut t.match_type,
                         Test::Header(t) => &mut t.match_type,
                         Test::Metadata(t) => &mut t.match_type,
                         Test::ServerMetadata(t) => &mut t.match_type,
                         Test::NotifyMethodCapability(t) => &mut t.match_type,
                         Test::SpamTest(t) => &mut t.match_type,
-                        Test::String(t) => &mut t.match_type,
+                        Test::String(t) | Test::Environment(t) => &mut t.match_type,
                         Test::VirusTest(t) => &mut t.match_type,
                         _ => {
                             debug_assert!(false, "This should not have happened: {:?}", test);

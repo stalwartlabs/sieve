@@ -64,16 +64,18 @@
     {
       "Test": {
         "Environment": {
-          "name": {
-            "Text": "imap.mailbox"
-          },
+          "match_type": "Contains",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "EnvironmentVariable": "imap.mailbox"
+            }
+          ],
           "key_list": [
             {
               "Text": "*"
             }
           ],
-          "match_type": "Contains",
-          "comparator": "AsciiCaseMap",
           "is_not": false
         }
       }
@@ -114,16 +116,18 @@
     {
       "Test": {
         "Environment": {
-          "name": {
-            "Text": "imap.cause"
-          },
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "EnvironmentVariable": "imap.cause"
+            }
+          ],
           "key_list": [
             {
               "Text": "COPY"
             }
           ],
-          "match_type": "Is",
-          "comparator": "AsciiCaseMap",
           "is_not": false
         }
       }
@@ -168,7 +172,7 @@
           "Text": "spam-report@example.org"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }

@@ -1,9 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-    CompileError,
+use crate::{
+    compiler::{
+        grammar::instruction::{CompilerState, Instruction},
+        lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
+        CompileError,
+    },
+    runtime::string::IntoString,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -81,34 +84,22 @@ impl<'x> CompilerState<'x> {
         token_info: TokenInfo,
     ) -> Result<Variable, CompileError> {
         match token_info.token {
-            Token::StringConstant(value) => Ok(
-                if value.len() > 7 && value[..7].eq_ignore_ascii_case(b"global.") {
-                    Variable::Global(String::from_utf8(value[7..].to_vec()).map_err(|_| {
-                        TokenInfo {
-                            token: Token::StringConstant(value),
-                            line_num: token_info.line_num,
-                            line_pos: token_info.line_pos,
-                        }
-                        .invalid_utf8()
-                    })?)
-                } else {
-                    let name = String::from_utf8(value).map_err(|err| {
-                        TokenInfo {
-                            token: Token::StringConstant(err.into_bytes()),
-                            line_num: token_info.line_num,
-                            line_pos: token_info.line_pos,
-                        }
-                        .invalid_utf8()
-                    })?;
-
-                    if !self.is_var_global(&name) {
-                        Variable::Local(self.register_local_var(&name))
-                    } else {
-                        Variable::Global(name.to_ascii_lowercase())
-                    }
-                },
-            ),
+            Token::StringConstant(value) => Ok(self.register_variable(value.into_string())),
             _ => Err(token_info.invalid("variable name must be a constant")),
+        }
+    }
+
+    pub(crate) fn register_variable(&mut self, name: String) -> Variable {
+        let name = name.to_lowercase();
+        match name.strip_prefix("global.") {
+            Some(global_var) if !global_var.is_empty() => Variable::Global(global_var.to_string()),
+            _ => {
+                if !self.is_var_global(&name) {
+                    Variable::Local(self.register_local_var(name))
+                } else {
+                    Variable::Global(name)
+                }
+            }
         }
     }
 }

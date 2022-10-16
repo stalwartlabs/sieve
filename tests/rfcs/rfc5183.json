@@ -12,18 +12,20 @@
     {
       "Test": {
         "Environment": {
-          "name": {
-            "Text": "remote-host"
+          "match_type": {
+            "Matches": 0
           },
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "EnvironmentVariable": "remote-host"
+            }
+          ],
           "key_list": [
             {
               "Text": "*.example.com"
             }
           ],
-          "match_type": {
-            "Matches": 0
-          },
-          "comparator": "AsciiCaseMap",
           "is_not": false
         }
       }

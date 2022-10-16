@@ -7,13 +7,10 @@ require "fileinto";
 
 test "Segfault Trigger 1" {
 
-	if not test_multiscript [
-		"multiscript/group-spam.sieve",
-		"multiscript/spam.sieve",
-		"multiscript/sent-store.sieve"]
-	{
-		test_fail "failed multiscript execution";
-	}
+	include "group-spam";
+	include "spam";
+	include "sent-store";
+
 }
 
 test_set "message" text:
@@ -30,12 +27,8 @@ test "Internal Flags" {
  		test_fail "some flags or keywords are already set";
 	}
 
-	if not test_multiscript [
-		"multiscript/setflag.sieve",
-		"multiscript/fileinto.sieve"]
-	{
-		test_fail "failed multiscript execution";
-	}
+	include "setflag";
+	include "fileinto";
 
 	test_result_reset;
 	test_message :folder "folder" 0;

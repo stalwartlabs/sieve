@@ -23,6 +23,7 @@ pub(crate) enum StringItem {
     LocalVariable(usize),
     MatchVariable(usize),
     GlobalVariable(String),
+    EnvironmentVariable(String),
     List(Vec<StringItem>),
 }
 
@@ -103,17 +104,26 @@ impl<'x> CompilerState<'x> {
                                         return Err(ErrorType::InvalidMatchVariable(num));
                                     }
                                 }
-                            } else if pos - var_start_pos > 7
-                                && bytes[var_start_pos..var_start_pos + 7]
-                                    .eq_ignore_ascii_case(b"global.")
-                            {
-                                items.push(StringItem::GlobalVariable(
-                                    String::from_utf8(bytes[var_start_pos + 7..pos].to_vec())
-                                        .unwrap(),
-                                ));
                             } else {
-                                is_var_error = true;
-                            };
+                                match std::str::from_utf8(&bytes[var_start_pos..pos])
+                                    .unwrap()
+                                    .to_lowercase()
+                                    .split_once('.')
+                                {
+                                    Some(("global", var_name)) if !var_name.is_empty() => {
+                                        items
+                                            .push(StringItem::GlobalVariable(var_name.to_string()));
+                                    }
+                                    Some(("env", var_name)) if !var_name.is_empty() => {
+                                        items.push(StringItem::EnvironmentVariable(
+                                            var_name.to_string(),
+                                        ));
+                                    }
+                                    _ => {
+                                        is_var_error = true;
+                                    }
+                                }
+                            }
 
                             state = State::None;
                         } else {
@@ -257,6 +267,7 @@ impl Display for StringItem {
             StringItem::LocalVariable(v) => write!(f, "${{{}}}", v),
             StringItem::MatchVariable(v) => write!(f, "${{{}}}", v),
             StringItem::GlobalVariable(v) => write!(f, "${{global.{}}}", v),
+            StringItem::EnvironmentVariable(v) => write!(f, "${{env.{}}}", v),
             StringItem::List(l) => {
                 for i in l {
                     i.fmt(f)?;

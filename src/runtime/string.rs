@@ -29,6 +29,15 @@ impl<'x> Context<'x> {
                     ""[..].into()
                 }
             }
+            StringItem::EnvironmentVariable(var_name) => {
+                if let Some(data) = self.vars_env.get(var_name) {
+                    data.as_ref().into()
+                } else if let Some(data) = self.runtime.environment.get(var_name) {
+                    data.as_ref().into()
+                } else {
+                    ""[..].into()
+                }
+            }
             StringItem::List(list) => {
                 let mut data = String::new();
                 for item in list {
@@ -52,6 +61,13 @@ impl<'x> Context<'x> {
                         }
                         StringItem::GlobalVariable(var_name) => {
                             if let Some(string) = self.vars_global.get(var_name) {
+                                data.push_str(string);
+                            }
+                        }
+                        StringItem::EnvironmentVariable(var_name) => {
+                            if let Some(string) = self.vars_env.get(var_name) {
+                                data.push_str(string);
+                            } else if let Some(string) = self.runtime.environment.get(var_name) {
                                 data.push_str(string);
                             }
                         }

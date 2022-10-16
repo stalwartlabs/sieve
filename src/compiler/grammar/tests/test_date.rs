@@ -18,24 +18,23 @@ pub(crate) struct TestDate {
     pub index: Option<i32>,
     pub zone: Zone,
     pub date_part: DatePart,
-    pub list: bool,
+    pub mime_anychild: bool,
     pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestCurrentDate {
-    pub zone: Option<i32>,
+    pub zone: Option<i64>,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub date_part: DatePart,
     pub key_list: Vec<StringItem>,
-    pub list: bool,
     pub is_not: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Zone {
-    Time(i32),
+    Time(i64),
     Original,
     Local,
 }
@@ -68,7 +67,8 @@ impl<'x> CompilerState<'x> {
         let mut zone = Zone::Local;
         let mut date_part = None;
 
-        let mut list = false;
+        let mut mime = false;
+        let mut mime_anychild = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -79,7 +79,8 @@ impl<'x> CompilerState<'x> {
                     | Word::Matches
                     | Word::Value
                     | Word::Count
-                    | Word::Regex),
+                    | Word::Regex
+                    | Word::List),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
@@ -92,23 +93,17 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::Last) => {
                     index_last = true;
                 }
-                Token::Tag(Word::List) => {
-                    list = true;
-                }
                 Token::Tag(Word::OriginalZone) => {
                     zone = Zone::Original;
                 }
                 Token::Tag(Word::Zone) => {
-                    let token_info = self.tokens.unwrap_next()?;
-                    if let Token::StringConstant(value) = &token_info.token {
-                        if let Ok(value) = std::str::from_utf8(value) {
-                            if let Ok(timezone) = value.parse() {
-                                zone = Zone::Time(timezone);
-                                continue;
-                            }
-                        }
-                    }
-                    return Err(token_info.expected("string containing time zone"));
+                    zone = Zone::Time(self.parse_timezone()?);
+                }
+                Token::Tag(Word::Mime) => {
+                    mime = true;
+                }
+                Token::Tag(Word::AnyChild) => {
+                    mime_anychild = true;
                 }
                 _ => {
                     if header_name.is_none() {
@@ -133,6 +128,10 @@ impl<'x> CompilerState<'x> {
             }
         }
 
+        if !mime && mime_anychild {
+            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+        }
+
         Ok(Test::Date(TestDate {
             header_name: header_name.unwrap(),
             key_list,
@@ -141,7 +140,7 @@ impl<'x> CompilerState<'x> {
             comparator,
             index: if index_last { index.map(|i| -i) } else { index },
             zone,
-            list,
+            mime_anychild,
             is_not: false,
         }))
     }
@@ -153,8 +152,6 @@ impl<'x> CompilerState<'x> {
         let mut zone = None;
         let mut date_part = None;
 
-        let mut list = false;
-
         loop {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
@@ -164,27 +161,16 @@ impl<'x> CompilerState<'x> {
                     | Word::Matches
                     | Word::Value
                     | Word::Count
-                    | Word::Regex),
+                    | Word::Regex
+                    | Word::List),
                 ) => {
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
                     comparator = self.parse_comparator()?;
                 }
-                Token::Tag(Word::List) => {
-                    list = true;
-                }
                 Token::Tag(Word::Zone) => {
-                    let token_info = self.tokens.unwrap_next()?;
-                    if let Token::StringConstant(value) = &token_info.token {
-                        if let Ok(value) = std::str::from_utf8(value) {
-                            if let Ok(timezone) = value.parse::<i32>() {
-                                zone = timezone.into();
-                                continue;
-                            }
-                        }
-                    }
-                    return Err(token_info.expected("string containing time zone"));
+                    zone = self.parse_timezone()?.into();
                 }
                 _ => {
                     if date_part.is_none() {
@@ -213,9 +199,24 @@ impl<'x> CompilerState<'x> {
             match_type,
             comparator,
             zone,
-            list,
             is_not: false,
         }))
+    }
+
+    pub(crate) fn parse_timezone(&mut self) -> Result<i64, CompileError> {
+        let token_info = self.tokens.unwrap_next()?;
+        if let Token::StringConstant(value) = &token_info.token {
+            if let Ok(value) = std::str::from_utf8(value) {
+                if let Ok(timezone) = value.parse::<i64>() {
+                    return match timezone {
+                        0..=1400 => Ok((timezone / 100 * 3600) + (timezone % 100 * 60)),
+                        -1200..=-1 => Ok((timezone / 100 * 3600) - (-timezone % 100 * 60)),
+                        _ => Err(token_info.expected("invalid timezone")),
+                    };
+                }
+            }
+        }
+        Err(token_info.expected("string containing time zone"))
     }
 }
 

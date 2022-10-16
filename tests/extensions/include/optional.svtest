@@ -20,21 +20,3 @@ test "Included Optional" {
 		test_fail "unexpected result value after missing script: ${result}";
 	}
 }
-
-
-test "Included Optional - Binary" {
- 	if not test_script_compile "execute/optional.sieve" {
-		test_fail "failed to compile sieve script";
-	}
-
-	test_binary_save "optional";
-	test_binary_load "optional";
-
-	if not test_script_run {
-		test_fail "failed to execute sieve script";
-	}
-
-	if not string "${result}" " ONE TWO" {
-		test_fail "unexpected result value: ${result}";
-	}
-}

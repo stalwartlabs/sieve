@@ -295,7 +295,7 @@
           "Text": "pleeb@isp.example.org"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }

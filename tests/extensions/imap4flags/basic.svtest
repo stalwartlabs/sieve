@@ -51,7 +51,7 @@ test "Setflag; Hasflag one" {
 }
 
 test "Hasflag; duplicates" {
-	set "Flags" "A B C D E F A B C D E F";
+	setflag "Flags" "A B C D E F A B C D E F";
 
 	if hasflag :comparator "i;ascii-numeric" :count "gt" "Flags" "6" {
 		test_fail "hasflag must ignore duplicates";

@@ -17,27 +17,10 @@ test_set "envelope.to" "timo@example.net";
 test "Basic" {
 	reject "I don't want your mail";
 
-	if not test_result_execute {
-        test_fail "failed to execute reject";
-    }
-
-    test_message :smtp 0;
-
-    if not address :is "to" "sirius@example.org" {
-        test_fail "to address incorrect";
-    }
-
-    if not header :contains "from" "Postmaster" {
-        test_fail "from address incorrect";
-    }
-
-	if not envelope :is "to" "sirius@example.org" {
-		test_fail "envelope recipient incorrect";
+	if not test_result_action "reject" {
+		test_fail "reject action missing from result";
 	}
 
-	if not envelope :is "from" "" {
-		test_fail "envelope sender not null";
-	}
 }
 
 test_result_reset;
@@ -46,11 +29,7 @@ test_set "envelope.from" "<>";
 test "Null Sender" {
 	reject "I don't want your mail";
 
-	if not test_result_execute {
-		test_fail "failed to execute reject";
-	}
-
-	if test_message :smtp 0 {
-		test_fail "reject sent message to NULL sender";
+	if not test_result_action "reject" {
+		test_fail "reject action missing from result";
 	}
 }

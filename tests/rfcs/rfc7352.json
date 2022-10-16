@@ -216,8 +216,9 @@
   [
     19,
     {
-      "SetFlag": {
-        "varname": null,
+      "EditFlags": {
+        "action": "Set",
+        "name": null,
         "flags": [
           {
             "Text": "\\seen"
@@ -247,9 +248,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "from"
-            }
+            "From"
           ],
           "key_list": [
             {
@@ -408,9 +407,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "from"
-            }
+            "From"
           ],
           "key_list": [
             {
@@ -738,8 +735,9 @@
   [
     56,
     {
-      "SetFlag": {
-        "varname": null,
+      "EditFlags": {
+        "action": "Set",
+        "name": null,
         "flags": [
           {
             "Text": "\\seen"

@@ -55,26 +55,4 @@ Frop!
 		test_fail "mailbox somehow not created";
 	}
 
-	test_result_reset;
-
-	test_set "message" text:
-From: stephan@example.org
-To: nico@frop.example.org
-Subject: Frop 2
-
-Frop!
-.
-	;
-
-	fileinto "created";
-
-	if not test_result_execute {
-		test_fail "execution of result failed second time";
-	}
-
-	test_message :folder "created" 0;
-
-	if not header :is "subject" "Frop 1" {
-		test_fail "incorrect message read back from mail store";
-	}
 }

@@ -1,4 +1,0 @@
-priv/sieve/name/namespace
-1
-priv/sieve/data/1
-require ["variables", "include"]; set "global.a" "personal";

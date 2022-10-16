@@ -20,9 +20,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "from"
-            }
+            "From"
           ],
           "key_list": [
             {
@@ -163,9 +161,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "from"
-            }
+            "From"
           ],
           "key_list": [
             {
@@ -286,7 +282,7 @@
       "Test": {
         "CurrentDate": {
           "zone": null,
-          "match_type": "Is",
+          "match_type": "List",
           "comparator": "AsciiCaseMap",
           "date_part": "Date",
           "key_list": [
@@ -294,7 +290,6 @@
               "Text": "tag:example.com,2011-01-01:localHolidays"
             }
           ],
-          "list": true,
           "is_not": false
         }
       }
@@ -327,9 +322,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "to"
-            }
+            "To"
           ],
           "key_list": [
             {
@@ -391,7 +384,7 @@
           "Text": "tag:example.com,2010-05-28:mylist"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": true
       }

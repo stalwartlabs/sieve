@@ -1,5 +1,4 @@
 require "vnd.stalwart.testsuite";
-require "vnd.stalwart.environment";
 require "variables";
 require "relational";
 

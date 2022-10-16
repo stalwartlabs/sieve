@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Comparator},
+    grammar::{actions::action_set::Variable, instruction::CompilerState, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -18,7 +18,7 @@ use crate::compiler::grammar::{test::Test, MatchType};
 pub(crate) struct TestHasFlag {
     pub comparator: Comparator,
     pub match_type: MatchType,
-    pub variable_list: Vec<StringItem>,
+    pub variable_list: Vec<Variable>,
     pub flags: Vec<StringItem>,
     pub is_not: bool,
 }
@@ -28,7 +28,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
 
-        let maybe_flags;
+        let maybe_variables;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -47,7 +47,7 @@ impl<'x> CompilerState<'x> {
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
-                    maybe_flags = self.parse_strings_token(token_info)?;
+                    maybe_variables = self.parse_strings_token(token_info)?;
                     break;
                 }
             }
@@ -55,11 +55,26 @@ impl<'x> CompilerState<'x> {
 
         match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
             Some(Ok(Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen)) => {
-                if !maybe_flags.is_empty() {
+                if !maybe_variables.is_empty() {
+                    let mut variable_list = Vec::with_capacity(maybe_variables.len());
+                    for variable in maybe_variables {
+                        match variable {
+                            StringItem::Text(var_name) => {
+                                variable_list.push(self.register_variable(var_name));
+                            }
+                            _ => {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .invalid("variable name has to be a constant"))
+                            }
+                        }
+                    }
+
                     Ok(Test::HasFlag(TestHasFlag {
                         comparator,
                         match_type,
-                        variable_list: maybe_flags,
+                        variable_list,
                         flags: self.parse_strings()?,
                         is_not: false,
                     }))
@@ -74,7 +89,7 @@ impl<'x> CompilerState<'x> {
                 comparator,
                 match_type,
                 variable_list: Vec::new(),
-                flags: maybe_flags,
+                flags: maybe_variables,
                 is_not: false,
             })),
         }

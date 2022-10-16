@@ -1,6 +1,0 @@
-require "vnd.stalwart.testsuite";
-require "vnd.stalwart.debug";
-
-test "Basic" {
-	debug_log "logging basic message.";
-}

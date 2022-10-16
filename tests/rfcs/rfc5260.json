@@ -61,7 +61,7 @@
           "index": null,
           "zone": "Original",
           "date_part": "Hour",
-          "list": false,
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -93,7 +93,7 @@
           "index": null,
           "zone": "Original",
           "date_part": "Hour",
-          "list": false,
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -138,7 +138,7 @@
           "index": null,
           "zone": "Local",
           "date_part": "Weekday",
-          "list": false,
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -168,7 +168,7 @@
           "index": null,
           "zone": "Local",
           "date_part": "Weekday",
-          "list": false,
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -209,7 +209,6 @@
               "Text": "0"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -235,7 +234,6 @@
               "Text": "6"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -263,7 +261,6 @@
               "Text": "09"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -291,7 +288,6 @@
               "Text": "17"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -312,7 +308,7 @@
           "Text": "pager@example.com"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }
@@ -334,7 +330,6 @@
               "Text": "2007-06-30"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -362,7 +357,6 @@
               "Text": "2007-07-07"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -409,7 +403,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -461,7 +454,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -528,7 +520,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -573,10 +564,10 @@
           "comparator": "AsciiCaseMap",
           "index": 2,
           "zone": {
-            "Time": -500
+            "Time": -18000
           },
           "date_part": "Iso8601",
-          "list": false,
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -597,7 +588,7 @@
           "Text": "aftercutoff@example.org"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }

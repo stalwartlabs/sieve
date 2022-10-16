@@ -12,23 +12,7 @@ Frop.
 ;
 
 test "Actions Fileinto" {
-	test_mailbox_create "aaaa";
-	test_mailbox_create "bbbb";
-
-	if not test_script_compile "execute/actions-fileinto.sieve" {
-		test_fail "failed to compile sieve script";
-	}
-
-	test_binary_save "actions-fileinto";
-	test_binary_load "actions-fileinto";
-
-	if not test_script_run {
-		test_fail "failed to execute sieve script";
-	}
-
-	if not test_result_execute {
-		test_fail "failed to execute result";
-	}
+	include "actions-fileinto";
 
 	test_message :folder "aaaa" 0;
 
@@ -44,25 +28,5 @@ test "Actions Fileinto" {
 }
 
 test "Namespace - file" {
-	if not test_script_compile "execute/namespace.sieve" {
-		test_fail "failed to compile sub-test";
-	}
-
-	if not test_script_run {
-		test_fail "failed to execute sub-test";
-	}
-}
-
-test "Namespace - dict" {
-	test_config_set "sieve" "dict:file:${tst.path}/included/namespace.dict";
-	test_config_set "sieve_global" "dict:file:${tst.path}/included-global/namespace.dict";
-	test_config_reload :extension "include";
-
-	if not test_script_compile "execute/namespace.sieve" {
-		test_fail "failed to compile sub-test";
-	}
-	
-	if not test_script_run {
-		test_fail "failed to execute sub-test";
-	}
+	include "namespace-execute";
 }

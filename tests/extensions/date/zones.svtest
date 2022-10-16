@@ -10,7 +10,6 @@ test "Local-Zone" {
 	set "local_zone" "${0}";
 }
 
-/* FIXME: using variables somehow fails here */
 if string "${local_zone}" "+0200" {
 test_set "message" text:
 From: stephan@example.org
@@ -58,6 +57,9 @@ test "Original Zone" {
 }
 
 test "Local Zone Shift" {
+	set "a" "";
+	set "b" "";
+
 	if anyof (
 			allof (
 				string "${local_zone}" "+0200",

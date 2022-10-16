@@ -2,11 +2,10 @@ use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
 use mail_parser::HeaderName;
-use phf::phf_map;
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
-    Context, Envelope, Input, Runtime, Script, Sieve,
+    Context, Input, Runtime, Script, Sieve,
 };
 
 pub mod actions;
@@ -81,10 +80,14 @@ impl Runtime {
 
         Runtime {
             allowed_capabilities,
-            environment: AHashMap::new(),
+            environment: AHashMap::from_iter([
+                ("name".into(), "Stalwart Sieve".into()),
+                ("version".into(), env!("CARGO_PKG_VERSION").into()),
+            ]),
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,
             max_instructions: 5000,
+            max_redirects: 1,
             protected_headers: vec![
                 HeaderName::Other("Original-Subject".into()),
                 HeaderName::Other("Original-From".into()),
@@ -92,12 +95,29 @@ impl Runtime {
         }
     }
 
-    pub fn add_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
+    pub fn set_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
         self.protected_headers.push(HeaderName::parse(header_name));
     }
 
     pub fn with_protected_header(mut self, header_name: impl Into<Cow<'static, str>>) -> Self {
-        self.add_protected_header(header_name);
+        self.set_protected_header(header_name);
+        self
+    }
+
+    pub fn set_env_variable(
+        &mut self,
+        name: impl Into<String>,
+        value: impl Into<Cow<'static, str>>,
+    ) {
+        self.environment.insert(name.into(), value.into());
+    }
+
+    pub fn with_env_variable(
+        mut self,
+        name: impl Into<String>,
+        value: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        self.set_env_variable(name.into(), value.into());
         self
     }
 
@@ -190,32 +210,3 @@ impl From<&str> for Script {
         Script::Personal(name.to_string())
     }
 }
-
-impl<'x> From<String> for Envelope<'x> {
-    fn from(name: String) -> Self {
-        if let Some(envelope) = ENVELOPE.get(&name) {
-            envelope.clone()
-        } else {
-            Envelope::Other(name.into())
-        }
-    }
-}
-
-impl<'x> From<&'x str> for Envelope<'x> {
-    fn from(name: &'x str) -> Self {
-        if let Some(envelope) = ENVELOPE.get(name) {
-            envelope.clone()
-        } else {
-            Envelope::Other(name.into())
-        }
-    }
-}
-
-pub(crate) static ENVELOPE: phf::Map<&'static str, Envelope> = phf_map! {
-    "from" => Envelope::From,
-    "to" => Envelope::To,
-    "bytimeabsolute" => Envelope::ByTimeAbsolute,
-    "bytimerelative" => Envelope::ByTimeRelative,
-    "bymode" => Envelope::ByMode,
-    "bytrace" => Envelope::ByTrace,
-};

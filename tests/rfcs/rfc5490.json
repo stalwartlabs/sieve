@@ -194,9 +194,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "from"
-            }
+            "From"
           ],
           "key_list": [
             {

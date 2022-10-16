@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, sync::Arc, time::SystemTime};
 
 use ahash::AHashMap;
 use mail_parser::{Encoding, Message, MessagePart, PartType};
@@ -51,6 +51,7 @@ impl<'x> Context<'x> {
             script_cache: AHashMap::new(),
             script_stack: Vec::with_capacity(0),
             vars_global: AHashMap::new(),
+            vars_env: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
             envelope: Vec::new(),
@@ -60,6 +61,10 @@ impl<'x> Context<'x> {
             }],
             has_changes: false,
             default_from: "MAILER-DAEMON".into(),
+            current_time: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0) as i64,
         }
     }
 
@@ -101,270 +106,249 @@ impl<'x> Context<'x> {
         let mut current_script = self.script_stack.last()?.script.clone();
         let mut iter = current_script.instructions.get(self.pos..)?.iter();
 
-        while let Some(instruction) = iter.next() {
-            match instruction {
-                Instruction::Jz(jmp_pos) => {
-                    if !self.test_result {
-                        debug_assert!(*jmp_pos > self.pos);
-                        self.pos = *jmp_pos;
-                        iter = current_script.instructions.get(self.pos..)?.iter();
-                        continue;
-                    }
-                }
-                Instruction::Jnz(jmp_pos) => {
-                    if self.test_result {
-                        debug_assert!(*jmp_pos > self.pos);
-                        self.pos = *jmp_pos;
-                        iter = current_script.instructions.get(self.pos..)?.iter();
-                        continue;
-                    }
-                }
-                Instruction::Jmp(jmp_pos) => {
-                    debug_assert_ne!(*jmp_pos, self.pos);
-                    self.pos = *jmp_pos;
-                    iter = current_script.instructions.get(self.pos..)?.iter();
-                    continue;
-                }
-                Instruction::Test(test) => match test.exec(self) {
-                    TestResult::Bool(result) => {
-                        self.test_result = result;
-                    }
-                    TestResult::Event { event, is_not } => {
-                        self.pos += 1;
-                        self.test_result = is_not;
-                        return Some(Ok(event));
-                    }
-                    TestResult::Error(err) => {
-                        return Some(Err(err));
-                    }
-                },
-                Instruction::Clear(clear) => {
-                    if clear.local_vars_num > 0 {
-                        if let Some(local_vars) = self.vars_local.get_mut(
-                            clear.local_vars_idx as usize
-                                ..(clear.local_vars_idx + clear.local_vars_num) as usize,
-                        ) {
-                            for local_var in local_vars.iter_mut() {
-                                if !local_var.is_empty() {
-                                    *local_var = String::with_capacity(0);
-                                }
-                            }
-                        } else {
-                            debug_assert!(false, "Failed to clear local variables: {:?}", clear);
+        'outer: loop {
+            while let Some(instruction) = iter.next() {
+                match instruction {
+                    Instruction::Jz(jmp_pos) => {
+                        if !self.test_result {
+                            debug_assert!(*jmp_pos > self.pos);
+                            self.pos = *jmp_pos;
+                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            continue;
                         }
                     }
-                    if clear.match_vars != 0 {
-                        self.clear_match_variables(clear.match_vars);
+                    Instruction::Jnz(jmp_pos) => {
+                        if self.test_result {
+                            debug_assert!(*jmp_pos > self.pos);
+                            self.pos = *jmp_pos;
+                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            continue;
+                        }
                     }
-                }
-                Instruction::Keep(keep) => {
-                    self.actions
-                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                    self.actions.push(Action::Keep {
-                        flags: keep
-                            .flags
-                            .iter()
-                            .map(|f| self.eval_string(f).into_owned())
-                            .collect(),
-                    });
-                }
-                Instruction::FileInto(fi) => {
-                    if self.has_changes {
-                        let bytes = self.build_message();
-                        self.actions.push(Action::UpdateMessage { bytes });
-                    }
-                    self.actions
-                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                    self.actions.push(Action::FileInto {
-                        folder: self.eval_string(&fi.folder).into_owned(),
-                        flags: fi
-                            .flags
-                            .iter()
-                            .map(|f| self.eval_string(f).into_owned())
-                            .collect(),
-                        mailbox_id: fi
-                            .mailbox_id
-                            .as_ref()
-                            .map(|mi| self.eval_string(mi).into_owned()),
-                        special_use: fi
-                            .special_use
-                            .as_ref()
-                            .map(|su| self.eval_string(su).into_owned()),
-                        copy: fi.copy,
-                        create: fi.create,
-                    });
-                }
-                Instruction::Redirect(r) => {
-                    if self.has_changes {
-                        let bytes = self.build_message();
-                        self.actions.push(Action::UpdateMessage { bytes });
-                    }
-                    self.actions.push(Action::Redirect {
-                        address: self.eval_string(&r.address).into_owned(),
-                        copy: r.copy,
-                    });
-                }
-                Instruction::Discard => {
-                    self.actions
-                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                    self.actions.push(Action::Discard);
-                }
-                Instruction::Stop => {
-                    self.script_stack.clear();
-                    break;
-                }
-                Instruction::Reject(reject) => {
-                    let reason = self.eval_string(&reject.reason).into_owned();
-                    self.actions
-                        .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                    self.actions.push(if reject.ereject {
-                        Action::Ereject { reason }
-                    } else {
-                        Action::Reject { reason }
-                    });
-                }
-                Instruction::ForEveryPart(fep) => {
-                    if let Some(next_part) = self.part_iter.next() {
-                        self.part = next_part;
-                    } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
-                        debug_assert!(fep.jz_pos > self.pos);
-                        self.part_iter = prev_part_iter;
-                        self.part = prev_part;
-                        self.pos = fep.jz_pos;
+                    Instruction::Jmp(jmp_pos) => {
+                        debug_assert_ne!(*jmp_pos, self.pos);
+                        self.pos = *jmp_pos;
                         iter = current_script.instructions.get(self.pos..)?.iter();
                         continue;
-                    } else {
-                        self.part = 0;
-                        #[cfg(test)]
-                        panic!("ForEveryPart executed without items on stack.");
                     }
-                }
-                Instruction::ForEveryPartPush => {
-                    let part_iter = self
-                        .find_nested_parts_ids(self.part_iter_stack.is_empty())
-                        .into_iter();
-                    self.part_iter_stack
-                        .push((self.part, std::mem::replace(&mut self.part_iter, part_iter)));
-                }
-                Instruction::ForEveryPartPop(num_pops) => {
-                    debug_assert!(
-                        *num_pops > 0 && *num_pops <= self.part_iter_stack.len(),
-                        "Pop out of range: {} with {} items.",
-                        num_pops,
-                        self.part_iter_stack.len()
-                    );
-                    for _ in 0..*num_pops {
-                        if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
+                    Instruction::Test(test) => match test.exec(self) {
+                        TestResult::Bool(result) => {
+                            self.test_result = result;
+                        }
+                        TestResult::Event { event, is_not } => {
+                            self.pos += 1;
+                            self.test_result = is_not;
+                            return Some(Ok(event));
+                        }
+                        TestResult::Error(err) => {
+                            return Some(Err(err));
+                        }
+                    },
+                    Instruction::Clear(clear) => {
+                        if clear.local_vars_num > 0 {
+                            if let Some(local_vars) = self.vars_local.get_mut(
+                                clear.local_vars_idx as usize
+                                    ..(clear.local_vars_idx + clear.local_vars_num) as usize,
+                            ) {
+                                for local_var in local_vars.iter_mut() {
+                                    if !local_var.is_empty() {
+                                        *local_var = String::with_capacity(0);
+                                    }
+                                }
+                            } else {
+                                debug_assert!(
+                                    false,
+                                    "Failed to clear local variables: {:?}",
+                                    clear
+                                );
+                            }
+                        }
+                        if clear.match_vars != 0 {
+                            self.clear_match_variables(clear.match_vars);
+                        }
+                    }
+                    Instruction::Keep(keep) => {
+                        self.actions
+                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                        self.actions.push(Action::Keep {
+                            flags: self.get_local_or_global_flags(&keep.flags),
+                        });
+                    }
+                    Instruction::FileInto(fi) => fi.exec(self),
+                    Instruction::Redirect(redirect) => redirect.exec(self),
+                    Instruction::Discard => {
+                        self.actions
+                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                        self.actions.push(Action::Discard);
+                    }
+                    Instruction::Stop => {
+                        self.script_stack.clear();
+                        break 'outer;
+                    }
+                    Instruction::Reject(reject) => {
+                        let reason = self.eval_string(&reject.reason).into_owned();
+                        self.actions
+                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
+                        self.actions.push(if reject.ereject {
+                            Action::Ereject { reason }
+                        } else {
+                            Action::Reject { reason }
+                        });
+                    }
+                    Instruction::ForEveryPart(fep) => {
+                        if let Some(next_part) = self.part_iter.next() {
+                            self.part = next_part;
+                        } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop()
+                        {
+                            debug_assert!(fep.jz_pos > self.pos);
                             self.part_iter = prev_part_iter;
                             self.part = prev_part;
+                            self.pos = fep.jz_pos;
+                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            continue;
                         } else {
-                            break;
+                            self.part = 0;
+                            #[cfg(test)]
+                            panic!("ForEveryPart executed without items on stack.");
                         }
                     }
-                }
-                Instruction::Replace(replace) => replace.exec(self),
-                Instruction::Enclose(enclose) => enclose.exec(self),
-                Instruction::ExtractText(extract) => extract.exec(self),
-                Instruction::AddHeader(add_header) => add_header.exec(self),
-                Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
-                Instruction::Set(set) => set.exec(self),
-                Instruction::Notify(_) => (),
-                Instruction::Vacation(_) => (),
-                Instruction::SetFlag(_) => (),
-                Instruction::AddFlag(_) => (),
-                Instruction::RemoveFlag(_) => (),
-                Instruction::Include(include) => match include.exec(self) {
-                    IncludeResult::Cached(script) => {
-                        self.script_stack.push(ScriptStack {
-                            script: script.clone(),
-                            prev_pos: self.pos + 1,
-                            prev_vars_local: std::mem::replace(
-                                &mut self.vars_local,
-                                vec![String::with_capacity(0); script.num_vars],
-                            ),
-                            prev_vars_match: std::mem::replace(
-                                &mut self.vars_match,
-                                vec![String::with_capacity(0); script.num_match_vars],
-                            ),
-                        });
-                        self.pos = 0;
-                        current_script = script;
-                        iter = current_script.instructions.iter();
-                        continue;
+                    Instruction::ForEveryPartPush => {
+                        let part_iter = self
+                            .find_nested_parts_ids(self.part_iter_stack.is_empty())
+                            .into_iter();
+                        self.part_iter_stack
+                            .push((self.part, std::mem::replace(&mut self.part_iter, part_iter)));
                     }
-                    IncludeResult::Event(event) => {
+                    Instruction::ForEveryPartPop(num_pops) => {
+                        debug_assert!(
+                            *num_pops > 0 && *num_pops <= self.part_iter_stack.len(),
+                            "Pop out of range: {} with {} items.",
+                            num_pops,
+                            self.part_iter_stack.len()
+                        );
+                        for _ in 0..*num_pops {
+                            if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
+                                self.part_iter = prev_part_iter;
+                                self.part = prev_part;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    Instruction::Replace(replace) => replace.exec(self),
+                    Instruction::Enclose(enclose) => enclose.exec(self),
+                    Instruction::ExtractText(extract) => extract.exec(self),
+                    Instruction::AddHeader(add_header) => add_header.exec(self),
+                    Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
+                    Instruction::Set(set) => set.exec(self),
+                    Instruction::Notify(_) => (),
+                    Instruction::Vacation(_) => (),
+                    Instruction::EditFlags(flags) => flags.exec(self),
+                    Instruction::Include(include) => match include.exec(self) {
+                        IncludeResult::Cached(script) => {
+                            self.script_stack.push(ScriptStack {
+                                script: script.clone(),
+                                prev_pos: self.pos + 1,
+                                prev_vars_local: std::mem::replace(
+                                    &mut self.vars_local,
+                                    vec![String::with_capacity(0); script.num_vars],
+                                ),
+                                prev_vars_match: std::mem::replace(
+                                    &mut self.vars_match,
+                                    vec![String::with_capacity(0); script.num_match_vars],
+                                ),
+                            });
+                            self.pos = 0;
+                            current_script = script;
+                            iter = current_script.instructions.iter();
+                            continue;
+                        }
+                        IncludeResult::Event(event) => {
+                            self.pos += 1;
+                            return Some(Ok(event));
+                        }
+                        IncludeResult::Error(err) => {
+                            return Some(Err(err));
+                        }
+                        IncludeResult::None => (),
+                    },
+                    Instruction::Convert(_) => (), //TODO
+                    Instruction::Return => {
+                        break;
+                    }
+                    Instruction::Require(capabilities) => {
+                        for capability in capabilities {
+                            if !self.runtime.allowed_capabilities.contains(capability) {
+                                return Some(Err(
+                                    if let Capability::Other(not_supported) = capability {
+                                        RuntimeError::CapabilityNotSupported(not_supported.clone())
+                                    } else {
+                                        RuntimeError::CapabilityNotAllowed(capability.clone())
+                                    },
+                                ));
+                            }
+                        }
+                    }
+                    Instruction::Error(err) => {
+                        return Some(Err(RuntimeError::ScriptErrorMessage(
+                            self.eval_string(&err.message).into_owned(),
+                        )))
+                    }
+                    Instruction::Invalid(invalid) => {
+                        return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
+                    }
+
+                    #[cfg(test)]
+                    Instruction::External((command, params)) => {
                         self.pos += 1;
-                        return Some(Ok(event));
+                        return Some(Ok(Event::TestCommand {
+                            command: command.to_string(),
+                            params: params
+                                .iter()
+                                .map(|p| self.eval_string(p).to_string())
+                                .collect(),
+                        }));
                     }
-                    IncludeResult::Error(err) => {
-                        return Some(Err(err));
-                    }
-                    IncludeResult::None => (),
-                },
-                Instruction::Convert(_) => (), //TODO
-                Instruction::Return => {
-                    if let Some(prev_script) = self.script_stack.pop() {
-                        self.pos = prev_script.prev_pos;
-                        self.vars_local = prev_script.prev_vars_local;
-                        self.vars_match = prev_script.prev_vars_match;
-                    }
-                    current_script = self.script_stack.last()?.script.clone();
-                    iter = current_script.instructions.get(self.pos..)?.iter();
-                    continue;
-                }
-                Instruction::Require(capabilities) => {
-                    for capability in capabilities {
-                        if !self.runtime.allowed_capabilities.contains(capability) {
-                            return Some(Err(
-                                if let Capability::Other(not_supported) = capability {
-                                    RuntimeError::CapabilityNotSupported(not_supported.clone())
-                                } else {
-                                    RuntimeError::CapabilityNotAllowed(capability.clone())
-                                },
-                            ));
-                        }
-                    }
-                }
-                Instruction::Error(err) => {
-                    return Some(Err(RuntimeError::ScriptErrorMessage(
-                        self.eval_string(&err.message).into_owned(),
-                    )))
-                }
-                Instruction::Invalid(invalid) => {
-                    return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
                 }
 
-                #[cfg(test)]
-                Instruction::External((command, params)) => {
-                    self.pos += 1;
-                    return Some(Ok(Event::TestCommand {
-                        command: command.to_string(),
-                        params: params
-                            .iter()
-                            .map(|p| self.eval_string(p).to_string())
-                            .collect(),
-                    }));
-                }
+                self.pos += 1;
             }
 
-            self.pos += 1;
+            if let Some(prev_script) = self.script_stack.pop() {
+                self.pos = prev_script.prev_pos;
+                self.vars_local = prev_script.prev_vars_local;
+                self.vars_match = prev_script.prev_vars_match;
+            }
+
+            if let Some(script_stack) = self.script_stack.last() {
+                current_script = script_stack.script.clone();
+                iter = current_script.instructions.get(self.pos..)?.iter();
+            } else {
+                break;
+            }
         }
 
-        if self.has_changes {
-            if let Some(pos) = self
-                .actions
-                .iter()
-                .position(|a| matches!(a, Action::Keep { .. }))
-            {
-                let bytes = self.build_message();
-                self.actions.insert(pos, Action::UpdateMessage { bytes });
+        let global_flags = self.get_global_flags();
+        if self.has_changes || !global_flags.is_empty() {
+            for (pos, action) in self.actions.iter_mut().enumerate() {
+                if let Action::Keep { flags } = action {
+                    if flags.is_empty() && !global_flags.is_empty() {
+                        *flags = global_flags;
+                    }
+
+                    if self.has_changes {
+                        let bytes = self.build_message();
+                        self.actions.insert(pos, Action::UpdateMessage { bytes });
+                    }
+                    break;
+                }
             }
         }
 
         None
     }
 
-    pub fn set_envelope<'y>(&mut self, envelope: impl Into<Envelope<'x>>, value: &'y str) {
+    pub fn set_envelope(&mut self, envelope: impl Into<Envelope>, value: &str) {
         let envelope = envelope.into();
         if matches!(&envelope, Envelope::From | Envelope::To) {
             if let Some(value) = parse_envelope_address(value) {
@@ -375,7 +359,7 @@ impl<'x> Context<'x> {
         }
     }
 
-    pub fn with_envelope(mut self, envelope: impl Into<Envelope<'x>>, value: &str) -> Self {
+    pub fn with_envelope(mut self, envelope: impl Into<Envelope>, value: &str) -> Self {
         self.set_envelope(envelope, value);
         self
     }
@@ -390,6 +374,19 @@ impl<'x> Context<'x> {
 
     pub fn with_from(mut self, from: impl Into<Cow<'x, str>>) -> Self {
         self.set_from(from);
+        self
+    }
+
+    pub fn set_env_variable(&mut self, name: impl Into<String>, value: impl Into<Cow<'x, str>>) {
+        self.vars_env.insert(name.into(), value.into());
+    }
+
+    pub fn with_env_variable(
+        mut self,
+        name: impl Into<String>,
+        value: impl Into<Cow<'x, str>>,
+    ) -> Self {
+        self.set_env_variable(name.into(), value.into());
         self
     }
 }

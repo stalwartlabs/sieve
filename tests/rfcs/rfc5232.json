@@ -30,8 +30,9 @@
   [
     3,
     {
-      "SetFlag": {
-        "varname": null,
+      "EditFlags": {
+        "action": "Set",
+        "name": null,
         "flags": [
           {
             "Text": "\\Deleted"
@@ -68,15 +69,16 @@
   [
     5,
     {
-      "Jz": 8
+      "Jz": 9
     }
   ],
   [
     6,
     {
-      "SetFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Set",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -97,7 +99,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 0
           }
         ],
         "mailbox_id": null,
@@ -108,9 +110,20 @@
   [
     8,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "Clear": {
+        "local_vars_idx": 0,
+        "local_vars_num": 1,
+        "match_vars": 0
+      }
+    }
+  ],
+  [
+    9,
+    {
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -121,11 +134,12 @@
     }
   ],
   [
-    9,
+    10,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -136,11 +150,12 @@
     }
   ],
   [
-    10,
+    11,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -154,11 +169,12 @@
     }
   ],
   [
-    11,
+    12,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -169,7 +185,7 @@
     }
   ],
   [
-    12,
+    13,
     {
       "Test": {
         "Header": {
@@ -194,17 +210,18 @@
     }
   ],
   [
-    13,
+    14,
     {
-      "Jz": 15
+      "Jz": 16
     }
   ],
   [
-    14,
+    15,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -215,7 +232,7 @@
     }
   ],
   [
-    15,
+    16,
     {
       "Test": {
         "Header": {
@@ -240,17 +257,18 @@
     }
   ],
   [
-    16,
+    17,
     {
-      "Jz": 19
+      "Jz": 20
     }
   ],
   [
-    17,
+    18,
     {
-      "RemoveFlag": {
-        "varname": {
-          "Text": "flagvar"
+      "EditFlags": {
+        "action": "Remove",
+        "name": {
+          "Local": 0
         },
         "flags": [
           {
@@ -261,7 +279,7 @@
     }
   ],
   [
-    18,
+    19,
     {
       "FileInto": {
         "copy": false,
@@ -271,7 +289,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 0
           }
         ],
         "mailbox_id": null,
@@ -280,7 +298,7 @@
     }
   ],
   [
-    19,
+    20,
     {
       "Test": {
         "HasFlag": {
@@ -288,7 +306,7 @@
           "match_type": "Contains",
           "variable_list": [
             {
-              "Text": "MyVar"
+              "Local": 1
             }
           ],
           "flags": [
@@ -302,13 +320,13 @@
     }
   ],
   [
-    20,
+    21,
     {
-      "Jnz": 24
+      "Jnz": 25
     }
   ],
   [
-    21,
+    22,
     {
       "Test": {
         "HasFlag": {
@@ -316,7 +334,7 @@
           "match_type": "Contains",
           "variable_list": [
             {
-              "Text": "MyVar"
+              "Local": 1
             }
           ],
           "flags": [
@@ -333,13 +351,13 @@
     }
   ],
   [
-    22,
+    23,
     {
-      "Jnz": 24
+      "Jnz": 25
     }
   ],
   [
-    23,
+    24,
     {
       "Test": {
         "HasFlag": {
@@ -349,7 +367,7 @@
           },
           "variable_list": [
             {
-              "Text": "MyFlags"
+              "Local": 2
             }
           ],
           "flags": [
@@ -363,13 +381,13 @@
     }
   ],
   [
-    24,
+    25,
     {
-      "Jz": 27
+      "Jz": 28
     }
   ],
   [
-    25,
+    26,
     {
       "FileInto": {
         "copy": false,
@@ -388,7 +406,7 @@
     }
   ],
   [
-    26,
+    27,
     {
       "Keep": {
         "flags": [
@@ -400,7 +418,7 @@
     }
   ],
   [
-    27,
+    28,
     {
       "Test": {
         "Size": {
@@ -412,17 +430,18 @@
     }
   ],
   [
-    28,
+    29,
     {
-      "Jz": 34
+      "Jz": 35
     }
   ],
   [
-    29,
+    30,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "MyFlags"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 2
         },
         "flags": [
           {
@@ -433,7 +452,7 @@
     }
   ],
   [
-    30,
+    31,
     {
       "Test": {
         "Header": {
@@ -458,17 +477,18 @@
     }
   ],
   [
-    31,
+    32,
     {
-      "Jz": 33
+      "Jz": 34
     }
   ],
   [
-    32,
+    33,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "MyFlags"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 2
         },
         "flags": [
           {
@@ -479,7 +499,7 @@
     }
   ],
   [
-    33,
+    34,
     {
       "FileInto": {
         "copy": false,
@@ -489,7 +509,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 2
           }
         ],
         "mailbox_id": null,
@@ -498,7 +518,7 @@
     }
   ],
   [
-    34,
+    35,
     {
       "Test": {
         "Header": {
@@ -523,17 +543,18 @@
     }
   ],
   [
-    35,
+    36,
     {
-      "Jz": 38
+      "Jz": 39
     }
   ],
   [
-    36,
+    37,
     {
-      "AddFlag": {
-        "varname": {
-          "Text": "MyFlags"
+      "EditFlags": {
+        "action": "Add",
+        "name": {
+          "Local": 2
         },
         "flags": [
           {
@@ -547,7 +568,7 @@
     }
   ],
   [
-    37,
+    38,
     {
       "FileInto": {
         "copy": false,
@@ -557,7 +578,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 2
           }
         ],
         "mailbox_id": null,
@@ -566,7 +587,7 @@
     }
   ],
   [
-    38,
+    39,
     {
       "Test": {
         "Header": {
@@ -591,18 +612,18 @@
     }
   ],
   [
-    39,
+    40,
     {
       "Jz": 44
     }
   ],
   [
-    40,
+    41,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 2
         },
         "value": {
           "Text": "\\Flagged $Work"
@@ -611,24 +632,14 @@
     }
   ],
   [
-    41,
+    42,
     {
       "Keep": {
         "flags": [
           {
-            "LocalVariable": 0
+            "LocalVariable": 2
           }
         ]
-      }
-    }
-  ],
-  [
-    42,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
       }
     }
   ],
@@ -678,7 +689,7 @@
       "Keep": {
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 2
           }
         ]
       }
@@ -781,7 +792,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 2
           }
         ],
         "mailbox_id": null,
@@ -806,7 +817,7 @@
         },
         "flags": [
           {
-            "Text": ""
+            "LocalVariable": 2
           }
         ],
         "mailbox_id": null,

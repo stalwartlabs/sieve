@@ -56,7 +56,7 @@
           "Text": "kim@home.example.com"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }

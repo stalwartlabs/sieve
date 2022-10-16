@@ -14,7 +14,6 @@ use super::{
         test_date::{TestCurrentDate, TestDate},
         test_duplicate::TestDuplicate,
         test_envelope::TestEnvelope,
-        test_environment::TestEnvironment,
         test_exists::TestExists,
         test_extlists::TestValidExtList,
         test_hasflag::TestHasFlag,
@@ -58,15 +57,13 @@ pub(crate) enum Test {
     // RFC 7352
     Duplicate(TestDuplicate),
 
-    // RFC 5229
+    // RFC 5229 & RFC 5183
     String(TestString),
+    Environment(TestString),
 
     // RFC 5435
     NotifyMethodCapability(TestNotifyMethodCapability),
     ValidNotifyMethod(TestValidNotifyMethod),
-
-    // RFC 5183
-    Environment(TestEnvironment),
 
     // RFC 6134
     ValidExtList(TestValidExtList),
@@ -391,16 +388,13 @@ impl Test {
             Test::Duplicate(op) => {
                 op.is_not = true;
             }
-            Test::String(op) => {
+            Test::String(op) | Test::Environment(op) => {
                 op.is_not = true;
             }
             Test::NotifyMethodCapability(op) => {
                 op.is_not = true;
             }
             Test::ValidNotifyMethod(op) => {
-                op.is_not = true;
-            }
-            Test::Environment(op) => {
                 op.is_not = true;
             }
             Test::ValidExtList(op) => {

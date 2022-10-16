@@ -24,9 +24,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "notify"
-            }
+            "Notify"
           ],
           "key_list": [
             {
@@ -54,9 +52,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "notify"
-            }
+            "Notify"
           ],
           "key_list": [
             {
@@ -84,9 +80,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "notify"
-            }
+            "Notify"
           ],
           "key_list": [
             {
@@ -116,9 +110,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "orcpt"
-            }
+            "Orcpt"
           ],
           "key_list": [
             {
@@ -148,9 +140,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "bytimerelative"
-            }
+            "ByTimeRelative"
           ],
           "key_list": [
             {
@@ -178,9 +168,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "bytimerelative"
-            }
+            "ByTimeRelative"
           ],
           "key_list": [
             {
@@ -220,7 +208,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -252,9 +239,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "bytimeabsolute"
-            }
+            "ByTimeAbsolute"
           ],
           "key_list": [
             {
@@ -294,9 +279,7 @@
       "Test": {
         "Envelope": {
           "envelope_list": [
-            {
-              "Text": "bytimeabsolute"
-            }
+            "ByTimeAbsolute"
           ],
           "key_list": [
             {
@@ -364,7 +347,6 @@
               "LocalVariable": 0
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -448,7 +430,7 @@
           "Text": "elsewhere@example.com"
         },
         "notify": "Never",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": "None",
         "list": false
       }
@@ -494,7 +476,7 @@
           "Text": "cellphone@example.com"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": {
           "Relative": {
             "rlimit": 600,
@@ -522,7 +504,6 @@
               "Text": "22"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -550,7 +531,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -602,7 +582,6 @@
               "Text": "*"
             }
           ],
-          "list": false,
           "is_not": false
         }
       }
@@ -647,7 +626,7 @@
           "Text": "cellphone@example.com"
         },
         "notify": "Default",
-        "ret": "Default",
+        "return_of_content": "Default",
         "by_time": {
           "Absolute": {
             "alimit": {
