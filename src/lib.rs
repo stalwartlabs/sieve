@@ -39,10 +39,12 @@ pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
+    pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
     pub(crate) max_instructions: usize,
+    pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
 }
 
@@ -54,7 +56,8 @@ pub struct Context<'x> {
 
     pub(crate) message: Message<'x>,
     pub(crate) message_size: usize,
-    pub(crate) envelope: Vec<(Envelope, String)>,
+    pub(crate) envelope: Vec<(Envelope, Cow<'x, str>)>,
+    pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
@@ -92,6 +95,12 @@ pub enum Envelope {
     Ret,
     Envid,
     Other(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Metadata<T> {
+    Server { annotation: T },
+    Mailbox { name: T, annotation: T },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

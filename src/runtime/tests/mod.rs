@@ -15,6 +15,7 @@ pub mod test_envelope;
 pub mod test_exists;
 pub mod test_hasflag;
 pub mod test_header;
+pub mod test_metadata;
 pub mod test_size;
 pub mod test_string;
 
@@ -56,10 +57,8 @@ impl Test {
                     is_not: test.is_not,
                 };
             }
-            Test::Metadata(_) => todo!(),
-            Test::MetadataExists(_) => todo!(),
-            Test::ServerMetadata(_) => todo!(),
-            Test::ServerMetadataExists(_) => todo!(),
+            Test::Metadata(test) => test.exec(ctx),
+            Test::MetadataExists(test) => test.exec(ctx),
             Test::MailboxIdExists(_) => todo!(),
             Test::SpamTest(_) => todo!(),
             Test::VirusTest(_) => todo!(),
