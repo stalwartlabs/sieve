@@ -1,20 +1,31 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+use crate::{
+    compiler::{
+        grammar::{
+            instruction::{CompilerState, Instruction},
+            test::Test,
+        },
+        lexer::{string::StringItem, word::Word, Token},
+        CompileError,
+    },
+    FileCarbonCopy,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Vacation {
-    pub period: Period,
     pub subject: Option<StringItem>,
     pub from: Option<StringItem>,
-    pub handle: Option<StringItem>,
-    pub addresses: Vec<StringItem>,
     pub mime: bool,
-    pub fcc: Option<Fcc>,
+    pub fcc: Option<FileCarbonCopy<StringItem>>,
+    pub reason: StringItem,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct TestVacation {
+    pub addresses: Vec<StringItem>,
+    pub period: Period,
+    pub handle: Option<StringItem>,
     pub reason: StringItem,
 }
 
@@ -23,15 +34,6 @@ pub(crate) enum Period {
     Days(u64),
     Seconds(u64),
     Default,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Fcc {
-    pub fcc: StringItem,
-    pub create: bool,
-    pub flags: Vec<StringItem>,
-    pub special_use: Option<StringItem>,
-    pub mailbox_id: Option<StringItem>,
 }
 
 /*
@@ -145,17 +147,25 @@ impl<'x> CompilerState<'x> {
             return Err(self.tokens.unwrap_next()?.invalid("missing ':fcc' tag"));
         }
 
+        self.instructions
+            .push(Instruction::Test(Test::Vacation(TestVacation {
+                period,
+                handle,
+                reason: reason.clone(),
+                addresses,
+            })));
+
+        self.instructions
+            .push(Instruction::Jz(self.instructions.len() + 2));
+
         self.instructions.push(Instruction::Vacation(Vacation {
             reason,
-            period,
             subject,
             from,
-            handle,
-            addresses,
             mime,
             fcc: if let Some(fcc) = fcc {
-                Fcc {
-                    fcc,
+                FileCarbonCopy {
+                    mailbox: fcc,
                     create,
                     flags,
                     special_use,
@@ -166,6 +176,7 @@ impl<'x> CompilerState<'x> {
                 None
             },
         }));
+
         Ok(())
     }
 }

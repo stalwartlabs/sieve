@@ -6,7 +6,7 @@ use compiler::grammar::{
     instruction::Instruction,
     Capability,
 };
-use mail_parser::{HeaderName, Message};
+use mail_parser::{HeaderName, Message, RfcHeader};
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +37,8 @@ pub struct Compiler {
 #[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
+    pub(crate) valid_notification_uris: AHashSet<URIScheme>,
+    pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
@@ -46,6 +48,10 @@ pub struct Runtime {
     pub(crate) max_instructions: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
+    pub(crate) max_received_headers: usize,
+    pub(crate) vacation_use_orig_rcpt: bool,
+    pub(crate) vacation_default_subject: Cow<'static, str>,
+    pub(crate) vacation_subject_prefix: Cow<'static, str>,
 }
 
 #[derive(Clone, Debug)]
@@ -54,7 +60,8 @@ pub struct Context<'x> {
     pub(crate) runtime: Runtime,
     #[cfg(not(test))]
     pub(crate) runtime: &'x Runtime,
-    pub(crate) default_from: Cow<'x, str>,
+    pub(crate) user_address: Cow<'x, str>,
+    pub(crate) user_full_name: Cow<'x, str>,
     pub(crate) current_time: i64,
 
     pub(crate) message: Message<'x>,
@@ -77,6 +84,7 @@ pub struct Context<'x> {
 
     pub(crate) actions: Vec<Action>,
     pub(crate) has_changes: bool,
+    pub(crate) num_redirects: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -110,6 +118,7 @@ pub enum Metadata<T> {
 pub enum Action {
     Keep {
         flags: Vec<String>,
+        message: Option<Vec<u8>>,
     },
     Discard,
     Reject {
@@ -123,18 +132,24 @@ pub enum Action {
         flags: Vec<String>,
         mailbox_id: Option<String>,
         special_use: Option<String>,
-        copy: bool,
         create: bool,
+        message: Option<Vec<u8>>,
     },
-    Redirect {
-        address: String,
-        copy: bool,
+    SendMessage {
+        recipient: Recipient,
         notify: Notify,
         return_of_content: Ret,
         by_time: ByTime<i64>,
+        message: Option<Vec<u8>>,
+        fcc: Option<Box<FileCarbonCopy<String>>>,
     },
-    UpdateMessage {
-        bytes: Vec<u8>,
+    Notify {
+        from: Option<String>,
+        importance: Importance,
+        options: Vec<String>,
+        message: Option<String>,
+        fcc: Option<Box<FileCarbonCopy<String>>>,
+        method: URI,
     },
 }
 
@@ -145,11 +160,17 @@ pub enum Event {
         optional: bool,
     },
     MailboxExists {
-        names: Vec<String>,
+        mailboxes: Vec<Mailbox>,
+        special_use: Vec<String>,
     },
-    SpecialUseExists {
-        mailbox: Option<String>,
-        attributes: Vec<String>,
+    ListContains {
+        lists: Vec<String>,
+        values: Vec<String>,
+        match_as: MatchAs,
+    },
+    DuplicateId {
+        id: String,
+        expiry: Expiry,
     },
 
     #[cfg(test)]
@@ -159,11 +180,78 @@ pub enum Event {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub struct FileCarbonCopy<T> {
+    pub mailbox: T,
+    pub mailbox_id: Option<T>,
+    pub create: bool,
+    pub flags: Vec<T>,
+    pub special_use: Option<T>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Importance {
+    High,
+    Normal,
+    Low,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Expiry {
+    Seconds(u64),
+    LastSeconds(u64),
+    None,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum MatchAs {
+    Octet,
+    Lowercase,
+    Number,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Recipient {
+    Address(String),
+    List(String),
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Input {
     True,
     False,
     Script { name: Script, script: Arc<Sieve> },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum URI {
+    Mailto { params: Vec<(Mailto, String)> },
+    Xmpp { uri: String },
+    Http { uri: String },
+    Tel { uri: String },
+    Other { uri: String },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Mailto {
+    Header(RfcHeader),
+    Body,
+    Other(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Mailbox {
+    Name(String),
+    Id(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum URIScheme {
+    Mailto,
+    Xmpp,
+    Http,
+    Tel,
+    Other(String),
 }
 
 #[cfg(test)]
@@ -173,13 +261,14 @@ mod tests {
         path::{Path, PathBuf},
     };
 
+    use ahash::{AHashMap, AHashSet};
     use mail_parser::{
-        parsers::MessageStream, Encoding, HeaderValue, Message, MessagePart, PartType,
+        parsers::MessageStream, Addr, Encoding, HeaderValue, Message, MessagePart, PartType,
     };
 
     use crate::{
         runtime::actions::action_mime::reset_test_boundary, Action, Compiler, Envelope, Event,
-        Input, Runtime,
+        Input, Mailbox, Recipient, Runtime, URIScheme,
     };
 
     /*fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
@@ -216,17 +305,6 @@ mod tests {
             "tests/compile/compile.svtest",
             "tests/compile/warnings.svtest",
 
-            "tests/extensions/enotify/notify_method_capability.svtest",
-            "tests/extensions/enotify/mailto.svtest",
-            "tests/extensions/enotify/encodeurl.svtest",
-            "tests/extensions/enotify/basic.svtest",
-            "tests/extensions/enotify/valid_notify_method.svtest",
-            "tests/extensions/enotify/execute.svtest",
-            "tests/extensions/vacation/reply.svtest",
-            "tests/extensions/vacation/message.svtest",
-            "tests/extensions/vacation/smtp.svtest",
-            "tests/extensions/vacation/execute.svtest",
-            "tests/extensions/vacation/utf-8.svtest",
             "tests/extensions/spamvirustest/spamtest.svtest",
             "tests/extensions/spamvirustest/virustest.svtest",
             "tests/extensions/spamvirustest/spamtestplus.svtest",
@@ -313,6 +391,19 @@ mod tests {
             "tests/extensions/mailbox/execute.svtest",
             "tests/extensions/special-use/execute.svtest",
             "tests/extensions/metadata/execute.svtest",
+            "tests/extensions/enotify/basic.svtest",
+            "tests/extensions/enotify/valid_notify_method.svtest",
+            "tests/extensions/enotify/notify_method_capability.svtest",
+            "tests/extensions/enotify/mailto.svtest",
+            "tests/extensions/enotify/encodeurl.svtest",
+            "tests/extensions/enotify/execute.svtest",
+            "tests/extensions/extlists/basic.svtest",
+            "tests/extensions/duplicate/execute.svtest",
+            "tests/extensions/vacation/reply.svtest",
+            "tests/extensions/vacation/message.svtest",
+            "tests/extensions/vacation/smtp.svtest",
+            "tests/extensions/vacation/execute.svtest",
+            "tests/extensions/vacation/utf-8.svtest",
         ] {
             println!("===== {} =====", test);
             run_test(&PathBuf::from(test));
@@ -333,11 +424,14 @@ mod tests {
         let mut raw_message_: Option<Vec<u8>> = None;
         let mut prev_state = None;
         let mut mailboxes = Vec::new();
+        let mut lists: AHashMap<String, AHashSet<String>> = AHashMap::new();
+        let mut duplicated_ids = AHashSet::new();
 
         'outer: loop {
             let runtime = Runtime::new()
                 .with_protected_header("Auto-Submitted")
-                .with_protected_header("Received");
+                .with_protected_header("Received")
+                .with_valid_notification_uri(URIScheme::Mailto);
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {
@@ -368,6 +462,21 @@ mod tests {
             }
             instance.set_env_variable("vnd.stalwart.default_mailbox", "INBOX");
             instance.set_env_variable("vnd.stalwart.username", "john.doe");
+            instance.set_user_address("MAILER-DAEMON");
+            if let HeaderValue::Address(Addr {
+                address: Some(addr),
+                ..
+            }) = instance.message.get_from()
+            {
+                instance.set_envelope(Envelope::From, addr.to_string());
+            }
+            if let HeaderValue::Address(Addr {
+                address: Some(addr),
+                ..
+            }) = instance.message.get_to()
+            {
+                instance.set_envelope(Envelope::To, addr.to_string());
+            }
 
             while let Some(event) = instance.run(input) {
                 match event.unwrap() {
@@ -389,7 +498,10 @@ mod tests {
                             panic!("Script {} not found.", include_path.display());
                         }
                     }
-                    Event::MailboxExists { names } => {
+                    Event::MailboxExists {
+                        mailboxes: mailboxes_,
+                        special_use,
+                    } => {
                         for action in &instance.actions {
                             if let Action::FileInto { folder, create, .. } = action {
                                 if *create && !mailboxes.contains(folder) {
@@ -397,10 +509,37 @@ mod tests {
                                 }
                             }
                         }
-                        input = names.iter().all(|n| mailboxes.contains(n)).into();
+                        input = (special_use.is_empty()
+                            && mailboxes_.iter().all(|n| {
+                                if let Mailbox::Name(n) = n {
+                                    mailboxes.contains(n)
+                                } else {
+                                    false
+                                }
+                            }))
+                        .into();
                     }
-                    Event::SpecialUseExists { .. } => {
-                        input = false.into();
+                    Event::ListContains {
+                        lists: lists_,
+                        values,
+                        ..
+                    } => {
+                        let mut result = false;
+                        'list: for list in &lists_ {
+                            if let Some(list) = lists.get(list) {
+                                for value in &values {
+                                    if list.contains(value) {
+                                        result = true;
+                                        break 'list;
+                                    }
+                                }
+                            }
+                        }
+
+                        input = result.into();
+                    }
+                    Event::DuplicateId { id, .. } => {
+                        input = duplicated_ids.contains(&id).into();
                     }
 
                     Event::TestCommand {
@@ -415,9 +554,30 @@ mod tests {
                                 println!("Running test '{}'...", current_test);
                             }
                             "test_set" => {
-                                let target = params.first().expect("test_set parameter");
+                                let mut params = params.into_iter();
+                                let target = params.next().expect("test_set parameter");
                                 if target == "message" {
-                                    raw_message_ = params.pop().unwrap().into_bytes().into();
+                                    let value = params.next().unwrap();
+                                    raw_message_ = if value.eq_ignore_ascii_case(":smtp") {
+                                        let mut message = None;
+                                        for action in instance.actions.iter().rev() {
+                                            if let Action::SendMessage {
+                                                message: Some(message_),
+                                                ..
+                                            } = action
+                                            {
+                                                /*println!(
+                                                    "<[{}]>",
+                                                    std::str::from_utf8(message_).unwrap()
+                                                );*/
+                                                message = message_.into();
+                                                break;
+                                            }
+                                        }
+                                        message.expect("No SMTP message found").to_vec().into()
+                                    } else {
+                                        value.into_bytes().into()
+                                    };
                                     prev_state = (
                                         instance.pos,
                                         instance.script_cache,
@@ -432,9 +592,9 @@ mod tests {
                                 } else if let Some(envelope) = target.strip_prefix("envelope.") {
                                     let envelope = Envelope::from(envelope.to_string());
                                     instance.envelope.retain(|(e, _)| e != &envelope);
-                                    instance.set_envelope(envelope, params.pop().unwrap());
+                                    instance.set_envelope(envelope, params.next().unwrap());
                                 } else if target == "currentdate" {
-                                    let bytes = params.pop().unwrap().into_bytes();
+                                    let bytes = params.next().unwrap().into_bytes();
                                     if let HeaderValue::DateTime(dt) =
                                         MessageStream::new(&bytes).parse_date()
                                     {
@@ -458,7 +618,7 @@ mod tests {
                                             })
                                     }
                                     ":smtp" => {
-                                        instance.actions.iter().any(|a| matches!(a, Action::Redirect { .. } ))
+                                        instance.actions.iter().any(|a| matches!(a, Action::SendMessage { .. } ))
                                     }
                                     param => panic!("Invalid test_message param '{}'", param),
                                 }.into();
@@ -498,6 +658,32 @@ mod tests {
                                             .runtime
                                             .set_max_variable_size(value.parse().unwrap());
                                     }
+                                    "sieve_valid_ext_list" => {
+                                        instance.runtime.set_valid_ext_list(value);
+                                    }
+                                    "sieve_ext_list_item" => {
+                                        lists
+                                            .entry(value)
+                                            .or_insert_with(AHashSet::new)
+                                            .insert(params.next().expect("list item value"));
+                                    }
+                                    "sieve_duplicated_id" => {
+                                        duplicated_ids.insert(value);
+                                    }
+                                    "sieve_user_email" => {
+                                        instance.set_user_address(value);
+                                    }
+                                    "sieve_vacation_use_original_recipient" => {
+                                        instance.runtime.set_vacation_use_orig_rcpt(
+                                            value.eq_ignore_ascii_case("yes"),
+                                        );
+                                    }
+                                    "sieve_vacation_default_subject" => {
+                                        instance.runtime.set_vacation_default_subject(value);
+                                    }
+                                    "sieve_vacation_default_subject_template" => {
+                                        instance.runtime.set_vacation_subject_prefix(value);
+                                    }
                                     param => panic!("Invalid test_config_set param '{}'", param),
                                 }
                             }
@@ -507,7 +693,7 @@ mod tests {
                                         a,
                                         Action::Keep { .. }
                                             | Action::FileInto { .. }
-                                            | Action::Redirect { .. }
+                                            | Action::SendMessage { .. }
                                     )
                                 }))
                                 .into();
@@ -526,11 +712,28 @@ mod tests {
                                     (instance
                                         .actions
                                         .iter()
-                                        .any(|a| matches!(a, Action::Redirect { address, .. } if address == param)))
+                                        .any(|a| matches!(a, Action::SendMessage { recipient: Recipient::Address(address), .. } if address == param)))
+                                    .into()
+                                } else if param == "keep" {
+                                    (instance
+                                        .actions
+                                        .iter()
+                                        .any(|a| matches!(a, Action::Keep { .. })))
+                                    .into()
+                                } else if param == "send_message" {
+                                    (instance
+                                        .actions
+                                        .iter()
+                                        .any(|a| matches!(a, Action::SendMessage { .. })))
                                     .into()
                                 } else {
                                     panic!("test_result_action {} not implemented", param);
                                 };
+                            }
+                            "test_result_action_count" => {
+                                input = (instance.actions.len()
+                                    == params.first().unwrap().parse::<usize>().unwrap())
+                                .into();
                             }
                             "test_imap_metadata_set" => {
                                 let mut params = params.into_iter();
@@ -554,10 +757,16 @@ mod tests {
                                 mailboxes.push(params.pop().expect("mailbox to create"));
                             }
                             "test_result_reset" => {
-                                instance.actions = vec![Action::Keep { flags: vec![] }];
+                                instance.actions = vec![Action::Keep {
+                                    flags: vec![],
+                                    message: None,
+                                }];
                                 instance.metadata.clear();
                                 instance.has_changes = false;
+                                instance.num_redirects = 0;
+                                instance.runtime.vacation_use_orig_rcpt = false;
                                 mailboxes.clear();
+                                lists.clear();
                                 reset_test_boundary();
                             }
                             "test_config_reload" => (),

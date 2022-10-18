@@ -1,6 +1,6 @@
 use crate::{
     compiler::grammar::{test::Test, Capability},
-    Context, Event,
+    Context, Event, Mailbox,
 };
 
 use super::RuntimeError;
@@ -11,11 +11,14 @@ pub mod mime;
 pub mod test_address;
 pub mod test_body;
 pub mod test_date;
+pub mod test_duplicate;
 pub mod test_envelope;
 pub mod test_exists;
+pub mod test_extlists;
 pub mod test_hasflag;
 pub mod test_header;
 pub mod test_metadata;
+pub mod test_notify;
 pub mod test_size;
 pub mod test_string;
 
@@ -27,7 +30,7 @@ pub(crate) enum TestResult {
 
 impl Test {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        TestResult::Bool(match &self {
+        match &self {
             Test::Header(test) => test.exec(ctx),
             Test::Address(test) => test.exec(ctx),
             Test::Envelope(test) => test.exec(ctx),
@@ -38,61 +41,72 @@ impl Test {
             Test::HasFlag(test) => test.exec(ctx),
             Test::Date(test) => test.exec(ctx),
             Test::CurrentDate(test) => test.exec(ctx),
-            Test::Duplicate(_) => todo!(),
-            Test::NotifyMethodCapability(_) => todo!(),
-            Test::ValidNotifyMethod(_) => todo!(),
+            Test::Duplicate(test) => test.exec(ctx),
+            Test::NotifyMethodCapability(test) => test.exec(ctx),
+            Test::ValidNotifyMethod(test) => test.exec(ctx),
             Test::Environment(test) => test.exec(ctx, true),
-            Test::ValidExtList(_) => todo!(),
-            Test::Ihave(test) => {
+            Test::ValidExtList(test) => test.exec(ctx),
+            Test::Ihave(test) => TestResult::Bool(
                 test.capabilities.iter().all(|c| {
                     ![Capability::Variables, Capability::EncodedCharacter].contains(c)
                         && ctx.runtime.allowed_capabilities.contains(c)
-                }) ^ test.is_not
-            }
-            Test::MailboxExists(test) => {
-                return TestResult::Event {
-                    event: Event::MailboxExists {
-                        names: ctx.eval_strings_owned(&test.mailbox_names),
-                    },
-                    is_not: test.is_not,
-                };
-            }
+                }) ^ test.is_not,
+            ),
+            Test::MailboxExists(test) => TestResult::Event {
+                event: Event::MailboxExists {
+                    mailboxes: test
+                        .mailbox_names
+                        .iter()
+                        .map(|m| Mailbox::Name(ctx.eval_string(m).into_owned()))
+                        .collect(),
+                    special_use: Vec::new(),
+                },
+                is_not: test.is_not,
+            },
+            Test::Vacation(test) => test.exec(ctx),
             Test::Metadata(test) => test.exec(ctx),
             Test::MetadataExists(test) => test.exec(ctx),
-            Test::MailboxIdExists(_) => todo!(),
+            Test::MailboxIdExists(test) => TestResult::Event {
+                event: Event::MailboxExists {
+                    mailboxes: test
+                        .mailbox_ids
+                        .iter()
+                        .map(|m| Mailbox::Id(ctx.eval_string(m).into_owned()))
+                        .collect(),
+                    special_use: Vec::new(),
+                },
+                is_not: test.is_not,
+            },
             Test::SpamTest(_) => todo!(),
             Test::VirusTest(_) => todo!(),
-            Test::SpecialUseExists(test) => {
-                return TestResult::Event {
-                    event: Event::SpecialUseExists {
-                        mailbox: test
-                            .mailbox
-                            .as_ref()
-                            .map(|m| ctx.eval_string(m).into_owned()),
-                        attributes: ctx.eval_strings_owned(&test.attributes),
+            Test::SpecialUseExists(test) => TestResult::Event {
+                event: Event::MailboxExists {
+                    mailboxes: if let Some(mailbox) = &test.mailbox {
+                        vec![Mailbox::Name(ctx.eval_string(mailbox).into_owned())]
+                    } else {
+                        Vec::new()
                     },
-                    is_not: test.is_not,
-                };
-            }
+                    special_use: ctx.eval_strings_owned(&test.attributes),
+                },
+                is_not: test.is_not,
+            },
             Test::Convert(_) => todo!(),
-            Test::True => true,
-            Test::False => false,
+            Test::True => TestResult::Bool(true),
+            Test::False => TestResult::Bool(false),
             Test::Invalid(invalid) => {
-                return TestResult::Error(RuntimeError::InvalidInstruction(invalid.clone()))
+                TestResult::Error(RuntimeError::InvalidInstruction(invalid.clone()))
             }
             #[cfg(test)]
-            Test::External((command, params, is_not)) => {
-                return TestResult::Event {
-                    event: Event::TestCommand {
-                        command: command.clone(),
-                        params: params
-                            .iter()
-                            .map(|p| ctx.eval_string(p).into_owned())
-                            .collect(),
-                    },
-                    is_not: *is_not,
-                };
-            }
-        })
+            Test::External((command, params, is_not)) => TestResult::Event {
+                event: Event::TestCommand {
+                    command: command.clone(),
+                    params: params
+                        .iter()
+                        .map(|p| ctx.eval_string(p).into_owned())
+                        .collect(),
+                },
+                is_not: *is_not,
+            },
+        }
     }
 }

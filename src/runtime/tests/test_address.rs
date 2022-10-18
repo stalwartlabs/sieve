@@ -11,15 +11,17 @@ use mail_parser::{
 
 use crate::{
     compiler::grammar::{tests::test_address::TestAddress, AddressPart, MatchType},
-    Context,
+    Context, Event,
 };
 
+use super::TestResult;
+
 impl TestAddress {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let key_list = ctx.eval_strings(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
 
-        (match &self.match_type {
+        let result = match &self.match_type {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
                 ctx.find_headers(
@@ -119,8 +121,39 @@ impl TestAddress {
                 }
                 result
             }
-            MatchType::List => false, //TODO: Implement
-        }) ^ self.is_not
+            MatchType::List => {
+                let mut values: Vec<String> = Vec::new();
+
+                ctx.find_headers(
+                    &header_list,
+                    self.index,
+                    self.mime_anychild,
+                    |header, _, _| {
+                        ctx.find_addresses(header, &self.address_part, |value| {
+                            if !value.is_empty() && !values.iter().any(|v| v.eq(value)) {
+                                values.push(value.to_string());
+                            }
+                            false
+                        })
+                    },
+                );
+
+                if !values.is_empty() {
+                    return TestResult::Event {
+                        event: Event::ListContains {
+                            lists: ctx.eval_strings_owned(&self.key_list),
+                            values,
+                            match_as: self.comparator.as_match(),
+                        },
+                        is_not: self.is_not,
+                    };
+                }
+
+                false
+            }
+        };
+
+        TestResult::Bool(result ^ self.is_not)
     }
 }
 

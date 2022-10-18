@@ -2,24 +2,29 @@ require "vnd.stalwart.testsuite";
 require "relational";
 require "comparator-i;ascii-numeric";
 
+test_set "message" text:
+From: test@example.org
+To: nico@frop.example.org
+
+Frop
+.
+;
+
 test "Action" {
-	if not test_script_compile "execute/action.sieve" {
-		test_fail "script compile failed";
-	}
+	require "vacation";
 
-	if not test_script_run {
-		test_fail "script run failed";
-	}
+	vacation :addresses "stephan@example.org" "I am not at home today";
+	keep;
 
-	if not test_result_action :count "eq" :comparator "i;ascii-numeric" "2" {
+	if not test_result_action_count "2" {
 		test_fail "invalid number of actions in result";
 	}
 
-	if not test_result_action :index 1 "vacation" {
+	if not test_result_action "send_message" {
 		test_fail "vacation action is not present as first item in result";
 	}
 
-	if not test_result_action :index 2 "keep" {
+	if not test_result_action "keep" {
 		test_fail "keep action is missing in result";
 	}
 
@@ -28,41 +33,42 @@ test "Action" {
 	}
 }
 
+test_result_reset;
 test "No :handle specified" {
-	if not test_script_compile "execute/no-handle.sieve" {
-		test_fail "script compile failed";
-	}
+	require "vacation";
+	require "variables";
 
-	if not test_script_run {
-		test_fail "script execute failed";
-	}
+	set "reason" "I have a conference in Seattle";
+
+	vacation
+		:subject "I am not in: ${reason}"
+		:from "stephan@example.org"
+		"I am gone for today: ${reason}.";
 
 	if not test_result_execute {
 		test_fail "result execute failed";
 	}
 }
 
-test_config_set "sieve_vacation_min_period" "1s";
+#test_config_set "sieve_vacation_min_period" "1s";
 test_config_reload :extension "vacation";
+test_result_reset;
 
 test "Using :seconds tag" {
-	if not test_script_compile "execute/seconds.sieve" {
-		test_fail "script compile failed";
-	}
+	require "vacation-seconds";
 
-	if not test_script_run {
-		test_fail "script run failed";
-	}
+	vacation :seconds 120 :addresses "stephan@example.org" "I'll be back in a few minutes";
+	keep;
 
-	if not test_result_action :count "eq" :comparator "i;ascii-numeric" "2" {
+	if not test_result_action_count "2" {
 		test_fail "invalid number of actions in result";
 	}
 
-	if not test_result_action :index 1 "vacation" {
+	if not test_result_action "send_message" {
 		test_fail "vacation action is not present as first item in result";
 	}
 
-	if not test_result_action :index 2 "keep" {
+	if not test_result_action "keep" {
 		test_fail "keep action is missing in result";
 	}
 

@@ -22,7 +22,7 @@ test "Basic" {
 		test_fail "failed to execute vacation";
 	}
 
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	if not address :is "to" "sirius@example.org" {
 		test_fail "to address incorrect";
@@ -35,6 +35,8 @@ test "Basic" {
 	if not envelope :is "to" "sirius@example.org" {
 		test_fail "envelope recipient incorrect";
 	}
+
+	test_set "envelope.from" "";
 
 	if not envelope :is "from" "" {
 		test_fail "envelope sender not null";
@@ -70,6 +72,7 @@ Frop!
 
 test_set "envelope.from" "sirius@example.org";
 test_set "envelope.to" "timo@example.net";
+test_config_set "sieve_user_email" "";
 
 test "Envelope.to == To" {
 	vacation "I am gone";
@@ -78,11 +81,13 @@ test "Envelope.to == To" {
 		test_fail "failed to execute vacation";
 	}
 
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	if not address :is "from" "timo@example.net" {
 		test_fail "from address incorrect";
 	}
+
+	test_set "envelope.from" "";
 
 	if not envelope :is "from" "" {
 		test_fail "envelope sender not null";
@@ -103,6 +108,7 @@ Frop!
 
 test_set "envelope.from" "sirius@example.org";
 test_set "envelope.to" "timo@example.net";
+test_config_set "sieve_user_email" "tss@example.net";
 
 test "Envelope.to != To" {
 	vacation :addresses "tss@example.net" "I am gone";
@@ -111,11 +117,13 @@ test "Envelope.to != To" {
 		test_fail "failed to execute vacation";
 	}
 
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	if not address :is "from" "tss@example.net" {
 		test_fail "from address incorrect";
 	}
+
+	test_set "envelope.from" "";
 
 	if not envelope :is "from" "" {
 		test_fail "envelope sender not null";
@@ -136,6 +144,7 @@ Frop!
 
 test_set "envelope.from" "sirius@example.org";
 test_set "envelope.to" "colleague@example.net";
+test_config_set "sieve_user_email" "";
 
 test "Cc" {
 	vacation "I am gone";
@@ -144,12 +153,14 @@ test "Cc" {
 		test_fail "failed to execute vacation";
 	}
 
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	if not address :is "from" "colleague@example.net" {
 		if address :matches "from" "*" { }
 		test_fail "from address incorrect: ${1}";
 	}
+
+	test_set "envelope.from" "";
 
 	if not envelope :is "from" "" {
 		test_fail "envelope sender not null";

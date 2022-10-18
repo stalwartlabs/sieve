@@ -1,27 +1,46 @@
-use mail_parser::DateTime;
+use mail_parser::{DateTime, HeaderName, RfcHeader};
 
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
-    Action, Context,
+    Action, Context, Envelope, Recipient,
 };
 
 impl Redirect {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         if let Some(address) = sanitize_address(ctx.eval_string(&self.address).as_ref()) {
-            if ctx
-                .actions
-                .iter()
-                .filter(|a| matches!(a, Action::Redirect { .. }))
-                .count()
-                < ctx.runtime.max_redirects
+            if ctx.num_redirects < ctx.runtime.max_redirects
+                && ctx.message.parts[0]
+                    .headers
+                    .iter()
+                    .filter(|h| matches!(&h.name, HeaderName::Rfc(RfcHeader::Received)))
+                    .count()
+                    < ctx.runtime.max_received_headers
             {
-                if ctx.has_changes {
-                    let bytes = ctx.build_message();
-                    ctx.actions.push(Action::UpdateMessage { bytes });
+                // Try to avoid fowarding loops
+                if !self.list
+                    && (address.eq_ignore_ascii_case(ctx.user_address.as_ref())
+                        || ctx.envelope.iter().any(|(e, v)| {
+                            matches!(e, Envelope::From) && v.eq_ignore_ascii_case(address.as_str())
+                        }))
+                {
+                    return;
                 }
-                ctx.actions.push(Action::Redirect {
-                    address,
-                    copy: self.copy,
+
+                let message = if ctx.has_changes {
+                    ctx.build_message().into()
+                } else {
+                    None
+                };
+                if !self.copy {
+                    ctx.actions.retain(|a| !matches!(a, Action::Keep { .. }));
+                }
+                ctx.num_redirects += 1;
+                ctx.actions.push(Action::SendMessage {
+                    recipient: if !self.list {
+                        Recipient::Address(address)
+                    } else {
+                        Recipient::List(address)
+                    },
                     notify: self.notify.clone(),
                     return_of_content: self.return_of_content.clone(),
                     by_time: match &self.by_time {
@@ -53,6 +72,8 @@ impl Redirect {
                         },
                         ByTime::None => ByTime::None,
                     },
+                    message,
+                    fcc: None,
                 });
             }
         }

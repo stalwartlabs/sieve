@@ -1,6 +1,9 @@
 use regex::Regex;
 
-use crate::compiler::grammar::{Comparator, RelationalMatch};
+use crate::{
+    compiler::grammar::{Comparator, RelationalMatch},
+    MatchAs,
+};
 
 use super::glob::{glob_match, glob_match_capture};
 
@@ -81,6 +84,14 @@ impl Comparator {
                 debug_assert!(false, "Failed to compile regex: {:?}", err);
                 false
             }
+        }
+    }
+
+    pub(crate) fn as_match(&self) -> MatchAs {
+        match self {
+            Comparator::AsciiCaseMap => MatchAs::Lowercase,
+            Comparator::AsciiNumeric => MatchAs::Number,
+            _ => MatchAs::Octet,
         }
     }
 }

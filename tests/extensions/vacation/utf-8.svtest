@@ -27,7 +27,7 @@ test "UTF-8 Subject" {
 	/* Retrieve message from dummy SMTP and set it as the active message under
 	 * test.
 	 */
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	set "expected" "Auto: Я могу есть стекло, оно мне не вредит.";
 	if not header :is "subject" "${expected}" {
@@ -70,7 +70,7 @@ test "MIME Encoded Subject" {
 	/* Retrieve message from dummy SMTP and set it as the active message under
 	 * test.
 	 */
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	set "expected" "ÄÖÜ sadasd";
 	if not header :is "subject" "${expected}" {
@@ -111,7 +111,7 @@ test "MIME Encoded From" {
 	/* Retrieve message from dummy SMTP and set it as the active message under
 	 * test.
 	 */
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	set "expected" "Günther M. Karotte <g.m.karotte@example.com>";
 	if not header :is "from" "${expected}" {
@@ -152,7 +152,7 @@ test "MIME Encoded From - UTF-8 in phrase" {
 	/* Retrieve message from dummy SMTP and set it as the active message under
 	 * test.
 	 */
-	test_message :smtp 0;
+	test_set "message" :smtp 0;
 
 	set "expected" "Günther M. Karotte <g.m.karotte@example.com>";
 	if not header :is "from" "${expected}" {

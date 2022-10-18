@@ -1,8 +1,18 @@
 require "vnd.stalwart.testsuite";
 require "duplicate";
 
-# Simple execution tests; no duplicate verification can be tested yet.
-test "Run" {
+test_set "message" text:
+From: sirius@example.org
+To: nico@frop.example.com
+Subject: Frop!
+Message-ID: <abc@hostname>
+X-Frop: <xyz@hostname>
+
+Frop!
+.
+;
+
+test "Without duplicates" {
 	if duplicate {
 		test_fail "test erroneously reported a duplicate";
 	}
@@ -37,5 +47,49 @@ test "Run" {
 
 	if duplicate :last {
 		test_fail "test with :seconds :last erroneously reported a duplicate";
+	}
+}
+
+test "With duplicates" {
+	test_config_set "sieve_duplicated_id" "abc@hostname";
+	test_config_set "sieve_duplicated_id" "handleabc@hostname";
+	test_config_set "sieve_duplicated_id" "xyz@hostname";
+	test_config_set "sieve_duplicated_id" "handlexyz@hostname";
+	test_config_set "sieve_duplicated_id" "FROP!";
+
+	if not duplicate {
+		test_fail "test did not report a duplicate";
+	}
+
+	if not duplicate :handle "handle" {
+		test_fail "test with :handle did not report a duplicate";
+	}
+
+	if not duplicate {
+		test_fail "test did not report a duplicate";
+	}
+
+	if not duplicate :handle "handle" {
+		test_fail "test with :handle did not report a duplicate";
+	}
+
+	if not duplicate :header "X-frop" {
+		test_fail "test with :header did not report a duplicate";
+	}
+
+	if not duplicate :uniqueid "FROP!" {
+		test_fail "test with :uniqueid did not report a duplicate";
+	}
+
+	if not duplicate :seconds 90 {
+		test_fail "test with :seconds did not report a duplicate";
+	}
+
+	if not duplicate :seconds 90 :last {
+		test_fail "test with :seconds :last did not report a duplicate";
+	}
+
+	if not duplicate :last {
+		test_fail "test with :seconds :last did not report a duplicate";
 	}
 }

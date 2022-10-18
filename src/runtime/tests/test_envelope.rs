@@ -2,14 +2,16 @@ use mail_parser::DateTime;
 
 use crate::{
     compiler::grammar::{tests::test_envelope::TestEnvelope, MatchType},
-    Context, Envelope,
+    Context, Envelope, Event,
 };
 
+use super::TestResult;
+
 impl TestEnvelope {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let key_list = ctx.eval_strings(&self.key_list);
 
-        (match &self.match_type {
+        let result = match &self.match_type {
             MatchType::Is | MatchType::Contains => {
                 let is_is = matches!(&self.match_type, MatchType::Is);
 
@@ -91,8 +93,32 @@ impl TestEnvelope {
                 }
                 result
             }
-            MatchType::List => false, //TODO: Implement
-        }) ^ self.is_not
+            MatchType::List => {
+                let mut values: Vec<String> = Vec::new();
+
+                ctx.find_envelopes(self, |value| {
+                    if !value.is_empty() && !values.iter().any(|v| v.eq(value)) {
+                        values.push(value.to_string());
+                    }
+
+                    false
+                });
+
+                if !values.is_empty() {
+                    return TestResult::Event {
+                        event: Event::ListContains {
+                            lists: ctx.eval_strings_owned(&self.key_list),
+                            values,
+                            match_as: self.comparator.as_match(),
+                        },
+                        is_not: self.is_not,
+                    };
+                }
+
+                false
+            }
+        };
+        TestResult::Bool(result ^ self.is_not)
     }
 }
 

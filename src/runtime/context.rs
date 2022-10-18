@@ -59,13 +59,16 @@ impl<'x> Context<'x> {
             message_size: usize::MAX,
             actions: vec![Action::Keep {
                 flags: Vec::with_capacity(0),
+                message: None,
             }],
             has_changes: false,
-            default_from: "MAILER-DAEMON".into(),
+            user_address: "".into(),
+            user_full_name: "".into(),
             current_time: SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .map(|d| d.as_secs())
                 .unwrap_or(0) as i64,
+            num_redirects: 0,
         }
     }
 
@@ -173,6 +176,7 @@ impl<'x> Context<'x> {
                             .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
                         self.actions.push(Action::Keep {
                             flags: self.get_local_or_global_flags(&keep.flags),
+                            message: None,
                         });
                     }
                     Instruction::FileInto(fi) => fi.exec(self),
@@ -242,8 +246,8 @@ impl<'x> Context<'x> {
                     Instruction::AddHeader(add_header) => add_header.exec(self),
                     Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
                     Instruction::Set(set) => set.exec(self),
-                    Instruction::Notify(_) => (),
-                    Instruction::Vacation(_) => (),
+                    Instruction::Notify(notify) => notify.exec(self),
+                    Instruction::Vacation(vacation) => vacation.exec(self),
                     Instruction::EditFlags(flags) => flags.exec(self),
                     Instruction::Include(include) => match include.exec(self) {
                         IncludeResult::Cached(script) => {
@@ -331,16 +335,17 @@ impl<'x> Context<'x> {
 
         let global_flags = self.get_global_flags();
         if self.has_changes || !global_flags.is_empty() {
-            for (pos, action) in self.actions.iter_mut().enumerate() {
-                if let Action::Keep { flags } = action {
+            let new_message = if self.has_changes {
+                self.build_message().into()
+            } else {
+                None
+            };
+            for action in self.actions.iter_mut() {
+                if let Action::Keep { flags, message } = action {
                     if flags.is_empty() && !global_flags.is_empty() {
                         *flags = global_flags;
                     }
-
-                    if self.has_changes {
-                        let bytes = self.build_message();
-                        self.actions.insert(pos, Action::UpdateMessage { bytes });
-                    }
+                    *message = new_message;
                     break;
                 }
             }
@@ -374,12 +379,28 @@ impl<'x> Context<'x> {
         self.envelope.clear()
     }
 
-    pub fn set_from(&mut self, from: impl Into<Cow<'x, str>>) {
-        self.default_from = from.into();
+    pub fn set_user_address(&mut self, from: impl Into<Cow<'x, str>>) {
+        self.user_address = from.into();
     }
 
-    pub fn with_from(mut self, from: impl Into<Cow<'x, str>>) -> Self {
-        self.set_from(from);
+    pub fn with_user_address(mut self, from: impl Into<Cow<'x, str>>) -> Self {
+        self.set_user_address(from);
+        self
+    }
+
+    pub fn set_user_full_name(&mut self, name: &str) {
+        let mut name_ = String::with_capacity(name.len());
+        for ch in name.chars() {
+            if ['\"', '\\'].contains(&ch) {
+                name_.push('\\');
+            }
+            name_.push(ch);
+        }
+        self.user_full_name = name_.into();
+    }
+
+    pub fn with_user_full_name(mut self, name: &str) -> Self {
+        self.set_user_full_name(name);
         self
     }
 
@@ -411,5 +432,13 @@ impl<'x> Context<'x> {
     ) -> Self {
         self.set_medatata(name, value);
         self
+    }
+
+    pub fn user_from_field(&self) -> String {
+        if !self.user_full_name.is_empty() {
+            format!("\"{}\" <{}>", self.user_full_name, self.user_address)
+        } else {
+            self.user_address.to_string()
+        }
     }
 }

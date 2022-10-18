@@ -96,7 +96,7 @@ impl Replace {
                 ctx.insert_header(
                     0,
                     HeaderName::Other("From".to_string().into()),
-                    ctx.default_from.to_string(),
+                    ctx.user_from_field(),
                     true,
                 );
             }
@@ -270,7 +270,7 @@ impl Enclose {
             ctx.insert_header(
                 0,
                 HeaderName::Other("From".to_string().into()),
-                ctx.default_from.to_string(),
+                ctx.user_from_field(),
                 true,
             );
         }
@@ -366,8 +366,6 @@ impl<'x> Context<'x> {
         let mut iter = [0].iter();
         let mut iter_stack = Vec::new();
         let mut last_offset = 0;
-
-        self.has_changes = false;
 
         'outer: loop {
             while let Some(part) = iter.next().and_then(|p| current_message.parts.get(*p)) {

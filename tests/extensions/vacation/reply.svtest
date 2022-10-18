@@ -319,7 +319,7 @@ Frop!
 
 test_set "envelope.from" "timo@example.com";
 test_set "envelope.to" "stephan@example.com";
-test_set "envelope.orig_to" "all@example.com";
+test_set "envelope.orcpt" "all@example.com";
 
 test "No reply for original recipient" {
 	vacation "I am gone";
@@ -443,7 +443,7 @@ Frop!
 
 test_set "envelope.from" "timo@example.com";
 test_set "envelope.to" "stephan@example.com";
-test_set "envelope.orig_to" "all@example.com";
+test_set "envelope.orcpt" "all@example.com";
 
 test_config_set "sieve_vacation_use_original_recipient" "yes";
 test_config_reload :extension "vacation";
@@ -477,7 +477,7 @@ Frop!
 
 test_set "envelope.from" "timo@example.com";
 test_set "envelope.to" "jibberish@example.com";
-test_set "envelope.orig_to" "even-more-jibberish@example.com";
+test_set "envelope.orcpt" "even-more-jibberish@example.com";
 
 test_config_set "sieve_user_email" "user@example.com";
 test_config_reload;
@@ -493,6 +493,8 @@ test "Reply for user's explicitly configured email address" {
 		test_fail "vacation did not reply";
 	}
 
+	test_set "message" :smtp 0;
+
 	if not address "from" "user@example.com" {
 		test_fail "mail not sent from user's email address";
 	}
@@ -506,7 +508,7 @@ test_result_reset;
 
 test_set "message" text:
 From: timo@example.com
-To: all@example.com
+To: stephan@example.com
 Subject: Frop!
 
 Frop!
@@ -516,10 +518,7 @@ Frop!
 test_set "envelope.from" "timo@example.com";
 test_set "envelope.to" "stephan@example.com";
 
-test_config_set "sieve_vacation_dont_check_recipient" "yes";
-test_config_reload :extension "vacation";
-
-test "Reply for any recipient" {
+test "Reply if not duplicated" {
 	vacation "I am gone";
 
 	if not test_result_execute {
@@ -528,6 +527,24 @@ test "Reply for any recipient" {
 
 	if not test_message :smtp 0 {
 		test_fail "vacation did not reply";
+	}
+
+	test_result_reset;
+
+	if test_message :smtp 0 {
+		test_fail "check failed";
+	}
+
+	test_config_set "sieve_duplicated_id" "_vtimo@example.comI am gone";
+
+	vacation "I am gone";
+
+	if not test_result_execute {
+		test_fail "failed to execute vacation";
+	}
+
+	if test_message :smtp 0 {
+		test_fail "vacation not supposed to send message";
 	}
 }
 

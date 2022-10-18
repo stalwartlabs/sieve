@@ -6,7 +6,7 @@ use crate::compiler::{
 };
 
 use super::{
-    actions::action_convert::Convert,
+    actions::{action_convert::Convert, action_vacation::TestVacation},
     instruction::{CompilerState, Instruction},
     tests::{
         test_address::TestAddress,
@@ -85,6 +85,9 @@ pub(crate) enum Test {
 
     // RFC 8579
     SpecialUseExists(TestSpecialUseExists),
+
+    // RFC 5230
+    Vacation(TestVacation),
 
     #[cfg(test)]
     External(
@@ -422,7 +425,7 @@ impl Test {
             Test::SpecialUseExists(op) => {
                 op.is_not = true;
             }
-            Test::Invalid(_) => {}
+            Test::Vacation(_) | Test::Invalid(_) => {}
 
             #[cfg(test)]
             Test::External((_, _, is_not)) => {

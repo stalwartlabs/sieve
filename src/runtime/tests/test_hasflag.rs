@@ -5,8 +5,10 @@ use crate::{
     Context,
 };
 
+use super::TestResult;
+
 impl TestHasFlag {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut variable_list_ = None;
         let variable_list = if !self.variable_list.is_empty() {
             &self.variable_list
@@ -79,6 +81,6 @@ impl TestHasFlag {
             result
         };
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }

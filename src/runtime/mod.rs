@@ -5,7 +5,7 @@ use mail_parser::HeaderName;
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
-    Context, Input, Metadata, Runtime, Script, Sieve,
+    Context, Input, Metadata, Runtime, Script, Sieve, URIScheme,
 };
 
 pub mod actions;
@@ -90,10 +90,16 @@ impl Runtime {
             max_instructions: 5000,
             max_variable_size: 4096,
             max_redirects: 1,
+            max_received_headers: 10,
             protected_headers: vec![
                 HeaderName::Other("Original-Subject".into()),
                 HeaderName::Other("Original-From".into()),
             ],
+            valid_notification_uris: AHashSet::new(),
+            valid_ext_lists: AHashSet::new(),
+            vacation_use_orig_rcpt: false,
+            vacation_default_subject: "Automated reply".into(),
+            vacation_subject_prefix: "Auto: ".into(),
         }
     }
 
@@ -146,6 +152,51 @@ impl Runtime {
         value: impl Into<Cow<'static, str>>,
     ) -> Self {
         self.set_medatata(name, value);
+        self
+    }
+
+    pub fn set_valid_notification_uri(&mut self, uri: URIScheme) {
+        self.valid_notification_uris.insert(uri);
+    }
+
+    pub fn with_valid_notification_uri(mut self, uri: URIScheme) -> Self {
+        self.valid_notification_uris.insert(uri);
+        self
+    }
+
+    pub fn set_valid_ext_list(&mut self, name: impl Into<Cow<'static, str>>) {
+        self.valid_ext_lists.insert(name.into());
+    }
+
+    pub fn with_valid_ext_list(mut self, name: impl Into<Cow<'static, str>>) -> Self {
+        self.set_valid_ext_list(name);
+        self
+    }
+
+    pub fn set_vacation_use_orig_rcpt(&mut self, value: bool) {
+        self.vacation_use_orig_rcpt = value;
+    }
+
+    pub fn with_vacation_use_orig_rcpt(mut self, value: bool) -> Self {
+        self.set_vacation_use_orig_rcpt(value);
+        self
+    }
+
+    pub fn set_vacation_default_subject(&mut self, value: impl Into<Cow<'static, str>>) {
+        self.vacation_default_subject = value.into();
+    }
+
+    pub fn with_vacation_default_subject(mut self, value: impl Into<Cow<'static, str>>) -> Self {
+        self.set_vacation_default_subject(value);
+        self
+    }
+
+    pub fn set_vacation_subject_prefix(&mut self, value: impl Into<Cow<'static, str>>) {
+        self.vacation_subject_prefix = value.into();
+    }
+
+    pub fn with_vacation_subject_prefix(mut self, value: impl Into<Cow<'static, str>>) -> Self {
+        self.set_vacation_subject_prefix(value);
         self
     }
 
