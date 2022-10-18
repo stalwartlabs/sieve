@@ -6,7 +6,7 @@ use compiler::grammar::{
     instruction::Instruction,
     Capability,
 };
-use mail_parser::{HeaderName, Message};
+use mail_parser::{HeaderName, Message, RfcHeader};
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +37,8 @@ pub struct Compiler {
 #[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
+    pub(crate) valid_notification_uris: AHashSet<URIScheme>,
+    pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
@@ -46,12 +48,17 @@ pub struct Runtime {
     pub(crate) max_instructions: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
+    pub(crate) max_received_headers: usize,
+    pub(crate) vacation_use_orig_rcpt: bool,
+    pub(crate) vacation_default_subject: Cow<'static, str>,
+    pub(crate) vacation_subject_prefix: Cow<'static, str>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Context<'x> {
     pub(crate) runtime: &'x Runtime,
-    pub(crate) default_from: Cow<'x, str>,
+    pub(crate) user_address: Cow<'x, str>,
+    pub(crate) user_full_name: Cow<'x, str>,
     pub(crate) current_time: i64,
 
     pub(crate) message: Message<'x>,
@@ -74,6 +81,7 @@ pub struct Context<'x> {
 
     pub(crate) actions: Vec<Action>,
     pub(crate) has_changes: bool,
+    pub(crate) num_redirects: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -107,6 +115,7 @@ pub enum Metadata<T> {
 pub enum Action {
     Keep {
         flags: Vec<String>,
+        message: Option<Vec<u8>>,
     },
     Discard,
     Reject {
@@ -120,18 +129,24 @@ pub enum Action {
         flags: Vec<String>,
         mailbox_id: Option<String>,
         special_use: Option<String>,
-        copy: bool,
         create: bool,
+        message: Option<Vec<u8>>,
     },
-    Redirect {
-        address: String,
-        copy: bool,
+    SendMessage {
+        recipient: Recipient,
         notify: Notify,
         return_of_content: Ret,
         by_time: ByTime<i64>,
+        message: Option<Vec<u8>>,
+        fcc: Option<Box<FileCarbonCopy<String>>>,
     },
-    UpdateMessage {
-        bytes: Vec<u8>,
+    Notify {
+        from: Option<String>,
+        importance: Importance,
+        options: Vec<String>,
+        message: Option<String>,
+        fcc: Option<Box<FileCarbonCopy<String>>>,
+        method: URI,
     },
 }
 
@@ -142,13 +157,55 @@ pub enum Event {
         optional: bool,
     },
     MailboxExists {
-        names: Vec<String>,
+        mailboxes: Vec<Mailbox>,
+        special_use: Vec<String>,
     },
-    SpecialUseExists {
-        mailbox: Option<String>,
-        attributes: Vec<String>,
+    ListContains {
+        lists: Vec<String>,
+        values: Vec<String>,
+        match_as: MatchAs,
+    },
+    DuplicateId {
+        id: String,
+        expiry: Expiry,
     },
 
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub struct FileCarbonCopy<T> {
+    pub mailbox: T,
+    pub mailbox_id: Option<T>,
+    pub create: bool,
+    pub flags: Vec<T>,
+    pub special_use: Option<T>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Importance {
+    High,
+    Normal,
+    Low,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Expiry {
+    Seconds(u64),
+    LastSeconds(u64),
+    None,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum MatchAs {
+    Octet,
+    Lowercase,
+    Number,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Recipient {
+    Address(String),
+    List(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -156,4 +213,35 @@ pub enum Input {
     True,
     False,
     Script { name: Script, script: Arc<Sieve> },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum URI {
+    Mailto { params: Vec<(Mailto, String)> },
+    Xmpp { uri: String },
+    Http { uri: String },
+    Tel { uri: String },
+    Other { uri: String },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Mailto {
+    Header(RfcHeader),
+    Body,
+    Other(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum Mailbox {
+    Name(String),
+    Id(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum URIScheme {
+    Mailto,
+    Xmpp,
+    Http,
+    Tel,
+    Other(String),
 }

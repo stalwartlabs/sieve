@@ -1,9 +1,9 @@
 use crate::{compiler::grammar::tests::test_exists::TestExists, Context};
 
-use super::mime::SubpartIterator;
+use super::{mime::SubpartIterator, TestResult};
 
 impl TestExists {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let header_names = ctx.parse_header_names(&self.header_names);
         let mut header_exists = vec![false; header_names.len()];
         let parts = [ctx.part];
@@ -25,6 +25,6 @@ impl TestExists {
             }
         }
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }

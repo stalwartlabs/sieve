@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+use crate::{
+    compiler::{
+        grammar::instruction::{CompilerState, Instruction},
+        lexer::{string::StringItem, word::Word, Token},
+        CompileError,
+    },
+    FileCarbonCopy,
 };
-
-use super::action_vacation::Fcc;
 
 /*
 notify [":from" string]
@@ -23,7 +24,7 @@ pub(crate) struct Notify {
     pub importance: Option<StringItem>,
     pub options: Vec<StringItem>,
     pub message: Option<StringItem>,
-    pub fcc: Option<Fcc>,
+    pub fcc: Option<FileCarbonCopy<StringItem>>,
     pub method: StringItem,
 }
 
@@ -91,8 +92,8 @@ impl<'x> CompilerState<'x> {
             options,
             message,
             fcc: if let Some(fcc) = fcc {
-                Fcc {
-                    fcc,
+                FileCarbonCopy {
+                    mailbox: fcc,
                     create,
                     flags,
                     special_use,

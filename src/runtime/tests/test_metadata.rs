@@ -6,8 +6,10 @@ use crate::{
     Context, Metadata,
 };
 
+use super::TestResult;
+
 impl TestMetadata {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let metadata = match &self.medatata {
             Metadata::Server { annotation } => Metadata::Server {
                 annotation: ctx.eval_string(annotation),
@@ -39,7 +41,7 @@ impl TestMetadata {
             }) {
             value.as_ref()
         } else {
-            return false ^ self.is_not;
+            return TestResult::Bool(false ^ self.is_not);
         };
 
         let mut result = false;
@@ -86,12 +88,12 @@ impl TestMetadata {
             }
         }
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }
 
 impl TestMetadataExists {
-    pub(crate) fn exec(&self, ctx: &Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &Context) -> TestResult {
         let mailbox = self
             .mailbox
             .as_ref()
@@ -109,10 +111,10 @@ impl TestMetadataExists {
                 _ => (),
             }
             if annotations.is_empty() {
-                return true ^ self.is_not;
+                return TestResult::Bool(true ^ self.is_not);
             }
         }
 
-        false ^ self.is_not
+        TestResult::Bool(false ^ self.is_not)
     }
 }

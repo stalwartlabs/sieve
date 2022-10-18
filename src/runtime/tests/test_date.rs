@@ -7,144 +7,204 @@ use crate::{
         tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
         MatchType,
     },
-    Context,
+    Context, Event,
 };
 
+use super::TestResult;
+
 impl TestDate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let header_name = ctx.parse_header_name(&self.header_name);
 
-        let result = if let MatchType::Count(rel_match) = &self.match_type {
-            let mut date_count = 0;
-            ctx.find_headers(
-                &[header_name],
-                self.index,
-                self.mime_anychild,
-                |header, _, _| {
-                    if ctx.find_dates(header).is_some() {
-                        date_count += 1;
+        let result = match &self.match_type {
+            MatchType::Count(rel_match) => {
+                let mut date_count = 0;
+                ctx.find_headers(
+                    &[header_name],
+                    self.index,
+                    self.mime_anychild,
+                    |header, _, _| {
+                        if ctx.find_dates(header).is_some() {
+                            date_count += 1;
+                        }
+                        false
+                    },
+                );
+
+                let mut result = false;
+                for key in &self.key_list {
+                    if rel_match.cmp_num(date_count as f64, ctx.eval_string(key).as_ref()) {
+                        result = true;
+                        break;
                     }
-                    false
-                },
-            );
-
-            let mut result = false;
-            for key in &self.key_list {
-                if rel_match.cmp_num(date_count as f64, ctx.eval_string(key).as_ref()) {
-                    result = true;
-                    break;
                 }
+                result
             }
-            result
-        } else {
-            let key_list = ctx.eval_strings(&self.key_list);
-            let mut captured_values = Vec::new();
-
-            let result = ctx.find_headers(
-                &[header_name],
-                self.index,
-                self.mime_anychild,
-                |header, _, _| {
-                    if let Some(dt) = ctx.find_dates(header) {
-                        let date_part = self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
-                        for key in &key_list {
-                            if match &self.match_type {
-                                MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
-                                MatchType::Contains => {
-                                    self.comparator.contains(&date_part, key.as_ref())
-                                }
-                                MatchType::Value(rel_match) => {
-                                    self.comparator
-                                        .relational(rel_match, &date_part, key.as_ref())
-                                }
-                                MatchType::Matches(capture_positions) => self.comparator.matches(
-                                    &date_part,
-                                    key.as_ref(),
-                                    *capture_positions,
-                                    &mut captured_values,
-                                ),
-                                MatchType::Regex(capture_positions) => self.comparator.matches(
-                                    &date_part,
-                                    key.as_ref(),
-                                    *capture_positions,
-                                    &mut captured_values,
-                                ),
-                                MatchType::Count(_) | MatchType::List => false,
-                            } {
-                                return true;
+            MatchType::List => {
+                let mut values = Vec::new();
+                ctx.find_headers(
+                    &[header_name],
+                    self.index,
+                    self.mime_anychild,
+                    |header, _, _| {
+                        if let Some(dt) = ctx.find_dates(header) {
+                            let value = self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
+                            if !value.is_empty() && !values.iter().any(|v: &String| v.eq(&value)) {
+                                values.push(value);
                             }
                         }
-                    }
 
-                    false
-                },
-            );
-            if !captured_values.is_empty() {
-                ctx.set_match_variables(captured_values);
+                        false
+                    },
+                );
+                if !values.is_empty() {
+                    return TestResult::Event {
+                        event: Event::ListContains {
+                            lists: ctx.eval_strings_owned(&self.key_list),
+                            values,
+                            match_as: self.comparator.as_match(),
+                        },
+                        is_not: self.is_not,
+                    };
+                }
+                false
             }
-            result
+            _ => {
+                let key_list = ctx.eval_strings(&self.key_list);
+                let mut captured_values = Vec::new();
+
+                let result = ctx.find_headers(
+                    &[header_name],
+                    self.index,
+                    self.mime_anychild,
+                    |header, _, _| {
+                        if let Some(dt) = ctx.find_dates(header) {
+                            let date_part =
+                                self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
+                            for key in &key_list {
+                                if match &self.match_type {
+                                    MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
+                                    MatchType::Contains => {
+                                        self.comparator.contains(&date_part, key.as_ref())
+                                    }
+                                    MatchType::Value(rel_match) => self.comparator.relational(
+                                        rel_match,
+                                        &date_part,
+                                        key.as_ref(),
+                                    ),
+                                    MatchType::Matches(capture_positions) => {
+                                        self.comparator.matches(
+                                            &date_part,
+                                            key.as_ref(),
+                                            *capture_positions,
+                                            &mut captured_values,
+                                        )
+                                    }
+                                    MatchType::Regex(capture_positions) => self.comparator.matches(
+                                        &date_part,
+                                        key.as_ref(),
+                                        *capture_positions,
+                                        &mut captured_values,
+                                    ),
+                                    MatchType::Count(_) | MatchType::List => false,
+                                } {
+                                    return true;
+                                }
+                            }
+                        }
+
+                        false
+                    },
+                );
+                if !captured_values.is_empty() {
+                    ctx.set_match_variables(captured_values);
+                }
+                result
+            }
         };
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }
 
 impl TestCurrentDate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut result = false;
 
-        if let MatchType::Count(rel_match) = &self.match_type {
-            for key in &self.key_list {
-                if rel_match.cmp_num(1.0, ctx.eval_string(key).as_ref()) {
-                    result = true;
-                    break;
-                }
-            }
-        } else {
-            let mut captured_values = Vec::new();
-            let date_part = self.date_part.eval(
-                &(if let Some(zone) = self.zone {
-                    DateTime::from_timestamp(ctx.current_time).to_timezone(zone)
-                } else {
-                    DateTime::from_timestamp(ctx.current_time)
-                }),
-            );
-
-            for key in &self.key_list {
-                let key = ctx.eval_string(key);
-
-                if match &self.match_type {
-                    MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
-                    MatchType::Contains => self.comparator.contains(&date_part, key.as_ref()),
-                    MatchType::Value(rel_match) => {
-                        self.comparator
-                            .relational(rel_match, &date_part, key.as_ref())
+        match &self.match_type {
+            MatchType::Count(rel_match) => {
+                for key in &self.key_list {
+                    if rel_match.cmp_num(1.0, ctx.eval_string(key).as_ref()) {
+                        result = true;
+                        break;
                     }
-                    MatchType::Matches(capture_positions) => self.comparator.matches(
-                        &date_part,
-                        key.as_ref(),
-                        *capture_positions,
-                        &mut captured_values,
-                    ),
-                    MatchType::Regex(capture_positions) => self.comparator.matches(
-                        &date_part,
-                        key.as_ref(),
-                        *capture_positions,
-                        &mut captured_values,
-                    ),
-                    MatchType::Count(_) | MatchType::List => false,
-                } {
-                    result = true;
-                    break;
                 }
             }
+            MatchType::List => {
+                let value = self.date_part.eval(
+                    &(if let Some(zone) = self.zone {
+                        DateTime::from_timestamp(ctx.current_time).to_timezone(zone)
+                    } else {
+                        DateTime::from_timestamp(ctx.current_time)
+                    }),
+                );
+                if !value.is_empty() {
+                    return TestResult::Event {
+                        event: Event::ListContains {
+                            lists: ctx.eval_strings_owned(&self.key_list),
+                            values: vec![value],
+                            match_as: self.comparator.as_match(),
+                        },
+                        is_not: self.is_not,
+                    };
+                }
+            }
+            _ => {
+                let mut captured_values = Vec::new();
+                let date_part = self.date_part.eval(
+                    &(if let Some(zone) = self.zone {
+                        DateTime::from_timestamp(ctx.current_time).to_timezone(zone)
+                    } else {
+                        DateTime::from_timestamp(ctx.current_time)
+                    }),
+                );
 
-            if !captured_values.is_empty() {
-                ctx.set_match_variables(captured_values);
+                for key in &self.key_list {
+                    let key = ctx.eval_string(key);
+
+                    if match &self.match_type {
+                        MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
+                        MatchType::Contains => self.comparator.contains(&date_part, key.as_ref()),
+                        MatchType::Value(rel_match) => {
+                            self.comparator
+                                .relational(rel_match, &date_part, key.as_ref())
+                        }
+                        MatchType::Matches(capture_positions) => self.comparator.matches(
+                            &date_part,
+                            key.as_ref(),
+                            *capture_positions,
+                            &mut captured_values,
+                        ),
+                        MatchType::Regex(capture_positions) => self.comparator.matches(
+                            &date_part,
+                            key.as_ref(),
+                            *capture_positions,
+                            &mut captured_values,
+                        ),
+                        MatchType::Count(_) | MatchType::List => false,
+                    } {
+                        result = true;
+                        break;
+                    }
+                }
+
+                if !captured_values.is_empty() {
+                    ctx.set_match_variables(captured_values);
+                }
             }
         }
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }
 

@@ -8,10 +8,10 @@ use crate::{
     Context,
 };
 
-use super::mime::ContentTypeFilter;
+use super::{mime::ContentTypeFilter, TestResult};
 
 impl TestBody {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> bool {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let key_list = ctx.eval_strings(&self.key_list);
         let ct_filter = match &self.body_transform {
             BodyTransform::Text | BodyTransform::Raw => Vec::new(),
@@ -24,7 +24,7 @@ impl TestBody {
                     } else if let Some(ctf) = ContentTypeFilter::parse(ct.as_ref()) {
                         ct_filter.push(ctf);
                     } else {
-                        return false ^ self.is_not;
+                        return TestResult::Bool(false ^ self.is_not);
                     }
                 }
                 ct_filter
@@ -162,6 +162,6 @@ impl TestBody {
             })
         };
 
-        result ^ self.is_not
+        TestResult::Bool(result ^ self.is_not)
     }
 }

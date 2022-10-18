@@ -133,16 +133,20 @@ impl Modifier {
             }
             Modifier::Length => input.chars().count().to_string(),
             Modifier::EncodeUrl => {
+                let mut buf = [0; 4];
                 let mut result = String::with_capacity(input.len());
-                for char in input.as_bytes() {
-                    if char.is_ascii_alphanumeric() || [b'-', b'.', b'_', b'~'].contains(char) {
+
+                for char in input.chars() {
+                    if char.is_ascii_alphanumeric() || ['-', '.', '_', '~'].contains(&char) {
                         if result.len() < max_len {
-                            result.push(char::from(*char));
+                            result.push(char);
                         } else {
                             return result;
                         }
-                    } else if result.len() + 3 <= max_len {
-                        write!(result, "%{:02x}", char).ok();
+                    } else if result.len() + (char.len_utf8() * 3) <= max_len {
+                        for byte in char.encode_utf8(&mut buf).as_bytes().iter() {
+                            write!(result, "%{:02x}", byte).ok();
+                        }
                     } else {
                         return result;
                     }
