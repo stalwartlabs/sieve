@@ -3,11 +3,7 @@ use crate::{compiler::grammar::actions::action_fileinto::FileInto, Action, Conte
 impl FileInto {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         let folder = ctx.eval_string(&self.folder).into_owned();
-        let message = if ctx.has_changes {
-            ctx.build_message().into()
-        } else {
-            None
-        };
+        let message_id = ctx.build_message_id();
         ctx.actions.retain(|a| match a {
             Action::Discard if !self.copy => false,
             Action::Keep { flags, .. } if !self.copy && flags.is_empty() => false,
@@ -28,7 +24,7 @@ impl FileInto {
                 .as_ref()
                 .map(|su| ctx.eval_string(su).into_owned()),
             create: self.create,
-            message,
+            message_id,
         });
     }
 }

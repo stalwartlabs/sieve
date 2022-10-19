@@ -5,8 +5,8 @@ use mail_parser::{Encoding, Message, MessagePart, PartType};
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Action, Context, Envelope, Event, Input, Metadata, Runtime, Sieve, MAX_LOCAL_VARIABLES,
-    MAX_MATCH_VARIABLES,
+    Action, Context, Envelope, Event, Input, Metadata, Runtime, Sieve, SpamStatus, VirusStatus,
+    MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
 use super::{
@@ -59,7 +59,7 @@ impl<'x> Context<'x> {
             message_size: usize::MAX,
             actions: vec![Action::Keep {
                 flags: Vec::with_capacity(0),
-                message: None,
+                message_id: 0,
             }],
             has_changes: false,
             user_address: "".into(),
@@ -69,6 +69,10 @@ impl<'x> Context<'x> {
                 .map(|d| d.as_secs())
                 .unwrap_or(0) as i64,
             num_redirects: 0,
+            messages: vec![raw_message.into()],
+            last_message_id: 0,
+            virus_status: VirusStatus::Unknown,
+            spam_status: SpamStatus::Unknown,
         }
     }
 
@@ -172,11 +176,12 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::Keep(keep) => {
+                        let message_id = self.build_message_id();
                         self.actions
                             .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
                         self.actions.push(Action::Keep {
                             flags: self.get_local_or_global_flags(&keep.flags),
-                            message: None,
+                            message_id,
                         });
                     }
                     Instruction::FileInto(fi) => fi.exec(self),
@@ -277,7 +282,9 @@ impl<'x> Context<'x> {
                         }
                         IncludeResult::None => (),
                     },
-                    Instruction::Convert(_) => (), //TODO
+                    Instruction::Convert(convert) => {
+                        convert.exec(self);
+                    }
                     Instruction::Return => {
                         break;
                     }
@@ -335,17 +342,13 @@ impl<'x> Context<'x> {
 
         let global_flags = self.get_global_flags();
         if self.has_changes || !global_flags.is_empty() {
-            let new_message = if self.has_changes {
-                self.build_message().into()
-            } else {
-                None
-            };
+            let message_id_ = self.build_message_id();
             for action in self.actions.iter_mut() {
-                if let Action::Keep { flags, message } = action {
+                if let Action::Keep { flags, message_id } = action {
                     if flags.is_empty() && !global_flags.is_empty() {
                         *flags = global_flags;
                     }
-                    *message = new_message;
+                    *message_id = message_id_;
                     break;
                 }
             }
@@ -434,7 +437,25 @@ impl<'x> Context<'x> {
         self
     }
 
-    pub fn user_from_field(&self) -> String {
+    pub fn set_spam_status(&mut self, status: impl Into<SpamStatus>) {
+        self.spam_status = status.into();
+    }
+
+    pub fn with_spam_status(mut self, status: impl Into<SpamStatus>) -> Self {
+        self.set_spam_status(status);
+        self
+    }
+
+    pub fn set_virus_status(&mut self, status: impl Into<VirusStatus>) {
+        self.virus_status = status.into();
+    }
+
+    pub fn with_virus_status(mut self, status: impl Into<VirusStatus>) -> Self {
+        self.set_virus_status(status);
+        self
+    }
+
+    pub(crate) fn user_from_field(&self) -> String {
         if !self.user_full_name.is_empty() {
             format!("\"{}\" <{}>", self.user_full_name, self.user_address)
         } else {

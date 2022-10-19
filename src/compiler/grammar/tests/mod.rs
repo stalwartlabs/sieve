@@ -4,6 +4,7 @@ pub mod test_date;
 pub mod test_duplicate;
 pub mod test_envelope;
 pub mod test_environment;
+pub mod test_execute;
 pub mod test_exists;
 pub mod test_extlists;
 pub mod test_hasflag;

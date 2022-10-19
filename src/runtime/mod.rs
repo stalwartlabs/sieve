@@ -5,7 +5,7 @@ use mail_parser::HeaderName;
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
-    Context, Input, Metadata, Runtime, Script, Sieve, URIScheme,
+    Context, Input, Metadata, Runtime, Script, Sieve,
 };
 
 pub mod actions;
@@ -100,6 +100,7 @@ impl Runtime {
             vacation_use_orig_rcpt: false,
             vacation_default_subject: "Automated reply".into(),
             vacation_subject_prefix: "Auto: ".into(),
+            max_memory: 100 * 1024 * 1024,
         }
     }
 
@@ -155,12 +156,12 @@ impl Runtime {
         self
     }
 
-    pub fn set_valid_notification_uri(&mut self, uri: URIScheme) {
-        self.valid_notification_uris.insert(uri);
+    pub fn set_valid_notification_uri(&mut self, uri: impl Into<Cow<'static, str>>) {
+        self.valid_notification_uris.insert(uri.into());
     }
 
-    pub fn with_valid_notification_uri(mut self, uri: URIScheme) -> Self {
-        self.valid_notification_uris.insert(uri);
+    pub fn with_valid_notification_uri(mut self, uri: impl Into<Cow<'static, str>>) -> Self {
+        self.valid_notification_uris.insert(uri.into());
         self
     }
 

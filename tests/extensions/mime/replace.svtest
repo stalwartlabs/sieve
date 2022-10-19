@@ -248,7 +248,7 @@ This is the end of  MIME multipart.
 
 # Mixed content
 test_result_reset;
-test_set "message" text:
+set "message" text:
 From: Whomever <whoever@example.com>
 To: Someone <someone@example.com>
 Date: Sat, 10 Oct 2009 00:30:04 +0200
@@ -290,6 +290,11 @@ Please say Hello
 This is the end of the outer MIME multipart.
 .
 ;
+
+# A message without changes should be regenerated exactly
+# as the original.
+test_set "message" "${message}";
+test_assert_message "${message}";
 
 foreverypart {
     if header :mime :type "content-type" "text" {

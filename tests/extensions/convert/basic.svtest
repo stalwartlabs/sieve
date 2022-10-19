@@ -1,0 +1,172 @@
+require "vnd.stalwart.testsuite";
+require "variables";
+require "convert";
+
+test_set "message" text:
+From: Hendrik <hendrik@example.com>
+To: Harrie <harrie@example.com>
+Date: Sat, 11 Oct 2010 00:31:44 +0200
+Subject: Harrie is een prutser
+Content-Type: multipart/mixed; boundary=AA
+X-Test: AA
+
+This is a multi-part message in MIME format.
+--AA
+Content-Type: multipart/mixed; boundary=BB
+X-Test: BB
+
+This is a multi-part message in MIME format.
+--BB
+Content-Type: text/plain; charset="us-ascii"
+X-Test: CC
+
+Hello <world>
+
+--BB
+Content-Type: text/plain; charset="us-ascii"
+X-Test: DD
+
+Hello & again
+
+--BB--
+This is the end of MIME multipart.
+
+--AA
+Content-Type: text/plain; charset="us-ascii"
+X-Test: EE
+
+And again yeah!
+
+--AA--
+This is the end of  MIME multipart.
+.
+;
+
+test "text/plain to text/html conversion" {
+    if not convert "text/plain" "text/html" "" {
+        test_fail "text/plain to text/html conversion failed.";
+    }
+
+    test_assert_message "From: Hendrik <hendrik@example.com>
+To: Harrie <harrie@example.com>
+Date: Sat, 11 Oct 2010 00:31:44 +0200
+Subject: Harrie is een prutser
+Content-Type: multipart/mixed; boundary=AA
+X-Test: AA
+
+This is a multi-part message in MIME format.
+--AA
+Content-Type: multipart/mixed; boundary=BB
+X-Test: BB
+
+This is a multi-part message in MIME format.
+--BB
+Content-Type: text/html; charset=utf8
+
+<html><body>Hello &lt;world><br/></body></html>
+--BB
+Content-Type: text/html; charset=utf8
+
+<html><body>Hello & again<br/></body></html>
+--BB--
+This is the end of MIME multipart.
+
+--AA
+Content-Type: text/html; charset=utf8
+
+<html><body>And again yeah!<br/></body></html>
+--AA--
+This is the end of  MIME multipart.
+";
+
+}
+
+test_result_reset;
+test_set "message" text:
+From: Whomever <whoever@example.com>
+To: Someone <someone@example.com>
+Date: Sat, 10 Oct 2009 00:30:04 +0200
+Subject: whatever
+Content-Type: multipart/mixed; boundary=outer
+
+This is a multi-part message in MIME format.
+
+--outer
+Content-Type: multipart/alternative; boundary=inner
+
+This is a nested multi-part message in MIME format.
+
+--inner
+Content-Type: text/plain; charset="us-ascii"
+
+Hello
+
+--inner
+Content-Type: text/html; charset="us-ascii"
+
+<html><body>Hello</body></html>
+
+--inner--
+
+This is the end of the inner MIME multipart.
+
+--outer
+Content-Type: message/rfc822
+
+From: Someone Else
+Subject: Hello, this is an elaborate request for you to finally say hello
+ already!
+
+Please say Hello
+
+--outer--
+
+This is the end of the outer MIME multipart.
+.
+;
+
+test "text/html to text/plain conversion" {
+    if not convert "text/html" "text/plain" "" {
+        test_fail "text/html to text/plain conversion failed.";
+    }
+
+    test_assert_message "From: Whomever <whoever@example.com>
+To: Someone <someone@example.com>
+Date: Sat, 10 Oct 2009 00:30:04 +0200
+Subject: whatever
+Content-Type: multipart/mixed; boundary=outer
+
+This is a multi-part message in MIME format.
+
+--outer
+Content-Type: multipart/alternative; boundary=inner
+
+This is a nested multi-part message in MIME format.
+
+--inner
+Content-Type: text/plain; charset=\"us-ascii\"
+
+Hello
+
+--inner
+Content-Type: text/plain; charset=utf8
+
+Hello
+--inner--
+
+This is the end of the inner MIME multipart.
+
+--outer
+Content-Type: message/rfc822
+
+From: Someone Else
+Subject: Hello, this is an elaborate request for you to finally say hello
+ already!
+
+Please say Hello
+
+--outer--
+
+This is the end of the outer MIME multipart.
+";
+}

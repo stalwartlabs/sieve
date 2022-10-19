@@ -14,6 +14,7 @@ use super::{
         test_date::{TestCurrentDate, TestDate},
         test_duplicate::TestDuplicate,
         test_envelope::TestEnvelope,
+        test_execute::Execute,
         test_exists::TestExists,
         test_extlists::TestValidExtList,
         test_hasflag::TestHasFlag,
@@ -88,6 +89,9 @@ pub(crate) enum Test {
 
     // RFC 5230
     Vacation(TestVacation),
+
+    // Execute external command
+    Execute(Execute),
 
     #[cfg(test)]
     External(
@@ -279,6 +283,9 @@ impl<'x> CompilerState<'x> {
                 // RFC 8579
                 Token::Identifier(Word::SpecialUseExists) => self.parse_test_specialuseexists()?,
 
+                // RFC 8579
+                Token::Identifier(Word::Execute) => self.parse_test_execute()?,
+
                 Token::Identifier(word) => {
                     self.ignore_test()?;
                     Test::Invalid(Invalid {
@@ -423,6 +430,9 @@ impl Test {
                 op.is_not = true;
             }
             Test::SpecialUseExists(op) => {
+                op.is_not = true;
+            }
+            Test::Execute(op) => {
                 op.is_not = true;
             }
             Test::Vacation(_) | Test::Invalid(_) => {}

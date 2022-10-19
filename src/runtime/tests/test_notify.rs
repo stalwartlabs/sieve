@@ -1,9 +1,12 @@
+use std::borrow::Cow;
+
 use crate::{
     compiler::grammar::{
         tests::test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
         MatchType,
     },
-    Context, URI,
+    runtime::actions::action_notify::validate_uri,
+    Context,
 };
 
 use super::TestResult;
@@ -13,8 +16,14 @@ impl TestValidNotifyMethod {
         let mut num_valid = 0;
 
         for uri in &self.notification_uris {
-            if let Some(uri) = URI::parse(ctx.eval_string(uri).as_ref()) {
-                if ctx.runtime.valid_notification_uris.contains(&uri.scheme()) {
+            let uri = ctx.eval_string(uri);
+            if let Some(scheme) = validate_uri(uri.as_ref()) {
+                if ctx
+                    .runtime
+                    .valid_notification_uris
+                    .contains(&Cow::from(scheme))
+                    || ctx.runtime.valid_notification_uris.contains(&uri)
+                {
                     num_valid += 1;
                 }
             }
@@ -26,11 +35,15 @@ impl TestValidNotifyMethod {
 
 impl TestNotifyMethodCapability {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+        let uri = ctx.eval_string(&self.notification_uri);
         if !ctx
             .eval_string(&self.notification_capability)
             .eq_ignore_ascii_case("online")
-            || !URI::parse(ctx.eval_string(&self.notification_uri).as_ref()).map_or(false, |uri| {
-                ctx.runtime.valid_notification_uris.contains(&uri.scheme())
+            || !validate_uri(uri.as_ref()).map_or(false, |scheme| {
+                ctx.runtime
+                    .valid_notification_uris
+                    .contains(&Cow::from(scheme))
+                    || ctx.runtime.valid_notification_uris.contains(&uri)
             })
         {
             return TestResult::Bool(false ^ self.is_not);

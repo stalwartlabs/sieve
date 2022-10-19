@@ -13,7 +13,7 @@ use crate::{
     Action, Context, Envelope, Event, Expiry, FileCarbonCopy, Recipient,
 };
 
-const MAX_SUBJECT_LEN: usize = 256;
+pub(crate) const MAX_SUBJECT_LEN: usize = 256;
 
 impl TestVacation {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -287,12 +287,14 @@ impl Vacation {
         message.extend_from_slice(vacation_body.as_bytes());
 
         // Add action
+        let message_id = ctx.messages.len();
+        ctx.messages.push(message.into());
         ctx.actions.push(Action::SendMessage {
             recipient: Recipient::Address(vacation_to.to_string()),
             notify: Notify::Never,
             return_of_content: Ret::Default,
             by_time: ByTime::None,
-            message: message.into(),
+            message_id,
             fcc: self.fcc.as_ref().map(|fcc| {
                 Box::new(FileCarbonCopy {
                     mailbox: ctx.eval_string(&fcc.mailbox).into_owned(),

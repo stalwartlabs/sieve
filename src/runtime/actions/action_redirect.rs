@@ -26,14 +26,11 @@ impl Redirect {
                     return;
                 }
 
-                let message = if ctx.has_changes {
-                    ctx.build_message().into()
-                } else {
-                    None
-                };
                 if !self.copy {
                     ctx.actions.retain(|a| !matches!(a, Action::Keep { .. }));
                 }
+
+                let message_id = ctx.build_message_id();
                 ctx.num_redirects += 1;
                 ctx.actions.push(Action::SendMessage {
                     recipient: if !self.list {
@@ -72,7 +69,7 @@ impl Redirect {
                         },
                         ByTime::None => ByTime::None,
                     },
-                    message,
+                    message_id,
                     fcc: None,
                 });
             }

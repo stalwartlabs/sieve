@@ -37,7 +37,7 @@ pub struct Compiler {
 #[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
-    pub(crate) valid_notification_uris: AHashSet<URIScheme>,
+    pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
@@ -46,6 +46,7 @@ pub struct Runtime {
 
     pub(crate) max_include_scripts: usize,
     pub(crate) max_instructions: usize,
+    pub(crate) max_memory: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
@@ -73,6 +74,9 @@ pub struct Context<'x> {
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
 
+    pub(crate) spam_status: SpamStatus,
+    pub(crate) virus_status: VirusStatus,
+
     pub(crate) pos: usize,
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
@@ -83,6 +87,9 @@ pub struct Context<'x> {
     pub(crate) vars_match: Vec<String>,
 
     pub(crate) actions: Vec<Action>,
+    pub(crate) messages: Vec<Cow<'x, [u8]>>,
+    pub(crate) last_message_id: usize,
+
     pub(crate) has_changes: bool,
     pub(crate) num_redirects: usize,
 }
@@ -118,7 +125,7 @@ pub enum Metadata<T> {
 pub enum Action {
     Keep {
         flags: Vec<String>,
-        message: Option<Vec<u8>>,
+        message_id: usize,
     },
     Discard,
     Reject {
@@ -133,14 +140,14 @@ pub enum Action {
         mailbox_id: Option<String>,
         special_use: Option<String>,
         create: bool,
-        message: Option<Vec<u8>>,
+        message_id: usize,
     },
     SendMessage {
         recipient: Recipient,
         notify: Notify,
         return_of_content: Ret,
         by_time: ByTime<i64>,
-        message: Option<Vec<u8>>,
+        message_id: usize,
         fcc: Option<Box<FileCarbonCopy<String>>>,
     },
     Notify {
@@ -149,7 +156,7 @@ pub enum Action {
         options: Vec<String>,
         message: Option<String>,
         fcc: Option<Box<FileCarbonCopy<String>>>,
-        method: URI,
+        method: String,
     },
 }
 
@@ -171,6 +178,10 @@ pub enum Event {
     DuplicateId {
         id: String,
         expiry: Expiry,
+    },
+    Execute {
+        command: String,
+        arguments: Vec<String>,
     },
 
     #[cfg(test)]
@@ -214,6 +225,7 @@ pub enum MatchAs {
 pub enum Recipient {
     Address(String),
     List(String),
+    Group(Vec<String>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -224,34 +236,27 @@ pub enum Input {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum URI {
-    Mailto { params: Vec<(Mailto, String)> },
-    Xmpp { uri: String },
-    Http { uri: String },
-    Tel { uri: String },
-    Other { uri: String },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Mailto {
-    Header(RfcHeader),
-    Body,
-    Other(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Mailbox {
     Name(String),
     Id(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum URIScheme {
-    Mailto,
-    Xmpp,
-    Http,
-    Tel,
-    Other(String),
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SpamStatus {
+    Unknown,
+    Ham,
+    MaybeSpam(f64),
+    Spam,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum VirusStatus {
+    Unknown,
+    Clean,
+    Replaced,
+    Cured,
+    MaybeVirus,
+    Virus,
 }
 
 #[cfg(test)]
@@ -268,7 +273,7 @@ mod tests {
 
     use crate::{
         runtime::actions::action_mime::reset_test_boundary, Action, Compiler, Envelope, Event,
-        Input, Mailbox, Recipient, Runtime, URIScheme,
+        Input, Mailbox, Recipient, Runtime, SpamStatus, VirusStatus,
     };
 
     /*fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
@@ -305,13 +310,10 @@ mod tests {
             "tests/compile/compile.svtest",
             "tests/compile/warnings.svtest",
 
-            "tests/extensions/spamvirustest/spamtest.svtest",
-            "tests/extensions/spamvirustest/virustest.svtest",
-            "tests/extensions/spamvirustest/spamtestplus.svtest",
 
 
             */
-            "tests/test-size.svtest",
+            /*"tests/test-size.svtest",
             "tests/test-anyof.svtest",
             "tests/test-allof.svtest",
             "tests/test-exists.svtest",
@@ -404,6 +406,10 @@ mod tests {
             "tests/extensions/vacation/smtp.svtest",
             "tests/extensions/vacation/execute.svtest",
             "tests/extensions/vacation/utf-8.svtest",
+            "tests/extensions/spamvirustest/spamtest.svtest",
+            "tests/extensions/spamvirustest/virustest.svtest",
+            "tests/extensions/spamvirustest/spamtestplus.svtest",*/
+            "tests/extensions/convert/basic.svtest",
         ] {
             println!("===== {} =====", test);
             run_test(&PathBuf::from(test));
@@ -431,7 +437,7 @@ mod tests {
             let runtime = Runtime::new()
                 .with_protected_header("Auto-Submitted")
                 .with_protected_header("Received")
-                .with_valid_notification_uri(URIScheme::Mailto);
+                .with_valid_notification_uri("mailto");
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {
@@ -541,6 +547,9 @@ mod tests {
                     Event::DuplicateId { id, .. } => {
                         input = duplicated_ids.contains(&id).into();
                     }
+                    Event::Execute { .. } => {
+                        input = false.into();
+                    }
 
                     Event::TestCommand {
                         command,
@@ -561,11 +570,8 @@ mod tests {
                                     raw_message_ = if value.eq_ignore_ascii_case(":smtp") {
                                         let mut message = None;
                                         for action in instance.actions.iter().rev() {
-                                            if let Action::SendMessage {
-                                                message: Some(message_),
-                                                ..
-                                            } = action
-                                            {
+                                            if let Action::SendMessage { message_id, .. } = action {
+                                                let message_ = &instance.messages[*message_id];
                                                 /*println!(
                                                     "<[{}]>",
                                                     std::str::from_utf8(message_).unwrap()
@@ -684,6 +690,25 @@ mod tests {
                                     "sieve_vacation_default_subject_template" => {
                                         instance.runtime.set_vacation_subject_prefix(value);
                                     }
+                                    "sieve_spam_status" => {
+                                        instance.set_spam_status(SpamStatus::from_number(
+                                            value.parse().unwrap(),
+                                        ));
+                                    }
+                                    "sieve_spam_status_plus" => {
+                                        instance.set_spam_status(
+                                            match value.parse::<u32>().unwrap() {
+                                                0 => SpamStatus::Unknown,
+                                                100.. => SpamStatus::Spam,
+                                                n => SpamStatus::MaybeSpam((n as f64) / 100.0),
+                                            },
+                                        );
+                                    }
+                                    "sieve_virus_status" => {
+                                        instance.set_virus_status(VirusStatus::from_number(
+                                            value.parse().unwrap(),
+                                        ));
+                                    }
                                     param => panic!("Invalid test_config_set param '{}'", param),
                                 }
                             }
@@ -759,9 +784,10 @@ mod tests {
                             "test_result_reset" => {
                                 instance.actions = vec![Action::Keep {
                                     flags: vec![],
-                                    message: None,
+                                    message_id: 0,
                                 }];
                                 instance.metadata.clear();
+                                instance.messages.clear();
                                 instance.has_changes = false;
                                 instance.num_redirects = 0;
                                 instance.runtime.vacation_use_orig_rcpt = false;

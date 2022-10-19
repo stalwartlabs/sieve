@@ -30,15 +30,15 @@ impl Replace {
         // Update part
         let body = ctx.eval_string(&self.replacement).into_owned();
         let body_len = body.len();
-        ctx.message_size += body_len;
 
         let part = &mut ctx.message.parts[ctx.part];
 
-        ctx.message_size -= if part.offset_body != 0 {
-            part.offset_end - part.offset_header
-        } else {
-            part.body.len()
-        };
+        ctx.message_size = ctx.message_size + body_len
+            - (if part.offset_body != 0 {
+                part.offset_end - part.offset_header
+            } else {
+                part.body.len()
+            });
         part.body = PartType::Text(body.into());
         part.encoding = if !self.mime {
             Encoding::QuotedPrintable
@@ -359,6 +359,17 @@ enum StackItem<'x> {
 }
 
 impl<'x> Context<'x> {
+    pub(crate) fn build_message_id(&mut self) -> usize {
+        if self.has_changes {
+            self.last_message_id = self.messages.len();
+            self.has_changes = false;
+            let message = self.build_message();
+            self.messages.push(message.into());
+        }
+
+        self.last_message_id
+    }
+
     pub(crate) fn build_message(&mut self) -> Vec<u8> {
         let mut current_message = &self.message;
         let mut current_boundary = "";
