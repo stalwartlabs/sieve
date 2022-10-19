@@ -20,6 +20,7 @@ pub mod test_header;
 pub mod test_metadata;
 pub mod test_notify;
 pub mod test_size;
+pub mod test_spamtest;
 pub mod test_string;
 
 pub(crate) enum TestResult {
@@ -77,8 +78,8 @@ impl Test {
                 },
                 is_not: test.is_not,
             },
-            Test::SpamTest(_) => todo!(),
-            Test::VirusTest(_) => todo!(),
+            Test::SpamTest(test) => test.exec(ctx),
+            Test::VirusTest(test) => test.exec(ctx),
             Test::SpecialUseExists(test) => TestResult::Event {
                 event: Event::MailboxExists {
                     mailboxes: if let Some(mailbox) = &test.mailbox {
@@ -90,7 +91,14 @@ impl Test {
                 },
                 is_not: test.is_not,
             },
-            Test::Convert(_) => todo!(),
+            Test::Convert(test) => test.exec(ctx),
+            Test::Execute(test) => TestResult::Event {
+                event: Event::Execute {
+                    command: ctx.eval_string(&test.command).into_owned(),
+                    arguments: ctx.eval_strings_owned(&test.arguments),
+                },
+                is_not: test.is_not,
+            },
             Test::True => TestResult::Bool(true),
             Test::False => TestResult::Bool(false),
             Test::Invalid(invalid) => {

@@ -37,7 +37,7 @@ pub struct Compiler {
 #[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
-    pub(crate) valid_notification_uris: AHashSet<URIScheme>,
+    pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
@@ -46,6 +46,7 @@ pub struct Runtime {
 
     pub(crate) max_include_scripts: usize,
     pub(crate) max_instructions: usize,
+    pub(crate) max_memory: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
@@ -70,6 +71,9 @@ pub struct Context<'x> {
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
 
+    pub(crate) spam_status: SpamStatus,
+    pub(crate) virus_status: VirusStatus,
+
     pub(crate) pos: usize,
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
@@ -80,6 +84,9 @@ pub struct Context<'x> {
     pub(crate) vars_match: Vec<String>,
 
     pub(crate) actions: Vec<Action>,
+    pub(crate) messages: Vec<Cow<'x, [u8]>>,
+    pub(crate) last_message_id: usize,
+
     pub(crate) has_changes: bool,
     pub(crate) num_redirects: usize,
 }
@@ -115,7 +122,7 @@ pub enum Metadata<T> {
 pub enum Action {
     Keep {
         flags: Vec<String>,
-        message: Option<Vec<u8>>,
+        message_id: usize,
     },
     Discard,
     Reject {
@@ -130,14 +137,14 @@ pub enum Action {
         mailbox_id: Option<String>,
         special_use: Option<String>,
         create: bool,
-        message: Option<Vec<u8>>,
+        message_id: usize,
     },
     SendMessage {
         recipient: Recipient,
         notify: Notify,
         return_of_content: Ret,
         by_time: ByTime<i64>,
-        message: Option<Vec<u8>>,
+        message_id: usize,
         fcc: Option<Box<FileCarbonCopy<String>>>,
     },
     Notify {
@@ -146,7 +153,7 @@ pub enum Action {
         options: Vec<String>,
         message: Option<String>,
         fcc: Option<Box<FileCarbonCopy<String>>>,
-        method: URI,
+        method: String,
     },
 }
 
@@ -168,6 +175,10 @@ pub enum Event {
     DuplicateId {
         id: String,
         expiry: Expiry,
+    },
+    Execute {
+        command: String,
+        arguments: Vec<String>,
     },
 
 }
@@ -206,6 +217,7 @@ pub enum MatchAs {
 pub enum Recipient {
     Address(String),
     List(String),
+    Group(Vec<String>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -216,32 +228,25 @@ pub enum Input {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum URI {
-    Mailto { params: Vec<(Mailto, String)> },
-    Xmpp { uri: String },
-    Http { uri: String },
-    Tel { uri: String },
-    Other { uri: String },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Mailto {
-    Header(RfcHeader),
-    Body,
-    Other(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Mailbox {
     Name(String),
     Id(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum URIScheme {
-    Mailto,
-    Xmpp,
-    Http,
-    Tel,
-    Other(String),
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SpamStatus {
+    Unknown,
+    Ham,
+    MaybeSpam(f64),
+    Spam,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum VirusStatus {
+    Unknown,
+    Clean,
+    Replaced,
+    Cured,
+    MaybeVirus,
+    Virus,
 }

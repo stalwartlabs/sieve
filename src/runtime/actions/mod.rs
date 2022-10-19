@@ -1,3 +1,4 @@
+pub mod action_convert;
 pub mod action_editheader;
 pub mod action_fileinto;
 pub mod action_flags;
