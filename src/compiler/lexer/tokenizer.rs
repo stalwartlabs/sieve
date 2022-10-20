@@ -133,7 +133,7 @@ impl<'x> Tokenizer<'x> {
     }
 
     pub fn get_string(&mut self, maybe_variable: bool) -> Result<TokenInfo, CompileError> {
-        if self.buf.len() < self.compiler.max_string_len {
+        if self.buf.len() < self.compiler.max_string_size {
             let token = if maybe_variable {
                 Token::StringVariable(self.buf.to_vec())
             } else {

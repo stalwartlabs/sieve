@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
+    grammar::{
+        instruction::{CompilerState, Instruction},
+        Capability,
+    },
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -16,7 +19,13 @@ impl<'x> CompilerState<'x> {
         let cmd = Instruction::Keep(Keep {
             flags: match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
                 Some(Ok(Token::Tag(Word::Flags))) => {
-                    self.tokens.next();
+                    let token_info = self.tokens.next().unwrap().unwrap();
+                    self.validate_argument(
+                        0,
+                        Capability::Imap4Flags.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     self.parse_strings()?
                 }
                 _ => Vec::new(),

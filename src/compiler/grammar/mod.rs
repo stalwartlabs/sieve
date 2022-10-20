@@ -1,4 +1,7 @@
+use std::fmt::Display;
+
 use phf::phf_map;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::runtime::string::IntoString;
@@ -7,7 +10,7 @@ use self::instruction::CompilerState;
 
 use super::{
     lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 pub mod actions;
@@ -62,6 +65,9 @@ pub enum Capability {
     SpamTest,
     SpamTestPlus,
     VirusTest,
+
+    // Extensions
+    Execute,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -363,31 +369,86 @@ impl<'x> CompilerState<'x> {
         }
         Ok(strings)
     }
-}
 
-impl Capability {
-    pub fn parse(bytes: Vec<u8>) -> Capability {
-        if let Some(capability) = CAPABILITIES.get(std::str::from_utf8(&bytes).unwrap_or("")) {
-            capability.clone()
-        } else {
-            let capability = bytes.into_string();
-            if let Some(comparator) = capability.strip_prefix("comparator-") {
-                Capability::Comparator(Comparator::Other(comparator.to_string()))
+    #[inline(always)]
+    pub(crate) fn has_capability(&self, capability: &Capability) -> bool {
+        [&self.block]
+            .into_iter()
+            .chain(self.block_stack.iter())
+            .any(|b| b.capabilities.contains(capability))
+    }
+
+    #[inline(always)]
+    pub(crate) fn reset_param_check(&mut self) {
+        self.param_check.fill(false);
+    }
+
+    #[inline(always)]
+    pub(crate) fn validate_argument(
+        &mut self,
+        arg_num: usize,
+        capability: Option<Capability>,
+        line_num: usize,
+        line_pos: usize,
+    ) -> Result<(), CompileError> {
+        if arg_num > 0 {
+            if let Some(param) = self.param_check.get_mut(arg_num - 1) {
+                if !*param {
+                    *param = true;
+                } else {
+                    return Err(CompileError {
+                        line_num,
+                        line_pos,
+                        error_type: ErrorType::DuplicatedParameter,
+                    });
+                }
             } else {
-                Capability::Other(capability)
+                #[cfg(test)]
+                panic!("Argument out of range {}", arg_num);
             }
         }
+        if let Some(capability) = capability {
+            if !self.has_capability(&capability) {
+                return Err(CompileError {
+                    line_num,
+                    line_pos,
+                    error_type: ErrorType::UndeclaredCapability(capability),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn validate_match(
+        &mut self,
+        match_type: &MatchType,
+        key_list: &[StringItem],
+    ) -> Result<(), CompileError> {
+        if matches!(match_type, MatchType::Regex(_)) {
+            for key in key_list {
+                if let StringItem::Text(regex) = key {
+                    if Regex::new(regex).is_err() {
+                        return Err(self
+                            .tokens
+                            .unwrap_next()?
+                            .invalid(format!("Invalid regular expression {:?}", regex)));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
-impl From<String> for Capability {
-    fn from(capability: String) -> Self {
-        if let Some(capability) = CAPABILITIES.get(&capability) {
+impl Capability {
+    pub fn parse(capability: &str) -> Capability {
+        if let Some(capability) = CAPABILITIES.get(capability) {
             capability.clone()
         } else if let Some(comparator) = capability.strip_prefix("comparator-") {
             Capability::Comparator(Comparator::Other(comparator.to_string()))
         } else {
-            Capability::Other(capability)
+            Capability::Other(capability.to_string())
         }
     }
 }
@@ -406,6 +467,79 @@ static COMPARATOR: phf::Map<&'static str, Comparator> = phf_map! {
     "i;ascii-casemap" => Comparator::AsciiCaseMap,
     "i;ascii-numeric" => Comparator::AsciiNumeric,
 };
+
+impl From<&str> for Capability {
+    fn from(value: &str) -> Self {
+        Capability::parse(value)
+    }
+}
+
+impl From<String> for Capability {
+    fn from(value: String) -> Self {
+        Capability::parse(&value)
+    }
+}
+
+impl Display for Capability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Capability::Envelope => f.write_str("envelope"),
+            Capability::EnvelopeDsn => f.write_str("envelope-dsn"),
+            Capability::EnvelopeDeliverBy => f.write_str("envelope-deliverby"),
+            Capability::FileInto => f.write_str("fileinto"),
+            Capability::EncodedCharacter => f.write_str("encoded-character"),
+            Capability::Comparator(Comparator::Elbonia) => f.write_str("comparator-elbonia"),
+            Capability::Comparator(Comparator::Octet) => f.write_str("comparator-i;octet"),
+            Capability::Comparator(Comparator::AsciiCaseMap) => {
+                f.write_str("comparator-i;ascii-casemap")
+            }
+            Capability::Comparator(Comparator::AsciiNumeric) => {
+                f.write_str("comparator-i;ascii-numeric")
+            }
+            Capability::Comparator(Comparator::Other(comparator)) => f.write_str(comparator),
+            Capability::Body => f.write_str("body"),
+            Capability::Convert => f.write_str("convert"),
+            Capability::Copy => f.write_str("copy"),
+            Capability::Relational => f.write_str("relational"),
+            Capability::Date => f.write_str("date"),
+            Capability::Index => f.write_str("index"),
+            Capability::Duplicate => f.write_str("duplicate"),
+            Capability::Variables => f.write_str("variables"),
+            Capability::EditHeader => f.write_str("editheader"),
+            Capability::ForEveryPart => f.write_str("foreverypart"),
+            Capability::Mime => f.write_str("mime"),
+            Capability::Replace => f.write_str("replace"),
+            Capability::Enclose => f.write_str("enclose"),
+            Capability::ExtractText => f.write_str("extracttext"),
+            Capability::Enotify => f.write_str("enotify"),
+            Capability::RedirectDsn => f.write_str("redirect-dsn"),
+            Capability::RedirectDeliverBy => f.write_str("redirect-deliverby"),
+            Capability::Environment => f.write_str("environment"),
+            Capability::Reject => f.write_str("reject"),
+            Capability::Ereject => f.write_str("ereject"),
+            Capability::ExtLists => f.write_str("extlists"),
+            Capability::SubAddress => f.write_str("subaddress"),
+            Capability::Vacation => f.write_str("vacation"),
+            Capability::VacationSeconds => f.write_str("vacation-seconds"),
+            Capability::Fcc => f.write_str("fcc"),
+            Capability::Mailbox => f.write_str("mailbox"),
+            Capability::MailboxId => f.write_str("mailboxid"),
+            Capability::MboxMetadata => f.write_str("mboxmetadata"),
+            Capability::ServerMetadata => f.write_str("servermetadata"),
+            Capability::SpecialUse => f.write_str("special-use"),
+            Capability::Imap4Flags => f.write_str("imap4flags"),
+            Capability::Ihave => f.write_str("ihave"),
+            Capability::ImapSieve => f.write_str("imapsieve"),
+            Capability::Include => f.write_str("include"),
+            Capability::Regex => f.write_str("regex"),
+            Capability::SpamTest => f.write_str("spamtest"),
+            Capability::SpamTestPlus => f.write_str("spamtestplus"),
+            Capability::VirusTest => f.write_str("virustest"),
+            Capability::Execute => f.write_str("vnd.stalwart.execute"),
+            Capability::Other(capability) => f.write_str(capability),
+        }
+    }
+}
 
 static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
     "envelope" => Capability::Envelope,
@@ -455,4 +589,7 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
     "spamtest" => Capability::SpamTest,
     "spamtestplus" => Capability::SpamTestPlus,
     "virustest" => Capability::VirusTest,
+
+    // Extensions
+    "vnd.stalwart.execute" => Capability::Execute,
 };

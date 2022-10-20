@@ -1,9 +1,10 @@
+use mail_parser::HeaderName;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{
         instruction::{CompilerState, Instruction},
-        Comparator,
+        Capability, Comparator,
     },
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
@@ -45,13 +46,29 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Last) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     last = true;
                 }
                 _ => {
                     let string = self.parse_string_token(token_info)?;
                     if field_name.is_none() {
+                        if let StringItem::Text(header_name) = &string {
+                            if HeaderName::parse(header_name).is_none() {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .invalid("invalid header name"));
+                            }
+                        }
+
                         field_name = string.into();
                     } else {
+                        if matches!(
+                            &string,
+                            StringItem::Text(value) if value.len() > self.compiler.max_header_size
+                        ) {
+                            return Err(self.tokens.unwrap_next()?.invalid("header is too long"));
+                        }
                         value = string;
                         break;
                     }
@@ -86,25 +103,56 @@ impl<'x> CompilerState<'x> {
                     | Word::Count
                     | Word::Regex),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
+                    self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
                     index_last = true;
                 }
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(
+                        5,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime = true;
                 }
                 Token::Tag(Word::AnyChild) => {
+                    self.validate_argument(
+                        6,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime_anychild = true;
                 }
                 _ => {
                     field_name = self.parse_string_token(token_info)?;
+                    if let StringItem::Text(header_name) = &field_name {
+                        if HeaderName::parse(header_name).is_none() {
+                            return Err(self.tokens.unwrap_next()?.invalid("invalid header name"));
+                        }
+                    }
                     break;
                 }
             }
@@ -123,7 +171,9 @@ impl<'x> CompilerState<'x> {
                 Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
             )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
             {
-                self.parse_strings()?
+                let key_list = self.parse_strings()?;
+                self.validate_match(&match_type, &key_list)?;
+                key_list
             } else {
                 Vec::new()
             },

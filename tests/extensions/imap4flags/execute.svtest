@@ -1,7 +1,7 @@
 require "vnd.stalwart.testsuite";
 require "imap4flags";
 require "relational";
-
+require "include";
 
 /*
  * Execution testing

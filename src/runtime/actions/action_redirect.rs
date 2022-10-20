@@ -2,11 +2,12 @@ use mail_parser::{DateTime, HeaderName, RfcHeader};
 
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
+    runtime::RuntimeError,
     Action, Context, Envelope, Recipient,
 };
 
 impl Redirect {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
         if let Some(address) = sanitize_address(ctx.eval_string(&self.address).as_ref()) {
             if ctx.num_redirects < ctx.runtime.max_redirects
                 && ctx.message.parts[0]
@@ -23,14 +24,14 @@ impl Redirect {
                             matches!(e, Envelope::From) && v.eq_ignore_ascii_case(address.as_str())
                         }))
                 {
-                    return;
+                    return Ok(());
                 }
 
                 if !self.copy {
                     ctx.actions.retain(|a| !matches!(a, Action::Keep { .. }));
                 }
 
-                let message_id = ctx.build_message_id();
+                let message_id = ctx.build_message_id()?;
                 ctx.num_redirects += 1;
                 ctx.actions.push(Action::SendMessage {
                     recipient: if !self.list {
@@ -70,10 +71,11 @@ impl Redirect {
                         ByTime::None => ByTime::None,
                     },
                     message_id,
-                    fcc: None,
                 });
             }
         }
+
+        Ok(())
     }
 }
 

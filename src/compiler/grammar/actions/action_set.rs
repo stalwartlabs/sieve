@@ -4,7 +4,7 @@ use crate::{
     compiler::{
         grammar::instruction::{CompilerState, Instruction},
         lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-        CompileError,
+        CompileError, ErrorType,
     },
     runtime::string::IntoString,
 };
@@ -84,22 +84,32 @@ impl<'x> CompilerState<'x> {
         token_info: TokenInfo,
     ) -> Result<Variable, CompileError> {
         match token_info.token {
-            Token::StringConstant(value) => Ok(self.register_variable(value.into_string())),
+            Token::StringConstant(value) => {
+                self.register_variable(value.into_string())
+                    .map_err(|error_type| CompileError {
+                        line_num: token_info.line_num,
+                        line_pos: token_info.line_pos,
+                        error_type,
+                    })
+            }
             _ => Err(token_info.invalid("variable name must be a constant")),
         }
     }
 
-    pub(crate) fn register_variable(&mut self, name: String) -> Variable {
+    pub(crate) fn register_variable(&mut self, name: String) -> Result<Variable, ErrorType> {
         let name = name.to_lowercase();
-        match name.strip_prefix("global.") {
-            Some(global_var) if !global_var.is_empty() => Variable::Global(global_var.to_string()),
-            _ => {
-                if !self.is_var_global(&name) {
-                    Variable::Local(self.register_local_var(name))
-                } else {
-                    Variable::Global(name)
-                }
+        if let Some((namespace, name)) = name.split_once('.') {
+            if namespace == "global" {
+                Ok(Variable::Global(name.to_string()))
+            } else {
+                Err(ErrorType::InvalidNamespace(namespace.to_string()))
             }
+        } else {
+            Ok(if !self.is_var_global(&name) {
+                Variable::Local(self.register_local_var(name))
+            } else {
+                Variable::Global(name)
+            })
         }
     }
 }

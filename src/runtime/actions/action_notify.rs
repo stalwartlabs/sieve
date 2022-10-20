@@ -6,13 +6,14 @@ use crate::{
         action_notify::Notify,
         action_redirect::{ByTime, Ret},
     },
-    Action, Context, FileCarbonCopy, Importance, Recipient,
+    runtime::RuntimeError,
+    Action, Context, Importance, Recipient,
 };
 
 use super::action_vacation::MAX_SUBJECT_LEN;
 
 impl Notify {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
         // Do not notify on Auto-Submitted messages
         for header in &ctx.message.parts[0].headers {
             if matches!(&header.name, HeaderName::Other(name) if name.eq_ignore_ascii_case("Auto-Submitted"))
@@ -21,37 +22,36 @@ impl Notify {
                     .as_text_ref()
                     .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
             {
-                return;
+                return Ok(());
             }
         }
 
-        let uri = ctx.eval_string(&self.method);
-        let (scheme, params) = if let Some(parts) = parse_uri(uri.as_ref()) {
+        let uri = ctx.eval_string(&self.method).into_owned();
+        let (scheme, params) = if let Some(parts) = parse_uri(&uri) {
             parts
         } else {
-            return;
+            return Ok(());
         };
-        let fcc = self.fcc.as_ref().map(|fcc| {
-            Box::new(FileCarbonCopy {
-                mailbox: ctx.eval_string(&fcc.mailbox).into_owned(),
-                mailbox_id: fcc
-                    .mailbox_id
-                    .as_ref()
-                    .map(|m| ctx.eval_string(m).into_owned()),
-                create: fcc.create,
-                flags: ctx.get_local_flags(&fcc.flags),
-                special_use: fcc
-                    .special_use
-                    .as_ref()
-                    .map(|s| ctx.eval_string(s).into_owned()),
-            })
-        });
 
-        if scheme.eq_ignore_ascii_case("mailto") {
-            let params = if let Some(params) = parse_mailto(params) {
-                params
+        let has_fcc = self.fcc.is_some();
+        let is_mailto = scheme.eq_ignore_ascii_case("mailto");
+        let message_id = ctx.messages.len();
+
+        if is_mailto || has_fcc {
+            let params = if is_mailto {
+                if let Some(params) = parse_mailto(params) {
+                    params
+                } else {
+                    return Ok(());
+                }
             } else {
-                return;
+                MailtoMessage {
+                    to: Vec::new(),
+                    cc: Vec::new(),
+                    bcc: Vec::new(),
+                    body: None,
+                    headers: Vec::new(),
+                }
             };
             let from = if let Some(from) = &self.from {
                 let from = ctx.eval_string(from);
@@ -67,24 +67,29 @@ impl Notify {
                 ctx.user_from_field().into()
             };
             let notify_message = self.message.as_ref().map(|m| ctx.eval_string(m));
-
-            let mut message = Vec::with_capacity(
-                params
-                    .to
+            let message_len = params
+                .to
+                .iter()
+                .chain(params.cc.iter())
+                .map(|a| a.len() + 4)
+                .sum::<usize>()
+                + params
+                    .headers
                     .iter()
-                    .chain(params.cc.iter())
-                    .map(|a| a.len() + 4)
+                    .map(|(h, v)| h.len() + v.len() + 4)
                     .sum::<usize>()
-                    + params
-                        .headers
-                        .iter()
-                        .map(|(h, v)| h.len() + v.len() + 4)
-                        .sum::<usize>()
-                    + params.body.as_ref().map_or(0, |b| b.len())
-                    + notify_message.as_ref().map_or(0, |b| b.len())
-                    + from.len()
-                    + 200,
-            );
+                + params.body.as_ref().map_or(0, |b| b.len())
+                + notify_message.as_ref().map_or(0, |b| b.len())
+                + from.len()
+                + 200;
+
+            if ctx.messages.iter().map(|m| m.len()).sum::<usize>() + message_len
+                > ctx.runtime.max_memory
+            {
+                return Err(RuntimeError::OutOfMemory);
+            }
+
+            let mut message = Vec::with_capacity(message_len);
             message.extend_from_slice(b"From: ");
             message.extend_from_slice(from.as_bytes());
             message.extend_from_slice(b"\r\n");
@@ -200,37 +205,39 @@ impl Notify {
                 message.extend_from_slice(subject.as_bytes());
             }
 
-            let message_id = ctx.messages.len();
             ctx.messages.push(message.into());
 
-            ctx.actions.push(Action::SendMessage {
-                recipient: Recipient::Group(
-                    params
-                        .to
-                        .into_iter()
-                        .chain(params.cc.into_iter())
-                        .chain(params.bcc.into_iter())
-                        .map(|addr| {
-                            if let Some((addr, _)) = addr
-                                .rsplit_once('<')
-                                .and_then(|(_, addr)| addr.rsplit_once('>'))
-                            {
-                                addr.to_string()
-                            } else {
-                                addr
-                            }
-                        })
-                        .collect(),
-                ),
-                notify: crate::compiler::grammar::actions::action_redirect::Notify::Never,
-                return_of_content: Ret::Default,
-                by_time: ByTime::None,
-                message_id,
-                fcc,
-            });
-        } else {
+            if is_mailto {
+                ctx.actions.push(Action::SendMessage {
+                    recipient: Recipient::Group(
+                        params
+                            .to
+                            .into_iter()
+                            .chain(params.cc.into_iter())
+                            .chain(params.bcc.into_iter())
+                            .map(|addr| {
+                                if let Some((addr, _)) = addr
+                                    .rsplit_once('<')
+                                    .and_then(|(_, addr)| addr.rsplit_once('>'))
+                                {
+                                    addr.to_string()
+                                } else {
+                                    addr
+                                }
+                            })
+                            .collect(),
+                    ),
+                    notify: crate::compiler::grammar::actions::action_redirect::Notify::Never,
+                    return_of_content: Ret::Default,
+                    by_time: ByTime::None,
+                    message_id,
+                });
+            }
+        }
+
+        if !is_mailto {
             ctx.actions.push(Action::Notify {
-                method: uri.into_owned(),
+                method: uri,
                 from: self.from.as_ref().map(|f| ctx.eval_string(f).into_owned()),
                 importance: self.importance.as_ref().map_or(Importance::Normal, |i| {
                     match ctx.eval_string(i).as_ref() {
@@ -243,20 +250,92 @@ impl Notify {
                 message: self
                     .message
                     .as_ref()
-                    .map(|m| ctx.eval_string(m).into_owned()),
-                fcc,
+                    .map(|m| ctx.eval_string(m).into_owned())
+                    .or_else(|| ctx.message.get_subject().map(|s| s.to_string()))
+                    .unwrap_or_default(),
             });
         }
+
+        if let Some(fcc) = &self.fcc {
+            // File carbon copy
+            ctx.actions.push(Action::FileInto {
+                folder: ctx.eval_string(&fcc.mailbox).into_owned(),
+                flags: ctx.get_local_flags(&fcc.flags),
+                mailbox_id: fcc
+                    .mailbox_id
+                    .as_ref()
+                    .map(|m| ctx.eval_string(m).into_owned()),
+                special_use: fcc
+                    .special_use
+                    .as_ref()
+                    .map(|s| ctx.eval_string(s).into_owned()),
+                create: fcc.create,
+                message_id,
+            });
+        }
+
+        Ok(())
     }
+}
+
+pub(crate) fn validate_from(addr: &str) -> bool {
+    let mut has_at = false;
+    let mut has_dot = false;
+    let mut in_quote = false;
+    let mut in_angle = false;
+    let mut last_ch = 0;
+
+    for &ch in addr.as_bytes().iter() {
+        match ch {
+            b'\"' => {
+                if last_ch != b'\\' {
+                    in_quote = !in_quote;
+                }
+            }
+            b'<' if !in_quote => {
+                if !in_angle {
+                    in_angle = true;
+                    has_at = false;
+                    has_dot = false;
+                } else {
+                    return false;
+                }
+            }
+            b'>' if !in_quote => {
+                if in_angle {
+                    in_angle = false;
+                } else {
+                    return false;
+                }
+            }
+            b'@' if !in_quote => {
+                if !has_at && last_ch.is_ascii_alphanumeric() {
+                    has_at = true;
+                } else {
+                    return false;
+                }
+            }
+            b'.' if !in_quote && has_at => {
+                has_dot = true;
+            }
+            _ => (),
+        }
+        last_ch = ch;
+    }
+
+    has_dot && has_at && !in_angle
 }
 
 pub(crate) fn validate_uri(uri: &str) -> Option<&str> {
     let (scheme, uri) = parse_uri(uri)?;
     if scheme.eq_ignore_ascii_case("mailto") {
         parse_mailto(uri)?;
+        scheme.into()
+    } else if ["xmpp", "tel", "http", "https"].contains(&scheme) {
+        scheme.into()
+    } else {
+        None
     }
-
-    scheme.into()
 }
 
 pub(crate) fn parse_uri(uri: &str) -> Option<(&str, &str)> {
@@ -379,7 +458,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
             b'=' => match &state {
                 State::ParamName if !buf.is_empty() => {
                     let param = String::from_utf8(std::mem::take(&mut buf)).ok()?;
-                    state = if let Some(header) = RfcHeader::parse(&param) {
+                    state = if let Some(HeaderName::Rfc(header)) = HeaderName::parse(&param) {
                         if matches!(header, RfcHeader::To | RfcHeader::Cc | RfcHeader::Bcc) {
                             State::Address((header, false))
                         } else {

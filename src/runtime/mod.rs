@@ -22,6 +22,8 @@ pub enum RuntimeError {
     ScriptErrorMessage(String),
     CapabilityNotAllowed(Capability),
     CapabilityNotSupported(String),
+    OutOfMemory,
+    CPULimitReached,
 }
 
 impl Runtime {
@@ -87,7 +89,7 @@ impl Runtime {
             metadata: Vec::new(),
             include_scripts: AHashMap::new(),
             max_include_scripts: 3,
-            max_instructions: 5000,
+            cpu_limit: 5000,
             max_variable_size: 4096,
             max_redirects: 1,
             max_received_headers: 10,
@@ -101,7 +103,53 @@ impl Runtime {
             vacation_default_subject: "Automated reply".into(),
             vacation_subject_prefix: "Auto: ".into(),
             max_memory: 100 * 1024 * 1024,
+            max_header_size: 1024,
         }
+    }
+
+    pub fn set_cpu_limit(&mut self, size: usize) {
+        self.cpu_limit = size;
+    }
+
+    pub fn with_cpu_limit(mut self, size: usize) -> Self {
+        self.cpu_limit = size;
+        self
+    }
+
+    pub fn set_max_memory(&mut self, size: usize) {
+        self.max_memory = size;
+    }
+
+    pub fn with_max_memory(mut self, size: usize) -> Self {
+        self.max_memory = size;
+        self
+    }
+
+    pub fn set_max_include_scripts(&mut self, size: usize) {
+        self.max_include_scripts = size;
+    }
+
+    pub fn with_max_include_scripts(mut self, size: usize) -> Self {
+        self.max_include_scripts = size;
+        self
+    }
+
+    pub fn set_max_redirects(&mut self, size: usize) {
+        self.max_redirects = size;
+    }
+
+    pub fn with_max_redirects(mut self, size: usize) -> Self {
+        self.max_redirects = size;
+        self
+    }
+
+    pub fn set_max_received_headers(&mut self, size: usize) {
+        self.max_received_headers = size;
+    }
+
+    pub fn with_max_received_headers(mut self, size: usize) -> Self {
+        self.max_received_headers = size;
+        self
     }
 
     pub fn set_max_variable_size(&mut self, size: usize) {
@@ -113,8 +161,37 @@ impl Runtime {
         self
     }
 
+    pub fn set_max_header_size(&mut self, size: usize) {
+        self.max_header_size = size;
+    }
+
+    pub fn with_max_header_size(mut self, size: usize) -> Self {
+        self.max_header_size = size;
+        self
+    }
+
+    pub fn set_capability(&mut self, capability: impl Into<Capability>) {
+        self.allowed_capabilities.insert(capability.into());
+    }
+
+    pub fn with_capability(mut self, capability: impl Into<Capability>) -> Self {
+        self.set_capability(capability);
+        self
+    }
+
+    pub fn unset_capability(&mut self, capability: impl Into<Capability>) {
+        self.allowed_capabilities.remove(&capability.into());
+    }
+
+    pub fn without_capability(mut self, capability: impl Into<Capability>) -> Self {
+        self.unset_capability(capability);
+        self
+    }
+
     pub fn set_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
-        self.protected_headers.push(HeaderName::parse(header_name));
+        if let Some(header_name) = HeaderName::parse(header_name) {
+            self.protected_headers.push(header_name);
+        }
     }
 
     pub fn with_protected_header(mut self, header_name: impl Into<Cow<'static, str>>) -> Self {

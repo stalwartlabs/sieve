@@ -38,15 +38,19 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Once) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     once = true;
                 }
                 Token::Tag(Word::Optional) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     optional = true;
                 }
                 Token::Tag(Word::Personal) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     location = Location::Personal;
                 }
                 Token::Tag(Word::Global) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     location = Location::Global;
                 }
                 _ => {

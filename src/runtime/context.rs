@@ -69,6 +69,7 @@ impl<'x> Context<'x> {
                 .map(|d| d.as_secs())
                 .unwrap_or(0) as i64,
             num_redirects: 0,
+            num_instructions: 0,
             messages: vec![raw_message.into()],
             last_message_id: 0,
             virus_status: VirusStatus::Unknown,
@@ -116,6 +117,11 @@ impl<'x> Context<'x> {
 
         'outer: loop {
             while let Some(instruction) = iter.next() {
+                self.num_instructions += 1;
+                if self.num_instructions > self.runtime.cpu_limit {
+                    return Some(Err(RuntimeError::CPULimitReached));
+                }
+
                 match instruction {
                     Instruction::Jz(jmp_pos) => {
                         if !self.test_result {
@@ -176,7 +182,10 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::Keep(keep) => {
-                        let message_id = self.build_message_id();
+                        let message_id = match self.build_message_id() {
+                            Ok(message_id_) => message_id_,
+                            Err(err) => return Some(Err(err)),
+                        };
                         self.actions
                             .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
                         self.actions.push(Action::Keep {
@@ -184,8 +193,16 @@ impl<'x> Context<'x> {
                             message_id,
                         });
                     }
-                    Instruction::FileInto(fi) => fi.exec(self),
-                    Instruction::Redirect(redirect) => redirect.exec(self),
+                    Instruction::FileInto(fi) => {
+                        if let Err(err) = fi.exec(self) {
+                            return Some(Err(err));
+                        }
+                    }
+                    Instruction::Redirect(redirect) => {
+                        if let Err(err) = redirect.exec(self) {
+                            return Some(Err(err));
+                        }
+                    }
                     Instruction::Discard => {
                         self.actions
                             .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
@@ -251,8 +268,16 @@ impl<'x> Context<'x> {
                     Instruction::AddHeader(add_header) => add_header.exec(self),
                     Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
                     Instruction::Set(set) => set.exec(self),
-                    Instruction::Notify(notify) => notify.exec(self),
-                    Instruction::Vacation(vacation) => vacation.exec(self),
+                    Instruction::Notify(notify) => {
+                        if let Err(err) = notify.exec(self) {
+                            return Some(Err(err));
+                        }
+                    }
+                    Instruction::Vacation(vacation) => {
+                        if let Err(err) = vacation.exec(self) {
+                            return Some(Err(err));
+                        }
+                    }
                     Instruction::EditFlags(flags) => flags.exec(self),
                     Instruction::Include(include) => match include.exec(self) {
                         IncludeResult::Cached(script) => {
@@ -306,6 +331,13 @@ impl<'x> Context<'x> {
                             self.eval_string(&err.message).into_owned(),
                         )))
                     }
+                    Instruction::Execute(execute) => {
+                        self.pos += 1;
+                        return Some(Ok(Event::Execute {
+                            command: self.eval_string(&execute.command).into_owned(),
+                            arguments: self.eval_strings_owned(&execute.arguments),
+                        }));
+                    }
                     Instruction::Invalid(invalid) => {
                         return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
                     }
@@ -342,7 +374,10 @@ impl<'x> Context<'x> {
 
         let global_flags = self.get_global_flags();
         if self.has_changes || !global_flags.is_empty() {
-            let message_id_ = self.build_message_id();
+            let message_id_ = match self.build_message_id() {
+                Ok(message_id_) => message_id_,
+                Err(err) => return Some(Err(err)),
+            };
             for action in self.actions.iter_mut() {
                 if let Action::Keep { flags, message_id } = action {
                     if flags.is_empty() && !global_flags.is_empty() {
@@ -357,21 +392,26 @@ impl<'x> Context<'x> {
         None
     }
 
-    pub fn set_envelope(&mut self, envelope: impl Into<Envelope>, value: impl Into<Cow<'x, str>>) {
-        let envelope = envelope.into();
-        if matches!(&envelope, Envelope::From | Envelope::To) {
-            let value: Cow<str> = value.into();
-            if let Some(value) = parse_envelope_address(value.as_ref()) {
-                self.envelope.push((envelope, value.to_string().into()));
+    pub fn set_envelope(
+        &mut self,
+        envelope: impl TryInto<Envelope>,
+        value: impl Into<Cow<'x, str>>,
+    ) {
+        if let Ok(envelope) = envelope.try_into() {
+            if matches!(&envelope, Envelope::From | Envelope::To) {
+                let value: Cow<str> = value.into();
+                if let Some(value) = parse_envelope_address(value.as_ref()) {
+                    self.envelope.push((envelope, value.to_string().into()));
+                }
+            } else {
+                self.envelope.push((envelope, value.into()));
             }
-        } else {
-            self.envelope.push((envelope, value.into()));
         }
     }
 
     pub fn with_envelope(
         mut self,
-        envelope: impl Into<Envelope>,
+        envelope: impl TryInto<Envelope>,
         value: impl Into<Cow<'x, str>>,
     ) -> Self {
         self.set_envelope(envelope, value);

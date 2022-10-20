@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Comparator},
+    grammar::{instruction::CompilerState, Capability, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -50,9 +50,22 @@ impl<'x> CompilerState<'x> {
                     | Word::Count
                     | Word::Regex),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
@@ -67,6 +80,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
+        self.validate_match(&match_type, &key_list)?;
 
         Ok(Test::NotifyMethodCapability(TestNotifyMethodCapability {
             key_list,

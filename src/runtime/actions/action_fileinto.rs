@@ -1,9 +1,11 @@
-use crate::{compiler::grammar::actions::action_fileinto::FileInto, Action, Context};
+use crate::{
+    compiler::grammar::actions::action_fileinto::FileInto, runtime::RuntimeError, Action, Context,
+};
 
 impl FileInto {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
         let folder = ctx.eval_string(&self.folder).into_owned();
-        let message_id = ctx.build_message_id();
+        let message_id = ctx.build_message_id()?;
         ctx.actions.retain(|a| match a {
             Action::Discard if !self.copy => false,
             Action::Keep { flags, .. } if !self.copy && flags.is_empty() => false,
@@ -26,5 +28,6 @@ impl FileInto {
             create: self.create,
             message_id,
         });
+        Ok(())
     }
 }

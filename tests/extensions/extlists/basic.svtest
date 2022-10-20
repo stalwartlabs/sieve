@@ -1,4 +1,7 @@
 require "extlists";
+require "variables";
+require "envelope";
+require "date";
 
 test "Extlists - valid_ext_list" {
     if valid_ext_list [":addrbook:default", ":addrbook:personal"] {

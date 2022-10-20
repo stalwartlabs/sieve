@@ -1,7 +1,8 @@
+use mail_parser::HeaderName;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::instruction::CompilerState,
+    grammar::{instruction::CompilerState, Capability},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -26,13 +27,36 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(
+                        1,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime = true;
                 }
                 Token::Tag(Word::AnyChild) => {
+                    self.validate_argument(
+                        2,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime_anychild = true;
                 }
                 _ => {
-                    header_names = self.parse_strings_token(token_info)?.into();
+                    let headers = self.parse_strings_token(token_info)?;
+                    for header in &headers {
+                        if let StringItem::Text(header_name) = &header {
+                            if HeaderName::parse(header_name).is_none() {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .invalid("invalid header name"));
+                            }
+                        }
+                    }
+                    header_names = headers.into();
                 }
             }
         }

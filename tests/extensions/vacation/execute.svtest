@@ -55,6 +55,7 @@ test_config_reload :extension "vacation";
 test_result_reset;
 
 test "Using :seconds tag" {
+	require "vacation";
 	require "vacation-seconds";
 
 	vacation :seconds 120 :addresses "stephan@example.org" "I'll be back in a few minutes";

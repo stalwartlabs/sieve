@@ -11,8 +11,4 @@ test "Invalid Syntax" {
         if test_script_compile "errors/syntax.sieve" {
                 test_fail "compile should have failed";
         }
-
-        if not test_error :count "eq" :comparator "i;ascii-numeric" "31" {
-                test_fail "wrong number of errors reported";
-        }
 }

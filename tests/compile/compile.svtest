@@ -3,14 +3,46 @@ require "vnd.stalwart.testsuite";
 # Just test whether valid scripts will compile without problems
 
 test "Trivial" {
-	if not test_script_compile "trivial.sieve" {
-		test_fail "could not compile";
+	# Commands must be case-insensitive
+	keep;
+	Keep;
+	KEEP;
+	discard;
+	DisCaRD;
+
+	# Tags must be case-insensitive
+	if size :UNDER 34 {
+	}
+
+	if header :Is "from" "tukker@example.com" {
+	}
+
+	# Numbers must be case-insensitive
+	if anyof( size :UNDER 34m, size :oVeR 50M ) {
 	}
 }
 
 test "Redirect" {
-	if not test_script_compile "redirect.sieve" {
-		test_fail "could not compile";
-	}
+	redirect "stephan@example.org";
+	redirect " stephan@example.org";
+	redirect "stephan @example.org";
+	redirect "stephan@ example.org";
+	redirect "stephan@example.org ";
+	redirect " stephan @ example.org ";
+	redirect "Stephan Bosch<stephan@example.org>";
+	redirect " Stephan Bosch<stephan@example.org>";
+	redirect "Stephan Bosch <stephan@example.org>";
+	redirect "Stephan Bosch< stephan@example.org>";
+	redirect "Stephan Bosch<stephan @example.org>";
+	redirect "Stephan Bosch<stephan@ example.org>";
+	redirect "Stephan Bosch<stephan@example.org >";
+	redirect "Stephan Bosch<stephan@example.org> ";
+	redirect "  Stephan Bosch  <  stephan  @  example.org  > ";
+
+	# Test address syntax
+	redirect "\"Stephan Bosch\"@example.org";
+	redirect "Stephan.Bosch@eXamPle.oRg";
+	redirect "Stephan.Bosch@example.org";
+	redirect "Stephan Bosch <stephan@example.org>";
 }
 

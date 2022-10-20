@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{actions::action_set::Variable, instruction::CompilerState, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
+    grammar::{actions::action_set::Variable, instruction::CompilerState, Capability, Comparator},
+    lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
     CompileError,
 };
 
@@ -41,9 +41,22 @@ impl<'x> CompilerState<'x> {
                     | Word::Count
                     | Word::Regex),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 _ => {
@@ -53,14 +66,27 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
-            Some(Ok(Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen)) => {
+        match self.tokens.peek() {
+            Some(Ok(TokenInfo {
+                token: Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
+                line_num,
+                line_pos,
+            })) => {
                 if !maybe_variables.is_empty() {
+                    let line_num = *line_num;
+                    let line_pos = *line_pos;
+
                     let mut variable_list = Vec::with_capacity(maybe_variables.len());
                     for variable in maybe_variables {
                         match variable {
                             StringItem::Text(var_name) => {
-                                variable_list.push(self.register_variable(var_name));
+                                variable_list.push(self.register_variable(var_name).map_err(
+                                    |error_type| CompileError {
+                                        line_num,
+                                        line_pos,
+                                        error_type,
+                                    },
+                                )?);
                             }
                             _ => {
                                 return Err(self
@@ -70,12 +96,14 @@ impl<'x> CompilerState<'x> {
                             }
                         }
                     }
+                    let flags = self.parse_strings()?;
+                    self.validate_match(&match_type, &flags)?;
 
                     Ok(Test::HasFlag(TestHasFlag {
                         comparator,
                         match_type,
                         variable_list,
-                        flags: self.parse_strings()?,
+                        flags,
                         is_not: false,
                     }))
                 } else {
@@ -85,13 +113,17 @@ impl<'x> CompilerState<'x> {
                         .invalid("variable name cannot be a list"))
                 }
             }
-            _ => Ok(Test::HasFlag(TestHasFlag {
-                comparator,
-                match_type,
-                variable_list: Vec::new(),
-                flags: maybe_variables,
-                is_not: false,
-            })),
+            _ => {
+                self.validate_match(&match_type, &maybe_variables)?;
+
+                Ok(Test::HasFlag(TestHasFlag {
+                    comparator,
+                    match_type,
+                    variable_list: Vec::new(),
+                    flags: maybe_variables,
+                    is_not: false,
+                }))
+            }
         }
     }
 }

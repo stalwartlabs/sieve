@@ -12,10 +12,6 @@ test "Syntax errors" {
 	if test_script_compile "errors/syntax.sieve" {
 		test_fail "compile should have failed";
 	}
-
-	if test_error :count "ne" "6" {
-		test_fail "wrong number of errors reported";
-	}
 }
 
 /*
@@ -27,7 +23,4 @@ test "Validation errors" {
 		test_fail "compile should have failed";
 	}
 
-	if test_error :count "ne" "3" {
-		test_fail "wrong number of errors reported";
-	}
 }

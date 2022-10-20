@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
+    grammar::{
+        instruction::{CompilerState, Instruction},
+        Capability,
+    },
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -29,18 +32,48 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Copy) => {
+                    self.validate_argument(
+                        1,
+                        Capability::Copy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     copy = true;
                 }
                 Token::Tag(Word::Create) => {
+                    self.validate_argument(
+                        2,
+                        Capability::Mailbox.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     create = true;
                 }
                 Token::Tag(Word::Flags) => {
+                    self.validate_argument(
+                        3,
+                        Capability::Imap4Flags.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     flags = self.parse_strings()?;
                 }
                 Token::Tag(Word::MailboxId) => {
+                    self.validate_argument(
+                        4,
+                        Capability::Mailbox.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mailbox_id = self.parse_string()?.into();
                 }
                 Token::Tag(Word::SpecialUse) => {
+                    self.validate_argument(
+                        5,
+                        Capability::SpecialUse.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     special_use = self.parse_string()?.into();
                 }
                 _ => {

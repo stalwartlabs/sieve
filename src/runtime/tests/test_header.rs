@@ -186,21 +186,19 @@ impl<'x> Context<'x> {
     ) -> Vec<HeaderName<'y>> {
         let mut result = Vec::with_capacity(header_names.len());
         for header_name in header_names {
-            result.push(self.parse_header_name(header_name));
+            if let Some(header_name) = self.parse_header_name(header_name) {
+                result.push(header_name);
+            }
         }
         result
     }
 
+    #[inline(always)]
     pub(crate) fn parse_header_name<'z: 'y, 'y>(
         &'z self,
         header_name: &'y StringItem,
-    ) -> HeaderName<'y> {
-        let header_name = self.eval_string(header_name);
-        if let Some(rfc_header) = RfcHeader::parse(header_name.as_ref()) {
-            HeaderName::Rfc(rfc_header)
-        } else {
-            HeaderName::Other(header_name)
-        }
+    ) -> Option<HeaderName<'y>> {
+        HeaderName::parse(self.eval_string(header_name))
     }
 
     pub(crate) fn find_headers(

@@ -9,6 +9,7 @@ use crate::{
         action_mime::{Enclose, ExtractText, Replace},
         action_set::Variable,
     },
+    runtime::RuntimeError,
     Context,
 };
 
@@ -86,7 +87,7 @@ impl Replace {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("From".into()),
-                        from.as_ref().remove_crlf(),
+                        from.as_ref().remove_crlf(ctx.runtime.max_header_size),
                         true,
                     );
                     add_from = false;
@@ -107,7 +108,7 @@ impl Replace {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("Subject".into()),
-                        subject.as_ref().remove_crlf(),
+                        subject.as_ref().remove_crlf(ctx.runtime.max_header_size),
                         true,
                     );
                 }
@@ -161,7 +162,11 @@ impl Enclose {
         let subject = self
             .subject
             .as_ref()
-            .map(|s| ctx.eval_string(s).into_owned())
+            .map(|s| {
+                ctx.eval_string(s)
+                    .as_ref()
+                    .remove_crlf(ctx.runtime.max_header_size)
+            })
             .or_else(|| ctx.message.get_subject().map(|s| s.to_string()))
             .unwrap_or_default();
 
@@ -240,27 +245,28 @@ impl Enclose {
                 header_name = header_name.trim();
                 header_value = header_value.trim();
                 if !header_value.is_empty() {
-                    let name = HeaderName::parse(header_name);
-                    if !ctx.runtime.protected_headers.contains(&name) {
-                        match &name {
-                            HeaderName::Rfc(RfcHeader::Date) => {
-                                add_date = false;
+                    if let Some(name) = HeaderName::parse(header_name) {
+                        if !ctx.runtime.protected_headers.contains(&name) {
+                            match &name {
+                                HeaderName::Rfc(RfcHeader::Date) => {
+                                    add_date = false;
+                                }
+                                HeaderName::Rfc(RfcHeader::From) => {
+                                    add_from = false;
+                                }
+                                HeaderName::Rfc(RfcHeader::MessageId) => {
+                                    add_message_id = false;
+                                }
+                                _ => (),
                             }
-                            HeaderName::Rfc(RfcHeader::From) => {
-                                add_from = false;
-                            }
-                            HeaderName::Rfc(RfcHeader::MessageId) => {
-                                add_message_id = false;
-                            }
-                            _ => (),
-                        }
 
-                        ctx.insert_header(
-                            0,
-                            HeaderName::Other(header_name.to_string().into()),
-                            header_value.to_string(),
-                            true,
-                        );
+                            ctx.insert_header(
+                                0,
+                                HeaderName::Other(header_name.to_string().into()),
+                                header_value.remove_crlf(ctx.runtime.max_header_size),
+                                true,
+                            );
+                        }
                     }
                 }
             }
@@ -359,15 +365,21 @@ enum StackItem<'x> {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn build_message_id(&mut self) -> usize {
+    pub(crate) fn build_message_id(&mut self) -> Result<usize, RuntimeError> {
         if self.has_changes {
+            if self.messages.iter().map(|m| m.len()).sum::<usize>() + self.message_size
+                > self.runtime.max_memory
+            {
+                return Err(RuntimeError::OutOfMemory);
+            }
+
             self.last_message_id = self.messages.len();
             self.has_changes = false;
             let message = self.build_message();
             self.messages.push(message.into());
         }
 
-        self.last_message_id
+        Ok(self.last_message_id)
     }
 
     pub(crate) fn build_message(&mut self) -> Vec<u8> {

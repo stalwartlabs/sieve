@@ -6,7 +6,7 @@ use compiler::grammar::{
     instruction::Instruction,
     Capability,
 };
-use mail_parser::{HeaderName, Message, RfcHeader};
+use mail_parser::{HeaderName, Message};
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
 
@@ -25,13 +25,16 @@ pub struct Sieve {
 
 pub struct Compiler {
     // Settings
-    pub(crate) max_script_len: usize,
-    pub(crate) max_string_len: usize,
-    pub(crate) max_variable_len: usize,
+    pub(crate) max_script_size: usize,
+    pub(crate) max_string_size: usize,
+    pub(crate) max_variable_size: usize,
     pub(crate) max_nested_blocks: usize,
     pub(crate) max_nested_tests: usize,
+    pub(crate) max_nested_foreverypart: usize,
     pub(crate) max_match_variables: usize,
     pub(crate) max_local_variables: usize,
+    pub(crate) max_header_size: usize,
+    pub(crate) max_includes: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -45,11 +48,13 @@ pub struct Runtime {
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
-    pub(crate) max_instructions: usize,
+    pub(crate) cpu_limit: usize,
     pub(crate) max_memory: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
+    pub(crate) max_header_size: usize,
+
     pub(crate) vacation_use_orig_rcpt: bool,
     pub(crate) vacation_default_subject: Cow<'static, str>,
     pub(crate) vacation_subject_prefix: Cow<'static, str>,
@@ -92,6 +97,7 @@ pub struct Context<'x> {
 
     pub(crate) has_changes: bool,
     pub(crate) num_redirects: usize,
+    pub(crate) num_instructions: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -112,7 +118,6 @@ pub enum Envelope {
     Orcpt,
     Ret,
     Envid,
-    Other(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -148,14 +153,12 @@ pub enum Action {
         return_of_content: Ret,
         by_time: ByTime<i64>,
         message_id: usize,
-        fcc: Option<Box<FileCarbonCopy<String>>>,
     },
     Notify {
         from: Option<String>,
         importance: Importance,
         options: Vec<String>,
-        message: Option<String>,
-        fcc: Option<Box<FileCarbonCopy<String>>>,
+        message: String,
         method: String,
     },
 }
@@ -192,7 +195,7 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct FileCarbonCopy<T> {
+pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
     pub mailbox_id: Option<T>,
     pub create: bool,
@@ -272,152 +275,51 @@ mod tests {
     };
 
     use crate::{
-        runtime::actions::action_mime::reset_test_boundary, Action, Compiler, Envelope, Event,
-        Input, Mailbox, Recipient, Runtime, SpamStatus, VirusStatus,
+        compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary, Action,
+        Compiler, Envelope, Event, Input, Mailbox, Recipient, Runtime, SpamStatus, VirusStatus,
     };
 
-    /*fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
+    #[test]
+    fn test_suite() {
+        let mut tests = Vec::new();
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push("tests");
+
+        read_dir(path, &mut tests);
+
+        for test in tests {
+            /*if !test
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .contains("error")
+            {
+                continue;
+            }*/
+            println!("===== {} =====", test.display());
+            run_test(&test);
+        }
+    }
+
+    fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
         for entry in fs::read_dir(path).unwrap() {
             let entry = entry.unwrap().path();
             if entry.is_dir() {
                 read_dir(entry, files);
-            } else if ["svtest", "sieve"]
-                .contains(&entry.extension().and_then(|e| e.to_str()).unwrap_or(""))
+            } else if entry
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .eq("svtest")
             {
                 files.push(entry);
             }
         }
-    }*/
-
-    #[test]
-    fn test_suite() {
-        for test in [
-            /*"tests/execute/mailstore.svtest",
-            "tests/execute/actions.svtest",
-            "tests/execute/smtp.svtest",
-            "tests/execute/errors-cpu-limit.svtest",
-            "tests/execute/address-normalize.svtest",
-            "tests/execute/examples.svtest",
-
-            "tests/plugins/extprograms/execute/command.svtest",
-            "tests/plugins/extprograms/execute/execute.svtest",
-            "tests/plugins/extprograms/pipe/command.svtest",
-            "tests/plugins/extprograms/pipe/execute.svtest",
-            "tests/plugins/extprograms/filter/command.svtest",
-            "tests/plugins/extprograms/filter/execute.svtest",
-
-            "tests/compile/recover.svtest",
-            "tests/compile/compile.svtest",
-            "tests/compile/warnings.svtest",
-
-
-
-            */
-            /*"tests/test-size.svtest",
-            "tests/test-anyof.svtest",
-            "tests/test-allof.svtest",
-            "tests/test-exists.svtest",
-            "tests/control-stop.svtest",
-            "tests/test-address.svtest",
-            "tests/control-if.svtest",
-            "tests/lexer.svtest",
-            "tests/testsuite.svtest",
-            "tests/test-header.svtest",
-            "tests/match-types/is.svtest",
-            "tests/match-types/contains.svtest",
-            "tests/match-types/matches.svtest",
-            "tests/comparators/i-octet.svtest",
-            "tests/comparators/i-ascii-casemap.svtest",
-            "tests/extensions/subaddress/rfc.svtest",
-            "tests/extensions/subaddress/basic.svtest",
-            "tests/extensions/encoded-character.svtest",
-            "tests/extensions/variables/string.svtest",
-            "tests/extensions/variables/match.svtest",
-            "tests/extensions/variables/regex.svtest",
-            "tests/extensions/variables/basic.svtest",
-            "tests/extensions/variables/modifiers.svtest",
-            "tests/extensions/variables/quoting.svtest",
-            "tests/extensions/variables/limits.svtest",
-            "tests/extensions/editheader/utf8.svtest",
-            "tests/extensions/editheader/protected.svtest",
-            "tests/extensions/editheader/addheader.svtest",
-            "tests/extensions/editheader/deleteheader.svtest",
-            "tests/extensions/editheader/execute.svtest",
-            "tests/extensions/editheader/alternating.svtest",
-            "tests/extensions/mime/header.svtest",
-            "tests/extensions/mime/calendar-example.svtest",
-            "tests/extensions/mime/address.svtest",
-            "tests/extensions/mime/extracttext.svtest",
-            "tests/extensions/mime/content-header.svtest",
-            "tests/extensions/mime/execute.svtest",
-            "tests/extensions/mime/foreverypart.svtest",
-            "tests/extensions/mime/exists.svtest",
-            "tests/extensions/mime/replace.svtest",
-            "tests/extensions/mime/enclose.svtest",
-            "tests/extensions/regex/match-values.svtest",
-            "tests/extensions/regex/basic.svtest",
-            "tests/extensions/relational/rfc.svtest",
-            "tests/extensions/relational/comparators.svtest",
-            "tests/extensions/relational/basic.svtest",
-            "tests/extensions/envelope.svtest",
-            "tests/extensions/body/content.svtest",
-            "tests/extensions/body/text.svtest",
-            "tests/extensions/body/match-values.svtest",
-            "tests/extensions/body/basic.svtest",
-            "tests/extensions/body/raw.svtest",
-            "tests/extensions/imap4flags/basic.svtest",
-            "tests/extensions/imap4flags/hasflag.svtest",
-            "tests/extensions/imap4flags/flagstring.svtest",
-            "tests/extensions/imap4flags/multiscript.svtest",
-            "tests/extensions/imap4flags/flagstore.svtest",
-            "tests/extensions/imap4flags/execute.svtest",
-            "tests/extensions/date/basic.svtest",
-            "tests/extensions/date/zones.svtest",
-            "tests/extensions/date/date-parts.svtest",
-            "tests/extensions/date/currentdate.svtest",
-            "tests/extensions/index/basic.svtest",
-            "tests/extensions/ihave/basic.svtest",
-            "tests/extensions/ihave/restrictions.svtest",
-            "tests/extensions/include/once.svtest",
-            "tests/extensions/include/twice.svtest",
-            "tests/extensions/include/rfc.svtest",
-            "tests/extensions/include/optional.svtest",
-            "tests/extensions/include/execute.svtest",
-            "tests/extensions/include/variables.svtest",
-            "tests/extensions/environment/rfc.svtest",
-            "tests/extensions/environment/basic.svtest",
-            "tests/extensions/environment/variables.svtest",
-            "tests/extensions/reject/smtp.svtest",
-            "tests/extensions/reject/execute.svtest",
-            "tests/extensions/redirect/basic.svtest",
-            "tests/extensions/mailbox/execute.svtest",
-            "tests/extensions/special-use/execute.svtest",
-            "tests/extensions/metadata/execute.svtest",
-            "tests/extensions/enotify/basic.svtest",
-            "tests/extensions/enotify/valid_notify_method.svtest",
-            "tests/extensions/enotify/notify_method_capability.svtest",
-            "tests/extensions/enotify/mailto.svtest",
-            "tests/extensions/enotify/encodeurl.svtest",
-            "tests/extensions/enotify/execute.svtest",
-            "tests/extensions/extlists/basic.svtest",
-            "tests/extensions/duplicate/execute.svtest",
-            "tests/extensions/vacation/reply.svtest",
-            "tests/extensions/vacation/message.svtest",
-            "tests/extensions/vacation/smtp.svtest",
-            "tests/extensions/vacation/execute.svtest",
-            "tests/extensions/vacation/utf-8.svtest",
-            "tests/extensions/spamvirustest/spamtest.svtest",
-            "tests/extensions/spamvirustest/virustest.svtest",
-            "tests/extensions/spamvirustest/spamtestplus.svtest",*/
-            "tests/extensions/convert/basic.svtest",
-        ] {
-            println!("===== {} =====", test);
-            run_test(&PathBuf::from(test));
-        }
     }
 
     fn run_test(script_path: &Path) {
-        let compiler = Compiler::new();
+        let mut compiler = Compiler::new();
         let mut ancestors = script_path.ancestors();
         ancestors.next();
         let base_path = ancestors.next().unwrap();
@@ -437,7 +339,8 @@ mod tests {
             let runtime = Runtime::new()
                 .with_protected_header("Auto-Submitted")
                 .with_protected_header("Received")
-                .with_valid_notification_uri("mailto");
+                .with_valid_notification_uri("mailto")
+                .with_capability(Capability::Execute);
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {
@@ -547,8 +450,16 @@ mod tests {
                     Event::DuplicateId { id, .. } => {
                         input = duplicated_ids.contains(&id).into();
                     }
-                    Event::Execute { .. } => {
-                        input = false.into();
+                    Event::Execute { command, arguments } => {
+                        assert_eq!(arguments, ["param1", "param2"]);
+                        input = (if command.eq_ignore_ascii_case("always_succeed") {
+                            true
+                        } else if command.eq_ignore_ascii_case("always_fail") {
+                            false
+                        } else {
+                            panic!("Unknown command {}", command);
+                        })
+                        .into();
                     }
 
                     Event::TestCommand {
@@ -596,7 +507,8 @@ mod tests {
 
                                     continue 'outer;
                                 } else if let Some(envelope) = target.strip_prefix("envelope.") {
-                                    let envelope = Envelope::from(envelope.to_string());
+                                    let envelope =
+                                        Envelope::try_from(envelope.to_string()).unwrap();
                                     instance.envelope.retain(|(e, _)| e != &envelope);
                                     instance.set_envelope(envelope, params.next().unwrap());
                                 } else if target == "currentdate" {
@@ -709,6 +621,29 @@ mod tests {
                                             value.parse().unwrap(),
                                         ));
                                     }
+                                    "sieve_editheader_max_header_size" => {
+                                        let mhs = if !value.is_empty() {
+                                            value.parse::<usize>().unwrap()
+                                        } else {
+                                            1024
+                                        };
+                                        instance.runtime.set_max_header_size(mhs);
+                                        compiler.set_max_header_size(mhs);
+                                    }
+                                    "sieve_include_max_includes" => {
+                                        compiler.set_max_includes(if !value.is_empty() {
+                                            value.parse::<usize>().unwrap()
+                                        } else {
+                                            3
+                                        });
+                                    }
+                                    "sieve_include_max_nesting_depth" => {
+                                        compiler.set_max_nested_blocks(if !value.is_empty() {
+                                            value.parse::<usize>().unwrap()
+                                        } else {
+                                            3
+                                        });
+                                    }
                                     param => panic!("Invalid test_config_set param '{}'", param),
                                 }
                             }
@@ -794,6 +729,20 @@ mod tests {
                                 mailboxes.clear();
                                 lists.clear();
                                 reset_test_boundary();
+                            }
+                            "test_script_compile" => {
+                                let mut include_path = PathBuf::from(base_path);
+                                include_path.push(params.first().unwrap());
+
+                                if let Ok(bytes) = fs::read(include_path.as_path()) {
+                                    let result = compiler.compile(&add_crlf(&bytes));
+                                    /*if let Err(err) = &result {
+                                        println!("Error: {:?}", err);
+                                    }*/
+                                    input = result.is_ok().into();
+                                } else {
+                                    panic!("Script {} not found.", include_path.display());
+                                }
                             }
                             "test_config_reload" => (),
                             "test_fail" => {

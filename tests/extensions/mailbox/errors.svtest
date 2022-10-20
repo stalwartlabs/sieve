@@ -1,6 +1,5 @@
 require "vnd.stalwart.testsuite";
 require "variables";
-require "vnd.stalwart.debug";
 
 require "relational";
 require "comparator-i;ascii-numeric";
@@ -13,11 +12,6 @@ test "Invalid Syntax" {
 	if test_script_compile "errors/syntax.sieve" {
 		test_fail "compile should have failed";
 	}
-
-	# FIXME: check warnings
-	if not test_error :count "eq" :comparator "i;ascii-numeric" "12" {
-		test_fail "wrong number of errors reported";
-	}
 }
 
 /*
@@ -27,14 +21,5 @@ test "Invalid Syntax" {
 test "Mailboxexists - bad UTF-8 in mailbox name" {
 	if not test_script_compile "errors/mailboxexists-bad-utf8.sieve" {
 		test_fail "compile failed";
-	}
-
-	if not test_script_run {
-		test_fail "execution failed";
-	}
-
-	# FIXME: check warnings
-	if not test_error :count "eq" :comparator "i;ascii-numeric" "0" {
-		test_fail "wrong number of runtime errors reported";
 	}
 }

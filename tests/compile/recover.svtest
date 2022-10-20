@@ -18,9 +18,6 @@ test "Missing semicolons" {
 		test_fail "compile should have failed.";
 	}
 
-	if not test_error :count "eq" :comparator "i;ascii-numeric" "3" {
-		test_fail "wrong number of errors reported";
-	}
 }
 
 /* End of block recovery*/
@@ -30,9 +27,6 @@ test "Missing semicolon at end of block" {
 		test_fail "compile should have failed.";
 	}
 
-	if not test_error :count "eq" :comparator "i;ascii-numeric" "4" {
-		test_fail "wrong number of errors reported";
-	}
 }
 
 /*
@@ -44,7 +38,4 @@ test "Spurious comma at end of test list" {
 		test_fail "compile should have failed.";
 	}
 
-	if not test_error :count "eq" :comparator "i;ascii-numeric" "3" {
-		test_fail "wrong number of errors reported";
-	}
 }

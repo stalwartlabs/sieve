@@ -318,11 +318,14 @@ Text
 ;
 
 test "Invalid header name" {
-	if header :mime :anychild :contains "subject:" "" {
+	set "header" "subject:";
+
+	if header :mime :anychild :contains "${header}" "" {
 		test_fail "matched invalid header name";
 	}
 
-	if header :mime :anychild :contains "to!" "" {
+	set "header" "to!";
+	if header :mime :anychild :contains "${header}" "" {
 		test_fail "matched invalid header name";
 	}
 }
@@ -333,11 +336,13 @@ test "Invalid header name" {
 
 test "Invalid header name - foreverypart" {
 	foreverypart {
-		if header :mime :anychild :contains "subject:" "" {
+		set "header" "subject:";
+		if header :mime :anychild :contains "${header}" "" {
 			test_fail "matched invalid header name";
 		}
 
-		if header :mime :anychild :contains "to!" "" {
+		set "header" "to!";
+		if header :mime :anychild :contains "${header}" "" {
 			test_fail "matched invalid header name";
 		}
 	}

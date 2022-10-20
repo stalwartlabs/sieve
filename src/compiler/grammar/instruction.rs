@@ -25,6 +25,7 @@ use super::{
         action_set::Set,
         action_vacation::Vacation,
     },
+    tests::test_execute::Execute,
     Capability, Clear, Invalid,
 };
 
@@ -82,10 +83,15 @@ pub(crate) enum Instruction {
     Include(Include),
     Return,
 
+    // Execute extension
+    Execute(Execute),
+
     // Testing
     #[cfg(test)]
     External((String, Vec<crate::compiler::lexer::string::StringItem>)),
 }
+
+pub(crate) const MAX_PARAMS: usize = 11;
 
 pub(crate) struct Block {
     pub(crate) btype: Word,
@@ -98,9 +104,11 @@ pub(crate) struct Block {
     pub(crate) match_test_pos: Vec<usize>,
     pub(crate) match_test_vars: u64,
     pub(crate) vars_local: AHashMap<String, usize>,
+    pub(crate) capabilities: AHashSet<Capability>,
 }
 
 pub(crate) struct CompilerState<'x> {
+    pub(crate) compiler: &'x Compiler,
     pub(crate) tokens: Tokenizer<'x>,
     pub(crate) instructions: Vec<Instruction>,
     pub(crate) block_stack: Vec<Block>,
@@ -110,11 +118,13 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) vars_num: usize,
     pub(crate) vars_num_max: usize,
     pub(crate) vars_match_max: usize,
+    pub(crate) param_check: [bool; MAX_PARAMS],
+    pub(crate) includes_num: usize,
 }
 
 impl Compiler {
     pub fn compile(&self, script: &[u8]) -> Result<Sieve, CompileError> {
-        if script.len() > self.max_script_len {
+        if script.len() > self.max_script_size {
             return Err(CompileError {
                 line_num: 0,
                 line_pos: 0,
@@ -123,6 +133,7 @@ impl Compiler {
         }
 
         let mut state = CompilerState {
+            compiler: self,
             tokens: Tokenizer::new(self, script),
             instructions: Vec::new(),
             block_stack: Vec::new(),
@@ -132,10 +143,13 @@ impl Compiler {
             vars_num: 0,
             vars_num_max: 0,
             vars_match_max: 0,
+            param_check: [false; MAX_PARAMS],
+            includes_num: 0,
         };
 
         while let Some(token_info) = state.tokens.next() {
             let token_info = token_info?;
+            state.reset_param_check();
 
             match token_info.token {
                 Token::Identifier(instruction) => {
@@ -169,6 +183,12 @@ impl Compiler {
                             state.parse_keep()?;
                         }
                         Word::FileInto => {
+                            state.validate_argument(
+                                0,
+                                Capability::FileInto.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_fileinto()?;
                         }
                         Word::Redirect => {
@@ -183,6 +203,25 @@ impl Compiler {
 
                         // RFC 5703
                         Word::ForEveryPart => {
+                            state.validate_argument(
+                                0,
+                                Capability::ForEveryPart.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+
+                            if state
+                                .block_stack
+                                .iter()
+                                .filter(|b| matches!(&b.btype, Word::ForEveryPart))
+                                .count()
+                                == self.max_nested_foreverypart
+                            {
+                                return Err(
+                                    token_info.invalid("too many nested 'foreverypart' blocks")
+                                );
+                            }
+
                             is_new_block = if let Some(Ok(Token::Tag(Word::Name))) =
                                 state.tokens.peek().map(|r| r.map(|t| &t.token))
                             {
@@ -210,6 +249,12 @@ impl Compiler {
                                 }));
                         }
                         Word::Break => {
+                            state.validate_argument(
+                                0,
+                                Capability::ForEveryPart.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             if let Some(Ok(Token::Tag(Word::Name))) =
                                 state.tokens.peek().map(|r| r.map(|t| &t.token))
                             {
@@ -264,66 +309,161 @@ impl Compiler {
                             state.instructions.push(Instruction::Jmp(usize::MAX));
                         }
                         Word::Replace => {
+                            state.validate_argument(
+                                0,
+                                Capability::Replace.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_replace()?;
                         }
                         Word::Enclose => {
+                            state.validate_argument(
+                                0,
+                                Capability::Enclose.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_enclose()?;
                         }
                         Word::ExtractText => {
+                            state.validate_argument(
+                                0,
+                                Capability::ExtractText.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_extracttext()?;
                         }
 
                         // RFC 6558
                         Word::Convert => {
+                            state.validate_argument(
+                                0,
+                                Capability::Convert.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_convert()?;
                         }
 
                         // RFC 5293
                         Word::AddHeader => {
+                            state.validate_argument(
+                                0,
+                                Capability::EditHeader.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_addheader()?;
                         }
                         Word::DeleteHeader => {
+                            state.validate_argument(
+                                0,
+                                Capability::EditHeader.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_deleteheader()?;
                         }
 
                         // RFC 5229
                         Word::Set => {
+                            state.validate_argument(
+                                0,
+                                Capability::Variables.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_set()?;
                         }
 
                         // RFC 5435
                         Word::Notify => {
+                            state.validate_argument(
+                                0,
+                                Capability::Enotify.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_notify()?;
                         }
 
                         // RFC 5429
                         Word::Reject => {
+                            state.validate_argument(
+                                0,
+                                Capability::Reject.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_reject(false)?;
                         }
                         Word::Ereject => {
+                            state.validate_argument(
+                                0,
+                                Capability::Ereject.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_reject(true)?;
                         }
 
                         // RFC 5230
                         Word::Vacation => {
+                            state.validate_argument(
+                                0,
+                                Capability::Vacation.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_vacation()?;
                         }
 
                         // RFC 5463
                         Word::Error => {
+                            state.validate_argument(
+                                0,
+                                Capability::Ihave.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_error()?;
                         }
 
                         // RFC 5232
                         Word::SetFlag | Word::AddFlag | Word::RemoveFlag => {
+                            state.validate_argument(
+                                0,
+                                Capability::Imap4Flags.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             state.parse_flag_action(instruction)?;
                         }
 
                         // RFC 6609
                         Word::Include => {
-                            state.parse_include()?;
+                            if state.includes_num < self.max_includes {
+                                state.validate_argument(
+                                    0,
+                                    Capability::Include.into(),
+                                    token_info.line_num,
+                                    token_info.line_pos,
+                                )?;
+                                state.parse_include()?;
+                                state.includes_num += 1;
+                            } else {
+                                return Err(token_info.custom(ErrorType::TooManyIncludes));
+                            }
                         }
                         Word::Return => {
+                            state.validate_argument(
+                                0,
+                                Capability::Include.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             let mut num_pops = 0;
 
                             for block in [&state.block]
@@ -344,9 +484,21 @@ impl Compiler {
                             state.instructions.push(Instruction::Return);
                         }
                         Word::Global => {
+                            state.validate_argument(
+                                0,
+                                Capability::Include.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            state.validate_argument(
+                                0,
+                                Capability::Variables.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
                             for global in state.parse_static_strings()? {
                                 if !state.is_var_local(&global) {
-                                    if global.len() < self.max_variable_len {
+                                    if global.len() < self.max_variable_size {
                                         state.register_global_var(&global);
                                     } else {
                                         return Err(state
@@ -363,6 +515,15 @@ impl Compiler {
                             }
                         }
 
+                        Word::Execute => {
+                            state.validate_argument(
+                                0,
+                                Capability::Execute.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            state.parse_execute()?;
+                        }
                         _ => {
                             state.ignore_instruction()?;
                             state.instructions.push(Instruction::Invalid(Invalid {
@@ -680,6 +841,7 @@ impl Block {
             if_jmps: vec![],
             break_jmps: vec![],
             vars_local: AHashMap::new(),
+            capabilities: AHashSet::new(),
         }
     }
 

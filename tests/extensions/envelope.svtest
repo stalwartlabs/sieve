@@ -244,6 +244,8 @@ test "Envelope - Non-standard hostnames" {
 }
 
 test "Envelope - bytimeabsolute" {
+	require "envelope-deliverby";
+
 	test_set "envelope.bytimeabsolute" "1990-01-01T00:00:30+03:00";
 
 	if not envelope :zone "+0200" "bytimeabsolute" "1989-12-31T23:00:30+02:00" {

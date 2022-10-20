@@ -9,8 +9,8 @@ use crate::{
         },
         AddressPart,
     },
-    runtime::tests::TestResult,
-    Action, Context, Envelope, Event, Expiry, FileCarbonCopy, Recipient,
+    runtime::{tests::TestResult, RuntimeError},
+    Action, Context, Envelope, Event, Expiry, Recipient,
 };
 
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
@@ -149,7 +149,7 @@ impl TestVacation {
 }
 
 impl Vacation {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
         let mut vacation_to = "";
 
         for (name, value) in &ctx.envelope {
@@ -239,17 +239,23 @@ impl Vacation {
             vacation_subject = ctx.runtime.vacation_default_subject.as_ref().into();
         }
         let vacation_body = ctx.eval_string(&self.reason);
-        let mut message = Vec::with_capacity(
-            vacation_body.len()
-                + vacation_from.len()
-                + vacation_to_full
-                    .as_ref()
-                    .map_or(vacation_to.len(), |t| t.len())
-                + vacation_subject.len()
-                + message_id.as_ref().map_or(0, |m| m.len() * 2)
-                + references.as_ref().map_or(0, |m| m.len())
-                + 160,
-        );
+        let message_len = vacation_body.len()
+            + vacation_from.len()
+            + vacation_to_full
+                .as_ref()
+                .map_or(vacation_to.len(), |t| t.len())
+            + vacation_subject.len()
+            + message_id.as_ref().map_or(0, |m| m.len() * 2)
+            + references.as_ref().map_or(0, |m| m.len())
+            + 160;
+
+        if ctx.messages.iter().map(|m| m.len()).sum::<usize>() + message_len
+            > ctx.runtime.max_memory
+        {
+            return Err(RuntimeError::OutOfMemory);
+        }
+
+        let mut message = Vec::with_capacity(message_len);
         write_header(&mut message, "From: ", vacation_from.as_ref());
         if let Some(vacation_to_full) = vacation_to_full {
             message.extend_from_slice(b"To:");
@@ -295,22 +301,27 @@ impl Vacation {
             return_of_content: Ret::Default,
             by_time: ByTime::None,
             message_id,
-            fcc: self.fcc.as_ref().map(|fcc| {
-                Box::new(FileCarbonCopy {
-                    mailbox: ctx.eval_string(&fcc.mailbox).into_owned(),
-                    mailbox_id: fcc
-                        .mailbox_id
-                        .as_ref()
-                        .map(|m| ctx.eval_string(m).into_owned()),
-                    create: fcc.create,
-                    flags: ctx.get_local_flags(&fcc.flags),
-                    special_use: fcc
-                        .special_use
-                        .as_ref()
-                        .map(|s| ctx.eval_string(s).into_owned()),
-                })
-            }),
         });
+
+        // File carbon copy
+        if let Some(fcc) = &self.fcc {
+            ctx.actions.push(Action::FileInto {
+                folder: ctx.eval_string(&fcc.mailbox).into_owned(),
+                flags: ctx.get_local_flags(&fcc.flags),
+                mailbox_id: fcc
+                    .mailbox_id
+                    .as_ref()
+                    .map(|m| ctx.eval_string(m).into_owned()),
+                special_use: fcc
+                    .special_use
+                    .as_ref()
+                    .map(|s| ctx.eval_string(s).into_owned()),
+                create: fcc.create,
+                message_id,
+            });
+        }
+
+        Ok(())
     }
 }
 

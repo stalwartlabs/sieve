@@ -4,6 +4,7 @@ require "relational";
 require "comparator-i;ascii-numeric";
 require "mailbox";
 require "fileinto";
+require "include";
 
 test "Segfault Trigger 1" {
 
@@ -27,8 +28,14 @@ test "Internal Flags" {
  		test_fail "some flags or keywords are already set";
 	}
 
-	include "setflag";
-	include "fileinto";
+	require "imap4flags";
+
+	setflag "$label1 \\answered";
+
+	require "fileinto";
+	require "mailbox";
+
+	fileinto :create "folder";
 
 	test_result_reset;
 	test_message :folder "folder" 0;

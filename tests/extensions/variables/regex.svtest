@@ -16,7 +16,8 @@ test "RFC - values overwrite" {
 		test_fail "invalid match values";
 	}
 
-	if string :regex "${sentence2}" "the (.*) barks at the (.*) in the store" {
+	set "regex" "the (.*) barks at the (.*) in the store";
+	if string :regex "${sentence2}" "${regex}" {
 		test_fail "should not have matched second sentence";
 	}
 
@@ -24,7 +25,8 @@ test "RFC - values overwrite" {
 		test_fail "should have preserved match values";
 	}
 
-	if not string :regex "${sentence2}" "the (.*) barks at the (.*) in the alley" {
+	set "regex" "the (.*) barks at the (.*) in the alley";
+	if not string :regex "${sentence2}" "${regex}" {
 		test_fail "failed to match the second sentence (second time)";
 	}
 

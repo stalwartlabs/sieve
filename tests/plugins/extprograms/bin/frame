@@ -1,7 +1,0 @@
-#!/bin/sh
-
-echo -n "FRAMED $1{ "
-cat
-echo -n " }"
-
-exit 0

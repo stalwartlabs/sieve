@@ -1,6 +1,11 @@
 require "vnd.stalwart.testsuite";
 require "variables";
 require "enclose";
+require "mime";
+require "foreverypart";
+require "extracttext";
+require "replace";
+require "editheader";
 
 test "Enclose" {
 

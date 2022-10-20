@@ -119,6 +119,11 @@ impl<'x> CompilerState<'x> {
                                             var_name.to_string(),
                                         ));
                                     }
+                                    /*Some((namespace, _)) => {
+                                        return Err(ErrorType::InvalidNamespace(
+                                            namespace.to_string(),
+                                        ));
+                                    }*/
                                     _ => {
                                         is_var_error = true;
                                     }
@@ -282,7 +287,7 @@ impl Display for StringItem {
 mod tests {
 
     use super::StringItem;
-    use crate::compiler::grammar::instruction::{Block, CompilerState};
+    use crate::compiler::grammar::instruction::{Block, CompilerState, MAX_PARAMS};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
     use crate::{AHashSet, Compiler};
@@ -291,6 +296,7 @@ mod tests {
     fn tokenize_string() {
         let c = Compiler::new();
         let mut compiler = CompilerState {
+            compiler: &c,
             instructions: Vec::new(),
             block_stack: Vec::new(),
             block: Block::new(Word::Not),
@@ -300,6 +306,8 @@ mod tests {
             vars_num_max: 0,
             tokens: Tokenizer::new(&c, b""),
             vars_match_max: usize::MAX,
+            param_check: [false; MAX_PARAMS],
+            includes_num: 0,
         };
 
         for (input, expected_result) in [

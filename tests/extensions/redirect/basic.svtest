@@ -3,133 +3,133 @@ test "Mail address normalization - redirect" {
     # Test various white space occurrences
     redirect "stephan@example.org";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+		  test_fail "redirect action missing from result";
+	  }
 
     test_result_reset;
     redirect " stephan@example.org";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+		  test_fail "redirect action missing from result";
+	  }
 
     test_result_reset;
     redirect "stephan @example.org";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+		  test_fail "redirect action missing from result";
+  	}
 
     test_result_reset;
     redirect "stephan@ example.org";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "stephan@example.org ";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect " stephan @ example.org ";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch<stephan@example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect " Stephan Bosch<stephan@example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch <stephan@example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch< stephan@example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch<stephan @example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch<stephan@ example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch<stephan@example.org >";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch<stephan@example.org> ";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "  Stephan Bosch  <  stephan  @  example.org  > ";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     # Test address syntax
     test_result_reset;
     redirect "\"Stephan Bosch\"@example.org";
     if not test_result_action "redirect" "Stephan Bosch@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan.Bosch@eXamPle.oRg";
     if not test_result_action "redirect" "Stephan.Bosch@eXamPle.oRg" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan.Bosch@example.org";
     if not test_result_action "redirect" "Stephan.Bosch@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "Stephan Bosch <stephan@example.org>";
     if not test_result_action "redirect" "stephan@example.org" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
     redirect "\"S[r]us\"@example.net";
     if not test_result_action "redirect" "S[r]us@example.net" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
-	redirect "\"Sirius\"@example.net";
+  	redirect "\"Sirius\"@example.net";
     if not test_result_action "redirect" "Sirius@example.net" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 
     test_result_reset;
-	redirect "\"Stephan Bosch\" <\"S.Bosch\"@example.net>";
+  	redirect "\"Stephan Bosch\" <\"S.Bosch\"@example.net>";
     if not test_result_action "redirect" "S.Bosch@example.net" {
-		test_fail "redirect action missing from result";
-	}
+      test_fail "redirect action missing from result";
+    }
 }

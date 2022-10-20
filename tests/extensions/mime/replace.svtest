@@ -1,6 +1,10 @@
 require "vnd.stalwart.testsuite";
 require "variables";
 require "replace";
+require "mime";
+require "foreverypart";
+require "editheader";
+require "extracttext";
 
 test "Replace" {
 set "message" text:

@@ -242,11 +242,14 @@ Text
 ;
 
 test "Invalid header name" {
-	if header :contains "subject:" "" {
+	set "header" "subject:";
+
+	if header :contains "${header}" "" {
 		test_fail "matched invalid header name";
 	}
 
-	if header :contains "to!" "" {
+	set "header" "to:";
+	if header :contains "${header}" "" {
 		test_fail "matched invalid header name";
 	}
 }
