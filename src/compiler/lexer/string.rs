@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2020-2022, Stalwart Labs Ltd.
+ *
+ * This file is part of the Stalwart Sieve Interpreter.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ * in the LICENSE file at the top-level directory of this distribution.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can be released from the requirements of the AGPLv3 license by
+ * purchasing a commercial license. Please contact licensing@stalw.art
+ * for more details.
+*/
+
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
@@ -287,7 +310,10 @@ impl Display for StringItem {
 mod tests {
 
     use super::StringItem;
-    use crate::compiler::grammar::instruction::{Block, CompilerState, MAX_PARAMS};
+    use crate::compiler::grammar::instruction::{Block, CompilerState, Instruction, MAX_PARAMS};
+    use crate::compiler::grammar::test::Test;
+    use crate::compiler::grammar::tests::test_string::TestString;
+    use crate::compiler::grammar::{Comparator, MatchType};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
     use crate::{AHashSet, Compiler};
@@ -295,11 +321,19 @@ mod tests {
     #[test]
     fn tokenize_string() {
         let c = Compiler::new();
+        let mut block = Block::new(Word::Not);
+        block.match_test_pos.push(0);
         let mut compiler = CompilerState {
             compiler: &c,
-            instructions: Vec::new(),
+            instructions: vec![Instruction::Test(Test::String(TestString {
+                match_type: MatchType::Regex(u64::MAX),
+                comparator: Comparator::AsciiCaseMap,
+                source: vec![StringItem::LocalVariable(0)],
+                key_list: vec![StringItem::LocalVariable(0)],
+                is_not: false,
+            }))],
             block_stack: Vec::new(),
-            block: Block::new(Word::Not),
+            block,
             last_block_type: Word::Not,
             vars_global: AHashSet::new(),
             vars_num: 0,
@@ -346,14 +380,14 @@ mod tests {
                 "${BAD${global.Company}",
                 StringItem::List(vec![
                     StringItem::Text("${BAD".to_string()),
-                    StringItem::GlobalVariable("Company".to_string()),
+                    StringItem::GlobalVariable("company".to_string()),
                 ]),
             ),
             (
                 "${President, ${global.Company} Inc.}",
                 StringItem::List(vec![
                     StringItem::Text("${President, ".to_string()),
-                    StringItem::GlobalVariable("Company".to_string()),
+                    StringItem::GlobalVariable("company".to_string()),
                     StringItem::Text(" Inc.}".to_string()),
                 ]),
             ),
@@ -361,7 +395,7 @@ mod tests {
                 "dear${hex:20 24 7b}global.Name}",
                 StringItem::List(vec![
                     StringItem::Text("dear ".to_string()),
-                    StringItem::GlobalVariable("Name".to_string()),
+                    StringItem::GlobalVariable("name".to_string()),
                 ]),
             ),
             (
