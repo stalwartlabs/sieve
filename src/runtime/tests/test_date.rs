@@ -14,7 +14,11 @@ use super::TestResult;
 
 impl TestDate {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let header_name = ctx.parse_header_name(&self.header_name);
+        let header_name = if let Some(header_name) = ctx.parse_header_name(&self.header_name) {
+            header_name
+        } else {
+            return TestResult::Bool(false ^ self.is_not);
+        };
 
         let result = match &self.match_type {
             MatchType::Count(rel_match) => {

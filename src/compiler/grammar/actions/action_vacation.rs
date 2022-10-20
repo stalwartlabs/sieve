@@ -5,6 +5,7 @@ use crate::{
         grammar::{
             instruction::{CompilerState, Instruction},
             test::Test,
+            Capability,
         },
         lexer::{string::StringItem, word::Word, Token},
         CompileError,
@@ -86,12 +87,20 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     mime = true;
                 }
                 Token::Tag(Word::Create) => {
+                    self.validate_argument(
+                        2,
+                        Capability::Mailbox.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     create = true;
                 }
                 Token::Tag(Word::Days) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     if period == Period::Default {
                         period = Period::Days(self.tokens.expect_number(u64::MAX as usize)? as u64);
                     } else {
@@ -101,6 +110,12 @@ impl<'x> CompilerState<'x> {
                     }
                 }
                 Token::Tag(Word::Seconds) => {
+                    self.validate_argument(
+                        3,
+                        Capability::VacationSeconds.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     if period == Period::Default {
                         period =
                             Period::Seconds(self.tokens.expect_number(u64::MAX as usize)? as u64);
@@ -111,27 +126,55 @@ impl<'x> CompilerState<'x> {
                     }
                 }
                 Token::Tag(Word::Subject) => {
+                    self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
                     subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::From) => {
+                    self.validate_argument(5, None, token_info.line_num, token_info.line_pos)?;
                     from = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Handle) => {
+                    self.validate_argument(6, None, token_info.line_num, token_info.line_pos)?;
                     handle = self.parse_string()?.into();
                 }
                 Token::Tag(Word::SpecialUse) => {
+                    self.validate_argument(
+                        7,
+                        Capability::SpecialUse.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     special_use = self.parse_string()?.into();
                 }
                 Token::Tag(Word::MailboxId) => {
+                    self.validate_argument(
+                        8,
+                        Capability::MailboxId.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mailbox_id = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Fcc) => {
+                    self.validate_argument(
+                        9,
+                        Capability::Fcc.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     fcc = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Flags) => {
+                    self.validate_argument(
+                        10,
+                        Capability::Imap4Flags.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     flags = self.parse_strings()?;
                 }
                 Token::Tag(Word::Addresses) => {
+                    self.validate_argument(11, None, token_info.line_num, token_info.line_pos)?;
                     addresses = self.parse_strings()?;
                 }
                 _ => {

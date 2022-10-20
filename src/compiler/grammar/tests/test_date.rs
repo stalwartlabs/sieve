@@ -1,8 +1,9 @@
+use mail_parser::HeaderName;
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Comparator},
+    grammar::{instruction::CompilerState, Capability, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -82,32 +83,80 @@ impl<'x> CompilerState<'x> {
                     | Word::Regex
                     | Word::List),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
+                    self.validate_argument(
+                        3,
+                        Capability::Index.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
+                    self.validate_argument(
+                        4,
+                        Capability::Index.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     index_last = true;
                 }
-                Token::Tag(Word::OriginalZone) => {
-                    zone = Zone::Original;
-                }
-                Token::Tag(Word::Zone) => {
-                    zone = Zone::Time(self.parse_timezone()?);
-                }
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(
+                        5,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime = true;
                 }
                 Token::Tag(Word::AnyChild) => {
+                    self.validate_argument(
+                        6,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime_anychild = true;
+                }
+                Token::Tag(Word::OriginalZone) => {
+                    self.validate_argument(7, None, token_info.line_num, token_info.line_pos)?;
+                    zone = Zone::Original;
+                }
+                Token::Tag(Word::Zone) => {
+                    self.validate_argument(7, None, token_info.line_num, token_info.line_pos)?;
+                    zone = Zone::Time(self.parse_timezone()?);
                 }
                 _ => {
                     if header_name.is_none() {
-                        header_name = self.parse_string_token(token_info)?.into();
+                        let header = self.parse_string_token(token_info)?;
+                        if let StringItem::Text(header_name) = &header {
+                            if HeaderName::parse(header_name).is_none() {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .invalid("invalid header name"));
+                            }
+                        }
+                        header_name = header.into();
                     } else if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token {
                             if let Ok(string) = std::str::from_utf8(string) {
@@ -131,6 +180,7 @@ impl<'x> CompilerState<'x> {
         if !mime && mime_anychild {
             return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
         }
+        self.validate_match(&match_type, &key_list)?;
 
         Ok(Test::Date(TestDate {
             header_name: header_name.unwrap(),
@@ -164,12 +214,26 @@ impl<'x> CompilerState<'x> {
                     | Word::Regex
                     | Word::List),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Zone) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     zone = self.parse_timezone()?.into();
                 }
                 _ => {
@@ -192,6 +256,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
+        self.validate_match(&match_type, &key_list)?;
 
         Ok(Test::CurrentDate(TestCurrentDate {
             key_list,

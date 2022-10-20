@@ -25,16 +25,18 @@ impl AddHeader {
         }
 
         if !header_name.is_empty() {
-            let header_name = HeaderName::parse(header_name);
-
-            if !ctx.runtime.protected_headers.contains(&header_name) {
-                ctx.has_changes = true;
-                ctx.insert_header(
-                    ctx.part,
-                    header_name,
-                    ctx.eval_string(&self.value).as_ref().remove_crlf(),
-                    self.last,
-                )
+            if let Some(header_name) = HeaderName::parse(header_name) {
+                if !ctx.runtime.protected_headers.contains(&header_name) {
+                    ctx.has_changes = true;
+                    ctx.insert_header(
+                        ctx.part,
+                        header_name,
+                        ctx.eval_string(&self.value)
+                            .as_ref()
+                            .remove_crlf(ctx.runtime.max_header_size),
+                        self.last,
+                    )
+                }
             }
         }
     }
@@ -42,7 +44,12 @@ impl AddHeader {
 
 impl DeleteHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        let header_name = HeaderName::parse(ctx.eval_string(&self.field_name));
+        let header_name =
+            if let Some(header_name) = HeaderName::parse(ctx.eval_string(&self.field_name)) {
+                header_name
+            } else {
+                return;
+            };
         let value_patterns = ctx.eval_strings(&self.value_patterns);
         let mut deleted_headers = Vec::new();
         let mut deleted_bytes = 0;
@@ -117,15 +124,19 @@ impl DeleteHeader {
 }
 
 pub(crate) trait RemoveCrLf {
-    fn remove_crlf(&self) -> String;
+    fn remove_crlf(&self, max_len: usize) -> String;
 }
 
 impl RemoveCrLf for &str {
-    fn remove_crlf(&self) -> String {
+    fn remove_crlf(&self, max_len: usize) -> String {
         let mut header_value = String::with_capacity(self.len());
         for ch in self.chars() {
             if !['\n', '\r'].contains(&ch) {
-                header_value.push(ch);
+                if header_value.len() + ch.len_utf8() <= max_len {
+                    header_value.push(ch);
+                } else {
+                    return header_value;
+                }
             }
         }
         header_value

@@ -55,12 +55,15 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     mime = true;
                 }
                 Token::Tag(Word::Subject) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::From) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     from = self.parse_string()?.into();
                 }
                 _ => {
@@ -88,9 +91,11 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Subject) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     subject = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Headers) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     headers = self.parse_strings()?;
                 }
                 _ => {
@@ -117,6 +122,7 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::First) => {
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     first = self.tokens.expect_number(usize::MAX)?.into();
                 }
                 Token::Tag(

@@ -1,3 +1,4 @@
+use mail_parser::HeaderName;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
@@ -32,24 +33,39 @@ impl<'x> CompilerState<'x> {
         let mut last = false;
 
         while let Some(token_info) = self.tokens.peek() {
-            match token_info?.token {
+            let token_info = token_info?;
+            let line_num = token_info.line_num;
+            let line_pos = token_info.line_pos;
+
+            match token_info.token {
                 Token::Tag(Word::Handle) => {
+                    self.validate_argument(1, None, line_num, line_pos)?;
                     self.tokens.next();
                     handle = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Header) => {
+                    self.validate_argument(2, None, line_num, line_pos)?;
                     self.tokens.next();
-                    dup_match = DupMatch::Header(self.parse_string()?);
+                    let header = self.parse_string()?;
+                    if let StringItem::Text(header_name) = &header {
+                        if HeaderName::parse(header_name).is_none() {
+                            return Err(self.tokens.unwrap_next()?.invalid("invalid header name"));
+                        }
+                    }
+                    dup_match = DupMatch::Header(header);
                 }
                 Token::Tag(Word::UniqueId) => {
+                    self.validate_argument(2, None, line_num, line_pos)?;
                     self.tokens.next();
                     dup_match = DupMatch::UniqueId(self.parse_string()?);
                 }
                 Token::Tag(Word::Seconds) => {
+                    self.validate_argument(3, None, line_num, line_pos)?;
                     self.tokens.next();
                     seconds = (self.tokens.expect_number(u64::MAX as usize)? as u64).into();
                 }
                 Token::Tag(Word::Last) => {
+                    self.validate_argument(4, None, line_num, line_pos)?;
                     self.tokens.next();
                     last = true;
                 }

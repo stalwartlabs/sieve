@@ -2,10 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        grammar::instruction::{CompilerState, Instruction},
+        grammar::{
+            instruction::{CompilerState, Instruction},
+            Capability,
+        },
         lexer::{string::StringItem, word::Word, Token},
         CompileError,
     },
+    runtime::actions::action_notify::{validate_from, validate_uri},
     FileCarbonCopy,
 };
 
@@ -46,33 +50,79 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::From) => {
-                    from = self.parse_string()?.into();
+                    self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
+                    let address = self.parse_string()?;
+                    if let StringItem::Text(address) = &address {
+                        if address.is_empty() || !validate_from(address) {
+                            return Err(token_info.invalid("from address"));
+                        }
+                    }
+                    from = address.into();
                 }
                 Token::Tag(Word::Message) => {
+                    self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     message = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Importance) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     importance = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Options) => {
+                    self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
                     options = self.parse_strings()?;
                 }
                 Token::Tag(Word::Create) => {
+                    self.validate_argument(
+                        5,
+                        Capability::Mailbox.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     create = true;
                 }
                 Token::Tag(Word::SpecialUse) => {
+                    self.validate_argument(
+                        6,
+                        Capability::SpecialUse.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     special_use = self.parse_string()?.into();
                 }
                 Token::Tag(Word::MailboxId) => {
+                    self.validate_argument(
+                        7,
+                        Capability::MailboxId.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mailbox_id = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Fcc) => {
+                    self.validate_argument(
+                        8,
+                        Capability::Fcc.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     fcc = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Flags) => {
+                    self.validate_argument(
+                        9,
+                        Capability::Imap4Flags.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     flags = self.parse_strings()?;
                 }
                 _ => {
+                    if let Token::StringConstant(uri) = &token_info.token {
+                        if validate_uri(std::str::from_utf8(uri).unwrap_or("")).is_none() {
+                            return Err(token_info.invalid("URI"));
+                        }
+                    }
+
                     method = self.parse_string_token(token_info)?;
                     break;
                 }

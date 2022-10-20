@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::Compiler;
 
-use self::lexer::tokenizer::TokenInfo;
+use self::{grammar::Capability, lexer::tokenizer::TokenInfo};
 
 pub mod grammar;
 pub mod lexer;
@@ -20,6 +20,7 @@ pub enum ErrorType {
     InvalidNumber(String),
     InvalidMatchVariable(usize),
     InvalidUnicodeSequence(u32),
+    InvalidNamespace(String),
     InvalidUtf8String,
     UnterminatedString,
     UnterminatedComment,
@@ -35,8 +36,11 @@ pub enum ErrorType {
     UnexpectedEOF,
     TooManyNestedBlocks,
     TooManyNestedTests,
+    TooManyIncludes,
     UnsupportedComparator(String),
     InvalidGrammar(Cow<'static, str>),
+    DuplicatedParameter,
+    UndeclaredCapability(Capability),
 }
 
 impl Default for Compiler {
@@ -48,14 +52,107 @@ impl Default for Compiler {
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
-            max_script_len: 1024 * 1024,
-            max_string_len: 1024 * 1024,
-            max_variable_len: 32,
+            max_script_size: 1024 * 1024,
+            max_string_size: 1024 * 1024,
+            max_variable_size: 32,
             max_nested_blocks: 15,
             max_nested_tests: 15,
+            max_nested_foreverypart: 3,
             max_match_variables: 30,
             max_local_variables: 128,
+            max_header_size: 1024,
+            max_includes: 6,
         }
+    }
+
+    pub fn set_max_header_size(&mut self, size: usize) {
+        self.max_header_size = size;
+    }
+
+    pub fn with_max_header_size(mut self, size: usize) -> Self {
+        self.max_header_size = size;
+        self
+    }
+
+    pub fn set_max_includes(&mut self, size: usize) {
+        self.max_includes = size;
+    }
+
+    pub fn with_max_includes(mut self, size: usize) -> Self {
+        self.max_includes = size;
+        self
+    }
+
+    pub fn set_max_nested_blocks(&mut self, size: usize) {
+        self.max_nested_blocks = size;
+    }
+
+    pub fn with_max_nested_blocks(mut self, size: usize) -> Self {
+        self.max_nested_blocks = size;
+        self
+    }
+
+    pub fn set_max_nested_tests(&mut self, size: usize) {
+        self.max_nested_tests = size;
+    }
+
+    pub fn with_max_nested_tests(mut self, size: usize) -> Self {
+        self.max_nested_tests = size;
+        self
+    }
+
+    pub fn set_max_nested_foreverypart(&mut self, size: usize) {
+        self.max_nested_foreverypart = size;
+    }
+
+    pub fn with_max_nested_foreverypart(mut self, size: usize) -> Self {
+        self.max_nested_foreverypart = size;
+        self
+    }
+
+    pub fn set_max_script_size(&mut self, size: usize) {
+        self.max_script_size = size;
+    }
+
+    pub fn with_max_script_size(mut self, size: usize) -> Self {
+        self.max_script_size = size;
+        self
+    }
+
+    pub fn set_max_string_size(&mut self, size: usize) {
+        self.max_string_size = size;
+    }
+
+    pub fn with_max_string_size(mut self, size: usize) -> Self {
+        self.max_string_size = size;
+        self
+    }
+
+    pub fn set_max_variable_size(&mut self, size: usize) {
+        self.max_variable_size = size;
+    }
+
+    pub fn with_max_variable_size(mut self, size: usize) -> Self {
+        self.max_variable_size = size;
+        self
+    }
+
+    pub fn set_max_match_variables(&mut self, size: usize) {
+        self.max_match_variables = size;
+    }
+
+    pub fn with_max_match_variables(mut self, size: usize) -> Self {
+        self.max_match_variables = size;
+        self
+    }
+
+    pub fn set_max_local_variables(&mut self, size: usize) {
+        self.max_local_variables = size;
+    }
+
+    pub fn with_max_local_variables(mut self, size: usize) -> Self {
+        self.max_local_variables = size;
+        self
     }
 }
 

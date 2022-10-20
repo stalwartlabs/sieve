@@ -12,11 +12,8 @@ impl TestDuplicate {
         let id = match &self.dup_match {
             DupMatch::Header(header_name) => {
                 let mut value = String::new();
-                ctx.find_headers(
-                    &[ctx.parse_header_name(header_name)],
-                    None,
-                    true,
-                    |header, _, _| {
+                if let Some(header_name) = ctx.parse_header_name(header_name) {
+                    ctx.find_headers(&[header_name], None, true, |header, _, _| {
                         if header.offset_end > 0 {
                             if let Some(bytes) = ctx
                                 .message
@@ -42,8 +39,8 @@ impl TestDuplicate {
                             }
                         }
                         false
-                    },
-                );
+                    });
+                }
                 value.into()
             }
             DupMatch::UniqueId(s) => ctx.eval_string(s),

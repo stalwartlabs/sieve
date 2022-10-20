@@ -119,6 +119,11 @@ impl<'x> CompilerState<'x> {
                                             var_name.to_string(),
                                         ));
                                     }
+                                    /*Some((namespace, _)) => {
+                                        return Err(ErrorType::InvalidNamespace(
+                                            namespace.to_string(),
+                                        ));
+                                    }*/
                                     _ => {
                                         is_var_error = true;
                                     }

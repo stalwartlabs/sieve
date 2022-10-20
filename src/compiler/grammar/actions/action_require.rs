@@ -8,18 +8,27 @@ use crate::compiler::{
 };
 
 impl<'x> CompilerState<'x> {
-    pub(crate) fn parse_require(&mut self) -> Result<(), CompileError> {
-        let capabilities =
-            if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
-                capabilties
+    fn add_capability(&mut self, capabilities: &mut Vec<Capability>, capability: Capability) {
+        if !self.has_capability(&capability) {
+            let parent_capability = if matches!(&capability, Capability::SpamTestPlus) {
+                Some(Capability::SpamTest)
             } else {
-                self.instructions.push(Instruction::Require(vec![]));
-                if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
-                    capabilties
-                } else {
-                    unreachable!();
-                }
+                None
             };
+            capabilities.push(capability.clone());
+            self.block.capabilities.insert(capability);
+
+            if let Some(capability) = parent_capability {
+                if !self.has_capability(&capability) {
+                    capabilities.push(capability.clone());
+                    self.block.capabilities.insert(capability);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn parse_require(&mut self) -> Result<(), CompileError> {
+        let mut capabilities = Vec::new();
 
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
@@ -27,10 +36,10 @@ impl<'x> CompilerState<'x> {
                 let token_info = self.tokens.unwrap_next()?;
                 match token_info.token {
                     Token::StringConstant(value) => {
-                        let capability = Capability::parse(value);
-                        if !capabilities.contains(&capability) {
-                            capabilities.push(capability);
-                        }
+                        self.add_capability(
+                            &mut capabilities,
+                            Capability::parse(std::str::from_utf8(&value).unwrap_or("")),
+                        );
                         let token_info = self.tokens.unwrap_next()?;
                         match token_info.token {
                             Token::Comma => (),
@@ -46,13 +55,21 @@ impl<'x> CompilerState<'x> {
                 }
             },
             Token::StringConstant(value) => {
-                let capability = Capability::parse(value);
-                if !capabilities.contains(&capability) {
-                    capabilities.push(capability);
-                }
+                self.add_capability(
+                    &mut capabilities,
+                    Capability::parse(std::str::from_utf8(&value).unwrap_or("")),
+                );
             }
             _ => {
                 return Err(token_info.expected("'[' or string"));
+            }
+        }
+
+        if !capabilities.is_empty() {
+            if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
+                capabilties.extend(capabilities)
+            } else {
+                self.instructions.push(Instruction::Require(capabilities));
             }
         }
 

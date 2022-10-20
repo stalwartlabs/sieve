@@ -6,7 +6,7 @@ use compiler::grammar::{
     instruction::Instruction,
     Capability,
 };
-use mail_parser::{HeaderName, Message, RfcHeader};
+use mail_parser::{HeaderName, Message};
 use runtime::context::ScriptStack;
 use serde::{Deserialize, Serialize};
 
@@ -25,13 +25,16 @@ pub struct Sieve {
 
 pub struct Compiler {
     // Settings
-    pub(crate) max_script_len: usize,
-    pub(crate) max_string_len: usize,
-    pub(crate) max_variable_len: usize,
+    pub(crate) max_script_size: usize,
+    pub(crate) max_string_size: usize,
+    pub(crate) max_variable_size: usize,
     pub(crate) max_nested_blocks: usize,
     pub(crate) max_nested_tests: usize,
+    pub(crate) max_nested_foreverypart: usize,
     pub(crate) max_match_variables: usize,
     pub(crate) max_local_variables: usize,
+    pub(crate) max_header_size: usize,
+    pub(crate) max_includes: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -45,11 +48,13 @@ pub struct Runtime {
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
     pub(crate) max_include_scripts: usize,
-    pub(crate) max_instructions: usize,
+    pub(crate) cpu_limit: usize,
     pub(crate) max_memory: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
+    pub(crate) max_header_size: usize,
+
     pub(crate) vacation_use_orig_rcpt: bool,
     pub(crate) vacation_default_subject: Cow<'static, str>,
     pub(crate) vacation_subject_prefix: Cow<'static, str>,
@@ -89,6 +94,7 @@ pub struct Context<'x> {
 
     pub(crate) has_changes: bool,
     pub(crate) num_redirects: usize,
+    pub(crate) num_instructions: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -109,7 +115,6 @@ pub enum Envelope {
     Orcpt,
     Ret,
     Envid,
-    Other(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -145,14 +150,12 @@ pub enum Action {
         return_of_content: Ret,
         by_time: ByTime<i64>,
         message_id: usize,
-        fcc: Option<Box<FileCarbonCopy<String>>>,
     },
     Notify {
         from: Option<String>,
         importance: Importance,
         options: Vec<String>,
-        message: Option<String>,
-        fcc: Option<Box<FileCarbonCopy<String>>>,
+        message: String,
         method: String,
     },
 }
@@ -184,7 +187,7 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct FileCarbonCopy<T> {
+pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
     pub mailbox_id: Option<T>,
     pub create: bool,

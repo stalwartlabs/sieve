@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        grammar::{instruction::CompilerState, Comparator},
+        grammar::{instruction::CompilerState, Capability, Comparator},
         lexer::{string::StringItem, word::Word, Token},
         CompileError,
     },
@@ -34,11 +34,21 @@ impl<'x> CompilerState<'x> {
         let mut zone = None;
 
         loop {
-            let token_info = self.tokens.unwrap_next()?;
+            let mut token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
                     word @ (Word::LocalPart | Word::Domain | Word::All | Word::User | Word::Detail),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        if matches!(word, Word::User | Word::Detail) {
+                            Capability::SubAddress.into()
+                        } else {
+                            None
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     address_part = word.into();
                 }
                 Token::Tag(
@@ -50,26 +60,67 @@ impl<'x> CompilerState<'x> {
                     | Word::Regex
                     | Word::List),
                 ) => {
+                    self.validate_argument(
+                        2,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Zone) => {
+                    self.validate_argument(
+                        4,
+                        Capability::EnvelopeDeliverBy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     zone = self.parse_timezone()?.into();
                 }
                 _ => {
                     if envelope_list.is_none() {
                         let mut envelopes = Vec::new();
+                        let line_num = token_info.line_num;
+                        let line_pos = token_info.line_pos;
+
                         match token_info.token {
-                            Token::StringConstant(s) => {
-                                envelopes.push(s.into_string().into());
-                            }
+                            Token::StringConstant(s) => match Envelope::try_from(s.into_string()) {
+                                Ok(envelope) => {
+                                    envelopes.push(envelope);
+                                }
+                                Err(invalid) => {
+                                    token_info.token = Token::Comma;
+                                    return Err(
+                                        token_info.invalid(format!("envelope '{}'", invalid))
+                                    );
+                                }
+                            },
                             Token::BracketOpen => loop {
-                                let token_info = self.tokens.unwrap_next()?;
+                                let mut token_info = self.tokens.unwrap_next()?;
                                 match token_info.token {
                                     Token::StringConstant(s) => {
-                                        envelopes.push(s.into_string().into());
+                                        match Envelope::try_from(s.into_string()) {
+                                            Ok(envelope) => {
+                                                if !envelopes.contains(&envelope) {
+                                                    envelopes.push(envelope);
+                                                }
+                                            }
+                                            Err(invalid) => {
+                                                token_info.token = Token::Comma;
+                                                return Err(token_info
+                                                    .invalid(format!("envelope '{}'", invalid)));
+                                            }
+                                        }
                                     }
                                     Token::Comma => (),
                                     Token::BracketClose if !envelopes.is_empty() => break,
@@ -77,6 +128,35 @@ impl<'x> CompilerState<'x> {
                                 }
                             },
                             _ => return Err(token_info.expected("constant string")),
+                        }
+
+                        for envelope in &envelopes {
+                            match envelope {
+                                Envelope::ByTimeAbsolute
+                                | Envelope::ByTimeRelative
+                                | Envelope::ByMode
+                                | Envelope::ByTrace => {
+                                    self.validate_argument(
+                                        0,
+                                        Capability::EnvelopeDeliverBy.into(),
+                                        line_num,
+                                        line_pos,
+                                    )?;
+                                }
+
+                                Envelope::Notify
+                                | Envelope::Orcpt
+                                | Envelope::Ret
+                                | Envelope::Envid => {
+                                    self.validate_argument(
+                                        0,
+                                        Capability::EnvelopeDsn.into(),
+                                        line_num,
+                                        line_pos,
+                                    )?;
+                                }
+                                _ => (),
+                            }
                         }
 
                         envelope_list = envelopes.into();
@@ -87,6 +167,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
+        self.validate_match(&match_type, &key_list)?;
 
         Ok(Test::Envelope(TestEnvelope {
             envelope_list: envelope_list.unwrap(),
@@ -100,22 +181,26 @@ impl<'x> CompilerState<'x> {
     }
 }
 
-impl From<String> for Envelope {
-    fn from(name: String) -> Self {
-        if let Some(envelope) = ENVELOPE.get(&name) {
-            envelope.clone()
+impl TryFrom<String> for Envelope {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if let Some(envelope) = ENVELOPE.get(&value) {
+            Ok(envelope.clone())
         } else {
-            Envelope::Other(name.to_lowercase())
+            Err(value)
         }
     }
 }
 
-impl From<&str> for Envelope {
-    fn from(name: &str) -> Self {
-        if let Some(envelope) = ENVELOPE.get(name) {
-            envelope.clone()
+impl<'x> TryFrom<&'x str> for Envelope {
+    type Error = &'x str;
+
+    fn try_from(value: &'x str) -> Result<Self, Self::Error> {
+        if let Some(envelope) = ENVELOPE.get(value) {
+            Ok(envelope.clone())
         } else {
-            Envelope::Other(name.to_lowercase())
+            Err(value)
         }
     }
 }

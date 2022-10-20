@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::grammar::instruction::CompilerState;
+use crate::compiler::grammar::instruction::{CompilerState, Instruction};
 use crate::compiler::lexer::string::StringItem;
 use crate::compiler::CompileError;
 
@@ -19,12 +19,15 @@ pub(crate) struct Error {
 }
 
 impl<'x> CompilerState<'x> {
-    pub(crate) fn parse_execute(&mut self) -> Result<Execute, CompileError> {
-        Ok(Execute {
+    pub(crate) fn parse_execute(&mut self) -> Result<(), CompileError> {
+        let command = Execute {
             command: self.parse_string()?,
             arguments: self.parse_strings()?,
             is_not: false,
-        })
+        };
+        self.instructions.push(Instruction::Execute(command));
+
+        Ok(())
     }
 
     pub(crate) fn parse_test_execute(&mut self) -> Result<Test, CompileError> {

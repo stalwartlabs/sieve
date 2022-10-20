@@ -131,7 +131,7 @@ impl<'x> Context<'x> {
         for (name, value) in &self.envelope {
             if test_envelope.envelope_list.contains(name)
                 && match name {
-                    Envelope::From | Envelope::To | Envelope::Orcpt | Envelope::Other(_) => {
+                    Envelope::From | Envelope::To | Envelope::Orcpt => {
                         if let Some(value) = test_envelope.address_part.eval(value.as_ref()) {
                             cb(value)
                         } else {

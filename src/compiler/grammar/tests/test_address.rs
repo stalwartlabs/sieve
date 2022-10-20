@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, test::Test, Comparator},
+    grammar::{instruction::CompilerState, test::Test, Capability, Comparator},
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -40,6 +40,16 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(
                     word @ (Word::LocalPart | Word::Domain | Word::All | Word::User | Word::Detail),
                 ) => {
+                    self.validate_argument(
+                        1,
+                        if matches!(word, Word::User | Word::Detail) {
+                            Capability::SubAddress.into()
+                        } else {
+                            None
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     address_part = word.into();
                 }
                 Token::Tag(
@@ -51,21 +61,57 @@ impl<'x> CompilerState<'x> {
                     | Word::Regex
                     | Word::List),
                 ) => {
+                    self.validate_argument(
+                        2,
+                        match word {
+                            Word::Value | Word::Count => Capability::Relational.into(),
+                            Word::Regex => Capability::Regex.into(),
+                            Word::List => Capability::ExtLists.into(),
+                            _ => None,
+                        },
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     match_type = self.parse_match_type(word)?;
                 }
                 Token::Tag(Word::Comparator) => {
+                    self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
                 Token::Tag(Word::Index) => {
+                    self.validate_argument(
+                        4,
+                        Capability::Index.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     index = (self.tokens.expect_number(u16::MAX as usize)? as i32).into();
                 }
                 Token::Tag(Word::Last) => {
+                    self.validate_argument(
+                        5,
+                        Capability::Index.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     index_last = true;
                 }
                 Token::Tag(Word::Mime) => {
+                    self.validate_argument(
+                        6,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime = true;
                 }
                 Token::Tag(Word::AnyChild) => {
+                    self.validate_argument(
+                        7,
+                        Capability::Mime.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     mime_anychild = true;
                 }
                 _ => {
@@ -82,6 +128,7 @@ impl<'x> CompilerState<'x> {
         if !mime && mime_anychild {
             return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
         }
+        self.validate_match(&match_type, &key_list)?;
 
         Ok(Test::Address(TestAddress {
             header_list: header_list.unwrap(),

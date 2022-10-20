@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
+    grammar::{
+        instruction::{CompilerState, Instruction},
+        Capability,
+    },
     lexer::{string::StringItem, word::Word, Token},
     CompileError,
 };
@@ -84,15 +87,39 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(Word::Copy) => {
+                    self.validate_argument(
+                        1,
+                        Capability::Copy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     copy = true;
                 }
                 Token::Tag(Word::List) => {
+                    self.validate_argument(
+                        2,
+                        Capability::ExtLists.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     list = true;
                 }
                 Token::Tag(Word::ByTrace) => {
+                    self.validate_argument(
+                        3,
+                        Capability::RedirectDeliverBy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     by_trace = true;
                 }
                 Token::Tag(Word::ByMode) => {
+                    self.validate_argument(
+                        4,
+                        Capability::RedirectDeliverBy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     let by_mode_ = self.tokens.expect_static_string()?;
                     if by_mode_.eq_ignore_ascii_case(b"notify") {
                         by_mode = ByMode::Notify;
@@ -103,12 +130,30 @@ impl<'x> CompilerState<'x> {
                     }
                 }
                 Token::Tag(Word::ByTimeRelative) => {
+                    self.validate_argument(
+                        5,
+                        Capability::RedirectDeliverBy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     by_rlimit = (self.tokens.expect_number(u64::MAX as usize)? as u64).into();
                 }
                 Token::Tag(Word::ByTimeAbsolute) => {
+                    self.validate_argument(
+                        5,
+                        Capability::RedirectDeliverBy.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     by_alimit = self.parse_string()?.into();
                 }
                 Token::Tag(Word::Ret) => {
+                    self.validate_argument(
+                        6,
+                        Capability::RedirectDsn.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     let ret_ = self.tokens.expect_static_string()?;
                     if ret_.eq_ignore_ascii_case(b"full") {
                         ret = Ret::Full;
@@ -119,6 +164,12 @@ impl<'x> CompilerState<'x> {
                     }
                 }
                 Token::Tag(Word::Notify) => {
+                    self.validate_argument(
+                        7,
+                        Capability::RedirectDsn.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
                     let notify_ = self.tokens.expect_static_string()?;
                     if notify_.eq_ignore_ascii_case(b"never") {
                         notify = Notify::Never;
