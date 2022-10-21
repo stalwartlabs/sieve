@@ -1,5 +1,4 @@
-require "fileinto";
-require "mailboxid";
+require ["fileinto", "mailboxid", "mailbox", "enotify", "fcc"];
 
 if header :contains ["from"] "coyote" {
     fileinto :mailboxid "F6352ae03-b7f5-463c-896f-d8b48ee3"

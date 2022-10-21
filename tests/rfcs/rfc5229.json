@@ -2,6 +2,16 @@
   [
     0,
     {
+      "Require": [
+        "EncodedCharacter",
+        "Variables",
+        "FileInto"
+      ]
+    }
+  ],
+  [
+    1,
+    {
       "Set": {
         "modifiers": [],
         "name": {
@@ -14,7 +24,7 @@
     }
   ],
   [
-    1,
+    2,
     {
       "Set": {
         "modifiers": [],
@@ -35,15 +45,6 @@
           ]
         }
       }
-    }
-  ],
-  [
-    2,
-    {
-      "Require": [
-        "EncodedCharacter",
-        "Variables"
-      ]
     }
   ],
   [
@@ -195,7 +196,7 @@
     {
       "Invalid": {
         "name": "fileinfo",
-        "line_num": 19,
+        "line_num": 20,
         "line_pos": 5
       }
     }

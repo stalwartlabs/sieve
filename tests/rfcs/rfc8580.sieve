@@ -1,4 +1,4 @@
-require ["vacation", "fcc", "mailbox", "special-use", "imap4flags"];
+require ["vacation", "fcc", "mailbox", "special-use", "imap4flags", "enotify"];
 
 vacation :days 7
         :from "hemingway@example.com" 

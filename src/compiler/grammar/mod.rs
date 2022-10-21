@@ -491,6 +491,20 @@ static COMPARATOR: phf::Map<&'static str, Comparator> = phf_map! {
     "i;ascii-numeric" => Comparator::AsciiNumeric,
 };
 
+impl Invalid {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn line_num(&self) -> usize {
+        self.line_num
+    }
+
+    pub fn line_pos(&self) -> usize {
+        self.line_pos
+    }
+}
+
 impl From<&str> for Capability {
     fn from(value: &str) -> Self {
         Capability::parse(value)

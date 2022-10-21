@@ -1,5 +1,5 @@
 
-require ["fileinto", "imap4flags", "variables"];
+require ["fileinto", "imap4flags", "variables", "relational"];
 
 if size :over 500K {
             setflag "\\Deleted";

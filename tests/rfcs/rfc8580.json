@@ -7,28 +7,48 @@
         "Fcc",
         "Mailbox",
         "SpecialUse",
-        "Imap4Flags"
+        "Imap4Flags",
+        "Enotify"
       ]
     }
   ],
   [
     1,
     {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": {
+            "Days": 7
+          },
+          "handle": null,
+          "reason": {
+            "Text": "Gone Fishin'"
+          }
+        }
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Jz": 4
+    }
+  ],
+  [
+    3,
+    {
       "Vacation": {
-        "period": {
-          "Days": 7
-        },
         "subject": null,
         "from": {
           "Text": "hemingway@example.com"
         },
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": {
-          "fcc": {
+          "mailbox": {
             "Text": "INBOX.Sent"
           },
+          "mailbox_id": null,
           "create": true,
           "flags": [
             {
@@ -37,8 +57,7 @@
           ],
           "special_use": {
             "Text": "\\Sent"
-          },
-          "mailbox_id": null
+          }
         },
         "reason": {
           "Text": "Gone Fishin'"
@@ -47,7 +66,7 @@
     }
   ],
   [
-    2,
+    4,
     {
       "Notify": {
         "from": null,
@@ -57,13 +76,13 @@
           "Text": "You got mail!"
         },
         "fcc": {
-          "fcc": {
+          "mailbox": {
             "Text": "INBOX.Sent"
           },
+          "mailbox_id": null,
           "create": false,
           "flags": [],
-          "special_use": null,
-          "mailbox_id": null
+          "special_use": null
         },
         "method": {
           "Text": "mailto:ken@example.com"
@@ -72,7 +91,7 @@
     }
   ],
   [
-    3,
+    5,
     {
       "Test": {
         "NotifyMethodCapability": {
@@ -95,40 +114,9 @@
     }
   ],
   [
-    4,
-    {
-      "Jz": 7
-    }
-  ],
-  [
-    5,
-    {
-      "Notify": {
-        "from": null,
-        "importance": null,
-        "options": [],
-        "message": {
-          "Text": "You got mail"
-        },
-        "fcc": {
-          "fcc": {
-            "Text": "INBOX.Sent"
-          },
-          "create": false,
-          "flags": [],
-          "special_use": null,
-          "mailbox_id": null
-        },
-        "method": {
-          "Text": "xmpp:ken@example.com?message;subject=SIEVE"
-        }
-      }
-    }
-  ],
-  [
     6,
     {
-      "Jmp": 8
+      "Jz": 9
     }
   ],
   [
@@ -139,16 +127,47 @@
         "importance": null,
         "options": [],
         "message": {
+          "Text": "You got mail"
+        },
+        "fcc": {
+          "mailbox": {
+            "Text": "INBOX.Sent"
+          },
+          "mailbox_id": null,
+          "create": false,
+          "flags": [],
+          "special_use": null
+        },
+        "method": {
+          "Text": "xmpp:ken@example.com?message;subject=SIEVE"
+        }
+      }
+    }
+  ],
+  [
+    8,
+    {
+      "Jmp": 10
+    }
+  ],
+  [
+    9,
+    {
+      "Notify": {
+        "from": null,
+        "importance": null,
+        "options": [],
+        "message": {
           "Text": "You got mail!"
         },
         "fcc": {
-          "fcc": {
+          "mailbox": {
             "Text": "INBOX.Sent"
           },
+          "mailbox_id": null,
           "create": false,
           "flags": [],
-          "special_use": null,
-          "mailbox_id": null
+          "special_use": null
         },
         "method": {
           "Text": "mailto:ken@example.com"

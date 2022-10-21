@@ -5,7 +5,8 @@
       "Require": [
         "FileInto",
         "Imap4Flags",
-        "Variables"
+        "Variables",
+        "Relational"
       ]
     }
   ],

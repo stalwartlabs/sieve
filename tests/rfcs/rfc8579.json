@@ -4,7 +4,10 @@
     {
       "Require": [
         "FileInto",
-        "SpecialUse"
+        "SpecialUse",
+        "Mailbox",
+        "Variables",
+        "Environment"
       ]
     }
   ],

@@ -1,15 +1,25 @@
 [package]
-name = "sieve"
+name = "sieve-rs"
+description = "Sieve filter interpreter for Rust"
+authors = [ "Stalwart Labs <hello@stalw.art>"]
+repository = "https://github.com/stalwartlabs/sieve"
+homepage = "https://github.com/stalwartlabs/sieve"
+license = "AGPL-3.0-only"
+keywords = ["sieve", "interpreter", "compiler", "email", "mail"]
+categories = ["email", "compilers"]
+readme = "README.md"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "sieve"
+
 [dependencies]
-#mail-parser = { git = "https://github.com/stalwartlabs/mail-parser", features = ["ludicrous_mode", "full_encoding"] } 
-#mail-builder = { git = "https://github.com/stalwartlabs/mail-builder", features = ["ludicrous_mode", "full_encoding"] } 
-mail-parser = { path = "/home/vagrant/code/mail-parser", features = ["ludicrous_mode", "full_encoding", "serde_support"] } 
-mail-builder = { path = "/home/vagrant/code/mail-builder" } 
+mail-parser = { git = "https://github.com/stalwartlabs/mail-parser", features = ["ludicrous_mode", "full_encoding"] } 
+mail-builder = { git = "https://github.com/stalwartlabs/mail-builder" } 
 phf = { version = "0.11", features = ["macros"] }
 serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3.3"
 ahash = { version = "0.8.0" }
 regex = "1.6.0"
 

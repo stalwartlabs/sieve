@@ -14,7 +14,8 @@
         "Envelope",
         "EnvelopeDsn",
         "EnvelopeDeliverBy",
-        "RedirectDsn"
+        "RedirectDsn",
+        "FileInto"
       ]
     }
   ],

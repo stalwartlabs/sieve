@@ -1,7 +1,8 @@
+require ["encoded-character", "variables", "fileinto"];
+
 set "dollar" "$";
 set "text" "regarding ${dollar}{beep}";
 
-require ["encoded-character", "variables"];
 set "name" "Ethelbert";
 if header :contains "Subject" "dear${hex:20 24 7b 4e}ame}" {
     # the test string is "dear Ethelbert"

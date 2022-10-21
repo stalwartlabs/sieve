@@ -246,14 +246,17 @@ mod tests {
         for file_name in fs::read_dir(&test_dir).unwrap() {
             let mut file_name = file_name.unwrap().path();
             if file_name.extension().map_or(false, |e| e == "sieve") {
-                println!("Parsing {}...", file_name.display());
+                println!("Parsing {}", file_name.display());
                 let script = fs::read(&file_name).unwrap();
                 file_name.set_extension("json");
-                //let expected_result = fs::read(&file_name).unwrap();
+                let expected_result = fs::read(&file_name).unwrap();
 
                 tests_run += 1;
 
-                let sieve = Compiler::new().compile(&script).unwrap();
+                let sieve = Compiler::new()
+                    .with_max_nested_foreverypart(10)
+                    .compile(&script)
+                    .unwrap();
                 let json_sieve = serde_json::to_string_pretty(
                     &sieve
                         .instructions
@@ -263,13 +266,11 @@ mod tests {
                 )
                 .unwrap();
 
-                fs::write(&file_name, json_sieve.as_bytes()).unwrap();
-
-                /*if json_sieve.as_bytes() != expected_result {
+                if json_sieve.as_bytes() != expected_result {
                     file_name.set_extension("failed");
                     fs::write(&file_name, json_sieve.as_bytes()).unwrap();
                     panic!("Test failed, parsed sieve saved to {}", file_name.display());
-                }*/
+                }
             }
         }
 

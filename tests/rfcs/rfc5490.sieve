@@ -1,4 +1,5 @@
-require ["fileinto", "reject", "mailbox"];
+require ["fileinto", "reject", "mailbox", "mboxmetadata", "vacation", 
+"servermetadata", "variables", "envelope", "enotify"];
 if mailboxexists "Partners" {
     fileinto :create "Partners";
 } else {

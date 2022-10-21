@@ -89,10 +89,19 @@ impl<'x> CompilerState<'x> {
         }
 
         if !capabilities.is_empty() {
-            if let Some(Instruction::Require(capabilties)) = self.instructions.last_mut() {
+            if self.block.require_pos == usize::MAX {
+                self.block.require_pos = self.instructions.len();
+                self.instructions.push(Instruction::Require(capabilities));
+            } else if let Some(Instruction::Require(capabilties)) =
+                self.instructions.get_mut(self.block.require_pos)
+            {
                 capabilties.extend(capabilities)
             } else {
-                self.instructions.push(Instruction::Require(capabilities));
+                #[cfg(test)]
+                panic!(
+                    "Invalid require instruction position {}.",
+                    self.block.require_pos
+                )
             }
         }
 

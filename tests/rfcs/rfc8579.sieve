@@ -1,5 +1,4 @@
-require "fileinto";
-require "special-use";
+require ["fileinto", "special-use", "mailbox", "variables", "environment"];
 
 fileinto :specialuse "\\Archive" "INBOX/Archive";
 

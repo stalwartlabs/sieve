@@ -5,7 +5,13 @@
       "Require": [
         "FileInto",
         "Reject",
-        "Mailbox"
+        "Mailbox",
+        "MboxMetadata",
+        "Vacation",
+        "ServerMetadata",
+        "Variables",
+        "Envelope",
+        "Enotify"
       ]
     }
   ],
@@ -69,11 +75,15 @@
         "Metadata": {
           "match_type": "Is",
           "comparator": "AsciiCaseMap",
-          "mailbox": {
-            "Text": "INBOX"
-          },
-          "annotation_name": {
-            "Text": "/private/vendor/vendor.isode/auto-replies"
+          "medatata": {
+            "Mailbox": {
+              "name": {
+                "Text": "INBOX"
+              },
+              "annotation": {
+                "Text": "/private/vendor/vendor.isode/auto-replies"
+              }
+            }
           },
           "key_list": [
             {
@@ -88,18 +98,36 @@
   [
     7,
     {
-      "Jz": 9
+      "Jz": 11
     }
   ],
   [
     8,
     {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "I'm away on holidays till March 2009.\nExpect a delay.\n"
+          }
+        }
+      }
+    }
+  ],
+  [
+    9,
+    {
+      "Jz": 11
+    }
+  ],
+  [
+    10,
+    {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -109,16 +137,20 @@
     }
   ],
   [
-    9,
+    11,
     {
       "Test": {
-        "ServerMetadata": {
+        "Metadata": {
           "match_type": {
             "Matches": 1
           },
           "comparator": "AsciiCaseMap",
-          "annotation_name": {
-            "Text": "/private/vendor/vendor.isode/notification-uri"
+          "medatata": {
+            "Server": {
+              "annotation": {
+                "Text": "/private/vendor/vendor.isode/notification-uri"
+              }
+            }
           },
           "key_list": [
             {
@@ -131,13 +163,13 @@
     }
   ],
   [
-    10,
+    12,
     {
-      "Jz": 13
+      "Jz": 15
     }
   ],
   [
-    11,
+    13,
     {
       "Set": {
         "modifiers": [],
@@ -151,7 +183,7 @@
     }
   ],
   [
-    12,
+    14,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -161,7 +193,7 @@
     }
   ],
   [
-    13,
+    15,
     {
       "Test": {
         "String": {
@@ -183,13 +215,13 @@
     }
   ],
   [
-    14,
+    16,
     {
-      "Jz": 29
+      "Jz": 31
     }
   ],
   [
-    15,
+    17,
     {
       "Test": {
         "Envelope": {
@@ -213,13 +245,13 @@
     }
   ],
   [
-    16,
+    18,
     {
-      "Jz": 19
+      "Jz": 21
     }
   ],
   [
-    17,
+    19,
     {
       "Set": {
         "modifiers": [],
@@ -243,7 +275,7 @@
     }
   ],
   [
-    18,
+    20,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -253,7 +285,7 @@
     }
   ],
   [
-    19,
+    21,
     {
       "Test": {
         "Header": {
@@ -280,13 +312,13 @@
     }
   ],
   [
-    20,
+    22,
     {
-      "Jz": 23
+      "Jz": 25
     }
   ],
   [
-    21,
+    23,
     {
       "Set": {
         "modifiers": [],
@@ -300,7 +332,7 @@
     }
   ],
   [
-    22,
+    24,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -310,7 +342,7 @@
     }
   ],
   [
-    23,
+    25,
     {
       "Test": {
         "Address": {
@@ -337,13 +369,13 @@
     }
   ],
   [
-    24,
+    26,
     {
-      "Jz": 27
+      "Jz": 29
     }
   ],
   [
-    25,
+    27,
     {
       "Set": {
         "modifiers": [],
@@ -357,7 +389,7 @@
     }
   ],
   [
-    26,
+    28,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -367,7 +399,7 @@
     }
   ],
   [
-    27,
+    29,
     {
       "Notify": {
         "from": null,
@@ -384,7 +416,7 @@
     }
   ],
   [
-    28,
+    30,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -394,10 +426,11 @@
     }
   ],
   [
-    29,
+    31,
     {
       "Test": {
-        "ServerMetadataExists": {
+        "MetadataExists": {
+          "mailbox": null,
           "annotation_names": [
             {
               "Text": "hello"
@@ -412,17 +445,17 @@
     }
   ],
   [
-    30,
+    32,
     {
-      "Jz": 32
+      "Jz": 34
     }
   ],
   [
-    31,
+    33,
     "Stop"
   ],
   [
-    32,
+    34,
     {
       "Test": {
         "MetadataExists": {
@@ -443,13 +476,13 @@
     }
   ],
   [
-    33,
+    35,
     {
-      "Jz": 35
+      "Jz": 37
     }
   ],
   [
-    34,
+    36,
     "Discard"
   ]
 ]

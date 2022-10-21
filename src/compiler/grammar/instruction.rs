@@ -128,6 +128,7 @@ pub(crate) struct Block {
     pub(crate) match_test_vars: u64,
     pub(crate) vars_local: AHashMap<String, usize>,
     pub(crate) capabilities: AHashSet<Capability>,
+    pub(crate) require_pos: usize,
 }
 
 pub(crate) struct CompilerState<'x> {
@@ -865,6 +866,7 @@ impl Block {
             break_jmps: vec![],
             vars_local: AHashMap::new(),
             capabilities: AHashSet::new(),
+            require_pos: usize::MAX,
         }
     }
 

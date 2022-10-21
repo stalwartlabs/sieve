@@ -1,6 +1,6 @@
 require ["copy", "redirect-deliverby", "date", "variables",
         "relational", "comparator-i;ascii-numeric", "envelope", "envelope-dsn",
-        "envelope-deliverby", "redirect-dsn"];
+        "envelope-deliverby", "redirect-dsn", "fileinto"];
 
 # Check whether SUCCESS notifications were requested,
 # irrespective of any other requests that were made

@@ -1,4 +1,4 @@
-require "vacation";
+require ["vacation", "vacation-seconds"];
 if header :contains "subject" "cyrus" {
     vacation "I'm out -- send mail to cyrus-bugs";
 } else {

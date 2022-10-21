@@ -1,4 +1,4 @@
-require ["enotify", "fileinto", "variables"];
+require ["enotify", "fileinto", "variables", "envelope"];
 
 if not valid_notify_method ["mailto:",
         "http://gw.example.net/notify?test"] {

@@ -1,4 +1,4 @@
-require ["date", "relational", "fileinto", "index"];
+require ["date", "relational", "fileinto", "index", "vacation", "variables", "editheader"];
 if allof(header :is "from" "boss@example.com",
         date :value "ge" :originalzone "date" "hour" "09",
         date :value "lt" :originalzone "date" "hour" "17")

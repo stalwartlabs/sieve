@@ -7,10 +7,19 @@
         "ExtLists",
         "FileInto",
         "SpamTest",
+        "ForEveryPart",
+        "Mime",
+        "Enclose",
         "Relational",
         {
           "Comparator": "AsciiNumeric"
-        }
+        },
+        "Variables",
+        "Date",
+        "Enotify",
+        "SubAddress",
+        "Index",
+        "Reject"
       ]
     }
   ],

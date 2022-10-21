@@ -518,6 +518,26 @@ impl<'x> Context<'x> {
         self
     }
 
+    pub fn get_actions(&self) -> &[Action] {
+        &self.actions
+    }
+
+    pub fn take_actions(&mut self) -> Vec<Action> {
+        std::mem::take(&mut self.actions)
+    }
+
+    pub fn get_messages(&self) -> &[Cow<'x, [u8]>] {
+        &self.messages
+    }
+
+    pub fn get_message<'z: 'x>(&'z self, id: usize) -> Option<&'x [u8]> {
+        self.messages.get(id).map(|m| m.as_ref())
+    }
+
+    pub fn take_messages(&mut self) -> Vec<Cow<'x, [u8]>> {
+        std::mem::take(&mut self.messages)
+    }
+
     pub(crate) fn user_from_field(&self) -> String {
         if !self.user_full_name.is_empty() {
             format!("\"{}\" <{}>", self.user_full_name, self.user_address)

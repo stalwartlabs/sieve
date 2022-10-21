@@ -178,7 +178,7 @@ impl<'x> Context<'x> {
     }
 }
 
-pub(crate) fn parse_envelope_address(addr: &str) -> Option<&str> {
+pub fn parse_envelope_address(addr: &str) -> Option<&str> {
     let addr = addr.as_bytes();
     let mut addr_start_pos = 0;
     let mut addr_end_pos = addr.len();

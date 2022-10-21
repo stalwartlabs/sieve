@@ -4,7 +4,12 @@
     {
       "Require": [
         "Duplicate",
-        "Variables"
+        "Variables",
+        "FileInto",
+        "Mailbox",
+        "Imap4Flags",
+        "Envelope",
+        "Enotify"
       ]
     }
   ],

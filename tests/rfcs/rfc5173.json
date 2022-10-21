@@ -3,7 +3,8 @@
     0,
     {
       "Require": [
-        "Body"
+        "Body",
+        "FileInto"
       ]
     }
   ],

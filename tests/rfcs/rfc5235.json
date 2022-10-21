@@ -3,6 +3,7 @@
     0,
     {
       "Require": [
+        "SpamTestPlus",
         "SpamTest",
         "FileInto",
         "Relational",

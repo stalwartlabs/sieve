@@ -1,3 +1,5 @@
+require ["editheader"];
+
 if not header :contains "X-Sieve-Filtered"
         ["<kim@job.example.com>", "<kim@home.example.com>"]
 {

@@ -1,4 +1,4 @@
-require "body";
+require ["body", "fileinto"];
 
 if body :raw :contains "MAKE MONEY FAST" {
         discard;

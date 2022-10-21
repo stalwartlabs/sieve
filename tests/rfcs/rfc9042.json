@@ -4,7 +4,10 @@
     {
       "Require": [
         "FileInto",
-        "MailboxId"
+        "MailboxId",
+        "Mailbox",
+        "Enotify",
+        "Fcc"
       ]
     }
   ],
@@ -84,15 +87,15 @@
           "Text": "You got mail!"
         },
         "fcc": {
-          "fcc": {
+          "mailbox": {
             "Text": "INBOX.Sent"
+          },
+          "mailbox_id": {
+            "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
           },
           "create": false,
           "flags": [],
-          "special_use": null,
-          "mailbox_id": {
-            "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
-          }
+          "special_use": null
         },
         "method": {
           "Text": "mailto:ken@example.com"

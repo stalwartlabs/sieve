@@ -1,4 +1,4 @@
-require ["duplicate", "variables"];
+require ["duplicate", "variables", "fileinto", "mailbox", "imap4flags", "envelope", "enotify"];
 
 if duplicate {
     discard;

@@ -1,5 +1,5 @@
-require ["envelope", "extlists", "fileinto", "spamtest",
-    "relational", "comparator-i;ascii-numeric"];
+require ["envelope", "extlists", "fileinto", "spamtest", "foreverypart", "mime", "enclose",
+    "relational", "comparator-i;ascii-numeric", "variables", "date", "enotify", "subaddress", "index", "reject"];
 if envelope :list "from" ":addrbook:default"
 { /* Known: allow high spam score */
 if spamtest :value "ge" :comparator "i;ascii-numeric" "8"

@@ -3,7 +3,8 @@
     0,
     {
       "Require": [
-        "Vacation"
+        "Vacation",
+        "VacationSeconds"
       ]
     }
   ],
@@ -35,18 +36,36 @@
   [
     2,
     {
-      "Jz": 5
+      "Jz": 7
     }
   ],
   [
     3,
     {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "I'm out -- send mail to cyrus-bugs"
+          }
+        }
+      }
+    }
+  ],
+  [
+    4,
+    {
+      "Jz": 6
+    }
+  ],
+  [
+    5,
+    {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -56,20 +75,38 @@
     }
   ],
   [
-    4,
+    6,
     {
-      "Jmp": 6
+      "Jmp": 10
     }
   ],
   [
-    5,
+    7,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "I'm out -- call me at +1 304 555 0123"
+          }
+        }
+      }
+    }
+  ],
+  [
+    8,
+    {
+      "Jz": 10
+    }
+  ],
+  [
+    9,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -79,7 +116,7 @@
     }
   ],
   [
-    6,
+    10,
     {
       "Test": {
         "Header": {
@@ -106,16 +143,36 @@
     }
   ],
   [
-    7,
+    11,
     {
-      "Jz": 9
+      "Jz": 15
     }
   ],
   [
-    8,
+    12,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "I'm away -- send mail to foo in my absence"
+          }
+        }
+      }
+    }
+  ],
+  [
+    13,
+    {
+      "Jz": 15
+    }
+  ],
+  [
+    14,
     {
       "Vacation": {
-        "period": "Default",
         "subject": {
           "List": [
             {
@@ -127,8 +184,6 @@
           ]
         },
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -138,7 +193,7 @@
     }
   ],
   [
-    9,
+    15,
     {
       "Test": {
         "Header": {
@@ -163,22 +218,40 @@
     }
   ],
   [
-    10,
+    16,
     {
-      "Jz": 13
+      "Jz": 21
     }
   ],
   [
-    11,
+    17,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": {
+            "Text": "ran-away"
+          },
+          "reason": {
+            "Text": "I'm out and can't meet for lunch"
+          }
+        }
+      }
+    }
+  ],
+  [
+    18,
+    {
+      "Jz": 20
+    }
+  ],
+  [
+    19,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": {
-          "Text": "ran-away"
-        },
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -188,22 +261,40 @@
     }
   ],
   [
-    12,
+    20,
     {
-      "Jmp": 14
+      "Jmp": 24
     }
   ],
   [
-    13,
+    21,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": {
+            "Text": "ran-away"
+          },
+          "reason": {
+            "Text": "I'm out"
+          }
+        }
+      }
+    }
+  ],
+  [
+    22,
+    {
+      "Jz": 24
+    }
+  ],
+  [
+    23,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": {
-          "Text": "ran-away"
-        },
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -213,14 +304,32 @@
     }
   ],
   [
-    14,
+    24,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "Content-Type: multipart/alternative; boundary=foo\n\n--foo\n\nI'm at the beach relaxing.  Mmmm, surf...\n\n--foo\nContent-Type: text/html; charset=us-ascii\n\n<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\"\n\"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<HTML><HEAD><TITLE>How to relax</TITLE>\n<BASE HREF=\"http://home.example.com/pictures/\"></HEAD>\n<BODY><P>I'm at the <A HREF=\"beach.gif\">beach</A> relaxing.\nMmmm, <A HREF=\"ocean.gif\">surf</A>...\n</BODY></HTML>\n\n--foo--\n"
+          }
+        }
+      }
+    }
+  ],
+  [
+    25,
+    {
+      "Jz": 27
+    }
+  ],
+  [
+    26,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": true,
         "fcc": null,
         "reason": {
@@ -230,23 +339,41 @@
     }
   ],
   [
-    15,
+    27,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [
+            {
+              "Text": "tjs@example.edu"
+            },
+            {
+              "Text": "ts4z@landru.example.edu"
+            }
+          ],
+          "period": {
+            "Days": 23
+          },
+          "handle": null,
+          "reason": {
+            "Text": "I'm away until October 19.\nIf it's an emergency, call 911, I guess."
+          }
+        }
+      }
+    }
+  ],
+  [
+    28,
+    {
+      "Jz": 30
+    }
+  ],
+  [
+    29,
     {
       "Vacation": {
-        "period": {
-          "Days": 23
-        },
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [
-          {
-            "Text": "tjs@example.edu"
-          },
-          {
-            "Text": "ts4z@landru.example.edu"
-          }
-        ],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -256,7 +383,7 @@
     }
   ],
   [
-    16,
+    30,
     {
       "Test": {
         "Header": {
@@ -281,13 +408,13 @@
     }
   ],
   [
-    17,
+    31,
     {
-      "Jz": 20
+      "Jz": 34
     }
   ],
   [
-    18,
+    32,
     {
       "Redirect": {
         "copy": false,
@@ -302,20 +429,38 @@
     }
   ],
   [
-    19,
+    33,
     {
-      "Jmp": 21
+      "Jmp": 37
     }
   ],
   [
-    20,
+    34,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "Sorry, I'm away, I'll read your\nmessage when I get around to it."
+          }
+        }
+      }
+    }
+  ],
+  [
+    35,
+    {
+      "Jz": 37
+    }
+  ],
+  [
+    36,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -325,7 +470,7 @@
     }
   ],
   [
-    21,
+    37,
     {
       "Test": {
         "Header": {
@@ -353,20 +498,38 @@
     }
   ],
   [
-    22,
+    38,
     {
-      "Jz": 25
+      "Jz": 43
     }
   ],
   [
-    23,
+    39,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "I am away this week."
+          }
+        }
+      }
+    }
+  ],
+  [
+    40,
+    {
+      "Jz": 42
+    }
+  ],
+  [
+    41,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -376,20 +539,38 @@
     }
   ],
   [
-    24,
+    42,
     {
-      "Jmp": 26
+      "Jmp": 46
     }
   ],
   [
-    25,
+    43,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "Estoy ausente esta semana."
+          }
+        }
+      }
+    }
+  ],
+  [
+    44,
+    {
+      "Jz": 46
+    }
+  ],
+  [
+    45,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -399,7 +580,7 @@
     }
   ],
   [
-    26,
+    46,
     {
       "Test": {
         "Address": {
@@ -426,22 +607,40 @@
     }
   ],
   [
-    27,
+    47,
     {
-      "Jz": 30
+      "Jz": 52
     }
   ],
   [
-    28,
+    48,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "Having lots of fun! Back in a day or two!"
+          }
+        }
+      }
+    }
+  ],
+  [
+    49,
+    {
+      "Jz": 51
+    }
+  ],
+  [
+    50,
     {
       "Vacation": {
-        "period": "Default",
         "subject": {
           "Text": "Gone fishing"
         },
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -451,22 +650,40 @@
     }
   ],
   [
-    29,
+    51,
     {
-      "Jmp": 31
+      "Jmp": 55
     }
   ],
   [
-    30,
+    52,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "Je lirai votre message quand je retourne."
+          }
+        }
+      }
+    }
+  ],
+  [
+    53,
+    {
+      "Jz": 55
+    }
+  ],
+  [
+    54,
     {
       "Vacation": {
-        "period": "Default",
         "subject": {
           "Text": "Je suis parti cette semaine"
         },
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -476,23 +693,41 @@
     }
   ],
   [
-    31,
+    55,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [
+            {
+              "Text": "tjs@example.edu"
+            },
+            {
+              "Text": "ts4z@landru.example.edu"
+            }
+          ],
+          "period": {
+            "Seconds": 1800
+          },
+          "handle": null,
+          "reason": {
+            "Text": "I am in a meeting, and do not have access to email."
+          }
+        }
+      }
+    }
+  ],
+  [
+    56,
+    {
+      "Jz": 58
+    }
+  ],
+  [
+    57,
     {
       "Vacation": {
-        "period": {
-          "Seconds": 1800
-        },
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [
-          {
-            "Text": "tjs@example.edu"
-          },
-          {
-            "Text": "ts4z@landru.example.edu"
-          }
-        ],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -502,18 +737,36 @@
     }
   ],
   [
-    32,
+    58,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": {
+            "Seconds": 0
+          },
+          "handle": {
+            "Text": "auto-resp"
+          },
+          "reason": {
+            "Text": "Your request has been received.  A service\n    representative will contact you as soon as\n    possible, usually within one business day."
+          }
+        }
+      }
+    }
+  ],
+  [
+    59,
+    {
+      "Jz": 61
+    }
+  ],
+  [
+    60,
     {
       "Vacation": {
-        "period": {
-          "Seconds": 0
-        },
         "subject": null,
         "from": null,
-        "handle": {
-          "Text": "auto-resp"
-        },
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {

@@ -1,4 +1,4 @@
-require ["include"];
+require ["include", "reject", "fileinto", "variables", "relational", "vacation"];
 
 include :personal "always_allow";
 include :global "spam_tests";

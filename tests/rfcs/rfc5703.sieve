@@ -1,4 +1,4 @@
-require ["mime", "foreverypart", "fileinto", "replace", "enclose"];
+require ["mime", "foreverypart", "fileinto", "replace", "enclose", "include", "variables", "extracttext"];
 
 if true {
     discard;

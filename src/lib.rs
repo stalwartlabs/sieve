@@ -779,32 +779,6 @@ mod tests {
 
             return;
         }
-
-        //let mut files = Vec::new();
-        //let mut items = BTreeSet::new();
-
-        //read_dir(PathBuf::from("tests"), &mut files);
-        //for file in files {
-        /*println!("parsing {:?}", file);
-        let bytes = fs::read(&file).unwrap();
-        let tokens = tokenize(&bytes).unwrap();
-        for token in tokens {
-            if let Token::Identifier(id) = token.token {
-                //items.insert(id.to_lowercase());
-            }
-        }*/
-
-        /*if file.as_os_str().to_str().unwrap().contains("lexer.svtest") {
-            println!("{:#?}", tokens);
-            break;
-        }*/
-        //}
-
-        /*fs::write(
-            "identifiers.txt",
-            items.into_iter().collect::<Vec<_>>().join("\n"),
-        )
-        .unwrap();*/
     }
 
     fn add_crlf(bytes: &[u8]) -> Vec<u8> {

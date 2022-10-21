@@ -6,7 +6,10 @@
         "Date",
         "Relational",
         "FileInto",
-        "Index"
+        "Index",
+        "Vacation",
+        "Variables",
+        "EditHeader"
       ]
     }
   ],
@@ -365,20 +368,38 @@
   [
     25,
     {
-      "Jz": 27
+      "Jz": 29
     }
   ],
   [
     26,
     {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": {
+            "Days": 7
+          },
+          "handle": null,
+          "reason": {
+            "Text": "I'm away during the first week in July."
+          }
+        }
+      }
+    }
+  ],
+  [
+    27,
+    {
+      "Jz": 29
+    }
+  ],
+  [
+    28,
+    {
       "Vacation": {
-        "period": {
-          "Days": 7
-        },
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -388,7 +409,7 @@
     }
   ],
   [
-    27,
+    29,
     {
       "Test": {
         "CurrentDate": {
@@ -409,13 +430,13 @@
     }
   ],
   [
-    28,
+    30,
     {
-      "Jz": 31
+      "Jz": 33
     }
   ],
   [
-    29,
+    31,
     {
       "Set": {
         "modifiers": [],
@@ -429,7 +450,7 @@
     }
   ],
   [
-    30,
+    32,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -439,7 +460,7 @@
     }
   ],
   [
-    31,
+    33,
     {
       "Test": {
         "CurrentDate": {
@@ -460,13 +481,13 @@
     }
   ],
   [
-    32,
+    34,
     {
-      "Jz": 35
+      "Jz": 37
     }
   ],
   [
-    33,
+    35,
     {
       "Set": {
         "modifiers": [],
@@ -480,7 +501,7 @@
     }
   ],
   [
-    34,
+    36,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -490,7 +511,7 @@
     }
   ],
   [
-    35,
+    37,
     {
       "FileInto": {
         "copy": false,
@@ -505,7 +526,7 @@
     }
   ],
   [
-    36,
+    38,
     {
       "Test": {
         "CurrentDate": {
@@ -526,13 +547,13 @@
     }
   ],
   [
-    37,
+    39,
     {
-      "Jz": 39
+      "Jz": 41
     }
   ],
   [
-    38,
+    40,
     {
       "AddHeader": {
         "last": false,
@@ -546,7 +567,7 @@
     }
   ],
   [
-    39,
+    41,
     {
       "Test": {
         "Date": {
@@ -574,13 +595,13 @@
     }
   ],
   [
-    40,
+    42,
     {
-      "Jz": 42
+      "Jz": 44
     }
   ],
   [
-    41,
+    43,
     {
       "Redirect": {
         "copy": false,

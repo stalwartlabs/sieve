@@ -3,7 +3,12 @@
     0,
     {
       "Require": [
-        "Include"
+        "Include",
+        "Reject",
+        "FileInto",
+        "Variables",
+        "Relational",
+        "Vacation"
       ]
     }
   ],
@@ -612,18 +617,36 @@
   [
     45,
     {
-      "Jz": 47
+      "Jz": 49
     }
   ],
   [
     46,
     {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "It's true, I am on vacation."
+          }
+        }
+      }
+    }
+  ],
+  [
+    47,
+    {
+      "Jz": 49
+    }
+  ],
+  [
+    48,
+    {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {
@@ -633,7 +656,7 @@
     }
   ],
   [
-    47,
+    49,
     {
       "Test": {
         "String": {
@@ -655,20 +678,38 @@
     }
   ],
   [
-    48,
+    50,
     {
-      "Jz": 50
+      "Jz": 54
     }
   ],
   [
-    49,
+    51,
+    {
+      "Test": {
+        "Vacation": {
+          "addresses": [],
+          "period": "Default",
+          "handle": null,
+          "reason": {
+            "Text": "It's true, I am on vacation."
+          }
+        }
+      }
+    }
+  ],
+  [
+    52,
+    {
+      "Jz": 54
+    }
+  ],
+  [
+    53,
     {
       "Vacation": {
-        "period": "Default",
         "subject": null,
         "from": null,
-        "handle": null,
-        "addresses": [],
         "mime": false,
         "fcc": null,
         "reason": {

@@ -301,7 +301,7 @@ impl Notify {
     }
 }
 
-pub(crate) fn validate_from(addr: &str) -> bool {
+pub fn validate_from(addr: &str) -> bool {
     let mut has_at = false;
     let mut has_dot = false;
     let mut in_quote = false;
@@ -349,7 +349,7 @@ pub(crate) fn validate_from(addr: &str) -> bool {
     has_dot && has_at && !in_angle
 }
 
-pub(crate) fn validate_uri(uri: &str) -> Option<&str> {
+pub fn validate_uri(uri: &str) -> Option<&str> {
     let (scheme, uri) = parse_uri(uri)?;
     if scheme.eq_ignore_ascii_case("mailto") {
         parse_mailto(uri)?;

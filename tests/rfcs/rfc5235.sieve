@@ -1,4 +1,4 @@
-require ["spamtest", "fileinto", "relational", "comparator-i;ascii-numeric", "virustest"];
+require ["spamtestplus", "fileinto", "relational", "comparator-i;ascii-numeric", "virustest"];
 
 if spamtest :value "eq" :comparator "i;ascii-numeric" "0"
 {
