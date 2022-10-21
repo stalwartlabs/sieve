@@ -33,6 +33,7 @@ use crate::{
 
 pub mod actions;
 pub mod context;
+pub mod serialize;
 pub mod string;
 pub mod tests;
 pub mod variables;
