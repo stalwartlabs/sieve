@@ -39,7 +39,7 @@ use crate::{
 use super::action_editheader::RemoveCrLf;
 
 #[cfg(not(test))]
-use mail_builder::headers::{date::generate_date_header, message_id::generate_message_id_header};
+use mail_builder::headers::message_id::generate_message_id_header;
 
 impl Replace {
     pub(crate) fn exec(&self, ctx: &mut Context) {
@@ -139,16 +139,15 @@ impl Replace {
 
             // Add Date
             if add_date {
-                let mut header_value = Vec::with_capacity(20);
                 #[cfg(not(test))]
-                generate_date_header(&mut header_value).unwrap();
+                let header_value = mail_builder::headers::date::Date::now().to_rfc822();
                 #[cfg(test)]
-                header_value.extend_from_slice(b"Tue, 20 Nov 2022 05:14:20 -0300");
+                let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
                 ctx.insert_header(
                     0,
                     HeaderName::Other("Date".to_string().into()),
-                    String::from_utf8(header_value).unwrap(),
+                    header_value,
                     true,
                 );
             }
@@ -305,16 +304,15 @@ impl Enclose {
         }
 
         if add_date {
-            let mut header_value = Vec::with_capacity(20);
             #[cfg(not(test))]
-            generate_date_header(&mut header_value).unwrap();
+            let header_value = mail_builder::headers::date::Date::now().to_rfc822();
             #[cfg(test)]
-            header_value.extend_from_slice(b"Tue, 20 Nov 2022 05:14:20 -0300");
+            let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
             ctx.insert_header(
                 0,
                 HeaderName::Other("Date".to_string().into()),
-                String::from_utf8(header_value).unwrap(),
+                header_value,
                 true,
             );
         }
