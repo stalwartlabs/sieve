@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use mail_builder::headers::{date::generate_date_header, message_id::generate_message_id_header};
+use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
 use mail_parser::{Addr, HeaderName, HeaderValue, RfcHeader};
 
 use crate::{
@@ -302,7 +302,7 @@ impl Vacation {
             }
         }
         message.extend_from_slice(b"Date: ");
-        generate_date_header(&mut message).unwrap();
+        message.extend_from_slice(Date::now().to_rfc822().as_bytes());
         message.extend_from_slice(b"\r\n");
 
         message.extend_from_slice(b"Message-ID: ");

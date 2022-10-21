@@ -38,7 +38,7 @@ use crate::{
 
 use super::action_editheader::RemoveCrLf;
 
-use mail_builder::headers::{date::generate_date_header, message_id::generate_message_id_header};
+use mail_builder::headers::message_id::generate_message_id_header;
 
 impl Replace {
     pub(crate) fn exec(&self, ctx: &mut Context) {
@@ -138,13 +138,12 @@ impl Replace {
 
             // Add Date
             if add_date {
-                let mut header_value = Vec::with_capacity(20);
-                generate_date_header(&mut header_value).unwrap();
+                let header_value = mail_builder::headers::date::Date::now().to_rfc822();
 
                 ctx.insert_header(
                     0,
                     HeaderName::Other("Date".to_string().into()),
-                    String::from_utf8(header_value).unwrap(),
+                    header_value,
                     true,
                 );
             }
@@ -295,13 +294,12 @@ impl Enclose {
         }
 
         if add_date {
-            let mut header_value = Vec::with_capacity(20);
-            generate_date_header(&mut header_value).unwrap();
+            let header_value = mail_builder::headers::date::Date::now().to_rfc822();
 
             ctx.insert_header(
                 0,
                 HeaderName::Other("Date".to_string().into()),
-                String::from_utf8(header_value).unwrap(),
+                header_value,
                 true,
             );
         }

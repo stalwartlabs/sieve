@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use mail_builder::headers::{date::generate_date_header, message_id::generate_message_id_header};
+use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
 use mail_parser::{decoders::quoted_printable::HEX_MAP, HeaderName, RfcHeader};
 
 use crate::{
@@ -164,7 +164,7 @@ impl Notify {
 
             if !has_date {
                 message.extend_from_slice(b"Date: ");
-                generate_date_header(&mut message).unwrap();
+                message.extend_from_slice(Date::now().to_rfc822().as_bytes());
                 message.extend_from_slice(b"\r\n");
             }
 
