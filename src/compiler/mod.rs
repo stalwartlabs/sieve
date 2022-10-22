@@ -297,7 +297,14 @@ impl Display for CompileError {
                 write!(f, "Undeclared capability '{}'", value)
             }
             ErrorType::MissingTag(value) => write!(f, "Missing tag {:?}", value),
-        }
+        }?;
+
+        write!(
+            f,
+            " at line {}, column {}.",
+            self.line_num(),
+            self.line_pos()
+        )
     }
 }
 

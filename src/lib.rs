@@ -269,6 +269,8 @@ use serde::{Deserialize, Serialize};
 pub mod compiler;
 pub mod runtime;
 
+pub const SIEVE_COMPILER_VERSION: u8 = 1;
+
 pub(crate) const MAX_MATCH_VARIABLES: usize = 63;
 pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
 
