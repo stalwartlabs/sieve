@@ -115,7 +115,7 @@ impl<'x> CompilerState<'x> {
                         error_type,
                     })
             }
-            _ => Err(token_info.invalid("variable name must be a constant")),
+            _ => Err(token_info.custom(ErrorType::ExpectedConstantString)),
         }
     }
 

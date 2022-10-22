@@ -30,7 +30,7 @@ use crate::compiler::{
         Capability, Comparator,
     },
     lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 use crate::compiler::grammar::MatchType;
@@ -80,7 +80,7 @@ impl<'x> CompilerState<'x> {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
-                                    .invalid("invalid header name"));
+                                    .custom(ErrorType::InvalidHeaderName));
                             }
                         }
 
@@ -90,7 +90,10 @@ impl<'x> CompilerState<'x> {
                             &string,
                             StringItem::Text(value) if value.len() > self.compiler.max_header_size
                         ) {
-                            return Err(self.tokens.unwrap_next()?.invalid("header is too long"));
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::HeaderTooLong));
                         }
                         value = string;
                         break;
@@ -173,7 +176,10 @@ impl<'x> CompilerState<'x> {
                     field_name = self.parse_string_token(token_info)?;
                     if let StringItem::Text(header_name) = &field_name {
                         if HeaderName::parse(header_name).is_none() {
-                            return Err(self.tokens.unwrap_next()?.invalid("invalid header name"));
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
                         }
                     }
                     break;
@@ -182,7 +188,7 @@ impl<'x> CompilerState<'x> {
         }
 
         if !mime && mime_anychild {
-            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+            return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
 
         let cmd = Instruction::DeleteHeader(DeleteHeader {

@@ -28,7 +28,7 @@ use crate::{
     compiler::{
         grammar::{instruction::CompilerState, Capability, Comparator},
         lexer::{string::StringItem, word::Word, Token},
-        CompileError,
+        CompileError, ErrorType,
     },
     runtime::string::IntoString,
     Envelope,
@@ -124,7 +124,7 @@ impl<'x> CompilerState<'x> {
                                 Err(invalid) => {
                                     token_info.token = Token::Comma;
                                     return Err(
-                                        token_info.invalid(format!("envelope '{}'", invalid))
+                                        token_info.custom(ErrorType::InvalidEnvelope(invalid))
                                     );
                                 }
                             },
@@ -141,7 +141,7 @@ impl<'x> CompilerState<'x> {
                                             Err(invalid) => {
                                                 token_info.token = Token::Comma;
                                                 return Err(token_info
-                                                    .invalid(format!("envelope '{}'", invalid)));
+                                                    .custom(ErrorType::InvalidEnvelope(invalid)));
                                             }
                                         }
                                     }

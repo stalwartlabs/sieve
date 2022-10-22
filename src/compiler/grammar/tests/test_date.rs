@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
     lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -176,7 +176,7 @@ impl<'x> CompilerState<'x> {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
-                                    .invalid("invalid header name"));
+                                    .custom(ErrorType::InvalidHeaderName));
                             }
                         }
                         header_name = header.into();
@@ -201,7 +201,7 @@ impl<'x> CompilerState<'x> {
         }
 
         if !mime && mime_anychild {
-            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+            return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
         self.validate_match(&match_type, &key_list)?;
 

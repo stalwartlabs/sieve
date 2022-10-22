@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use crate::Compiler;
 
@@ -44,7 +44,13 @@ pub enum ErrorType {
     InvalidMatchVariable(usize),
     InvalidUnicodeSequence(u32),
     InvalidNamespace(String),
+    InvalidRegex(String),
     InvalidUtf8String,
+    InvalidHeaderName,
+    InvalidArguments,
+    InvalidAddress,
+    InvalidURI,
+    InvalidEnvelope(String),
     UnterminatedString,
     UnterminatedComment,
     UnterminatedMultiline,
@@ -52,6 +58,9 @@ pub enum ErrorType {
     ScriptTooLong,
     StringTooLong,
     VariableTooLong,
+    VariableIsLocal(String),
+    HeaderTooLong,
+    ExpectedConstantString,
     UnexpectedToken {
         expected: Cow<'static, str>,
         found: String,
@@ -59,11 +68,15 @@ pub enum ErrorType {
     UnexpectedEOF,
     TooManyNestedBlocks,
     TooManyNestedTests,
+    TooManyNestedForEveryParts,
     TooManyIncludes,
+    LabelAlreadyDefined(String),
+    LabelUndefined(String),
+    BreakOutsideLoop,
     UnsupportedComparator(String),
-    InvalidGrammar(Cow<'static, str>),
     DuplicatedParameter,
     UndeclaredCapability(Capability),
+    MissingTag(Cow<'static, str>),
 }
 
 impl Default for Compiler {
@@ -205,11 +218,11 @@ impl TokenInfo {
         }
     }
 
-    pub fn invalid(self, reason: impl Into<Cow<'static, str>>) -> CompileError {
+    pub fn missing_tag(self, tag: impl Into<Cow<'static, str>>) -> CompileError {
         CompileError {
             line_num: self.line_num,
             line_pos: self.line_pos,
-            error_type: ErrorType::InvalidGrammar(reason.into()),
+            error_type: ErrorType::MissingTag(tag.into()),
         }
     }
 
@@ -226,6 +239,64 @@ impl TokenInfo {
             line_num: self.line_num,
             line_pos: self.line_pos,
             error_type,
+        }
+    }
+}
+
+impl Display for CompileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.error_type() {
+            ErrorType::InvalidCharacter(value) => {
+                write!(f, "Invalid character {:?}", char::from(*value))
+            }
+            ErrorType::InvalidNumber(value) => write!(f, "Invalid number {:?}", value),
+            ErrorType::InvalidMatchVariable(value) => {
+                write!(f, "Match variable {} out of range", value)
+            }
+            ErrorType::InvalidUnicodeSequence(value) => {
+                write!(f, "Invalid Unicode sequence {:04x}", value)
+            }
+            ErrorType::InvalidNamespace(value) => write!(f, "Invalid namespace {:?}", value),
+            ErrorType::InvalidRegex(value) => write!(f, "Invalid regular expression {:?}", value),
+            ErrorType::InvalidUtf8String => write!(f, "Invalid UTF-8 string"),
+            ErrorType::InvalidHeaderName => write!(f, "Invalid header name"),
+            ErrorType::InvalidArguments => write!(f, "Invalid Arguments"),
+            ErrorType::InvalidAddress => write!(f, "Invalid Address"),
+            ErrorType::InvalidURI => write!(f, "Invalid URI"),
+            ErrorType::InvalidEnvelope(value) => write!(f, "Invalid envelope {:?}", value),
+            ErrorType::UnterminatedString => write!(f, "Unterminated string"),
+            ErrorType::UnterminatedComment => write!(f, "Unterminated comment"),
+            ErrorType::UnterminatedMultiline => write!(f, "Unterminated multi-line string"),
+            ErrorType::UnterminatedBlock => write!(f, "Unterminated block"),
+            ErrorType::ScriptTooLong => write!(f, "Sieve script is too large"),
+            ErrorType::StringTooLong => write!(f, "String is too long"),
+            ErrorType::VariableTooLong => write!(f, "Variable name is too long"),
+            ErrorType::VariableIsLocal(value) => {
+                write!(f, "Variable {:?} was already defined as local", value)
+            }
+            ErrorType::HeaderTooLong => write!(f, "Header value is too long"),
+            ErrorType::ExpectedConstantString => write!(f, "Expected a constant string"),
+            ErrorType::UnexpectedToken { expected, found } => {
+                write!(f, "Expected token {:?} but found {:?}", expected, found)
+            }
+            ErrorType::UnexpectedEOF => write!(f, "Unexpected end of file"),
+            ErrorType::TooManyNestedBlocks => write!(f, "Too many nested blocks"),
+            ErrorType::TooManyNestedTests => write!(f, "Too many nested tests"),
+            ErrorType::TooManyNestedForEveryParts => {
+                write!(f, "Too many nested foreverypart blocks")
+            }
+            ErrorType::TooManyIncludes => write!(f, "Too many includes"),
+            ErrorType::LabelAlreadyDefined(value) => write!(f, "Label {:?} already defined", value),
+            ErrorType::LabelUndefined(value) => write!(f, "Label {:?} does not exist", value),
+            ErrorType::BreakOutsideLoop => write!(f, "Break used outside of foreverypart loop"),
+            ErrorType::UnsupportedComparator(value) => {
+                write!(f, "Comparator {:?} is not supported", value)
+            }
+            ErrorType::DuplicatedParameter => write!(f, "Duplicated argument"),
+            ErrorType::UndeclaredCapability(value) => {
+                write!(f, "Undeclared capability '{}'", value)
+            }
+            ErrorType::MissingTag(value) => write!(f, "Missing tag {:?}", value),
         }
     }
 }

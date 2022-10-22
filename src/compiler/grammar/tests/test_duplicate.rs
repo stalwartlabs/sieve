@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{
     grammar::instruction::CompilerState,
     lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 use crate::compiler::grammar::test::Test;
@@ -72,7 +72,10 @@ impl<'x> CompilerState<'x> {
                     let header = self.parse_string()?;
                     if let StringItem::Text(header_name) = &header {
                         if HeaderName::parse(header_name).is_none() {
-                            return Err(self.tokens.unwrap_next()?.invalid("invalid header name"));
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
                         }
                     }
                     dup_match = DupMatch::Header(header);

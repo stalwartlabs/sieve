@@ -455,7 +455,7 @@ impl<'x> CompilerState<'x> {
                         return Err(self
                             .tokens
                             .unwrap_next()?
-                            .invalid(format!("Invalid regular expression {:?}", regex)));
+                            .custom(ErrorType::InvalidRegex(regex.to_string())));
                     }
                 }
             }

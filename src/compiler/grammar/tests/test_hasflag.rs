@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{
     grammar::{actions::action_set::Variable, instruction::CompilerState, Capability, Comparator},
     lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -115,7 +115,7 @@ impl<'x> CompilerState<'x> {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
-                                    .invalid("variable name has to be a constant"))
+                                    .custom(ErrorType::ExpectedConstantString))
                             }
                         }
                     }
@@ -133,7 +133,7 @@ impl<'x> CompilerState<'x> {
                     Err(self
                         .tokens
                         .unwrap_next()?
-                        .invalid("variable name cannot be a list"))
+                        .custom(ErrorType::ExpectedConstantString))
                 }
             }
             _ => {
