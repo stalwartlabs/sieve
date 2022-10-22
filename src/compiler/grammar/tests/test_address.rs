@@ -149,7 +149,7 @@ impl<'x> CompilerState<'x> {
         }
 
         if !mime && mime_anychild {
-            return Err(self.tokens.unwrap_next()?.invalid("missing ':mime' tag"));
+            return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
         self.validate_match(&match_type, &key_list)?;
 

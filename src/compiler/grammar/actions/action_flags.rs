@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{
     grammar::instruction::{CompilerState, Instruction},
     lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    CompileError, ErrorType,
 };
 
 use super::action_set::Variable;
@@ -80,7 +80,7 @@ impl<'x> CompilerState<'x> {
                     action,
                 },
                 _ => {
-                    return Err(token_info.invalid("invalid parameters on flag action"));
+                    return Err(token_info.custom(ErrorType::InvalidArguments));
                 }
             },
         );

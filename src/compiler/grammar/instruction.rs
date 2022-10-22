@@ -30,6 +30,7 @@ use crate::{
         lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
+    runtime::string::IntoString,
     Compiler, Sieve,
 };
 
@@ -240,7 +241,7 @@ impl Compiler {
                                 == self.max_nested_foreverypart
                             {
                                 return Err(
-                                    token_info.invalid("too many nested 'foreverypart' blocks")
+                                    token_info.custom(ErrorType::TooManyNestedForEveryParts)
                                 );
                             }
 
@@ -251,9 +252,8 @@ impl Compiler {
                                 let label = state.tokens.expect_static_string()?;
                                 for block in &state.block_stack {
                                     if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
-                                        return Err(tag.invalid(format!(
-                                            "label {:?} already defined",
-                                            String::from_utf8_lossy(&label)
+                                        return Err(tag.custom(ErrorType::LabelAlreadyDefined(
+                                            label.into_string(),
                                         )));
                                     }
                                 }
@@ -303,10 +303,9 @@ impl Compiler {
                                 }
 
                                 if !label_found {
-                                    return Err(tag.invalid(format!(
-                                        "label {:?} does not exist",
-                                        String::from_utf8_lossy(&label)
-                                    )));
+                                    return Err(
+                                        tag.custom(ErrorType::LabelUndefined(label.into_string()))
+                                    );
                                 }
                             } else {
                                 let mut label_found = false;
@@ -324,7 +323,7 @@ impl Compiler {
                                     }
                                 }
                                 if !label_found {
-                                    return Err(token_info.invalid("break used outside loop"));
+                                    return Err(token_info.custom(ErrorType::BreakOutsideLoop));
                                 }
                             }
 
@@ -529,10 +528,10 @@ impl Compiler {
                                             .custom(ErrorType::VariableTooLong));
                                     }
                                 } else {
-                                    return Err(state.tokens.unwrap_next()?.invalid(format!(
-                                        "variable {:?} already defined as local",
-                                        global
-                                    )));
+                                    return Err(state
+                                        .tokens
+                                        .unwrap_next()?
+                                        .custom(ErrorType::VariableIsLocal(global)));
                                 }
                             }
                         }

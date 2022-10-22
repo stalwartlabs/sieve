@@ -56,10 +56,7 @@ impl<'x> CompilerState<'x> {
                         is_not: false,
                     }))
                 } else {
-                    Err(self
-                        .tokens
-                        .unwrap_next()?
-                        .invalid("mailbox cannot be a list"))
+                    Err(self.tokens.unwrap_next()?.expected("string"))
                 }
             }
             _ => Ok(Test::SpecialUseExists(TestSpecialUseExists {

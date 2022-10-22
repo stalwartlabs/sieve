@@ -124,13 +124,7 @@ impl<'x> CompilerState<'x> {
                 }
                 Token::Tag(Word::Days) => {
                     self.validate_argument(3, None, token_info.line_num, token_info.line_pos)?;
-                    if period == Period::Default {
-                        period = Period::Days(self.tokens.expect_number(u64::MAX as usize)? as u64);
-                    } else {
-                        return Err(
-                            token_info.invalid("multiple ':days' or ':seconds' tags specified")
-                        );
-                    }
+                    period = Period::Days(self.tokens.expect_number(u64::MAX as usize)? as u64);
                 }
                 Token::Tag(Word::Seconds) => {
                     self.validate_argument(
@@ -139,14 +133,7 @@ impl<'x> CompilerState<'x> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    if period == Period::Default {
-                        period =
-                            Period::Seconds(self.tokens.expect_number(u64::MAX as usize)? as u64);
-                    } else {
-                        return Err(
-                            token_info.invalid("multiple ':days' or ':seconds' tags specified")
-                        );
-                    }
+                    period = Period::Seconds(self.tokens.expect_number(u64::MAX as usize)? as u64);
                 }
                 Token::Tag(Word::Subject) => {
                     self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
@@ -210,7 +197,7 @@ impl<'x> CompilerState<'x> {
         if fcc.is_none()
             && (create || !flags.is_empty() || special_use.is_some() || mailbox_id.is_some())
         {
-            return Err(self.tokens.unwrap_next()?.invalid("missing ':fcc' tag"));
+            return Err(self.tokens.unwrap_next()?.missing_tag(":fcc"));
         }
 
         self.instructions

@@ -30,7 +30,7 @@ use crate::{
             Capability,
         },
         lexer::{string::StringItem, word::Word, Token},
-        CompileError,
+        CompileError, ErrorType,
     },
     runtime::actions::action_notify::{validate_from, validate_uri},
     FileCarbonCopy,
@@ -77,7 +77,7 @@ impl<'x> CompilerState<'x> {
                     let address = self.parse_string()?;
                     if let StringItem::Text(address) = &address {
                         if address.is_empty() || !validate_from(address) {
-                            return Err(token_info.invalid("from address"));
+                            return Err(token_info.custom(ErrorType::InvalidAddress));
                         }
                     }
                     from = address.into();
@@ -142,7 +142,7 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     if let Token::StringConstant(uri) = &token_info.token {
                         if validate_uri(std::str::from_utf8(uri).unwrap_or("")).is_none() {
-                            return Err(token_info.invalid("URI"));
+                            return Err(token_info.custom(ErrorType::InvalidURI));
                         }
                     }
 
@@ -155,7 +155,7 @@ impl<'x> CompilerState<'x> {
         if fcc.is_none()
             && (create || !flags.is_empty() || special_use.is_some() || mailbox_id.is_some())
         {
-            return Err(self.tokens.unwrap_next()?.invalid("missing ':fcc' tag"));
+            return Err(self.tokens.unwrap_next()?.missing_tag(":fcc"));
         }
 
         self.instructions.push(Instruction::Notify(Notify {
