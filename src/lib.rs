@@ -33,40 +33,40 @@
 //! ## Usage Example
 //!
 //! ```rust
-//!     use sieve::{runtime::RuntimeError, Action, Compiler, Event, Input, Runtime};
-//!
+//!     use sieve::{runtime::RuntimeError, Compiler, Event, Input, Runtime};
+//! 
 //!     let text_script = br#"
 //!     require ["fileinto", "body", "imap4flags"];
 //!     
 //!     if body :contains "tps" {
 //!         setflag "$tps_reports";
 //!     }
-//!
+//! 
 //!     if header :matches "List-ID" "*<*@*" {
 //!         fileinto "INBOX.lists.${2}"; stop;
 //!     }
 //!     "#;
-//!
-//!     // Compile
-//!     let compiler = Compiler::new();
-//!     let script = compiler.compile(text_script).unwrap();
-//!
-//!     // Build runtime
-//!     let runtime = Runtime::new();
-//!
-//!     // Create filter instance
-//!     let mut instance = runtime.filter(
-//!         br#"From: Sales Mailing List <list-sales@example.org>
+//!     let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
 //! To: John Doe <jdoe@example.org>
 //! List-ID: <sales@example.org>
 //! Subject: TPS Reports
-//!
+//! 
 //! We're putting new coversheets on all the TPS reports before they go out now.
-//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right!
-//! "#,
-//!     );
+//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
+//! "#;
+//! 
+//!     // Compile
+//!     let compiler = Compiler::new();
+//!     let script = compiler.compile(text_script).unwrap();
+//! 
+//!     // Build runtime
+//!     let runtime = Runtime::new();
+//! 
+//!     // Create filter instance
+//!     let mut instance = runtime.filter(raw_message.as_bytes());
 //!     let mut input = Input::script("my-script", script);
-//!
+//!     let mut messages: Vec<String> = Vec::new();
+//! 
 //!     // Start event loop
 //!     while let Some(result) = instance.run(input) {
 //!         match result {
@@ -83,15 +83,15 @@
 //!                     }
 //!                 }
 //!                 Event::MailboxExists { .. } => {
-//!                     // Return true if the mailbox exists
+//!                     // Set to true if the mailbox exists
 //!                     input = false.into();
 //!                 }
 //!                 Event::ListContains { .. } => {
-//!                     // Return true if the list(s) contains an entry
+//!                     // Set to true if the list(s) contains an entry
 //!                     input = false.into();
 //!                 }
 //!                 Event::DuplicateId { .. } => {
-//!                     // Return true if the ID is duplicate
+//!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
 //!                 Event::Execute { command, arguments } => {
@@ -99,8 +99,75 @@
 //!                         "Script executed command {:?} with parameters {:?}",
 //!                         command, arguments
 //!                     );
-//!                     input = false.into(); // Report whether the script succeeded
+//!                     // Set to true if the script succeeded
+//!                     input = false.into();
 //!                 }
+//! 
+//!                 Event::Keep { flags, message_id } => {
+//!                     println!(
+//!                         "Keep message '{}' with flags {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         flags
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::Discard => {
+//!                     println!("Discard message.");
+//!                     input = true.into();
+//!                 }
+//!                 Event::Reject { reason, .. } => {
+//!                     println!("Reject message with reason {:?}.", reason);
+//!                     input = true.into();
+//!                 }
+//!                 Event::FileInto {
+//!                     folder,
+//!                     flags,
+//!                     message_id,
+//!                     ..
+//!                 } => {
+//!                     println!(
+//!                         "File message '{}' in folder {:?} with flags {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         folder,
+//!                         flags
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::SendMessage {
+//!                     recipient,
+//!                     message_id,
+//!                     ..
+//!                 } => {
+//!                     println!(
+//!                         "Send message '{}' to {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         recipient
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::Notify {
+//!                     message, method, ..
+//!                 } => {
+//!                     println!("Notify URI {:?} with message {:?}", method, message);
+//!                     input = true.into();
+//!                 }
+//!                 Event::CreatedMessage { message, .. } => {
+//!                     messages.push(String::from_utf8(message).unwrap());
+//!                     input = true.into();
+//!                 }
+//! 
 //!                 #[cfg(test)]
 //!                 _ => unreachable!(),
 //!             },
@@ -143,60 +210,9 @@
 //!             }
 //!         }
 //!     }
-//!
-//!     // Process actions
-//!     for action in instance.get_actions() {
-//!         match action {
-//!             Action::Keep { flags, message_id } => {
-//!                 println!(
-//!                     "Keep message '{}' with flags {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     flags
-//!                 );
-//!             }
-//!             Action::Discard => {
-//!                 println!("Discard message.")
-//!             }
-//!             Action::Reject { reason } => {
-//!                 println!("Reject message with reason {:?}.", reason);
-//!             }
-//!             Action::Ereject { reason } => {
-//!                 println!("Ereject message with reason {:?}.", reason);
-//!             }
-//!             Action::FileInto {
-//!                 folder,
-//!                 flags,
-//!                 message_id,
-//!                 ..
-//!             } => {
-//!                 println!(
-//!                     "File message '{}' in folder {:?} with flags {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     folder,
-//!                     flags
-//!                 );
-//!             }
-//!             Action::SendMessage {
-//!                 recipient,
-//!                 message_id,
-//!                 ..
-//!             } => {
-//!                 println!(
-//!                     "Send message '{}' to {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     recipient
-//!                 );
-//!             }
-//!             Action::Notify {
-//!                 message, method, ..
-//!             } => {
-//!                 println!("Notify URI {:?} with message {:?}", method, message);
-//!             }
-//!         }
-//!     }
 //! ```
 //!
-//! ## Testing, Fuzzing & Benchmarking
+//! ## Testing and Fuzzing
 //!
 //! To run the testsuite:
 //!
@@ -268,8 +284,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod compiler;
 pub mod runtime;
-
-pub const SIEVE_COMPILER_VERSION: u8 = 1;
 
 pub(crate) const MAX_MATCH_VARIABLES: usize = 63;
 pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
@@ -349,8 +363,8 @@ pub struct Context<'x> {
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
 
-    pub(crate) actions: Vec<Action>,
-    pub(crate) messages: Vec<Cow<'x, [u8]>>,
+    pub(crate) queued_events: IntoIter<Event>,
+    pub(crate) final_event: Option<Event>,
     pub(crate) last_message_id: usize,
 
     pub(crate) has_changes: bool,
@@ -384,17 +398,38 @@ pub enum Metadata<T> {
     Mailbox { name: T, annotation: T },
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Action {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Event {
+    IncludeScript {
+        name: Script,
+        optional: bool,
+    },
+    MailboxExists {
+        mailboxes: Vec<Mailbox>,
+        special_use: Vec<String>,
+    },
+    ListContains {
+        lists: Vec<String>,
+        values: Vec<String>,
+        match_as: MatchAs,
+    },
+    DuplicateId {
+        id: String,
+        expiry: Expiry,
+    },
+    Execute {
+        command: String,
+        arguments: Vec<String>,
+    },
+
+    // Actions
     Keep {
         flags: Vec<String>,
         message_id: usize,
     },
     Discard,
     Reject {
-        reason: String,
-    },
-    Ereject {
+        extended: bool,
         reason: String,
     },
     FileInto {
@@ -419,30 +454,9 @@ pub enum Action {
         message: String,
         method: String,
     },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Event {
-    IncludeScript {
-        name: Script,
-        optional: bool,
-    },
-    MailboxExists {
-        mailboxes: Vec<Mailbox>,
-        special_use: Vec<String>,
-    },
-    ListContains {
-        lists: Vec<String>,
-        values: Vec<String>,
-        match_as: MatchAs,
-    },
-    DuplicateId {
-        id: String,
-        expiry: Expiry,
-    },
-    Execute {
-        command: String,
-        arguments: Vec<String>,
+    CreatedMessage {
+        message_id: usize,
+        message: Vec<u8>,
     },
 
     #[cfg(test)]
@@ -533,7 +547,7 @@ mod tests {
     };
 
     use crate::{
-        compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary, Action,
+        compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary,
         Compiler, Envelope, Event, Input, Mailbox, Recipient, Runtime, SpamStatus, VirusStatus,
     };
 
@@ -592,6 +606,7 @@ mod tests {
         let mut mailboxes = Vec::new();
         let mut lists: AHashMap<String, AHashSet<String>> = AHashMap::new();
         let mut duplicated_ids = AHashSet::new();
+        let mut actions = Vec::new();
 
         'outer: loop {
             let runtime = Runtime::new()
@@ -669,8 +684,8 @@ mod tests {
                         mailboxes: mailboxes_,
                         special_use,
                     } => {
-                        for action in &instance.actions {
-                            if let Action::FileInto { folder, create, .. } = action {
+                        for action in &actions {
+                            if let Event::FileInto { folder, create, .. } = action {
                                 if *create && !mailboxes.contains(folder) {
                                     mailboxes.push(folder.to_string());
                                 }
@@ -738,9 +753,23 @@ mod tests {
                                     let value = params.next().unwrap();
                                     raw_message_ = if value.eq_ignore_ascii_case(":smtp") {
                                         let mut message = None;
-                                        for action in instance.actions.iter().rev() {
-                                            if let Action::SendMessage { message_id, .. } = action {
-                                                let message_ = &instance.messages[*message_id];
+                                        for action in actions.iter().rev() {
+                                            if let Event::SendMessage { message_id, .. } = action {
+                                                let message_ = actions
+                                                    .iter()
+                                                    .find_map(|item| {
+                                                        if let Event::CreatedMessage {
+                                                            message_id: message_id_,
+                                                            message,
+                                                        } = item
+                                                        {
+                                                            if message_id == message_id_ {
+                                                                return Some(message);
+                                                            }
+                                                        }
+                                                        None
+                                                    })
+                                                    .unwrap();
                                                 /*println!(
                                                     "<[{}]>",
                                                     std::str::from_utf8(message_).unwrap()
@@ -787,14 +816,15 @@ mod tests {
                                 input = match params.next().unwrap().as_str() {
                                     ":folder" => {
                                         let folder_name = params.next().expect("test_message folder name");
-                                        instance.actions.iter().any(|a| if !folder_name.eq_ignore_ascii_case("INBOX") { 
-                                                matches!(a, Action::FileInto { folder, .. } if folder == &folder_name )
+                                        matches!(&instance.final_event, Some(Event::Keep { .. })) || 
+                                            actions.iter().any(|a| if !folder_name.eq_ignore_ascii_case("INBOX") { 
+                                                matches!(a, Event::FileInto { folder, .. } if folder == &folder_name )
                                             } else {
-                                                matches!(a, Action::Keep { .. })
+                                                matches!(a, Event::Keep { .. })
                                             })
                                     }
                                     ":smtp" => {
-                                        instance.actions.iter().any(|a| matches!(a, Action::SendMessage { .. } ))
+                                        actions.iter().any(|a| matches!(a, Event::SendMessage { .. } ))
                                     }
                                     param => panic!("Invalid test_message param '{}'", param),
                                 }.into();
@@ -906,12 +936,13 @@ mod tests {
                                 }
                             }
                             "test_result_execute" => {
-                                input = (instance.actions.iter().any(|a| {
+                                input = (matches!(&instance.final_event, Some(Event::Keep { .. })) || 
+                                    actions.iter().any(|a| {
                                     matches!(
                                         a,
-                                        Action::Keep { .. }
-                                            | Action::FileInto { .. }
-                                            | Action::SendMessage { .. }
+                                        Event::Keep { .. }
+                                            | Event::FileInto { .. }
+                                            | Event::SendMessage { .. }
                                     )
                                 }))
                                 .into();
@@ -919,37 +950,30 @@ mod tests {
                             "test_result_action" => {
                                 let param = params.first().expect("test_result_action parameter");
                                 input = if param == "reject" {
-                                    (instance
-                                        .actions
-                                        .iter()
-                                        .any(|a| matches!(a, Action::Reject { .. })))
-                                    .into()
+                                    (actions.iter().any(|a| matches!(a, Event::Reject { .. })))
+                                        .into()
                                 } else if param == "redirect" {
                                     let param =
                                         params.last().expect("test_result_action redirect address");
-                                    (instance
-                                        .actions
+                                    (actions
                                         .iter()
-                                        .any(|a| matches!(a, Action::SendMessage { recipient: Recipient::Address(address), .. } if address == param)))
+                                        .any(|a| matches!(a, Event::SendMessage { recipient: Recipient::Address(address), .. } if address == param)))
                                     .into()
                                 } else if param == "keep" {
-                                    (instance
-                                        .actions
-                                        .iter()
-                                        .any(|a| matches!(a, Action::Keep { .. })))
+                                    (matches!(&instance.final_event, Some(Event::Keep { .. }))
+                                        || actions.iter().any(|a| matches!(a, Event::Keep { .. })))
                                     .into()
                                 } else if param == "send_message" {
-                                    (instance
-                                        .actions
+                                    (actions
                                         .iter()
-                                        .any(|a| matches!(a, Action::SendMessage { .. })))
+                                        .any(|a| matches!(a, Event::SendMessage { .. })))
                                     .into()
                                 } else {
                                     panic!("test_result_action {} not implemented", param);
                                 };
                             }
                             "test_result_action_count" => {
-                                input = (instance.actions.len()
+                                input = (actions.len()
                                     == params.first().unwrap().parse::<usize>().unwrap())
                                 .into();
                             }
@@ -975,12 +999,13 @@ mod tests {
                                 mailboxes.push(params.pop().expect("mailbox to create"));
                             }
                             "test_result_reset" => {
-                                instance.actions = vec![Action::Keep {
+                                actions.clear();
+                                instance.final_event = Event::Keep {
                                     flags: vec![],
                                     message_id: 0,
-                                }];
+                                }
+                                .into();
                                 instance.metadata.clear();
-                                instance.messages.clear();
                                 instance.has_changes = false;
                                 instance.num_redirects = 0;
                                 instance.runtime.vacation_use_orig_rcpt = false;
@@ -1008,6 +1033,10 @@ mod tests {
                             }
                             _ => panic!("Test command {} not implemented.", command),
                         }
+                    }
+                    action => {
+                        actions.push(action);
+                        input = true.into();
                     }
                 }
             }

@@ -33,7 +33,7 @@ use crate::{
         AddressPart,
     },
     runtime::{tests::TestResult, RuntimeError},
-    Action, Context, Envelope, Event, Expiry, Recipient,
+    Context, Envelope, Event, Expiry, Recipient,
 };
 
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
@@ -272,9 +272,7 @@ impl Vacation {
             + references.as_ref().map_or(0, |m| m.len())
             + 160;
 
-        if ctx.messages.iter().map(|m| m.len()).sum::<usize>() + message_len
-            > ctx.runtime.max_memory
-        {
+        if message_len > ctx.runtime.max_memory {
             return Err(RuntimeError::OutOfMemory);
         }
 
@@ -316,19 +314,23 @@ impl Vacation {
         message.extend_from_slice(vacation_body.as_bytes());
 
         // Add action
-        let message_id = ctx.messages.len();
-        ctx.messages.push(message.into());
-        ctx.actions.push(Action::SendMessage {
+        let mut events = Vec::with_capacity(3);
+        ctx.last_message_id += 1;
+        events.push(Event::CreatedMessage {
+            message_id: ctx.last_message_id,
+            message,
+        });
+        events.push(Event::SendMessage {
             recipient: Recipient::Address(vacation_to.to_string()),
             notify: Notify::Never,
             return_of_content: Ret::Default,
             by_time: ByTime::None,
-            message_id,
+            message_id: ctx.last_message_id,
         });
 
         // File carbon copy
         if let Some(fcc) = &self.fcc {
-            ctx.actions.push(Action::FileInto {
+            events.push(Event::FileInto {
                 folder: ctx.eval_string(&fcc.mailbox).into_owned(),
                 flags: ctx.get_local_flags(&fcc.flags),
                 mailbox_id: fcc
@@ -340,9 +342,10 @@ impl Vacation {
                     .as_ref()
                     .map(|s| ctx.eval_string(s).into_owned()),
                 create: fcc.create,
-                message_id,
+                message_id: ctx.last_message_id,
             });
         }
+        ctx.queued_events = events.into_iter();
 
         Ok(())
     }

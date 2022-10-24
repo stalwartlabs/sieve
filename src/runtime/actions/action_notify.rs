@@ -30,7 +30,7 @@ use crate::{
         action_redirect::{ByTime, Ret},
     },
     runtime::RuntimeError,
-    Action, Context, Importance, Recipient,
+    Context, Event, Importance, Recipient,
 };
 
 use super::action_vacation::MAX_SUBJECT_LEN;
@@ -58,7 +58,7 @@ impl Notify {
 
         let has_fcc = self.fcc.is_some();
         let is_mailto = scheme.eq_ignore_ascii_case("mailto");
-        let message_id = ctx.messages.len();
+        let mut events = Vec::with_capacity(3);
 
         if is_mailto || has_fcc {
             let params = if is_mailto {
@@ -106,9 +106,7 @@ impl Notify {
                 + from.len()
                 + 200;
 
-            if ctx.messages.iter().map(|m| m.len()).sum::<usize>() + message_len
-                > ctx.runtime.max_memory
-            {
+            if message_len > ctx.runtime.max_memory {
                 return Err(RuntimeError::OutOfMemory);
             }
 
@@ -228,10 +226,14 @@ impl Notify {
                 message.extend_from_slice(subject.as_bytes());
             }
 
-            ctx.messages.push(message.into());
+            ctx.last_message_id += 1;
+            events.push(Event::CreatedMessage {
+                message_id: ctx.last_message_id,
+                message,
+            });
 
             if is_mailto {
-                ctx.actions.push(Action::SendMessage {
+                events.push(Event::SendMessage {
                     recipient: Recipient::Group(
                         params
                             .to
@@ -253,13 +255,13 @@ impl Notify {
                     notify: crate::compiler::grammar::actions::action_redirect::Notify::Never,
                     return_of_content: Ret::Default,
                     by_time: ByTime::None,
-                    message_id,
+                    message_id: ctx.last_message_id,
                 });
             }
         }
 
         if !is_mailto {
-            ctx.actions.push(Action::Notify {
+            events.push(Event::Notify {
                 method: uri,
                 from: self.from.as_ref().map(|f| ctx.eval_string(f).into_owned()),
                 importance: self.importance.as_ref().map_or(Importance::Normal, |i| {
@@ -281,7 +283,7 @@ impl Notify {
 
         if let Some(fcc) = &self.fcc {
             // File carbon copy
-            ctx.actions.push(Action::FileInto {
+            events.push(Event::FileInto {
                 folder: ctx.eval_string(&fcc.mailbox).into_owned(),
                 flags: ctx.get_local_flags(&fcc.flags),
                 mailbox_id: fcc
@@ -293,9 +295,10 @@ impl Notify {
                     .as_ref()
                     .map(|s| ctx.eval_string(s).into_owned()),
                 create: fcc.create,
-                message_id,
+                message_id: ctx.last_message_id,
             });
         }
+        ctx.queued_events = events.into_iter();
 
         Ok(())
     }

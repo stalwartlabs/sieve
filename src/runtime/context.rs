@@ -28,7 +28,7 @@ use mail_parser::{Encoding, Message, MessagePart, PartType};
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
-    Action, Context, Envelope, Event, Input, Metadata, Runtime, Sieve, SpamStatus, VirusStatus,
+    Context, Envelope, Event, Input, Metadata, Runtime, Sieve, SpamStatus, VirusStatus,
     MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
 };
 
@@ -80,10 +80,12 @@ impl<'x> Context<'x> {
             envelope: Vec::new(),
             metadata: Vec::new(),
             message_size: usize::MAX,
-            actions: vec![Action::Keep {
+            final_event: Event::Keep {
                 flags: Vec::with_capacity(0),
                 message_id: 0,
-            }],
+            }
+            .into(),
+            queued_events: vec![].into_iter(),
             has_changes: false,
             user_address: "".into(),
             user_full_name: "".into(),
@@ -93,7 +95,6 @@ impl<'x> Context<'x> {
                 .unwrap_or(0) as i64,
             num_redirects: 0,
             num_instructions: 0,
-            messages: vec![raw_message.into()],
             last_message_id: 0,
             virus_status: VirusStatus::Unknown,
             spam_status: SpamStatus::Unknown,
@@ -135,6 +136,11 @@ impl<'x> Context<'x> {
             }
         }
 
+        // Return any queued events
+        if let Some(event) = self.queued_events.next() {
+            return Some(Ok(event));
+        }
+
         let mut current_script = self.script_stack.last()?.script.clone();
         let mut iter = current_script.instructions.get(self.pos..)?.iter();
 
@@ -144,11 +150,12 @@ impl<'x> Context<'x> {
                 if self.num_instructions > self.runtime.cpu_limit {
                     return Some(Err(RuntimeError::CPULimitReached));
                 }
+                self.pos += 1;
 
                 match instruction {
                     Instruction::Jz(jmp_pos) => {
                         if !self.test_result {
-                            debug_assert!(*jmp_pos > self.pos);
+                            debug_assert!(*jmp_pos > self.pos - 1);
                             self.pos = *jmp_pos;
                             iter = current_script.instructions.get(self.pos..)?.iter();
                             continue;
@@ -156,14 +163,14 @@ impl<'x> Context<'x> {
                     }
                     Instruction::Jnz(jmp_pos) => {
                         if self.test_result {
-                            debug_assert!(*jmp_pos > self.pos);
+                            debug_assert!(*jmp_pos > self.pos - 1);
                             self.pos = *jmp_pos;
                             iter = current_script.instructions.get(self.pos..)?.iter();
                             continue;
                         }
                     }
                     Instruction::Jmp(jmp_pos) => {
-                        debug_assert_ne!(*jmp_pos, self.pos);
+                        debug_assert_ne!(*jmp_pos, self.pos - 1);
                         self.pos = *jmp_pos;
                         iter = current_script.instructions.get(self.pos..)?.iter();
                         continue;
@@ -173,7 +180,6 @@ impl<'x> Context<'x> {
                             self.test_result = result;
                         }
                         TestResult::Event { event, is_not } => {
-                            self.pos += 1;
                             self.test_result = is_not;
                             return Some(Ok(event));
                         }
@@ -205,52 +211,54 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::Keep(keep) => {
-                        let message_id = match self.build_message_id() {
+                        let next_event = match self.build_message_id() {
                             Ok(message_id_) => message_id_,
                             Err(err) => return Some(Err(err)),
                         };
-                        self.actions
-                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                        self.actions.push(Action::Keep {
+                        self.final_event = Event::Keep {
                             flags: self.get_local_or_global_flags(&keep.flags),
-                            message_id,
-                        });
+                            message_id: self.last_message_id,
+                        }
+                        .into();
+                        if let Some(next_event) = next_event {
+                            return Some(Ok(next_event));
+                        }
                     }
                     Instruction::FileInto(fi) => {
                         if let Err(err) = fi.exec(self) {
                             return Some(Err(err));
+                        }
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
                         }
                     }
                     Instruction::Redirect(redirect) => {
                         if let Err(err) = redirect.exec(self) {
                             return Some(Err(err));
                         }
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
+                        }
                     }
                     Instruction::Discard => {
-                        self.actions
-                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                        self.actions.push(Action::Discard);
+                        self.final_event = Event::Discard.into();
                     }
                     Instruction::Stop => {
                         self.script_stack.clear();
                         break 'outer;
                     }
                     Instruction::Reject(reject) => {
-                        let reason = self.eval_string(&reject.reason).into_owned();
-                        self.actions
-                            .retain(|a| !matches!(a, Action::Keep { .. } | Action::Discard));
-                        self.actions.push(if reject.ereject {
-                            Action::Ereject { reason }
-                        } else {
-                            Action::Reject { reason }
-                        });
+                        return Some(Ok(Event::Reject {
+                            extended: reject.ereject,
+                            reason: self.eval_string(&reject.reason).into_owned(),
+                        }));
                     }
                     Instruction::ForEveryPart(fep) => {
                         if let Some(next_part) = self.part_iter.next() {
                             self.part = next_part;
                         } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop()
                         {
-                            debug_assert!(fep.jz_pos > self.pos);
+                            debug_assert!(fep.jz_pos > self.pos - 1);
                             self.part_iter = prev_part_iter;
                             self.part = prev_part;
                             self.pos = fep.jz_pos;
@@ -295,10 +303,16 @@ impl<'x> Context<'x> {
                         if let Err(err) = notify.exec(self) {
                             return Some(Err(err));
                         }
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
+                        }
                     }
                     Instruction::Vacation(vacation) => {
                         if let Err(err) = vacation.exec(self) {
                             return Some(Err(err));
+                        }
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
                         }
                     }
                     Instruction::EditFlags(flags) => flags.exec(self),
@@ -306,7 +320,7 @@ impl<'x> Context<'x> {
                         IncludeResult::Cached(script) => {
                             self.script_stack.push(ScriptStack {
                                 script: script.clone(),
-                                prev_pos: self.pos + 1,
+                                prev_pos: self.pos,
                                 prev_vars_local: std::mem::replace(
                                     &mut self.vars_local,
                                     vec![String::with_capacity(0); script.num_vars],
@@ -322,7 +336,6 @@ impl<'x> Context<'x> {
                             continue;
                         }
                         IncludeResult::Event(event) => {
-                            self.pos += 1;
                             return Some(Ok(event));
                         }
                         IncludeResult::Error(err) => {
@@ -355,7 +368,6 @@ impl<'x> Context<'x> {
                         )))
                     }
                     Instruction::Execute(execute) => {
-                        self.pos += 1;
                         return Some(Ok(Event::Execute {
                             command: self.eval_string(&execute.command).into_owned(),
                             arguments: self.eval_strings_owned(&execute.arguments),
@@ -367,7 +379,6 @@ impl<'x> Context<'x> {
 
                     #[cfg(test)]
                     Instruction::External((command, params)) => {
-                        self.pos += 1;
                         return Some(Ok(Event::TestCommand {
                             command: command.to_string(),
                             params: params
@@ -377,8 +388,6 @@ impl<'x> Context<'x> {
                         }));
                     }
                 }
-
-                self.pos += 1;
             }
 
             if let Some(prev_script) = self.script_stack.pop() {
@@ -395,24 +404,39 @@ impl<'x> Context<'x> {
             }
         }
 
-        let global_flags = self.get_global_flags();
-        if self.has_changes || !global_flags.is_empty() {
-            let message_id_ = match self.build_message_id() {
-                Ok(message_id_) => message_id_,
-                Err(err) => return Some(Err(err)),
-            };
-            for action in self.actions.iter_mut() {
-                if let Action::Keep { flags, message_id } = action {
-                    if flags.is_empty() && !global_flags.is_empty() {
-                        *flags = global_flags;
+        match self.final_event.take() {
+            Some(Event::Keep {
+                mut flags,
+                mut message_id,
+            }) => {
+                let create_event = if self.has_changes {
+                    match self.build_message_id() {
+                        Ok(Some(event)) => {
+                            message_id = self.last_message_id;
+                            Some(event)
+                        }
+                        Ok(None) => None,
+                        Err(err) => return Some(Err(err)),
                     }
-                    *message_id = message_id_;
-                    break;
+                } else {
+                    None
+                };
+
+                let global_flags = self.get_global_flags();
+                if flags.is_empty() && !global_flags.is_empty() {
+                    flags = global_flags;
+                }
+                if let Some(create_event) = create_event {
+                    self.queued_events =
+                        vec![create_event, Event::Keep { flags, message_id }].into_iter();
+                    self.queued_events.next().map(Ok)
+                } else {
+                    Some(Ok(Event::Keep { flags, message_id }))
                 }
             }
+            Some(event) => Some(Ok(event)),
+            _ => None,
         }
-
-        None
     }
 
     pub fn set_envelope(
@@ -516,26 +540,6 @@ impl<'x> Context<'x> {
     pub fn with_virus_status(mut self, status: impl Into<VirusStatus>) -> Self {
         self.set_virus_status(status);
         self
-    }
-
-    pub fn get_actions(&self) -> &[Action] {
-        &self.actions
-    }
-
-    pub fn take_actions(&mut self) -> Vec<Action> {
-        std::mem::take(&mut self.actions)
-    }
-
-    pub fn get_messages(&self) -> &[Cow<'x, [u8]>] {
-        &self.messages
-    }
-
-    pub fn get_message<'z: 'x>(&'z self, id: usize) -> Option<&'x [u8]> {
-        self.messages.get(id).map(|m| m.as_ref())
-    }
-
-    pub fn take_messages(&mut self) -> Vec<Cow<'x, [u8]>> {
-        std::mem::take(&mut self.messages)
     }
 
     pub(crate) fn user_from_field(&self) -> String {

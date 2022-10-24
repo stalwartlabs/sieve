@@ -86,6 +86,8 @@ impl Default for Compiler {
 }
 
 impl Compiler {
+    pub const VERSION: u32 = 1;
+
     pub fn new() -> Self {
         Compiler {
             max_script_size: 1024 * 1024,

@@ -33,7 +33,7 @@ use crate::{
         action_set::Variable,
     },
     runtime::RuntimeError,
-    Context,
+    Context, Event,
 };
 
 use super::action_editheader::RemoveCrLf;
@@ -386,21 +386,22 @@ enum StackItem<'x> {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn build_message_id(&mut self) -> Result<usize, RuntimeError> {
-        if self.has_changes {
-            if self.messages.iter().map(|m| m.len()).sum::<usize>() + self.message_size
-                > self.runtime.max_memory
-            {
+    pub(crate) fn build_message_id(&mut self) -> Result<Option<Event>, RuntimeError> {
+        Ok(if self.has_changes {
+            if self.message_size > self.runtime.max_memory {
                 return Err(RuntimeError::OutOfMemory);
             }
 
-            self.last_message_id = self.messages.len();
+            self.last_message_id += 1;
             self.has_changes = false;
             let message = self.build_message();
-            self.messages.push(message.into());
-        }
-
-        Ok(self.last_message_id)
+            Some(Event::CreatedMessage {
+                message_id: self.last_message_id,
+                message,
+            })
+        } else {
+            None
+        })
     }
 
     pub(crate) fn build_message(&mut self) -> Vec<u8> {
