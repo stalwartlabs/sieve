@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use crate::{Sieve, SIEVE_COMPILER_VERSION};
+use crate::{Compiler, Sieve};
 
 const SIEVE_MARKER: u8 = 0xff;
 
@@ -31,7 +31,7 @@ pub enum SerializeError {
 
 impl Sieve {
     pub fn deserialize(bytes: &[u8]) -> Result<Self, Box<bincode::ErrorKind>> {
-        if bytes.len() > 2 && bytes[0] == SIEVE_MARKER && bytes[1] == SIEVE_COMPILER_VERSION {
+        if bytes.len() > 2 && bytes[0] == SIEVE_MARKER && bytes[1] == Compiler::VERSION as u8 {
             bincode::deserialize(&bytes[2..])
         } else {
             Err(Box::new(bincode::ErrorKind::Custom(
@@ -43,7 +43,7 @@ impl Sieve {
     pub fn serialize(&self) -> Result<Vec<u8>, Box<bincode::ErrorKind>> {
         let mut buf = Vec::with_capacity(bincode::serialized_size(self)? as usize + 2);
         buf.push(SIEVE_MARKER);
-        buf.push(SIEVE_COMPILER_VERSION);
+        buf.push(Compiler::VERSION as u8);
         bincode::serialize_into(&mut buf, self)?;
         Ok(buf)
     }

@@ -26,7 +26,7 @@ use mail_parser::{DateTime, HeaderName, RfcHeader};
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
     runtime::RuntimeError,
-    Action, Context, Envelope, Recipient,
+    Context, Envelope, Event, Recipient,
 };
 
 impl Redirect {
@@ -50,13 +50,16 @@ impl Redirect {
                     return Ok(());
                 }
 
-                if !self.copy {
-                    ctx.actions.retain(|a| !matches!(a, Action::Keep { .. }));
+                if !self.copy && matches!(&ctx.final_event, Some(Event::Keep { .. })) {
+                    ctx.final_event = None;
                 }
 
-                let message_id = ctx.build_message_id()?;
+                let mut events = Vec::with_capacity(2);
+                if let Some(event) = ctx.build_message_id()? {
+                    events.push(event);
+                }
                 ctx.num_redirects += 1;
-                ctx.actions.push(Action::SendMessage {
+                events.push(Event::SendMessage {
                     recipient: if !self.list {
                         Recipient::Address(address)
                     } else {
@@ -93,8 +96,9 @@ impl Redirect {
                         },
                         ByTime::None => ByTime::None,
                     },
-                    message_id,
+                    message_id: ctx.last_message_id,
                 });
+                ctx.queued_events = events.into_iter();
             }
         }
 

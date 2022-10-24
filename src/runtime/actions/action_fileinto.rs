@@ -22,22 +22,24 @@
 */
 
 use crate::{
-    compiler::grammar::actions::action_fileinto::FileInto, runtime::RuntimeError, Action, Context,
+    compiler::grammar::actions::action_fileinto::FileInto, runtime::RuntimeError, Context, Event,
 };
 
 impl FileInto {
     pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
         let folder = ctx.eval_string(&self.folder).into_owned();
-        let message_id = ctx.build_message_id()?;
-        ctx.actions.retain(|a| match a {
-            Action::Discard if !self.copy => false,
-            Action::Keep { flags, .. } if !self.copy && flags.is_empty() => false,
-            Action::FileInto {
-                folder: folder_, ..
-            } if folder_ == &folder => false,
-            _ => true,
-        });
-        ctx.actions.push(Action::FileInto {
+        let mut events = Vec::with_capacity(2);
+        if let Some(event) = ctx.build_message_id()? {
+            events.push(event);
+        }
+
+        if !self.copy
+            && !matches!(&ctx.final_event, Some(Event::Keep { flags, .. }) if !flags.is_empty())
+        {
+            ctx.final_event = None;
+        }
+
+        events.push(Event::FileInto {
             folder,
             flags: ctx.get_local_or_global_flags(&self.flags),
             mailbox_id: self
@@ -49,8 +51,11 @@ impl FileInto {
                 .as_ref()
                 .map(|su| ctx.eval_string(su).into_owned()),
             create: self.create,
-            message_id,
+            message_id: ctx.last_message_id,
         });
+
+        ctx.queued_events = events.into_iter();
+
         Ok(())
     }
 }

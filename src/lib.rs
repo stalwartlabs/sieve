@@ -33,40 +33,40 @@
 //! ## Usage Example
 //!
 //! ```rust
-//!     use sieve::{runtime::RuntimeError, Action, Compiler, Event, Input, Runtime};
-//!
+//!     use sieve::{runtime::RuntimeError, Compiler, Event, Input, Runtime};
+//! 
 //!     let text_script = br#"
 //!     require ["fileinto", "body", "imap4flags"];
 //!     
 //!     if body :contains "tps" {
 //!         setflag "$tps_reports";
 //!     }
-//!
+//! 
 //!     if header :matches "List-ID" "*<*@*" {
 //!         fileinto "INBOX.lists.${2}"; stop;
 //!     }
 //!     "#;
-//!
-//!     // Compile
-//!     let compiler = Compiler::new();
-//!     let script = compiler.compile(text_script).unwrap();
-//!
-//!     // Build runtime
-//!     let runtime = Runtime::new();
-//!
-//!     // Create filter instance
-//!     let mut instance = runtime.filter(
-//!         br#"From: Sales Mailing List <list-sales@example.org>
+//!     let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
 //! To: John Doe <jdoe@example.org>
 //! List-ID: <sales@example.org>
 //! Subject: TPS Reports
-//!
+//! 
 //! We're putting new coversheets on all the TPS reports before they go out now.
-//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right!
-//! "#,
-//!     );
+//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
+//! "#;
+//! 
+//!     // Compile
+//!     let compiler = Compiler::new();
+//!     let script = compiler.compile(text_script).unwrap();
+//! 
+//!     // Build runtime
+//!     let runtime = Runtime::new();
+//! 
+//!     // Create filter instance
+//!     let mut instance = runtime.filter(raw_message.as_bytes());
 //!     let mut input = Input::script("my-script", script);
-//!
+//!     let mut messages: Vec<String> = Vec::new();
+//! 
 //!     // Start event loop
 //!     while let Some(result) = instance.run(input) {
 //!         match result {
@@ -83,15 +83,15 @@
 //!                     }
 //!                 }
 //!                 Event::MailboxExists { .. } => {
-//!                     // Return true if the mailbox exists
+//!                     // Set to true if the mailbox exists
 //!                     input = false.into();
 //!                 }
 //!                 Event::ListContains { .. } => {
-//!                     // Return true if the list(s) contains an entry
+//!                     // Set to true if the list(s) contains an entry
 //!                     input = false.into();
 //!                 }
 //!                 Event::DuplicateId { .. } => {
-//!                     // Return true if the ID is duplicate
+//!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
 //!                 Event::Execute { command, arguments } => {
@@ -99,8 +99,75 @@
 //!                         "Script executed command {:?} with parameters {:?}",
 //!                         command, arguments
 //!                     );
-//!                     input = false.into(); // Report whether the script succeeded
+//!                     // Set to true if the script succeeded
+//!                     input = false.into();
 //!                 }
+//! 
+//!                 Event::Keep { flags, message_id } => {
+//!                     println!(
+//!                         "Keep message '{}' with flags {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         flags
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::Discard => {
+//!                     println!("Discard message.");
+//!                     input = true.into();
+//!                 }
+//!                 Event::Reject { reason, .. } => {
+//!                     println!("Reject message with reason {:?}.", reason);
+//!                     input = true.into();
+//!                 }
+//!                 Event::FileInto {
+//!                     folder,
+//!                     flags,
+//!                     message_id,
+//!                     ..
+//!                 } => {
+//!                     println!(
+//!                         "File message '{}' in folder {:?} with flags {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         folder,
+//!                         flags
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::SendMessage {
+//!                     recipient,
+//!                     message_id,
+//!                     ..
+//!                 } => {
+//!                     println!(
+//!                         "Send message '{}' to {:?}.",
+//!                         if message_id > 0 {
+//!                             messages[message_id - 1].as_str()
+//!                         } else {
+//!                             raw_message
+//!                         },
+//!                         recipient
+//!                     );
+//!                     input = true.into();
+//!                 }
+//!                 Event::Notify {
+//!                     message, method, ..
+//!                 } => {
+//!                     println!("Notify URI {:?} with message {:?}", method, message);
+//!                     input = true.into();
+//!                 }
+//!                 Event::CreatedMessage { message, .. } => {
+//!                     messages.push(String::from_utf8(message).unwrap());
+//!                     input = true.into();
+//!                 }
+//! 
 //!                 #[cfg(test)]
 //!                 _ => unreachable!(),
 //!             },
@@ -143,60 +210,9 @@
 //!             }
 //!         }
 //!     }
-//!
-//!     // Process actions
-//!     for action in instance.get_actions() {
-//!         match action {
-//!             Action::Keep { flags, message_id } => {
-//!                 println!(
-//!                     "Keep message '{}' with flags {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     flags
-//!                 );
-//!             }
-//!             Action::Discard => {
-//!                 println!("Discard message.")
-//!             }
-//!             Action::Reject { reason } => {
-//!                 println!("Reject message with reason {:?}.", reason);
-//!             }
-//!             Action::Ereject { reason } => {
-//!                 println!("Ereject message with reason {:?}.", reason);
-//!             }
-//!             Action::FileInto {
-//!                 folder,
-//!                 flags,
-//!                 message_id,
-//!                 ..
-//!             } => {
-//!                 println!(
-//!                     "File message '{}' in folder {:?} with flags {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     folder,
-//!                     flags
-//!                 );
-//!             }
-//!             Action::SendMessage {
-//!                 recipient,
-//!                 message_id,
-//!                 ..
-//!             } => {
-//!                 println!(
-//!                     "Send message '{}' to {:?}.",
-//!                     std::str::from_utf8(instance.get_message(*message_id).unwrap()).unwrap(),
-//!                     recipient
-//!                 );
-//!             }
-//!             Action::Notify {
-//!                 message, method, ..
-//!             } => {
-//!                 println!("Notify URI {:?} with message {:?}", method, message);
-//!             }
-//!         }
-//!     }
 //! ```
 //!
-//! ## Testing, Fuzzing & Benchmarking
+//! ## Testing and Fuzzing
 //!
 //! To run the testsuite:
 //!
@@ -268,8 +284,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod compiler;
 pub mod runtime;
-
-pub const SIEVE_COMPILER_VERSION: u8 = 1;
 
 pub(crate) const MAX_MATCH_VARIABLES: usize = 63;
 pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
@@ -346,8 +360,8 @@ pub struct Context<'x> {
     pub(crate) vars_local: Vec<String>,
     pub(crate) vars_match: Vec<String>,
 
-    pub(crate) actions: Vec<Action>,
-    pub(crate) messages: Vec<Cow<'x, [u8]>>,
+    pub(crate) queued_events: IntoIter<Event>,
+    pub(crate) final_event: Option<Event>,
     pub(crate) last_message_id: usize,
 
     pub(crate) has_changes: bool,
@@ -381,17 +395,38 @@ pub enum Metadata<T> {
     Mailbox { name: T, annotation: T },
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum Action {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Event {
+    IncludeScript {
+        name: Script,
+        optional: bool,
+    },
+    MailboxExists {
+        mailboxes: Vec<Mailbox>,
+        special_use: Vec<String>,
+    },
+    ListContains {
+        lists: Vec<String>,
+        values: Vec<String>,
+        match_as: MatchAs,
+    },
+    DuplicateId {
+        id: String,
+        expiry: Expiry,
+    },
+    Execute {
+        command: String,
+        arguments: Vec<String>,
+    },
+
+    // Actions
     Keep {
         flags: Vec<String>,
         message_id: usize,
     },
     Discard,
     Reject {
-        reason: String,
-    },
-    Ereject {
+        extended: bool,
         reason: String,
     },
     FileInto {
@@ -416,30 +451,9 @@ pub enum Action {
         message: String,
         method: String,
     },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Event {
-    IncludeScript {
-        name: Script,
-        optional: bool,
-    },
-    MailboxExists {
-        mailboxes: Vec<Mailbox>,
-        special_use: Vec<String>,
-    },
-    ListContains {
-        lists: Vec<String>,
-        values: Vec<String>,
-        match_as: MatchAs,
-    },
-    DuplicateId {
-        id: String,
-        expiry: Expiry,
-    },
-    Execute {
-        command: String,
-        arguments: Vec<String>,
+    CreatedMessage {
+        message_id: usize,
+        message: Vec<u8>,
     },
 
 }
