@@ -10,20 +10,23 @@ _sieve_ is a fast and secure Sieve filter interpreter for Rust that supports all
 ## Usage Example
 
 ```rust
-    use sieve::{runtime::RuntimeError, Action, Compiler, Event, Input, Runtime};
+use sieve::{runtime::RuntimeError, Action, Compiler, Event, Input, Runtime};
 
-    let text_script = br#"
-    require ["fileinto", "body", "imap4flags"];
-    
-    if body :contains "tps" {
-        setflag "$tps_reports";
-    }
+// Sieve script to execute
+let text_script = br#"
+require ["fileinto", "body", "imap4flags"];
 
-    if header :matches "List-ID" "*<*@*" {
-        fileinto "INBOX.lists.${2}"; stop;
-    }
-    "#;
-    let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
+if body :contains "tps" {
+    setflag "$tps_reports";
+}
+
+if header :matches "List-ID" "*<*@*" {
+    fileinto "INBOX.lists.${2}"; stop;
+}
+"#;
+
+// Message to filter
+let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
 To: John Doe <jdoe@example.org>
 List-ID: <sales@example.org>
 Subject: TPS Reports
@@ -32,164 +35,164 @@ We're putting new coversheets on all the TPS reports before they go out now.
 So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
 "#;
 
-    // Compile
-    let compiler = Compiler::new();
-    let script = compiler.compile(text_script).unwrap();
+// Compile
+let compiler = Compiler::new();
+let script = compiler.compile(text_script).unwrap();
 
-    // Build runtime
-    let runtime = Runtime::new();
+// Build runtime
+let runtime = Runtime::new();
 
-    // Create filter instance
-    let mut instance = runtime.filter(raw_message.as_bytes());
-    let mut input = Input::script("my-script", script);
-    let mut messages: Vec<String> = Vec::new();
+// Create filter instance
+let mut instance = runtime.filter(raw_message.as_bytes());
+let mut input = Input::script("my-script", script);
+let mut messages: Vec<String> = Vec::new();
 
-    // Start event loop
-    while let Some(result) = instance.run(input) {
-        match result {
-            Ok(event) => match event {
-                Event::IncludeScript { name, optional } => {
-                    // NOTE: Just for demonstration purposes, script name needs to be validated first.
-                    if let Ok(bytes) = std::fs::read(name.as_str()) {
-                        let script = compiler.compile(&bytes).unwrap();
-                        input = Input::script(name, script);
-                    } else if optional {
-                        input = Input::False;
-                    } else {
-                        panic!("Script {} not found.", name);
-                    }
+// Start event loop
+while let Some(result) = instance.run(input) {
+    match result {
+        Ok(event) => match event {
+            Event::IncludeScript { name, optional } => {
+                // NOTE: Just for demonstration purposes, script name needs to be validated first.
+                if let Ok(bytes) = std::fs::read(name.as_str()) {
+                    let script = compiler.compile(&bytes).unwrap();
+                    input = Input::script(name, script);
+                } else if optional {
+                    input = Input::False;
+                } else {
+                    panic!("Script {} not found.", name);
                 }
-                Event::MailboxExists { .. } => {
-                    // Set to true if the mailbox exists
-                    input = false.into();
-                }
-                Event::ListContains { .. } => {
-                    // Set to true if the list(s) contains an entry
-                    input = false.into();
-                }
-                Event::DuplicateId { .. } => {
-                    // Set to true if the ID is duplicate
-                    input = false.into();
-                }
-                Event::Execute { command, arguments } => {
-                    println!(
-                        "Script executed command {:?} with parameters {:?}",
-                        command, arguments
-                    );
-                    // Set to true if the script succeeded
-                    input = false.into();
-                }
-
-                Event::Keep { flags, message_id } => {
-                    println!(
-                        "Keep message '{}' with flags {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        flags
-                    );
-                    input = true.into();
-                }
-                Event::Discard => {
-                    println!("Discard message.");
-                    input = true.into();
-                }
-                Event::Reject { reason, .. } => {
-                    println!("Reject message with reason {:?}.", reason);
-                    input = true.into();
-                }
-                Event::FileInto {
-                    folder,
-                    flags,
-                    message_id,
-                    ..
-                } => {
-                    println!(
-                        "File message '{}' in folder {:?} with flags {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        folder,
-                        flags
-                    );
-                    input = true.into();
-                }
-                Event::SendMessage {
-                    recipient,
-                    message_id,
-                    ..
-                } => {
-                    println!(
-                        "Send message '{}' to {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        recipient
-                    );
-                    input = true.into();
-                }
-                Event::Notify {
-                    message, method, ..
-                } => {
-                    println!("Notify URI {:?} with message {:?}", method, message);
-                    input = true.into();
-                }
-                Event::CreatedMessage { message, .. } => {
-                    messages.push(String::from_utf8(message).unwrap());
-                    input = true.into();
-                }
-
-                #[cfg(test)]
-                _ => unreachable!(),
-            },
-            Err(error) => {
-                match error {
-                    RuntimeError::IllegalAction => {
-                        eprintln!("Script tried allocating more variables than allowed.");
-                    }
-                    RuntimeError::TooManyIncludes => {
-                        eprintln!("Too many included scripts.");
-                    }
-                    RuntimeError::InvalidInstruction(instruction) => {
-                        eprintln!(
-                            "Invalid instruction {:?} found at {}:{}.",
-                            instruction.name(),
-                            instruction.line_num(),
-                            instruction.line_pos()
-                        );
-                    }
-                    RuntimeError::ScriptErrorMessage(message) => {
-                        eprintln!("Script called the 'error' function with {:?}", message);
-                    }
-                    RuntimeError::CapabilityNotAllowed(capability) => {
-                        eprintln!(
-                            "Capability {:?} has been disabled by the administrator.",
-                            capability
-                        );
-                    }
-                    RuntimeError::CapabilityNotSupported(capability) => {
-                        eprintln!("Capability {:?} not supported.", capability);
-                    }
-                    RuntimeError::OutOfMemory => {
-                        eprintln!("Script exceeded the configured memory limit.");
-                    }
-                    RuntimeError::CPULimitReached => {
-                        eprintln!("Script exceeded the configured CPU limit.");
-                    }
-                }
-                break;
             }
+            Event::MailboxExists { .. } => {
+                // Set to true if the mailbox exists
+                input = false.into();
+            }
+            Event::ListContains { .. } => {
+                // Set to true if the list(s) contains an entry
+                input = false.into();
+            }
+            Event::DuplicateId { .. } => {
+                // Set to true if the ID is duplicate
+                input = false.into();
+            }
+            Event::Execute { command, arguments } => {
+                println!(
+                    "Script executed command {:?} with parameters {:?}",
+                    command, arguments
+                );
+                // Set to true if the script succeeded
+                input = false.into();
+            }
+
+            Event::Keep { flags, message_id } => {
+                println!(
+                    "Keep message '{}' with flags {:?}.",
+                    if message_id > 0 {
+                        messages[message_id - 1].as_str()
+                    } else {
+                        raw_message
+                    },
+                    flags
+                );
+                input = true.into();
+            }
+            Event::Discard => {
+                println!("Discard message.");
+                input = true.into();
+            }
+            Event::Reject { reason, .. } => {
+                println!("Reject message with reason {:?}.", reason);
+                input = true.into();
+            }
+            Event::FileInto {
+                folder,
+                flags,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "File message '{}' in folder {:?} with flags {:?}.",
+                    if message_id > 0 {
+                        messages[message_id - 1].as_str()
+                    } else {
+                        raw_message
+                    },
+                    folder,
+                    flags
+                );
+                input = true.into();
+            }
+            Event::SendMessage {
+                recipient,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "Send message '{}' to {:?}.",
+                    if message_id > 0 {
+                        messages[message_id - 1].as_str()
+                    } else {
+                        raw_message
+                    },
+                    recipient
+                );
+                input = true.into();
+            }
+            Event::Notify {
+                message, method, ..
+            } => {
+                println!("Notify URI {:?} with message {:?}", method, message);
+                input = true.into();
+            }
+            Event::CreatedMessage { message, .. } => {
+                messages.push(String::from_utf8(message).unwrap());
+                input = true.into();
+            }
+
+            #[cfg(test)]
+            _ => unreachable!(),
+        },
+        Err(error) => {
+            match error {
+                RuntimeError::IllegalAction => {
+                    eprintln!("Script tried allocating more variables than allowed.");
+                }
+                RuntimeError::TooManyIncludes => {
+                    eprintln!("Too many included scripts.");
+                }
+                RuntimeError::InvalidInstruction(instruction) => {
+                    eprintln!(
+                        "Invalid instruction {:?} found at {}:{}.",
+                        instruction.name(),
+                        instruction.line_num(),
+                        instruction.line_pos()
+                    );
+                }
+                RuntimeError::ScriptErrorMessage(message) => {
+                    eprintln!("Script called the 'error' function with {:?}", message);
+                }
+                RuntimeError::CapabilityNotAllowed(capability) => {
+                    eprintln!(
+                        "Capability {:?} has been disabled by the administrator.",
+                        capability
+                    );
+                }
+                RuntimeError::CapabilityNotSupported(capability) => {
+                    eprintln!("Capability {:?} not supported.", capability);
+                }
+                RuntimeError::OutOfMemory => {
+                    eprintln!("Script exceeded the configured memory limit.");
+                }
+                RuntimeError::CPULimitReached => {
+                    eprintln!("Script exceeded the configured CPU limit.");
+                }
+            }
+            break;
         }
     }
+}
 ```
 
-## Testing, Fuzzing & Benchmarking
+## Testing & Fuzzing
 
 To run the testsuite:
 
