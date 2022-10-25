@@ -32,8 +32,8 @@ use crate::{
         },
         AddressPart,
     },
-    runtime::{tests::TestResult, RuntimeError},
-    Context, Envelope, Event, Expiry, Recipient,
+    runtime::tests::TestResult,
+    Context, Envelope, Event, Recipient,
 };
 
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
@@ -42,6 +42,10 @@ impl TestVacation {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut from = String::new();
         let mut user_addresses = Vec::new();
+
+        if ctx.num_out_messages >= ctx.runtime.max_out_messages {
+            return TestResult::Bool(false);
+        }
 
         for (name, value) in &ctx.envelope {
             if !value.is_empty() {
@@ -158,10 +162,11 @@ impl TestVacation {
                         format!("_v{}{}", from, ctx.eval_string(&self.reason))
                     },
                     expiry: match &self.period {
-                        Period::Days(days) => Expiry::Seconds(days * 86400),
-                        Period::Seconds(seconds) => Expiry::Seconds(*seconds),
-                        Period::Default => Expiry::None,
+                        Period::Days(days) => days * 86400,
+                        Period::Seconds(seconds) => *seconds,
+                        Period::Default => ctx.runtime.default_vacation_expiry,
                     },
+                    last: false,
                 },
                 is_not: true,
             }
@@ -172,7 +177,7 @@ impl TestVacation {
 }
 
 impl Vacation {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut vacation_to = "";
 
         for (name, value) in &ctx.envelope {
@@ -272,10 +277,6 @@ impl Vacation {
             + references.as_ref().map_or(0, |m| m.len())
             + 160;
 
-        if message_len > ctx.runtime.max_memory {
-            return Err(RuntimeError::OutOfMemory);
-        }
-
         let mut message = Vec::with_capacity(message_len);
         write_header(&mut message, "From: ", vacation_from.as_ref());
         if let Some(vacation_to_full) = vacation_to_full {
@@ -316,6 +317,7 @@ impl Vacation {
         // Add action
         let mut events = Vec::with_capacity(3);
         ctx.last_message_id += 1;
+        ctx.num_out_messages += 1;
         events.push(Event::CreatedMessage {
             message_id: ctx.last_message_id,
             message,
@@ -346,8 +348,6 @@ impl Vacation {
             });
         }
         ctx.queued_events = events.into_iter();
-
-        Ok(())
     }
 }
 

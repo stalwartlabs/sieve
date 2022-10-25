@@ -29,14 +29,13 @@ use crate::{
         action_notify::Notify,
         action_redirect::{ByTime, Ret},
     },
-    runtime::RuntimeError,
     Context, Event, Importance, Recipient,
 };
 
 use super::action_vacation::MAX_SUBJECT_LEN;
 
 impl Notify {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         // Do not notify on Auto-Submitted messages
         for header in &ctx.message.parts[0].headers {
             if matches!(&header.name, HeaderName::Other(name) if name.eq_ignore_ascii_case("Auto-Submitted"))
@@ -45,7 +44,7 @@ impl Notify {
                     .as_text_ref()
                     .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
             {
-                return Ok(());
+                return;
             }
         }
 
@@ -53,11 +52,12 @@ impl Notify {
         let (scheme, params) = if let Some(parts) = parse_uri(&uri) {
             parts
         } else {
-            return Ok(());
+            return;
         };
 
         let has_fcc = self.fcc.is_some();
-        let is_mailto = scheme.eq_ignore_ascii_case("mailto");
+        let is_mailto = scheme.eq_ignore_ascii_case("mailto")
+            && ctx.num_out_messages < ctx.runtime.max_out_messages;
         let mut events = Vec::with_capacity(3);
 
         if is_mailto || has_fcc {
@@ -65,7 +65,7 @@ impl Notify {
                 if let Some(params) = parse_mailto(params) {
                     params
                 } else {
-                    return Ok(());
+                    return;
                 }
             } else {
                 MailtoMessage {
@@ -105,10 +105,6 @@ impl Notify {
                 + notify_message.as_ref().map_or(0, |b| b.len())
                 + from.len()
                 + 200;
-
-            if message_len > ctx.runtime.max_memory {
-                return Err(RuntimeError::OutOfMemory);
-            }
 
             let mut message = Vec::with_capacity(message_len);
             message.extend_from_slice(b"From: ");
@@ -279,6 +275,7 @@ impl Notify {
                     .or_else(|| ctx.message.get_subject().map(|s| s.to_string()))
                     .unwrap_or_default(),
             });
+            ctx.num_out_messages += 1;
         }
 
         if let Some(fcc) = &self.fcc {
@@ -299,8 +296,6 @@ impl Notify {
             });
         }
         ctx.queued_events = events.into_iter();
-
-        Ok(())
     }
 }
 

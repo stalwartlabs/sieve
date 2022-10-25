@@ -25,14 +25,14 @@ use mail_parser::{DateTime, HeaderName, RfcHeader};
 
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
-    runtime::RuntimeError,
     Context, Envelope, Event, Recipient,
 };
 
 impl Redirect {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         if let Some(address) = sanitize_address(ctx.eval_string(&self.address).as_ref()) {
             if ctx.num_redirects < ctx.runtime.max_redirects
+                && ctx.num_out_messages < ctx.runtime.max_out_messages
                 && ctx.message.parts[0]
                     .headers
                     .iter()
@@ -47,7 +47,7 @@ impl Redirect {
                             matches!(e, Envelope::From) && v.eq_ignore_ascii_case(address.as_str())
                         }))
                 {
-                    return Ok(());
+                    return;
                 }
 
                 if !self.copy && matches!(&ctx.final_event, Some(Event::Keep { .. })) {
@@ -55,10 +55,11 @@ impl Redirect {
                 }
 
                 let mut events = Vec::with_capacity(2);
-                if let Some(event) = ctx.build_message_id()? {
+                if let Some(event) = ctx.build_message_id() {
                     events.push(event);
                 }
                 ctx.num_redirects += 1;
+                ctx.num_out_messages += 1;
                 events.push(Event::SendMessage {
                     recipient: if !self.list {
                         Recipient::Address(address)
@@ -96,13 +97,11 @@ impl Redirect {
                         },
                         ByTime::None => ByTime::None,
                     },
-                    message_id: ctx.last_message_id,
+                    message_id: ctx.main_message_id,
                 });
                 ctx.queued_events = events.into_iter();
             }
         }
-
-        Ok(())
     }
 }
 

@@ -21,15 +21,13 @@
  * for more details.
 */
 
-use crate::{
-    compiler::grammar::actions::action_fileinto::FileInto, runtime::RuntimeError, Context, Event,
-};
+use crate::{compiler::grammar::actions::action_fileinto::FileInto, Context, Event};
 
 impl FileInto {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> Result<(), RuntimeError> {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let folder = ctx.eval_string(&self.folder).into_owned();
         let mut events = Vec::with_capacity(2);
-        if let Some(event) = ctx.build_message_id()? {
+        if let Some(event) = ctx.build_message_id() {
             events.push(event);
         }
 
@@ -51,11 +49,9 @@ impl FileInto {
                 .as_ref()
                 .map(|su| ctx.eval_string(su).into_owned()),
             create: self.create,
-            message_id: ctx.last_message_id,
+            message_id: ctx.main_message_id,
         });
 
         ctx.queued_events = events.into_iter();
-
-        Ok(())
     }
 }
