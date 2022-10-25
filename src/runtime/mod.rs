@@ -24,7 +24,7 @@
 use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
-use mail_parser::HeaderName;
+use mail_parser::{Encoding, HeaderName, Message, MessagePart, PartType};
 
 use crate::{
     compiler::grammar::{Capability, Comparator, Invalid},
@@ -40,13 +40,11 @@ pub mod variables;
 
 #[derive(Debug)]
 pub enum RuntimeError {
-    IllegalAction,
     TooManyIncludes,
     InvalidInstruction(Invalid),
     ScriptErrorMessage(String),
     CapabilityNotAllowed(Capability),
     CapabilityNotSupported(String),
-    OutOfMemory,
     CPULimitReached,
 }
 
@@ -126,8 +124,10 @@ impl Runtime {
             vacation_use_orig_rcpt: false,
             vacation_default_subject: "Automated reply".into(),
             vacation_subject_prefix: "Auto: ".into(),
-            max_memory: 100 * 1024 * 1024,
             max_header_size: 1024,
+            max_out_messages: 3,
+            default_vacation_expiry: 30 * 86400,
+            default_duplicate_expiry: 7 * 86400,
         }
     }
 
@@ -137,15 +137,6 @@ impl Runtime {
 
     pub fn with_cpu_limit(mut self, size: usize) -> Self {
         self.cpu_limit = size;
-        self
-    }
-
-    pub fn set_max_memory(&mut self, size: usize) {
-        self.max_memory = size;
-    }
-
-    pub fn with_max_memory(mut self, size: usize) -> Self {
-        self.max_memory = size;
         self
     }
 
@@ -164,6 +155,15 @@ impl Runtime {
 
     pub fn with_max_redirects(mut self, size: usize) -> Self {
         self.max_redirects = size;
+        self
+    }
+
+    pub fn set_max_out_messages(&mut self, size: usize) {
+        self.max_out_messages = size;
+    }
+
+    pub fn with_max_out_messages(mut self, size: usize) -> Self {
+        self.max_out_messages = size;
         self
     }
 
@@ -191,6 +191,24 @@ impl Runtime {
 
     pub fn with_max_header_size(mut self, size: usize) -> Self {
         self.max_header_size = size;
+        self
+    }
+
+    pub fn set_default_vacation_expiry(&mut self, expiry: u64) {
+        self.default_vacation_expiry = expiry;
+    }
+
+    pub fn with_default_vacation_expiry(mut self, expiry: u64) -> Self {
+        self.default_vacation_expiry = expiry;
+        self
+    }
+
+    pub fn set_default_duplicate_expiry(&mut self, expiry: u64) {
+        self.default_duplicate_expiry = expiry;
+    }
+
+    pub fn with_default_duplicate_expiry(mut self, expiry: u64) -> Self {
+        self.default_duplicate_expiry = expiry;
         self
     }
 
@@ -303,7 +321,26 @@ impl Runtime {
     }
 
     pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
-        Context::new(self, raw_message)
+        Context::new(
+            self,
+            Message::parse(raw_message).unwrap_or_else(|| Message {
+                parts: vec![MessagePart {
+                    headers: vec![],
+                    is_encoding_problem: false,
+                    body: PartType::Text("".into()),
+                    encoding: Encoding::None,
+                    offset_header: 0,
+                    offset_body: 0,
+                    offset_end: 0,
+                }],
+                raw_message: b""[..].into(),
+                ..Default::default()
+            }),
+        )
+    }
+
+    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x> {
+        Context::new(self, message)
     }
 }
 

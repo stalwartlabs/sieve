@@ -24,7 +24,7 @@
 use std::{borrow::Cow, sync::Arc, time::SystemTime};
 
 use ahash::AHashMap;
-use mail_parser::{Encoding, Message, MessagePart, PartType};
+use mail_parser::Message;
 
 use crate::{
     compiler::grammar::{instruction::Instruction, Capability},
@@ -47,25 +47,13 @@ pub(crate) struct ScriptStack {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn new(runtime: &'x Runtime, raw_message: &'x [u8]) -> Self {
+    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
         Context {
             #[cfg(test)]
             runtime: runtime.clone(),
             #[cfg(not(test))]
             runtime,
-            message: Message::parse(raw_message).unwrap_or_else(|| Message {
-                parts: vec![MessagePart {
-                    headers: vec![],
-                    is_encoding_problem: false,
-                    body: PartType::Text("".into()),
-                    encoding: Encoding::None,
-                    offset_header: 0,
-                    offset_body: 0,
-                    offset_end: 0,
-                }],
-                raw_message: b""[..].into(),
-                ..Default::default()
-            }),
+            message,
             part: 0,
             part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
@@ -95,7 +83,9 @@ impl<'x> Context<'x> {
                 .unwrap_or(0) as i64,
             num_redirects: 0,
             num_instructions: 0,
+            num_out_messages: 0,
             last_message_id: 0,
+            main_message_id: 0,
             virus_status: VirusStatus::Unknown,
             spam_status: SpamStatus::Unknown,
         }
@@ -110,29 +100,27 @@ impl<'x> Context<'x> {
                 let num_vars = script.num_vars;
                 let num_match_vars = script.num_match_vars;
 
-                if num_match_vars > MAX_MATCH_VARIABLES || num_vars > MAX_LOCAL_VARIABLES {
-                    return Some(Err(RuntimeError::IllegalAction));
-                }
+                if num_match_vars <= MAX_MATCH_VARIABLES && num_vars <= MAX_LOCAL_VARIABLES {
+                    if self.message_size == usize::MAX {
+                        self.message_size = self.message.raw_message.len();
+                    }
 
-                if self.message_size == usize::MAX {
-                    self.message_size = self.message.raw_message.len();
+                    self.script_cache.insert(name, script.clone());
+                    self.script_stack.push(ScriptStack {
+                        script,
+                        prev_pos: self.pos,
+                        prev_vars_local: std::mem::replace(
+                            &mut self.vars_local,
+                            vec![String::with_capacity(0); num_vars],
+                        ),
+                        prev_vars_match: std::mem::replace(
+                            &mut self.vars_match,
+                            vec![String::with_capacity(0); num_match_vars],
+                        ),
+                    });
+                    self.pos = 0;
+                    self.test_result = false;
                 }
-
-                self.script_cache.insert(name, script.clone());
-                self.script_stack.push(ScriptStack {
-                    script,
-                    prev_pos: self.pos,
-                    prev_vars_local: std::mem::replace(
-                        &mut self.vars_local,
-                        vec![String::with_capacity(0); num_vars],
-                    ),
-                    prev_vars_match: std::mem::replace(
-                        &mut self.vars_match,
-                        vec![String::with_capacity(0); num_match_vars],
-                    ),
-                });
-                self.pos = 0;
-                self.test_result = false;
             }
         }
 
@@ -148,6 +136,7 @@ impl<'x> Context<'x> {
             while let Some(instruction) = iter.next() {
                 self.num_instructions += 1;
                 if self.num_instructions > self.runtime.cpu_limit {
+                    self.finish_loop();
                     return Some(Err(RuntimeError::CPULimitReached));
                 }
                 self.pos += 1;
@@ -184,6 +173,7 @@ impl<'x> Context<'x> {
                             return Some(Ok(event));
                         }
                         TestResult::Error(err) => {
+                            self.finish_loop();
                             return Some(Err(err));
                         }
                     },
@@ -211,13 +201,10 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::Keep(keep) => {
-                        let next_event = match self.build_message_id() {
-                            Ok(message_id_) => message_id_,
-                            Err(err) => return Some(Err(err)),
-                        };
+                        let next_event = self.build_message_id();
                         self.final_event = Event::Keep {
                             flags: self.get_local_or_global_flags(&keep.flags),
-                            message_id: self.last_message_id,
+                            message_id: self.main_message_id,
                         }
                         .into();
                         if let Some(next_event) = next_event {
@@ -225,17 +212,13 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::FileInto(fi) => {
-                        if let Err(err) = fi.exec(self) {
-                            return Some(Err(err));
-                        }
+                        fi.exec(self);
                         if let Some(event) = self.queued_events.next() {
                             return Some(Ok(event));
                         }
                     }
                     Instruction::Redirect(redirect) => {
-                        if let Err(err) = redirect.exec(self) {
-                            return Some(Err(err));
-                        }
+                        redirect.exec(self);
                         if let Some(event) = self.queued_events.next() {
                             return Some(Ok(event));
                         }
@@ -300,17 +283,13 @@ impl<'x> Context<'x> {
                     Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
                     Instruction::Set(set) => set.exec(self),
                     Instruction::Notify(notify) => {
-                        if let Err(err) = notify.exec(self) {
-                            return Some(Err(err));
-                        }
+                        notify.exec(self);
                         if let Some(event) = self.queued_events.next() {
                             return Some(Ok(event));
                         }
                     }
                     Instruction::Vacation(vacation) => {
-                        if let Err(err) = vacation.exec(self) {
-                            return Some(Err(err));
-                        }
+                        vacation.exec(self);
                         if let Some(event) = self.queued_events.next() {
                             return Some(Ok(event));
                         }
@@ -339,6 +318,7 @@ impl<'x> Context<'x> {
                             return Some(Ok(event));
                         }
                         IncludeResult::Error(err) => {
+                            self.finish_loop();
                             return Some(Err(err));
                         }
                         IncludeResult::None => (),
@@ -352,6 +332,7 @@ impl<'x> Context<'x> {
                     Instruction::Require(capabilities) => {
                         for capability in capabilities {
                             if !self.runtime.allowed_capabilities.contains(capability) {
+                                self.finish_loop();
                                 return Some(Err(
                                     if let Capability::Other(not_supported) = capability {
                                         RuntimeError::CapabilityNotSupported(not_supported.clone())
@@ -363,9 +344,10 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::Error(err) => {
+                        self.finish_loop();
                         return Some(Err(RuntimeError::ScriptErrorMessage(
                             self.eval_string(&err.message).into_owned(),
-                        )))
+                        )));
                     }
                     Instruction::Execute(execute) => {
                         return Some(Ok(Event::Execute {
@@ -374,6 +356,7 @@ impl<'x> Context<'x> {
                         }));
                     }
                     Instruction::Invalid(invalid) => {
+                        self.finish_loop();
                         return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
                     }
 
@@ -407,17 +390,10 @@ impl<'x> Context<'x> {
         match self.final_event.take() {
             Some(Event::Keep {
                 mut flags,
-                mut message_id,
+                message_id,
             }) => {
                 let create_event = if self.has_changes {
-                    match self.build_message_id() {
-                        Ok(Some(event)) => {
-                            message_id = self.last_message_id;
-                            Some(event)
-                        }
-                        Ok(None) => None,
-                        Err(err) => return Some(Err(err)),
-                    }
+                    self.build_message_id()
                 } else {
                     None
                 };
@@ -427,8 +403,14 @@ impl<'x> Context<'x> {
                     flags = global_flags;
                 }
                 if let Some(create_event) = create_event {
-                    self.queued_events =
-                        vec![create_event, Event::Keep { flags, message_id }].into_iter();
+                    self.queued_events = vec![
+                        create_event,
+                        Event::Keep {
+                            flags,
+                            message_id: self.main_message_id,
+                        },
+                    ]
+                    .into_iter();
                     self.queued_events.next().map(Ok)
                 } else {
                     Some(Ok(Event::Keep { flags, message_id }))
@@ -436,6 +418,41 @@ impl<'x> Context<'x> {
             }
             Some(event) => Some(Ok(event)),
             _ => None,
+        }
+    }
+
+    pub(crate) fn finish_loop(&mut self) {
+        self.script_stack.clear();
+        if let Some(event) = self.final_event.take() {
+            self.queued_events = if let Event::Keep {
+                mut flags,
+                message_id,
+            } = event
+            {
+                let global_flags = self.get_global_flags();
+                if flags.is_empty() && !global_flags.is_empty() {
+                    flags = global_flags;
+                }
+
+                if self.has_changes {
+                    if let Some(event) = self.build_message_id() {
+                        vec![
+                            event,
+                            Event::Keep {
+                                flags,
+                                message_id: self.main_message_id,
+                            },
+                        ]
+                    } else {
+                        vec![Event::Keep { flags, message_id }]
+                    }
+                } else {
+                    vec![Event::Keep { flags, message_id }]
+                }
+            } else {
+                vec![event]
+            }
+            .into_iter();
         }
     }
 
@@ -540,6 +557,10 @@ impl<'x> Context<'x> {
     pub fn with_virus_status(mut self, status: impl Into<VirusStatus>) -> Self {
         self.set_virus_status(status);
         self
+    }
+
+    pub fn unwrap_message(self) -> Message<'x> {
+        self.message
     }
 
     pub(crate) fn user_from_field(&self) -> String {

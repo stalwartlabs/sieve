@@ -162,9 +162,6 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
             },
             Err(error) => {
                 match error {
-                    RuntimeError::IllegalAction => {
-                        eprintln!("Script tried allocating more variables than allowed.");
-                    }
                     RuntimeError::TooManyIncludes => {
                         eprintln!("Too many included scripts.");
                     }
@@ -188,14 +185,11 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     RuntimeError::CapabilityNotSupported(capability) => {
                         eprintln!("Capability {:?} not supported.", capability);
                     }
-                    RuntimeError::OutOfMemory => {
-                        eprintln!("Script exceeded the configured memory limit.");
-                    }
                     RuntimeError::CPULimitReached => {
                         eprintln!("Script exceeded the configured CPU limit.");
                     }
                 }
-                break;
+                input = true.into();
             }
         }
     }

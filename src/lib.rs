@@ -173,9 +173,6 @@
 //!             },
 //!             Err(error) => {
 //!                 match error {
-//!                     RuntimeError::IllegalAction => {
-//!                         eprintln!("Script tried allocating more variables than allowed.");
-//!                     }
 //!                     RuntimeError::TooManyIncludes => {
 //!                         eprintln!("Too many included scripts.");
 //!                     }
@@ -199,14 +196,11 @@
 //!                     RuntimeError::CapabilityNotSupported(capability) => {
 //!                         eprintln!("Capability {:?} not supported.", capability);
 //!                     }
-//!                     RuntimeError::OutOfMemory => {
-//!                         eprintln!("Script exceeded the configured memory limit.");
-//!                     }
 //!                     RuntimeError::CPULimitReached => {
 //!                         eprintln!("Script exceeded the configured CPU limit.");
 //!                     }
 //!                 }
-//!                 break;
+//!                 input = true.into();
 //!             }
 //!         }
 //!     }
@@ -321,11 +315,14 @@ pub struct Runtime {
 
     pub(crate) max_include_scripts: usize,
     pub(crate) cpu_limit: usize,
-    pub(crate) max_memory: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
     pub(crate) max_header_size: usize,
+    pub(crate) max_out_messages: usize,
+
+    pub(crate) default_vacation_expiry: u64,
+    pub(crate) default_duplicate_expiry: u64,
 
     pub(crate) vacation_use_orig_rcpt: bool,
     pub(crate) vacation_default_subject: Cow<'static, str>,
@@ -366,10 +363,12 @@ pub struct Context<'x> {
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
     pub(crate) last_message_id: usize,
+    pub(crate) main_message_id: usize,
 
     pub(crate) has_changes: bool,
     pub(crate) num_redirects: usize,
     pub(crate) num_instructions: usize,
+    pub(crate) num_out_messages: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -415,7 +414,8 @@ pub enum Event {
     },
     DuplicateId {
         id: String,
-        expiry: Expiry,
+        expiry: u64,
+        last: bool,
     },
     Execute {
         command: String,
@@ -480,13 +480,6 @@ pub enum Importance {
     High,
     Normal,
     Low,
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum Expiry {
-    Seconds(u64),
-    LastSeconds(u64),
-    None,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

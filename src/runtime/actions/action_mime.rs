@@ -32,7 +32,6 @@ use crate::{
         action_mime::{Enclose, ExtractText, Replace},
         action_set::Variable,
     },
-    runtime::RuntimeError,
     Context, Event,
 };
 
@@ -386,22 +385,19 @@ enum StackItem<'x> {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn build_message_id(&mut self) -> Result<Option<Event>, RuntimeError> {
-        Ok(if self.has_changes {
-            if self.message_size > self.runtime.max_memory {
-                return Err(RuntimeError::OutOfMemory);
-            }
-
+    pub(crate) fn build_message_id(&mut self) -> Option<Event> {
+        if self.has_changes {
+            self.main_message_id += 1;
             self.last_message_id += 1;
             self.has_changes = false;
             let message = self.build_message();
             Some(Event::CreatedMessage {
-                message_id: self.last_message_id,
+                message_id: self.main_message_id,
                 message,
             })
         } else {
             None
-        })
+        }
     }
 
     pub(crate) fn build_message(&mut self) -> Vec<u8> {

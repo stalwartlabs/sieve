@@ -25,7 +25,7 @@ use mail_parser::{parsers::MessageStream, HeaderValue};
 
 use crate::{
     compiler::grammar::tests::test_duplicate::{DupMatch, TestDuplicate},
-    Context, Event, Expiry,
+    Context, Event,
 };
 
 use super::TestResult;
@@ -79,11 +79,8 @@ impl TestDuplicate {
                 } else {
                     id.into_owned()
                 },
-                expiry: match &self.seconds {
-                    Some(seconds) if self.last => Expiry::Seconds(*seconds),
-                    Some(seconds) => Expiry::LastSeconds(*seconds),
-                    None => Expiry::None,
-                },
+                expiry: self.seconds.unwrap_or(ctx.runtime.default_duplicate_expiry),
+                last: self.last,
             },
             is_not: self.is_not,
         }
