@@ -293,7 +293,7 @@ pub struct Compiler {
     // Settings
     pub(crate) max_script_size: usize,
     pub(crate) max_string_size: usize,
-    pub(crate) max_variable_size: usize,
+    pub(crate) max_variable_name_size: usize,
     pub(crate) max_nested_blocks: usize,
     pub(crate) max_nested_tests: usize,
     pub(crate) max_nested_foreverypart: usize,
@@ -313,7 +313,7 @@ pub struct Runtime {
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
 
-    pub(crate) max_include_scripts: usize,
+    pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,
     pub(crate) max_variable_size: usize,
     pub(crate) max_redirects: usize,
