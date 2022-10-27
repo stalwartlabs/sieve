@@ -23,7 +23,7 @@
 
 use std::{borrow::Cow, fmt::Display};
 
-use crate::Compiler;
+use crate::{runtime::RuntimeError, Compiler};
 
 use self::{grammar::Capability, lexer::tokenizer::TokenInfo};
 
@@ -91,8 +91,8 @@ impl Compiler {
     pub fn new() -> Self {
         Compiler {
             max_script_size: 1024 * 1024,
-            max_string_size: 1024 * 1024,
-            max_variable_size: 32,
+            max_string_size: 4096,
+            max_variable_name_size: 32,
             max_nested_blocks: 15,
             max_nested_tests: 15,
             max_nested_foreverypart: 3,
@@ -166,12 +166,12 @@ impl Compiler {
         self
     }
 
-    pub fn set_max_variable_size(&mut self, size: usize) {
-        self.max_variable_size = size;
+    pub fn set_max_variable_name_size(&mut self, size: usize) {
+        self.max_variable_name_size = size;
     }
 
-    pub fn with_max_variable_size(mut self, size: usize) -> Self {
-        self.max_variable_size = size;
+    pub fn with_max_variable_name_size(mut self, size: usize) -> Self {
+        self.max_variable_name_size = size;
         self
     }
 
@@ -307,6 +307,34 @@ impl Display for CompileError {
             self.line_num(),
             self.line_pos()
         )
+    }
+}
+
+impl Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuntimeError::TooManyIncludes => write!(f, ""),
+            RuntimeError::InvalidInstruction(value) => write!(
+                f,
+                "Script executed invalid instruction {:?} at line {}, column {}.",
+                value.name(),
+                value.line_pos(),
+                value.line_num()
+            ),
+            RuntimeError::ScriptErrorMessage(value) => {
+                write!(f, "Script reported error {:?}.", value)
+            }
+            RuntimeError::CapabilityNotAllowed(value) => {
+                write!(f, "Capability '{}' has been disabled.", value)
+            }
+            RuntimeError::CapabilityNotSupported(value) => {
+                write!(f, "Capability '{}' not supported.", value)
+            }
+            RuntimeError::CPULimitReached => write!(
+                f,
+                "Script exceeded the maximum number of instructions allowed to execute."
+            ),
+        }
     }
 }
 

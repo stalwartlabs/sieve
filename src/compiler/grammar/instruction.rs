@@ -521,7 +521,7 @@ impl Compiler {
                             )?;
                             for global in state.parse_static_strings()? {
                                 if !state.is_var_local(&global) {
-                                    if global.len() < self.max_variable_size {
+                                    if global.len() < self.max_variable_name_size {
                                         state.register_global_var(&global);
                                     } else {
                                         return Err(state

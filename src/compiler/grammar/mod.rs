@@ -474,6 +474,58 @@ impl Capability {
             Capability::Other(capability.to_string())
         }
     }
+
+    pub fn all() -> &'static [Capability] {
+        &[
+            Capability::Envelope,
+            Capability::EnvelopeDsn,
+            Capability::EnvelopeDeliverBy,
+            Capability::FileInto,
+            Capability::EncodedCharacter,
+            Capability::Comparator(Comparator::Elbonia),
+            Capability::Comparator(Comparator::AsciiCaseMap),
+            Capability::Comparator(Comparator::AsciiNumeric),
+            Capability::Comparator(Comparator::Octet),
+            Capability::Body,
+            Capability::Convert,
+            Capability::Copy,
+            Capability::Relational,
+            Capability::Date,
+            Capability::Index,
+            Capability::Duplicate,
+            Capability::Variables,
+            Capability::EditHeader,
+            Capability::ForEveryPart,
+            Capability::Mime,
+            Capability::Replace,
+            Capability::Enclose,
+            Capability::ExtractText,
+            Capability::Enotify,
+            Capability::RedirectDsn,
+            Capability::RedirectDeliverBy,
+            Capability::Environment,
+            Capability::Reject,
+            Capability::Ereject,
+            Capability::ExtLists,
+            Capability::SubAddress,
+            Capability::Vacation,
+            Capability::VacationSeconds,
+            Capability::Fcc,
+            Capability::Mailbox,
+            Capability::MailboxId,
+            Capability::MboxMetadata,
+            Capability::ServerMetadata,
+            Capability::SpecialUse,
+            Capability::Imap4Flags,
+            Capability::Ihave,
+            Capability::ImapSieve,
+            Capability::Include,
+            Capability::Regex,
+            Capability::SpamTest,
+            Capability::SpamTestPlus,
+            Capability::VirusTest,
+        ]
+    }
 }
 
 static RELATIONAL: phf::Map<&'static str, RelationalMatch> = phf_map! {

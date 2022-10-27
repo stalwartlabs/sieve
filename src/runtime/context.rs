@@ -231,6 +231,7 @@ impl<'x> Context<'x> {
                         break 'outer;
                     }
                     Instruction::Reject(reject) => {
+                        self.final_event = None;
                         return Some(Ok(Event::Reject {
                             extended: reject.ereject,
                             reason: self.eval_string(&reject.reason).into_owned(),
@@ -559,8 +560,12 @@ impl<'x> Context<'x> {
         self
     }
 
-    pub fn unwrap_message(self) -> Message<'x> {
-        self.message
+    pub fn take_message(&mut self) -> Message<'x> {
+        std::mem::take(&mut self.message)
+    }
+
+    pub fn has_message_changed(&self) -> bool {
+        self.main_message_id > 0
     }
 
     pub(crate) fn user_from_field(&self) -> String {

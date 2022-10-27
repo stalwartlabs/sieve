@@ -48,7 +48,7 @@ impl Include {
 
             let cached_script = ctx.script_cache.get(&script_name);
             if !self.once || cached_script.is_none() {
-                if ctx.script_stack.len() < ctx.runtime.max_include_scripts {
+                if ctx.script_stack.len() < ctx.runtime.max_nested_includes {
                     if let Some(script) = cached_script
                         .or_else(|| ctx.runtime.include_scripts.get(script_name.as_str()))
                     {
@@ -68,21 +68,3 @@ impl Include {
         IncludeResult::None
     }
 }
-
-/*
-use crate::Context;
-
-
-
-impl Include {
-
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-
-    }
-
-}
-
-
-
-
-*/

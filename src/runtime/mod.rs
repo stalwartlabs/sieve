@@ -27,7 +27,7 @@ use ahash::{AHashMap, AHashSet};
 use mail_parser::{Encoding, HeaderName, Message, MessagePart, PartType};
 
 use crate::{
-    compiler::grammar::{Capability, Comparator, Invalid},
+    compiler::grammar::{Capability, Invalid},
     Context, Input, Metadata, Runtime, Script, Sieve,
 };
 
@@ -50,57 +50,11 @@ pub enum RuntimeError {
 
 impl Runtime {
     pub fn new() -> Self {
-        let allowed_capabilities = AHashSet::from_iter([
-            Capability::Envelope,
-            Capability::EnvelopeDsn,
-            Capability::EnvelopeDeliverBy,
-            Capability::FileInto,
-            Capability::EncodedCharacter,
-            Capability::Comparator(Comparator::Elbonia),
-            Capability::Comparator(Comparator::AsciiCaseMap),
-            Capability::Comparator(Comparator::AsciiNumeric),
-            Capability::Comparator(Comparator::Octet),
-            Capability::Body,
-            Capability::Convert,
-            Capability::Copy,
-            Capability::Relational,
-            Capability::Date,
-            Capability::Index,
-            Capability::Duplicate,
-            Capability::Variables,
-            Capability::EditHeader,
-            Capability::ForEveryPart,
-            Capability::Mime,
-            Capability::Replace,
-            Capability::Enclose,
-            Capability::ExtractText,
-            Capability::Enotify,
-            Capability::RedirectDsn,
-            Capability::RedirectDeliverBy,
-            Capability::Environment,
-            Capability::Reject,
-            Capability::Ereject,
-            Capability::ExtLists,
-            Capability::SubAddress,
-            Capability::Vacation,
-            Capability::VacationSeconds,
-            Capability::Fcc,
-            Capability::Mailbox,
-            Capability::MailboxId,
-            Capability::MboxMetadata,
-            Capability::ServerMetadata,
-            Capability::SpecialUse,
-            Capability::Imap4Flags,
-            Capability::Ihave,
-            Capability::ImapSieve,
-            Capability::Include,
-            Capability::Regex,
-            Capability::SpamTest,
-            Capability::SpamTestPlus,
-            Capability::VirusTest,
-            #[cfg(test)]
-            Capability::Other("vnd.stalwart.testsuite".to_string()),
-        ]);
+        #[allow(unused_mut)]
+        let mut allowed_capabilities = AHashSet::from_iter(Capability::all().iter().cloned());
+
+        #[cfg(test)]
+        allowed_capabilities.insert(Capability::Other("vnd.stalwart.testsuite".to_string()));
 
         Runtime {
             allowed_capabilities,
@@ -110,7 +64,7 @@ impl Runtime {
             ]),
             metadata: Vec::new(),
             include_scripts: AHashMap::new(),
-            max_include_scripts: 3,
+            max_nested_includes: 3,
             cpu_limit: 5000,
             max_variable_size: 4096,
             max_redirects: 1,
@@ -140,12 +94,12 @@ impl Runtime {
         self
     }
 
-    pub fn set_max_include_scripts(&mut self, size: usize) {
-        self.max_include_scripts = size;
+    pub fn set_max_nested_includes(&mut self, size: usize) {
+        self.max_nested_includes = size;
     }
 
-    pub fn with_max_include_scripts(mut self, size: usize) -> Self {
-        self.max_include_scripts = size;
+    pub fn with_max_nested_includes(mut self, size: usize) -> Self {
+        self.max_nested_includes = size;
         self
     }
 
@@ -230,6 +184,16 @@ impl Runtime {
         self
     }
 
+    pub fn without_capabilities(
+        mut self,
+        capabilities: impl IntoIterator<Item = impl Into<Capability>>,
+    ) -> Self {
+        for capability in capabilities {
+            self.allowed_capabilities.remove(&capability.into());
+        }
+        self
+    }
+
     pub fn set_protected_header(&mut self, header_name: impl Into<Cow<'static, str>>) {
         if let Some(header_name) = HeaderName::parse(header_name) {
             self.protected_headers.push(header_name);
@@ -238,6 +202,17 @@ impl Runtime {
 
     pub fn with_protected_header(mut self, header_name: impl Into<Cow<'static, str>>) -> Self {
         self.set_protected_header(header_name);
+        self
+    }
+
+    pub fn with_protected_headers(
+        mut self,
+        header_names: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
+    ) -> Self {
+        self.protected_headers = header_names
+            .into_iter()
+            .filter_map(HeaderName::parse)
+            .collect();
         self
     }
 
@@ -284,6 +259,14 @@ impl Runtime {
         self
     }
 
+    pub fn with_valid_notification_uris(
+        mut self,
+        uris: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
+    ) -> Self {
+        self.valid_notification_uris = uris.into_iter().map(Into::into).collect();
+        self
+    }
+
     pub fn set_valid_ext_list(&mut self, name: impl Into<Cow<'static, str>>) {
         self.valid_ext_lists.insert(name.into());
     }
@@ -295,6 +278,14 @@ impl Runtime {
 
     pub fn set_vacation_use_orig_rcpt(&mut self, value: bool) {
         self.vacation_use_orig_rcpt = value;
+    }
+
+    pub fn with_valid_ext_lists(
+        mut self,
+        lists: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
+    ) -> Self {
+        self.valid_ext_lists = lists.into_iter().map(Into::into).collect();
+        self
     }
 
     pub fn with_vacation_use_orig_rcpt(mut self, value: bool) -> Self {
@@ -404,7 +395,13 @@ impl AsRef<String> for Script {
 }
 
 impl Script {
-    pub(crate) fn as_str(&self) -> &String {
+    pub fn into_string(self) -> String {
+        match self {
+            Script::Personal(name) | Script::Global(name) => name,
+        }
+    }
+
+    pub fn as_str(&self) -> &String {
         match self {
             Script::Personal(name) | Script::Global(name) => name,
         }
