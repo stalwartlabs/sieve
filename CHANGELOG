@@ -1,3 +1,8 @@
-sieve 0.1
+sieve-rs 0.2.0
+================================
+- Improved event loop.
+- Initial release.
+
+sieve-rs 0.1.0
 ================================
 - Initial release.
