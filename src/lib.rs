@@ -584,7 +584,7 @@ mod tests {
     }
 
     fn run_test(script_path: &Path) {
-        let mut compiler = Compiler::new();
+        let mut compiler = Compiler::new().with_max_string_size(10240);
         let mut ancestors = script_path.ancestors();
         ancestors.next();
         let base_path = ancestors.next().unwrap();
@@ -606,6 +606,7 @@ mod tests {
                 .with_protected_header("Auto-Submitted")
                 .with_protected_header("Received")
                 .with_valid_notification_uri("mailto")
+                .with_max_out_messages(100)
                 .with_capability(Capability::Execute);
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
