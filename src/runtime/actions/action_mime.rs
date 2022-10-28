@@ -387,8 +387,8 @@ enum StackItem<'x> {
 impl<'x> Context<'x> {
     pub(crate) fn build_message_id(&mut self) -> Option<Event> {
         if self.has_changes {
-            self.main_message_id += 1;
             self.last_message_id += 1;
+            self.main_message_id = self.last_message_id;
             self.has_changes = false;
             let message = self.build_message();
             Some(Event::CreatedMessage {
