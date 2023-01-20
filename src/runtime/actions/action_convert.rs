@@ -75,7 +75,7 @@ impl Convert {
                 ),
                 (PartType::Text(text), Conversion::TextPlainToHtml)
                     if part
-                        .get_content_type()
+                        .content_type()
                         .and_then(|ct| ct.c_subtype.as_ref())
                         .map_or(false, |st| st.eq_ignore_ascii_case("plain")) =>
                 {

@@ -642,14 +642,14 @@ mod tests {
             if let HeaderValue::Address(Addr {
                 address: Some(addr),
                 ..
-            }) = instance.message.get_from()
+            }) = instance.message.from()
             {
                 instance.set_envelope(Envelope::From, addr.to_string());
             }
             if let HeaderValue::Address(Addr {
                 address: Some(addr),
                 ..
-            }) = instance.message.get_to()
+            }) = instance.message.to()
             {
                 instance.set_envelope(Envelope::To, addr.to_string());
             }

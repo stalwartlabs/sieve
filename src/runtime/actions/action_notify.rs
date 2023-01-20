@@ -164,7 +164,7 @@ impl Notify {
 
             if !has_message_id {
                 message.extend_from_slice(b"Message-ID: ");
-                generate_message_id_header(&mut message).unwrap();
+                generate_message_id_header(&mut message, gethostname::gethostname().to_str().unwrap_or("localhost")).unwrap();
                 message.extend_from_slice(b"\r\n");
             }
 
@@ -191,7 +191,7 @@ impl Notify {
                 subject.as_str()
             } else if let Some(subject) = &notify_message {
                 subject.as_ref()
-            } else if let Some(subject) = ctx.message.get_subject() {
+            } else if let Some(subject) = ctx.message.subject() {
                 subject
             } else {
                 ""
@@ -218,7 +218,7 @@ impl Notify {
                 message.extend_from_slice(body.as_bytes());
             } else if let Some(subject) = &notify_message {
                 message.extend_from_slice(subject.as_bytes());
-            } else if let Some(subject) = ctx.message.get_subject() {
+            } else if let Some(subject) = ctx.message.subject() {
                 message.extend_from_slice(subject.as_bytes());
             }
 
@@ -272,7 +272,7 @@ impl Notify {
                     .message
                     .as_ref()
                     .map(|m| ctx.eval_string(m).into_owned())
-                    .or_else(|| ctx.message.get_subject().map(|s| s.to_string()))
+                    .or_else(|| ctx.message.subject().map(|s| s.to_string()))
                     .unwrap_or_default(),
             });
             ctx.num_out_messages += 1;

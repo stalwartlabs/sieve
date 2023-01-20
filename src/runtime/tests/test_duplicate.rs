@@ -67,7 +67,7 @@ impl TestDuplicate {
                 value.into()
             }
             DupMatch::UniqueId(s) => ctx.eval_string(s),
-            DupMatch::Default => ctx.message.get_message_id().unwrap_or("").into(),
+            DupMatch::Default => ctx.message.message_id().unwrap_or("").into(),
         };
 
         TestResult::Event {

@@ -88,7 +88,7 @@ impl<'x> Context<'x> {
                 if let Some(subpart) = message.parts.get(part_id) {
                     let process_part = if !ct_filter.is_empty() {
                         let mut process_part = false;
-                        let (ct, cst) = if let Some(ct) = subpart.get_content_type() {
+                        let (ct, cst) = if let Some(ct) = subpart.content_type() {
                             (ct.c_type.as_ref(), ct.c_subtype.as_deref().unwrap_or(""))
                         } else {
                             match &subpart.body {
