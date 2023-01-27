@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022, Stalwart Labs Ltd.
+ * Copyright (c) 2020-2023, Stalwart Labs Ltd.
  *
  * This file is part of the Stalwart Sieve Interpreter.
  *

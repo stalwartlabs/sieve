@@ -241,4 +241,4 @@ a commercial license. Please contact licensing@stalw.art for more details.
   
 ## Copyright
 
-Copyright (C) 2020-2022, Stalwart Labs Ltd.
+Copyright (C) 2020-2023, Stalwart Labs Ltd.
