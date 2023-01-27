@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022, Stalwart Labs Ltd.
+ * Copyright (c) 2020-2023, Stalwart Labs Ltd.
  *
  * This file is part of the Stalwart Sieve Interpreter.
  *
@@ -261,7 +261,7 @@
 //!   
 //! ## Copyright
 //!
-//! Copyright (C) 2020-2022, Stalwart Labs Ltd.
+//! Copyright (C) 2020-2023, Stalwart Labs Ltd.
 //!
 
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
@@ -589,7 +589,7 @@ mod tests {
         ancestors.next();
         let base_path = ancestors.next().unwrap();
         let script = compiler
-            .compile(&add_crlf(&fs::read(&script_path).unwrap()))
+            .compile(&add_crlf(&fs::read(script_path).unwrap()))
             .unwrap();
 
         let mut input = Input::script("", script);
