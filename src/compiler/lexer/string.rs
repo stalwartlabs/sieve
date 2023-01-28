@@ -292,10 +292,10 @@ impl Display for StringItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StringItem::Text(t) => f.write_str(t),
-            StringItem::LocalVariable(v) => write!(f, "${{{}}}", v),
-            StringItem::MatchVariable(v) => write!(f, "${{{}}}", v),
-            StringItem::GlobalVariable(v) => write!(f, "${{global.{}}}", v),
-            StringItem::EnvironmentVariable(v) => write!(f, "${{env.{}}}", v),
+            StringItem::LocalVariable(v) => write!(f, "${{{v}}}"),
+            StringItem::MatchVariable(v) => write!(f, "${{{v}}}"),
+            StringItem::GlobalVariable(v) => write!(f, "${{global.{v}}}"),
+            StringItem::EnvironmentVariable(v) => write!(f, "${{env.{v}}}"),
             StringItem::List(l) => {
                 for i in l {
                     i.fmt(f)?;

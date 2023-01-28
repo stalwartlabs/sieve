@@ -251,21 +251,21 @@ impl Display for CompileError {
             ErrorType::InvalidCharacter(value) => {
                 write!(f, "Invalid character {:?}", char::from(*value))
             }
-            ErrorType::InvalidNumber(value) => write!(f, "Invalid number {:?}", value),
+            ErrorType::InvalidNumber(value) => write!(f, "Invalid number {value:?}"),
             ErrorType::InvalidMatchVariable(value) => {
-                write!(f, "Match variable {} out of range", value)
+                write!(f, "Match variable {value} out of range")
             }
             ErrorType::InvalidUnicodeSequence(value) => {
-                write!(f, "Invalid Unicode sequence {:04x}", value)
+                write!(f, "Invalid Unicode sequence {value:04x}")
             }
-            ErrorType::InvalidNamespace(value) => write!(f, "Invalid namespace {:?}", value),
-            ErrorType::InvalidRegex(value) => write!(f, "Invalid regular expression {:?}", value),
+            ErrorType::InvalidNamespace(value) => write!(f, "Invalid namespace {value:?}"),
+            ErrorType::InvalidRegex(value) => write!(f, "Invalid regular expression {value:?}"),
             ErrorType::InvalidUtf8String => write!(f, "Invalid UTF-8 string"),
             ErrorType::InvalidHeaderName => write!(f, "Invalid header name"),
             ErrorType::InvalidArguments => write!(f, "Invalid Arguments"),
             ErrorType::InvalidAddress => write!(f, "Invalid Address"),
             ErrorType::InvalidURI => write!(f, "Invalid URI"),
-            ErrorType::InvalidEnvelope(value) => write!(f, "Invalid envelope {:?}", value),
+            ErrorType::InvalidEnvelope(value) => write!(f, "Invalid envelope {value:?}"),
             ErrorType::UnterminatedString => write!(f, "Unterminated string"),
             ErrorType::UnterminatedComment => write!(f, "Unterminated comment"),
             ErrorType::UnterminatedMultiline => write!(f, "Unterminated multi-line string"),
@@ -274,12 +274,12 @@ impl Display for CompileError {
             ErrorType::StringTooLong => write!(f, "String is too long"),
             ErrorType::VariableTooLong => write!(f, "Variable name is too long"),
             ErrorType::VariableIsLocal(value) => {
-                write!(f, "Variable {:?} was already defined as local", value)
+                write!(f, "Variable {value:?} was already defined as local")
             }
             ErrorType::HeaderTooLong => write!(f, "Header value is too long"),
             ErrorType::ExpectedConstantString => write!(f, "Expected a constant string"),
             ErrorType::UnexpectedToken { expected, found } => {
-                write!(f, "Expected token {:?} but found {:?}", expected, found)
+                write!(f, "Expected token {expected:?} but found {found:?}")
             }
             ErrorType::UnexpectedEOF => write!(f, "Unexpected end of file"),
             ErrorType::TooManyNestedBlocks => write!(f, "Too many nested blocks"),
@@ -288,17 +288,17 @@ impl Display for CompileError {
                 write!(f, "Too many nested foreverypart blocks")
             }
             ErrorType::TooManyIncludes => write!(f, "Too many includes"),
-            ErrorType::LabelAlreadyDefined(value) => write!(f, "Label {:?} already defined", value),
-            ErrorType::LabelUndefined(value) => write!(f, "Label {:?} does not exist", value),
+            ErrorType::LabelAlreadyDefined(value) => write!(f, "Label {value:?} already defined"),
+            ErrorType::LabelUndefined(value) => write!(f, "Label {value:?} does not exist"),
             ErrorType::BreakOutsideLoop => write!(f, "Break used outside of foreverypart loop"),
             ErrorType::UnsupportedComparator(value) => {
-                write!(f, "Comparator {:?} is not supported", value)
+                write!(f, "Comparator {value:?} is not supported")
             }
             ErrorType::DuplicatedParameter => write!(f, "Duplicated argument"),
             ErrorType::UndeclaredCapability(value) => {
-                write!(f, "Undeclared capability '{}'", value)
+                write!(f, "Undeclared capability '{value}'")
             }
-            ErrorType::MissingTag(value) => write!(f, "Missing tag {:?}", value),
+            ErrorType::MissingTag(value) => write!(f, "Missing tag {value:?}"),
         }?;
 
         write!(
@@ -322,13 +322,13 @@ impl Display for RuntimeError {
                 value.line_num()
             ),
             RuntimeError::ScriptErrorMessage(value) => {
-                write!(f, "Script reported error {:?}.", value)
+                write!(f, "Script reported error {value:?}.")
             }
             RuntimeError::CapabilityNotAllowed(value) => {
-                write!(f, "Capability '{}' has been disabled.", value)
+                write!(f, "Capability '{value}' has been disabled.")
             }
             RuntimeError::CapabilityNotSupported(value) => {
-                write!(f, "Capability '{}' not supported.", value)
+                write!(f, "Capability '{value}' not supported.")
             }
             RuntimeError::CPULimitReached => write!(
                 f,

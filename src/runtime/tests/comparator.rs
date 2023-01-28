@@ -104,7 +104,7 @@ impl Comparator {
                 }
             }
             Err(err) => {
-                debug_assert!(false, "Failed to compile regex: {:?}", err);
+                debug_assert!(false, "Failed to compile regex: {err:?}");
                 false
             }
         }

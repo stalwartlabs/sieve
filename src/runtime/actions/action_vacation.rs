@@ -305,7 +305,7 @@ impl Vacation {
         message.extend_from_slice(b"\r\n");
 
         message.extend_from_slice(b"Message-ID: ");
-        generate_message_id_header(&mut message).unwrap();
+        generate_message_id_header(&mut message, &ctx.runtime.local_hostname).unwrap();
         message.extend_from_slice(b"\r\n");
 
         write_header(&mut message, "Auto-Submitted: ", "auto-replied");

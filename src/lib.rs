@@ -312,6 +312,7 @@ pub struct Runtime {
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
+    pub(crate) local_hostname: Cow<'static, str>,
 
     pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,

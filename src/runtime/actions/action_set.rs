@@ -57,7 +57,7 @@ impl<'x> Context<'x> {
                 if let Some(var) = self.vars_local.get_mut(*var_id) {
                     *var = variable;
                 } else {
-                    debug_assert!(false, "Non-existent local variable {}", var_id);
+                    debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
             Variable::Global(var_name) => {
@@ -168,7 +168,7 @@ impl Modifier {
                         }
                     } else if result.len() + (char.len_utf8() * 3) <= max_len {
                         for byte in char.encode_utf8(&mut buf).as_bytes().iter() {
-                            write!(result, "%{:02x}", byte).ok();
+                            write!(result, "%{byte:02x}").ok();
                         }
                     } else {
                         return result;

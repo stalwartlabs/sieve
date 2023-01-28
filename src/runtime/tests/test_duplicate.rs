@@ -53,7 +53,7 @@ impl TestDuplicate {
                             }
                         } else if let HeaderValue::Text(text) = &header.value {
                             // Inserted header
-                            let bytes = format!("{}\n", text).into_bytes();
+                            let bytes = format!("{text}\n").into_bytes();
                             if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id() {
                                 if !id.is_empty() {
                                     value = id.to_string();
@@ -67,7 +67,7 @@ impl TestDuplicate {
                 value.into()
             }
             DupMatch::UniqueId(s) => ctx.eval_string(s),
-            DupMatch::Default => ctx.message.get_message_id().unwrap_or("").into(),
+            DupMatch::Default => ctx.message.message_id().unwrap_or("").into(),
         };
 
         TestResult::Event {

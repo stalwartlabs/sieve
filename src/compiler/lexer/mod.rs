@@ -58,9 +58,9 @@ impl Display for Token {
             Token::ParenthesisClose => f.write_str(")"),
             Token::Comma => f.write_str(","),
             Token::Semicolon => f.write_str(";"),
-            Token::Number(n) => write!(f, "{}", n),
+            Token::Number(n) => write!(f, "{n}"),
             Token::Identifier(w) => w.fmt(f),
-            Token::Tag(t) => write!(f, ":{}", t),
+            Token::Tag(t) => write!(f, ":{t}"),
             Token::Invalid(s) => f.write_str(s),
             Token::StringConstant(s) | Token::StringVariable(s) => {
                 f.write_str(&String::from_utf8_lossy(s))

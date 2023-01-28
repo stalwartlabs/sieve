@@ -86,9 +86,8 @@ impl TestBody {
                         }
                     }
                     (BodyTransform::Content(_), PartType::Multipart(_)) => {
-                        if let Some(boundary) = part
-                            .get_content_type()
-                            .and_then(|ct| ct.get_attribute("boundary"))
+                        if let Some(boundary) =
+                            part.content_type().and_then(|ct| ct.attribute("boundary"))
                         {
                             let mime_body = std::str::from_utf8(
                                 raw_message
@@ -98,11 +97,11 @@ impl TestBody {
                             .unwrap_or("");
                             let mut mime_part = String::with_capacity(64);
                             if let Some((prologue, epilogue)) =
-                                mime_body.split_once(&format!("\n--{}", boundary))
+                                mime_body.split_once(&format!("\n--{boundary}"))
                             {
                                 mime_part.push_str(prologue);
                                 if let Some((_, epilogue)) =
-                                    epilogue.rsplit_once(&format!("\n--{}--", boundary))
+                                    epilogue.rsplit_once(&format!("\n--{boundary}--"))
                                 {
                                     mime_part.push_str(epilogue);
                                 }
@@ -138,7 +137,7 @@ impl TestBody {
                     (
                         BodyTransform::Text,
                         PartType::Binary(bytes) | PartType::InlineBinary(bytes),
-                    ) if part.get_content_type().map_or(false, |ct| {
+                    ) if part.content_type().map_or(false, |ct| {
                         ct.c_type.eq_ignore_ascii_case("application")
                             && ct.c_subtype.as_ref().map_or(false, |st| st.contains("xml"))
                     }) =>

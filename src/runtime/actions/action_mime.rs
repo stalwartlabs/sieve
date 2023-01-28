@@ -149,7 +149,7 @@ impl Replace {
 
             // Add Message-ID
             let mut header_value = Vec::with_capacity(20);
-            generate_message_id_header(&mut header_value).unwrap();
+            generate_message_id_header(&mut header_value, &ctx.runtime.local_hostname).unwrap();
 
             ctx.insert_header(
                 0,
@@ -181,7 +181,7 @@ impl Enclose {
                     .as_ref()
                     .remove_crlf(ctx.runtime.max_header_size)
             })
-            .or_else(|| ctx.message.get_subject().map(|s| s.to_string()))
+            .or_else(|| ctx.message.subject().map(|s| s.to_string()))
             .unwrap_or_default();
 
         let message = std::mem::take(&mut ctx.message);
@@ -229,7 +229,7 @@ impl Enclose {
         ctx.insert_header(
             0,
             HeaderName::Other("Content-Type".into()),
-            format!("multipart/mixed; boundary=\"{}\"", boundary),
+            format!("multipart/mixed; boundary=\"{boundary}\""),
             true,
         );
         ctx.insert_header(0, HeaderName::Other("Subject".into()), subject, true);
@@ -305,7 +305,7 @@ impl Enclose {
 
         if add_message_id {
             let mut header_value = Vec::with_capacity(20);
-            generate_message_id_header(&mut header_value).unwrap();
+            generate_message_id_header(&mut header_value, &ctx.runtime.local_hostname).unwrap();
 
             ctx.insert_header(
                 0,
@@ -352,7 +352,7 @@ impl ExtractText {
                 if let Some(var) = ctx.vars_local.get_mut(*var_id) {
                     *var = value;
                 } else {
-                    debug_assert!(false, "Non-existent local variable {}", var_id);
+                    debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
             Variable::Global(var_name) => {
@@ -499,7 +499,7 @@ impl<'x> Context<'x> {
                         }
                         _ => {
                             // Replaced part
-                            message.extend_from_slice(part.get_contents());
+                            message.extend_from_slice(part.contents());
                         }
                     }
                 }

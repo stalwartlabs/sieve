@@ -29,7 +29,7 @@ impl<'x> Context<'x> {
             if let Some(var) = self.vars_match.get_mut(var_num) {
                 *var = value;
             } else {
-                debug_assert!(false, "Invalid match varialbe {}", var_num);
+                debug_assert!(false, "Invalid match varialbe {var_num}");
             }
         }
     }
@@ -43,7 +43,7 @@ impl<'x> Context<'x> {
                     *match_var = String::with_capacity(0);
                 }
             } else {
-                debug_assert!(false, "Failed to clear match variable at index {}.", index);
+                debug_assert!(false, "Failed to clear match variable at index {index}.");
             }
         }
     }

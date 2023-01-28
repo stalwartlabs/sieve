@@ -761,7 +761,7 @@ impl<'x> CompilerState<'x> {
                         Test::String(t) | Test::Environment(t) => &mut t.match_type,
                         Test::VirusTest(t) => &mut t.match_type,
                         _ => {
-                            debug_assert!(false, "This should not have happened: {:?}", test);
+                            debug_assert!(false, "This should not have happened: {test:?}");
                             return false;
                         }
                     };
