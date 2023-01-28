@@ -254,7 +254,7 @@ impl<'x> Context<'x> {
             }
         } else if let HeaderValue::Text(text) = &header.value {
             // Inserted header
-            let bytes = format!("{}\n", text).into_bytes();
+            let bytes = format!("{text}\n").into_bytes();
             if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date() {
                 if dt.is_valid() {
                     return Some(Cow::Owned(dt));

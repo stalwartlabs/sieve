@@ -82,6 +82,7 @@ impl Runtime {
             max_out_messages: 3,
             default_vacation_expiry: 30 * 86400,
             default_duplicate_expiry: 7 * 86400,
+            local_hostname: "localhost".into(),
         }
     }
 
@@ -308,6 +309,15 @@ impl Runtime {
 
     pub fn with_vacation_subject_prefix(mut self, value: impl Into<Cow<'static, str>>) -> Self {
         self.set_vacation_subject_prefix(value);
+        self
+    }
+
+    pub fn set_local_hostname(&mut self, value: impl Into<Cow<'static, str>>) {
+        self.local_hostname = value.into();
+    }
+
+    pub fn with_local_hostname(mut self, value: impl Into<Cow<'static, str>>) -> Self {
+        self.set_local_hostname(value);
         self
     }
 

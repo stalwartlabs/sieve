@@ -683,10 +683,10 @@ impl Compiler {
                                     })?,
                                 Token::Number(n) => StringItem::Text(n.to_string()),
                                 Token::Identifier(s) => StringItem::Text(s.to_string()),
-                                Token::Tag(s) => StringItem::Text(format!(":{}", s)),
+                                Token::Tag(s) => StringItem::Text(format!(":{s}")),
                                 Token::Invalid(s) => StringItem::Text(s),
                                 Token::Semicolon => break,
-                                other => panic!("Invalid test param {:?}", other),
+                                other => panic!("Invalid test param {other:?}"),
                             });
                         }
                         state
@@ -805,7 +805,7 @@ impl<'x> CompilerState<'x> {
                         Test::String(t) | Test::Environment(t) => &mut t.match_type,
                         Test::VirusTest(t) => &mut t.match_type,
                         _ => {
-                            debug_assert!(false, "This should not have happened: {:?}", test);
+                            debug_assert!(false, "This should not have happened: {test:?}");
                             return false;
                         }
                     };

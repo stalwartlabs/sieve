@@ -189,11 +189,7 @@ impl<'x> Context<'x> {
                                     }
                                 }
                             } else {
-                                debug_assert!(
-                                    false,
-                                    "Failed to clear local variables: {:?}",
-                                    clear
-                                );
+                                debug_assert!(false, "Failed to clear local variables: {clear:?}");
                             }
                         }
                         if clear.match_vars != 0 {

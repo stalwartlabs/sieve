@@ -201,7 +201,7 @@ impl<'x> Context<'x> {
                     .unwrap_or(b"")
             } else if let HeaderValue::Text(text) = &header.value {
                 // Inserted header
-                raw_header = format!("{}\n", text).into_bytes().into();
+                raw_header = format!("{text}\n").into_bytes().into();
                 raw_header.as_deref().unwrap()
             } else {
                 b""

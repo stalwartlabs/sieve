@@ -112,7 +112,7 @@ impl<'x> Tokenizer<'x> {
                 if let Ok(number) = word.parse::<usize>() {
                     Token::Number(number * multiplier)
                 } else if self.token_is_tag {
-                    Token::Invalid(format!(":{}", word))
+                    Token::Invalid(format!(":{word}"))
                 } else {
                     Token::Invalid(word.to_string())
                 }
@@ -242,7 +242,7 @@ impl<'x> Tokenizer<'x> {
         if next_token.token == token {
             Ok(())
         } else {
-            Err(next_token.expected(format!("'{}'", token)))
+            Err(next_token.expected(format!("'{token}'")))
         }
     }
 
@@ -274,7 +274,7 @@ impl<'x> Tokenizer<'x> {
             if n < max_value {
                 Ok(n)
             } else {
-                Err(next_token.expected(format!("number lower than {}", max_value)))
+                Err(next_token.expected(format!("number lower than {max_value}")))
             }
         } else {
             Err(next_token.expected("number"))

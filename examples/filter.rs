@@ -68,7 +68,7 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     } else if optional {
                         input = Input::False;
                     } else {
-                        panic!("Script {} not found.", name);
+                        panic!("Script {name} not found.");
                     }
                 }
                 Event::MailboxExists { .. } => {
@@ -84,10 +84,7 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     input = false.into();
                 }
                 Event::Execute { command, arguments } => {
-                    println!(
-                        "Script executed command {:?} with parameters {:?}",
-                        command, arguments
-                    );
+                    println!("Script executed command {command:?} with parameters {arguments:?}");
                     // Set to true if the script succeeded
                     input = false.into();
                 }
@@ -109,7 +106,7 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     input = true.into();
                 }
                 Event::Reject { reason, .. } => {
-                    println!("Reject message with reason {:?}.", reason);
+                    println!("Reject message with reason {reason:?}.");
                     input = true.into();
                 }
                 Event::FileInto {
@@ -149,7 +146,7 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                 Event::Notify {
                     message, method, ..
                 } => {
-                    println!("Notify URI {:?} with message {:?}", method, message);
+                    println!("Notify URI {method:?} with message {message:?}");
                     input = true.into();
                 }
                 Event::CreatedMessage { message, .. } => {
@@ -174,16 +171,15 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                         );
                     }
                     RuntimeError::ScriptErrorMessage(message) => {
-                        eprintln!("Script called the 'error' function with {:?}", message);
+                        eprintln!("Script called the 'error' function with {message:?}");
                     }
                     RuntimeError::CapabilityNotAllowed(capability) => {
                         eprintln!(
-                            "Capability {:?} has been disabled by the administrator.",
-                            capability
+                            "Capability {capability:?} has been disabled by the administrator.",
                         );
                     }
                     RuntimeError::CapabilityNotSupported(capability) => {
-                        eprintln!("Capability {:?} not supported.", capability);
+                        eprintln!("Capability {capability:?} not supported.");
                     }
                     RuntimeError::CPULimitReached => {
                         eprintln!("Script exceeded the configured CPU limit.");

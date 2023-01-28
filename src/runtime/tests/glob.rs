@@ -296,23 +296,17 @@ mod tests {
             let mut match_values = Vec::new();
             assert!(
                 super::glob_match_capture(value, pattern, true, u64::MAX ^ 1, &mut match_values),
-                "{:?} {:?}",
-                value,
-                pattern
+                "{value:?} {pattern:?}",
             );
 
             assert_eq!(
                 match_values.into_iter().map(|(_, v)| v).collect::<Vec<_>>(),
                 expected_result,
-                "{:?} {:?}",
-                value,
-                pattern
+                "{value:?} {pattern:?}",
             );
             assert!(
                 super::glob_match(value, pattern, true),
-                "{:?} {:?}",
-                value,
-                pattern
+                "{value:?} {pattern:?}",
             );
         }
     }

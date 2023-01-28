@@ -427,7 +427,7 @@ impl<'x> CompilerState<'x> {
                 }
             } else {
                 #[cfg(test)]
-                panic!("Argument out of range {}", arg_num);
+                panic!("Argument out of range {arg_num}");
             }
         }
         if let Some(capability) = capability {

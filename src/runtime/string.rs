@@ -33,7 +33,7 @@ impl<'x> Context<'x> {
                 if let Some(data) = self.vars_local.get(*var_num) {
                     data.into()
                 } else {
-                    debug_assert!(false, "Failed to access local variable {}", var_num);
+                    debug_assert!(false, "Failed to access local variable {var_num}");
                     ""[..].into()
                 }
             }
@@ -41,7 +41,7 @@ impl<'x> Context<'x> {
                 if let Some(data) = self.vars_match.get(*var_num) {
                     data.into()
                 } else {
-                    debug_assert!(false, "Failed to access match variable {}", var_num);
+                    debug_assert!(false, "Failed to access match variable {var_num}");
                     ""[..].into()
                 }
             }
@@ -72,14 +72,14 @@ impl<'x> Context<'x> {
                             if let Some(string) = self.vars_local.get(*var_num) {
                                 data.push_str(string);
                             } else {
-                                debug_assert!(false, "Failed to access local variable {}", var_num);
+                                debug_assert!(false, "Failed to access local variable {var_num}");
                             }
                         }
                         StringItem::MatchVariable(var_num) => {
                             if let Some(string) = self.vars_match.get(*var_num) {
                                 data.push_str(string);
                             } else {
-                                debug_assert!(false, "Failed to access match variable {}", var_num);
+                                debug_assert!(false, "Failed to access match variable {var_num}");
                             }
                         }
                         StringItem::GlobalVariable(var_name) => {
@@ -95,7 +95,7 @@ impl<'x> Context<'x> {
                             }
                         }
                         _ => {
-                            debug_assert!(false, "This should not have happened: {:?}", string);
+                            debug_assert!(false, "This should not have happened: {string:?}");
                         }
                     }
                 }

@@ -197,7 +197,7 @@ To run the testsuite:
 To fuzz the library with `cargo-fuzz`:
 
 ```bash
- $ cargo +nightly fuzz run mail_parser
+ $ cargo +nightly fuzz run sieve
 ```
 
 ## Conformed RFCs

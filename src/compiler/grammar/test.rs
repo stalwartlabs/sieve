@@ -534,9 +534,9 @@ impl<'x> CompilerState<'x> {
                                     })?,
                                 Token::Number(n) => StringItem::Text(n.to_string()),
                                 Token::Identifier(s) => StringItem::Text(s.to_string()),
-                                Token::Tag(s) => StringItem::Text(format!(":{}", s)),
+                                Token::Tag(s) => StringItem::Text(format!(":{s}")),
                                 Token::Invalid(s) => StringItem::Text(s),
-                                other => panic!("Invalid test param {:?}", other),
+                                other => panic!("Invalid test param {other:?}"),
                             });
                         }
                         Test::External((name, params, false))

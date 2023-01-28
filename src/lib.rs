@@ -312,6 +312,7 @@ pub struct Runtime {
     pub(crate) environment: AHashMap<String, Cow<'static, str>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
+    pub(crate) local_hostname: Cow<'static, str>,
 
     pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,
@@ -642,14 +643,14 @@ mod tests {
             if let HeaderValue::Address(Addr {
                 address: Some(addr),
                 ..
-            }) = instance.message.get_from()
+            }) = instance.message.from()
             {
                 instance.set_envelope(Envelope::From, addr.to_string());
             }
             if let HeaderValue::Address(Addr {
                 address: Some(addr),
                 ..
-            }) = instance.message.get_to()
+            }) = instance.message.to()
             {
                 instance.set_envelope(Envelope::To, addr.to_string());
             }
@@ -663,7 +664,7 @@ mod tests {
                         } else {
                             "included-global"
                         });
-                        include_path.push(format!("{}.sieve", name));
+                        include_path.push(format!("{name}.sieve" ));
 
                         if let Ok(bytes) = fs::read(include_path.as_path()) {
                             let script = compiler.compile(&add_crlf(&bytes)).unwrap();
@@ -724,7 +725,7 @@ mod tests {
                         } else if command.eq_ignore_ascii_case("always_fail") {
                             false
                         } else {
-                            panic!("Unknown command {}", command);
+                            panic!("Unknown command {command}" );
                         })
                         .into();
                     }
@@ -738,7 +739,7 @@ mod tests {
                         match command.as_str() {
                             "test" => {
                                 current_test = params.pop().unwrap();
-                                println!("Running test '{}'...", current_test);
+                                println!("Running test '{current_test}'..." );
                             }
                             "test_set" => {
                                 let mut params = params.into_iter();
@@ -802,7 +803,7 @@ mod tests {
                                         panic!("Invalid currentdate");
                                     }
                                 } else {
-                                    panic!("test_set {} not implemented.", target);
+                                    panic!("test_set {target} not implemented." );
                                 }
                             }
                             "test_message" => {
@@ -820,7 +821,7 @@ mod tests {
                                     ":smtp" => {
                                         actions.iter().any(|a| matches!(a, Event::SendMessage { .. } ))
                                     }
-                                    param => panic!("Invalid test_message param '{}'", param),
+                                    param => panic!("Invalid test_message param '{param}'" ),
                                 }.into();
                             }
                             "test_assert_message" => {
@@ -831,7 +832,7 @@ mod tests {
                                     print!("<[");
                                     print!("{}", String::from_utf8(built_message).unwrap());
                                     println!("]>");
-                                    panic!("Message built incorrectly at '{}'", current_test);
+                                    panic!("Message built incorrectly at '{current_test}'" );
                                 }
                             }
                             "test_config_set" => {
@@ -926,7 +927,7 @@ mod tests {
                                             3
                                         });
                                     }
-                                    param => panic!("Invalid test_config_set param '{}'", param),
+                                    param => panic!("Invalid test_config_set param '{param}'" ),
                                 }
                             }
                             "test_result_execute" => {
@@ -963,7 +964,7 @@ mod tests {
                                         .any(|a| matches!(a, Event::SendMessage { .. })))
                                     .into()
                                 } else {
-                                    panic!("test_result_action {} not implemented", param);
+                                    panic!("test_result_action {param} not implemented");
                                 };
                             }
                             "test_result_action_count" => {
@@ -1025,7 +1026,7 @@ mod tests {
                             "test_fail" => {
                                 panic!("Test '{}' failed: {}", current_test, params.pop().unwrap());
                             }
-                            _ => panic!("Test command {} not implemented.", command),
+                            _ => panic!("Test command {command} not implemented." ),
                         }
                     }
                     action => {

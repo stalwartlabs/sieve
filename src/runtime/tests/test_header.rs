@@ -309,7 +309,7 @@ impl<'x> Context<'x> {
             if mime_opts == &MimeOpts::None {
                 return visitor_fnc(value);
             } else {
-                raw_header = format!("{}\n", value).into_bytes().into();
+                raw_header = format!("{value}\n").into_bytes().into();
                 header_value_ = MessageStream::new(raw_header.as_ref().unwrap())
                     .parse_content_type()
                     .into();
