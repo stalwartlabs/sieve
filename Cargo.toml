@@ -8,7 +8,7 @@ license = "AGPL-3.0-only"
 keywords = ["sieve", "interpreter", "compiler", "email", "mail"]
 categories = ["email", "compilers"]
 readme = "README.md"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [lib]

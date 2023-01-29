@@ -470,6 +470,16 @@ impl<'x> Context<'x> {
         }
     }
 
+    pub fn with_vars_env(mut self, vars_env: AHashMap<String, Cow<'x, str>>) -> Self {
+        self.vars_env = vars_env;
+        self
+    }
+
+    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Cow<'x, str>)>) -> Self {
+        self.envelope = envelope;
+        self
+    }
+
     pub fn with_envelope(
         mut self,
         envelope: impl TryInto<Envelope>,
