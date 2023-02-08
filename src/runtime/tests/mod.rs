@@ -117,6 +117,7 @@ impl Test {
             Test::Convert(test) => test.exec(ctx),
             Test::Execute(test) => TestResult::Event {
                 event: Event::Execute {
+                    command_type: test.command_type,
                     command: ctx.eval_string(&test.command).into_owned(),
                     arguments: ctx.eval_strings_owned(&test.arguments),
                 },

@@ -34,14 +34,14 @@
 //!
 //! ```rust
 //!     use sieve::{runtime::RuntimeError, Compiler, Event, Input, Runtime};
-//! 
+//!
 //!     let text_script = br#"
 //!     require ["fileinto", "body", "imap4flags"];
 //!     
 //!     if body :contains "tps" {
 //!         setflag "$tps_reports";
 //!     }
-//! 
+//!
 //!     if header :matches "List-ID" "*<*@*" {
 //!         fileinto "INBOX.lists.${2}"; stop;
 //!     }
@@ -50,23 +50,23 @@
 //! To: John Doe <jdoe@example.org>
 //! List-ID: <sales@example.org>
 //! Subject: TPS Reports
-//! 
+//!
 //! We're putting new coversheets on all the TPS reports before they go out now.
-//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
+//! So if you could go ahead and try to remember to do that from now on, that'd be great. All right!
 //! "#;
-//! 
+//!
 //!     // Compile
 //!     let compiler = Compiler::new();
 //!     let script = compiler.compile(text_script).unwrap();
-//! 
+//!
 //!     // Build runtime
 //!     let runtime = Runtime::new();
-//! 
+//!
 //!     // Create filter instance
 //!     let mut instance = runtime.filter(raw_message.as_bytes());
 //!     let mut input = Input::script("my-script", script);
 //!     let mut messages: Vec<String> = Vec::new();
-//! 
+//!
 //!     // Start event loop
 //!     while let Some(result) = instance.run(input) {
 //!         match result {
@@ -94,7 +94,7 @@
 //!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
-//!                 Event::Execute { command, arguments } => {
+//!                 Event::Execute { command, arguments, .. } => {
 //!                     println!(
 //!                         "Script executed command {:?} with parameters {:?}",
 //!                         command, arguments
@@ -102,7 +102,7 @@
 //!                     // Set to true if the script succeeded
 //!                     input = false.into();
 //!                 }
-//! 
+//!
 //!                 Event::Keep { flags, message_id } => {
 //!                     println!(
 //!                         "Keep message '{}' with flags {:?}.",
@@ -167,7 +167,7 @@
 //!                     messages.push(String::from_utf8(message).unwrap());
 //!                     input = true.into();
 //!                 }
-//! 
+//!
 //!                 #[cfg(test)]
 //!                 _ => unreachable!(),
 //!             },
@@ -416,6 +416,7 @@ pub enum Event {
         last: bool,
     },
     Execute {
+        command_type: CommandType,
         command: String,
         arguments: Vec<String>,
     },
@@ -518,4 +519,10 @@ pub enum VirusStatus {
     Cured,
     MaybeVirus,
     Virus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CommandType {
+    Binary,
+    Query,
 }
