@@ -1,11 +1,11 @@
 require "vnd.stalwart.execute";
 
 test "Basic" {
-    if execute "always_fail" ["param1", "param2"] {
+    if execute :binary "always_fail" ["param1", "param2"] {
         test_fail "Execute command did not fail.";
     }
 
-    if not execute "always_succeed" ["param1", "param2"] {
+    if not execute :binary "always_succeed" ["param1", "param2"] {
         test_fail "Execute command did not succeed.";
     }
 }

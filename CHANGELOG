@@ -1,7 +1,11 @@
+sieve-rs 0.3.0
+================================
+- Updated ``execute`` grammar.
+- Upgraded to latest mail-parser.
+
 sieve-rs 0.2.0
 ================================
 - Improved event loop.
-- Initial release.
 
 sieve-rs 0.1.0
 ================================

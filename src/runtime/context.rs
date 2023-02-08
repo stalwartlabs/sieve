@@ -348,6 +348,7 @@ impl<'x> Context<'x> {
                     }
                     Instruction::Execute(execute) => {
                         return Some(Ok(Event::Execute {
+                            command_type: execute.command_type,
                             command: self.eval_string(&execute.command).into_owned(),
                             arguments: self.eval_strings_owned(&execute.arguments),
                         }));

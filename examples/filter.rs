@@ -83,7 +83,9 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     // Set to true if the ID is duplicate
                     input = false.into();
                 }
-                Event::Execute { command, arguments } => {
+                Event::Execute {
+                    command, arguments, ..
+                } => {
                     println!("Script executed command {command:?} with parameters {arguments:?}");
                     // Set to true if the script succeeded
                     input = false.into();
