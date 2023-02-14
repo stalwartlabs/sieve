@@ -30,6 +30,7 @@ use crate::compiler::CompileError;
 use crate::CommandType;
 
 use crate::compiler::grammar::test::Test;
+use crate::compiler::lexer::tokenizer::TokenInfo;
 use crate::compiler::lexer::word::Word;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,7 +68,17 @@ impl<'x> CompilerState<'x> {
                 }
             },
             command: self.parse_string()?,
-            arguments: self.parse_strings()?,
+            arguments: if !matches!(
+                self.tokens.peek(),
+                Some(Ok(TokenInfo {
+                    token: Token::Semicolon,
+                    ..
+                }))
+            ) {
+                self.parse_strings()?
+            } else {
+                vec![]
+            },
             is_not: false,
         })
     }

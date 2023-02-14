@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{grammar::instruction::CompilerState, ErrorType},
     runtime::string::IntoString,
-    MAX_MATCH_VARIABLES,
+    Envelope, MAX_MATCH_VARIABLES,
 };
 
 enum State {
@@ -47,6 +47,7 @@ pub(crate) enum StringItem {
     MatchVariable(usize),
     GlobalVariable(String),
     EnvironmentVariable(String),
+    EnvelopeVariable(Envelope),
     List(Vec<StringItem>),
 }
 
@@ -141,6 +142,27 @@ impl<'x> CompilerState<'x> {
                                         items.push(StringItem::EnvironmentVariable(
                                             var_name.to_string(),
                                         ));
+                                    }
+                                    Some(("envelope", var_name)) if !var_name.is_empty() => {
+                                        let envelope = match var_name {
+                                            "from" => Envelope::From,
+                                            "to" => Envelope::To,
+                                            "by-time-absolute" => Envelope::ByTimeAbsolute,
+                                            "by-time-relative" => Envelope::ByTimeRelative,
+                                            "by-mode" => Envelope::ByMode,
+                                            "by-trace" => Envelope::ByTrace,
+                                            "notify" => Envelope::Notify,
+                                            "orcpt" => Envelope::Orcpt,
+                                            "ret" => Envelope::Ret,
+                                            "envid" => Envelope::Envid,
+                                            _ => {
+                                                is_var_error = true;
+                                                Envelope::From
+                                            }
+                                        };
+                                        if !is_var_error {
+                                            items.push(StringItem::EnvelopeVariable(envelope));
+                                        }
                                     }
                                     /*Some((namespace, _)) => {
                                         return Err(ErrorType::InvalidNamespace(
@@ -302,6 +324,18 @@ impl Display for StringItem {
                 }
                 Ok(())
             }
+            StringItem::EnvelopeVariable(env) => f.write_str(match env {
+                Envelope::From => "${{envelope.from}}",
+                Envelope::To => "${{envelope.to}}",
+                Envelope::ByTimeAbsolute => "${{envelope.by-time-absolute}}",
+                Envelope::ByTimeRelative => "${{envelope.by-time-relative}}",
+                Envelope::ByMode => "${{envelope.by-mode}}",
+                Envelope::ByTrace => "${{envelope.by-trace}}",
+                Envelope::Notify => "${{envelope.notify}}",
+                Envelope::Orcpt => "${{envelope.orcpt}}",
+                Envelope::Ret => "${{envelope.ret}}",
+                Envelope::Envid => "${{envelope.envit}}",
+            }),
         }
     }
 }

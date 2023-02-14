@@ -101,6 +101,18 @@ impl<'x> Context<'x> {
                 }
                 data.into()
             }
+            StringItem::EnvelopeVariable(envelope) => self
+                .envelope
+                .iter()
+                .find_map(|(e, v)| {
+                    if e == envelope {
+                        v.as_ref().into()
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_default()
+                .into(),
         }
     }
 
