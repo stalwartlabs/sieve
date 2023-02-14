@@ -5,7 +5,7 @@
 [![docs.rs](https://img.shields.io/docsrs/sieve-rs)](https://docs.rs/sieve-rs)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-_sieve_ is a fast and secure Sieve filter interpreter for Rust that supports all [existing Sieve extensions](https://www.iana.org/assignments/sieve-extensions/sieve-extensions.xhtml).
+_sieve_ is a fast and secure Sieve filter interpreter for Rust that supports all [registered Sieve extensions](https://www.iana.org/assignments/sieve-extensions/sieve-extensions.xhtml).
 
 ## Usage Example
 
