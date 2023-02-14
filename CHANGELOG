@@ -2,6 +2,7 @@ sieve-rs 0.3.0
 ================================
 - Updated ``execute`` grammar.
 - Upgraded to latest mail-parser.
+- Envelope accessible from environment variables.
 
 sieve-rs 0.2.0
 ================================
