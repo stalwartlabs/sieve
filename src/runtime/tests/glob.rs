@@ -132,7 +132,7 @@ pub(crate) fn glob_match_capture(
         let mut value = Vec::with_capacity(value_.len());
         for char in value_.chars() {
             if char.is_uppercase() {
-                for (pos, lowerchar) in char.to_lowercase().into_iter().enumerate() {
+                for (pos, lowerchar) in char.to_lowercase().enumerate() {
                     value.push((
                         lowerchar,
                         if pos == 0 {

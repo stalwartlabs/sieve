@@ -1,0 +1,48 @@
+require "vnd.stalwart.testsuite";
+require "encoded-character";
+require "variables";
+require "fileinto";
+require "mailbox";
+require "body";
+
+require "editheader";
+
+set "message" text:
+X-Some-Header: Header content
+From: stephan@example.com
+To: timo@example.com
+Message-Id: <1234@local>
+Subject: Frop!
+
+Frop!
+
+.
+;
+
+set "expected_message" text:
+From: no-reply@my.domain
+X-Some-Header: Header content
+To: timo@example.com
+Message-Id: <1234@local>
+Subject: Frop!
+
+Frop!
+
+.
+;
+
+
+test_set "message" "${message}";
+test "Remove, Add, Redirect" {
+    deleteheader "from";
+
+    addheader "From" "no-reply@my.domain";
+
+    redirect "redirect@here.email";
+
+    if not test_result_action "redirect" "redirect@here.email" {
+		  test_fail "redirect action missing from result";
+  	}
+
+    test_assert_message "${expected_message}";
+}
