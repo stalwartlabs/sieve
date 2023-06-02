@@ -1,3 +1,7 @@
+sieve-rs 0.3.1
+================================
+- Bump `mail-builder` dependency to 0.3.0.
+
 sieve-rs 0.3.0
 ================================
 - Updated ``execute`` grammar.
