@@ -57,7 +57,7 @@ impl EditFlags {
                 ctx.set_variable(var_name, flags);
             }
             Action::Add => {
-                let mut new_flags = ctx.get_variable(var_name).cloned().unwrap_or_default();
+                let mut new_flags = ctx.get_variable(var_name).unwrap_or_default().to_string();
                 let mut current_flags = new_flags
                     .split(' ')
                     .map(|f| f.to_lowercase())
@@ -80,11 +80,7 @@ impl EditFlags {
                 let mut current_flags = Vec::new();
                 let mut current_flags_lc = Vec::new();
 
-                for flag in ctx
-                    .get_variable(var_name)
-                    .map_or("", |f| f.as_str())
-                    .split(' ')
-                {
+                for flag in ctx.get_variable(var_name).unwrap_or_default().split(' ') {
                     current_flags.push(flag);
                     current_flags_lc.push(flag.to_lowercase());
                 }

@@ -30,6 +30,7 @@ use crate::{
         CompileError, ErrorType,
     },
     runtime::string::IntoString,
+    Envelope,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -55,6 +56,7 @@ pub(crate) struct Set {
 pub(crate) enum Variable {
     Local(usize),
     Global(String),
+    Envelope(Envelope),
 }
 
 impl<'x> CompilerState<'x> {
@@ -121,9 +123,13 @@ impl<'x> CompilerState<'x> {
 
     pub(crate) fn register_variable(&mut self, name: String) -> Result<Variable, ErrorType> {
         let name = name.to_lowercase();
-        if let Some((namespace, name)) = name.split_once('.') {
+        if let Some((namespace, part)) = name.split_once('.') {
             if namespace == "global" {
-                Ok(Variable::Global(name.to_string()))
+                Ok(Variable::Global(part.to_string()))
+            } else if namespace == "envelope" {
+                Envelope::try_from(part)
+                    .map(Variable::Envelope)
+                    .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string()))
             } else {
                 Err(ErrorType::InvalidNamespace(namespace.to_string()))
             }

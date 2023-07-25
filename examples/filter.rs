@@ -90,6 +90,10 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     // Set to true if the script succeeded
                     input = false.into();
                 }
+                Event::SetEnvelope { envelope, value } => {
+                    println!("Set envelope {envelope:?} to {value:?}");
+                    input = true.into();
+                }
 
                 Event::Keep { flags, message_id } => {
                     println!(
