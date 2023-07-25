@@ -275,10 +275,20 @@ impl<'x> Context<'x> {
                     }
                     Instruction::Replace(replace) => replace.exec(self),
                     Instruction::Enclose(enclose) => enclose.exec(self),
-                    Instruction::ExtractText(extract) => extract.exec(self),
+                    Instruction::ExtractText(extract) => {
+                        extract.exec(self);
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
+                        }
+                    }
                     Instruction::AddHeader(add_header) => add_header.exec(self),
                     Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
-                    Instruction::Set(set) => set.exec(self),
+                    Instruction::Set(set) => {
+                        set.exec(self);
+                        if let Some(event) = self.queued_events.next() {
+                            return Some(Ok(event));
+                        }
+                    }
                     Instruction::Notify(notify) => {
                         notify.exec(self);
                         if let Some(event) = self.queued_events.next() {

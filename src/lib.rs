@@ -102,6 +102,10 @@
 //!                     // Set to true if the script succeeded
 //!                     input = false.into();
 //!                 }
+//!                 Event::SetEnvelope { envelope, value } => {
+//!                     println!("Set envelope {envelope:?} to {value:?}");
+//!                     input = true.into();
+//!                 }
 //!
 //!                 Event::Keep { flags, message_id } => {
 //!                     println!(
@@ -378,7 +382,7 @@ pub enum Script {
     Global(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Envelope {
     From,
     To,
@@ -422,6 +426,10 @@ pub enum Event {
         command_type: CommandType,
         command: String,
         arguments: Vec<String>,
+    },
+    SetEnvelope {
+        envelope: Envelope,
+        value: String,
     },
 
     // Actions

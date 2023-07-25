@@ -74,3 +74,5 @@ if string :is "${global.i_am_on_vacation}" "1"
 {
     vacation "It's true, I am on vacation.";
 }
+
+set "envelope.from" "test@domain.com";

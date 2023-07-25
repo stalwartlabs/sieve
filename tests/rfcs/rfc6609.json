@@ -717,5 +717,19 @@
         }
       }
     }
+  ],
+  [
+    54,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Envelope": "From"
+        },
+        "value": {
+          "Text": "test@domain.com"
+        }
+      }
+    }
   ]
 ]

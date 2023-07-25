@@ -209,7 +209,7 @@ impl TryFrom<String> for Envelope {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if let Some(envelope) = ENVELOPE.get(&value) {
-            Ok(envelope.clone())
+            Ok(*envelope)
         } else {
             Err(value)
         }
@@ -221,7 +221,7 @@ impl<'x> TryFrom<&'x str> for Envelope {
 
     fn try_from(value: &'x str) -> Result<Self, Self::Error> {
         if let Some(envelope) = ENVELOPE.get(value) {
-            Ok(envelope.clone())
+            Ok(*envelope)
         } else {
             Err(value)
         }

@@ -23,7 +23,7 @@
 
 use crate::{
     compiler::grammar::actions::action_set::{Modifier, Set, Variable},
-    Context,
+    Context, Event,
 };
 use std::fmt::Write;
 
@@ -63,13 +63,27 @@ impl<'x> Context<'x> {
             Variable::Global(var_name) => {
                 self.vars_global.insert(var_name.clone(), variable);
             }
+            Variable::Envelope(env) => {
+                self.queued_events = vec![Event::SetEnvelope {
+                    envelope: *env,
+                    value: variable,
+                }]
+                .into_iter();
+            }
         }
     }
 
-    pub(crate) fn get_variable(&self, var_name: &Variable) -> Option<&String> {
+    pub(crate) fn get_variable(&self, var_name: &Variable) -> Option<&str> {
         match var_name {
-            Variable::Local(var_id) => self.vars_local.get(*var_id),
-            Variable::Global(var_name) => self.vars_global.get(var_name),
+            Variable::Local(var_id) => self.vars_local.get(*var_id).map(|s| s.as_str()),
+            Variable::Global(var_name) => self.vars_global.get(var_name).map(|s| s.as_str()),
+            Variable::Envelope(env) => self.envelope.iter().find_map(|(name, val)| {
+                if name == env {
+                    Some(val.as_ref())
+                } else {
+                    None
+                }
+            }),
         }
     }
 }

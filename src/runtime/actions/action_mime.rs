@@ -374,6 +374,13 @@ impl ExtractText {
             Variable::Global(var_name) => {
                 ctx.vars_global.insert(var_name.clone(), value);
             }
+            Variable::Envelope(env) => {
+                ctx.queued_events = vec![Event::SetEnvelope {
+                    envelope: *env,
+                    value,
+                }]
+                .into_iter();
+            }
         }
     }
 }
