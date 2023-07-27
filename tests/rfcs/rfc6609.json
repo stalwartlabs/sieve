@@ -722,12 +722,23 @@
     54,
     {
       "Set": {
-        "modifiers": [],
+        "modifiers": [
+          {
+            "Replace": {
+              "find": {
+                "Text": "."
+              },
+              "replace": {
+                "Text": "-"
+              }
+            }
+          }
+        ],
         "name": {
           "Envelope": "From"
         },
         "value": {
-          "Text": "test@domain.com"
+          "Text": "t.e.s.t@domain.com"
         }
       }
     }

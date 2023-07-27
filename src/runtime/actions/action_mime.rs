@@ -358,7 +358,7 @@ impl ExtractText {
 
             if !self.modifiers.is_empty() && !value.is_empty() {
                 for modifier in &self.modifiers {
-                    value = modifier.apply(&value, ctx.runtime.max_variable_size);
+                    value = modifier.apply(&value, ctx);
                 }
             }
         }
