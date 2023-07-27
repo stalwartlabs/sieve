@@ -31,7 +31,7 @@ impl Set {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut value = ctx.eval_string(&self.value).into_owned();
         for modifier in &self.modifiers {
-            value = modifier.apply(&value, ctx.runtime.max_variable_size);
+            value = modifier.apply(&value, ctx);
         }
 
         ctx.set_variable(&self.name, value);
@@ -89,7 +89,8 @@ impl<'x> Context<'x> {
 }
 
 impl Modifier {
-    pub(crate) fn apply(&self, input: &str, max_len: usize) -> String {
+    pub(crate) fn apply(&self, input: &str, ctx: &Context) -> String {
+        let max_len = ctx.runtime.max_variable_size;
         match self {
             Modifier::Lower => input.to_lowercase(),
             Modifier::Upper => input.to_uppercase(),
@@ -190,6 +191,10 @@ impl Modifier {
                 }
                 result
             }
+            Modifier::Replace { find, replace } => input.replace(
+                ctx.eval_string(find).as_ref(),
+                ctx.eval_string(replace).as_ref(),
+            ),
         }
     }
 }

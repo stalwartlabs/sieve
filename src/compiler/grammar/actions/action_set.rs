@@ -33,16 +33,36 @@ use crate::{
     Envelope,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Modifier {
-    Lower = 41,
-    Upper = 40,
-    LowerFirst = 31,
-    UpperFirst = 30,
-    QuoteWildcard = 20,
-    QuoteRegex = 21,
-    EncodeUrl = 15,
-    Length = 10,
+    Lower,
+    Upper,
+    LowerFirst,
+    UpperFirst,
+    QuoteWildcard,
+    QuoteRegex,
+    EncodeUrl,
+    Length,
+    Replace {
+        find: StringItem,
+        replace: StringItem,
+    },
+}
+
+impl Modifier {
+    pub fn order(&self) -> usize {
+        match self {
+            Modifier::Lower => 41,
+            Modifier::Upper => 40,
+            Modifier::LowerFirst => 31,
+            Modifier::UpperFirst => 30,
+            Modifier::QuoteWildcard => 20,
+            Modifier::QuoteRegex => 21,
+            Modifier::EncodeUrl => 15,
+            Modifier::Length => 10,
+            Modifier::Replace { .. } => 40,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,6 +103,14 @@ impl<'x> CompilerState<'x> {
                         modifiers.push(modifier);
                     }
                 }
+                Token::Tag(Word::Replace) => {
+                    let find = self.tokens.unwrap_next()?;
+                    let replace = self.tokens.unwrap_next()?;
+                    modifiers.push(Modifier::Replace {
+                        find: self.parse_string_token(find)?,
+                        replace: self.parse_string_token(replace)?,
+                    });
+                }
                 _ => {
                     if name.is_none() {
                         name = self.parse_variable_name(token_info)?.into();
@@ -94,7 +122,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
+        modifiers.sort_unstable_by_key(|m| std::cmp::Reverse(m.order()));
 
         self.instructions.push(Instruction::Set(Set {
             modifiers,

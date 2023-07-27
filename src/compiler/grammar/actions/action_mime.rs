@@ -162,6 +162,14 @@ impl<'x> CompilerState<'x> {
                         modifiers.push(modifier);
                     }
                 }
+                Token::Tag(Word::Replace) => {
+                    let find = self.tokens.unwrap_next()?;
+                    let replace = self.tokens.unwrap_next()?;
+                    modifiers.push(Modifier::Replace {
+                        find: self.parse_string_token(find)?,
+                        replace: self.parse_string_token(replace)?,
+                    });
+                }
                 _ => {
                     name = self.parse_variable_name(token_info)?;
                     break;
@@ -169,7 +177,7 @@ impl<'x> CompilerState<'x> {
             }
         }
 
-        modifiers.sort_unstable_by(|a: &Modifier, b: &Modifier| b.cmp(a));
+        modifiers.sort_unstable_by_key(|m| std::cmp::Reverse(m.order()));
 
         self.instructions
             .push(Instruction::ExtractText(ExtractText {
