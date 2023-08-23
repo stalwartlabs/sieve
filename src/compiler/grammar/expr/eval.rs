@@ -56,9 +56,9 @@ impl Number {
         let (a, b) = match (self, other) {
             (Number::Integer(a), Number::Integer(b)) => {
                 return match op {
-                    BinaryOperator::Add => Number::Integer(a + b),
-                    BinaryOperator::Subtract => Number::Integer(a - b),
-                    BinaryOperator::Multiply => Number::Integer(a * b),
+                    BinaryOperator::Add => Number::Integer(a.saturating_add(b)),
+                    BinaryOperator::Subtract => Number::Integer(a.saturating_sub(b)),
+                    BinaryOperator::Multiply => Number::Integer(a.saturating_mul(b)),
                     BinaryOperator::Divide => {
                         Number::Float(if b != 0 { a as f64 / b as f64 } else { 0.0 })
                     }
