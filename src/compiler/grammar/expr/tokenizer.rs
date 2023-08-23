@@ -33,7 +33,7 @@ use crate::{
 
 use super::{BinaryOperator, Token, UnaryOperator};
 
-pub(crate) struct Tokenizer<'x, F>
+pub struct Tokenizer<'x, F>
 where
     F: Fn(&str, bool) -> Result<VariableType, String>,
 {
@@ -53,8 +53,7 @@ impl<'x, F> Tokenizer<'x, F>
 where
     F: Fn(&str, bool) -> Result<VariableType, String>,
 {
-    #[cfg(test)]
-    pub(crate) fn new(expr: &'x str, variable_map: F) -> Self {
+    pub fn new(expr: &'x str, variable_map: F) -> Self {
         Self::from_iter(expr.as_bytes().iter().enumerate().peekable(), variable_map)
     }
 
@@ -75,7 +74,7 @@ where
     }
 
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Result<Option<Token>, String> {
+    pub(crate) fn next(&mut self) -> Result<Option<Token>, String> {
         if let Some(token) = self.next_token.pop() {
             return Ok(Some(token));
         } else if self.is_eof {

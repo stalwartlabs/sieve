@@ -101,7 +101,7 @@ pub(crate) enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum VariableType {
+pub enum VariableType {
     Local(usize),
     Match(usize),
     Global(String),

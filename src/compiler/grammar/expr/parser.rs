@@ -25,7 +25,7 @@ use crate::compiler::VariableType;
 
 use super::{tokenizer::Tokenizer, BinaryOperator, Expression, Token};
 
-pub(crate) struct ExpressionParser<'x, F>
+pub struct ExpressionParser<'x, F>
 where
     F: Fn(&str, bool) -> Result<VariableType, String>,
 {

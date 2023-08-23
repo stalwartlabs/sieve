@@ -569,8 +569,7 @@ mod tests {
         read_dir(path, &mut tests);
 
         for test in tests {
-            let cococ = "fd";
-            if !test
+            /*if !test
                 .file_name()
                 .unwrap()
                 .to_str()
@@ -578,7 +577,7 @@ mod tests {
                 .contains("expressions")
             {
                 continue;
-            }
+            }*/
             println!("===== {} =====", test.display());
             run_test(&test);
         }
@@ -829,8 +828,8 @@ mod tests {
                                 input = match params.next().unwrap().as_str() {
                                     ":folder" => {
                                         let folder_name = params.next().expect("test_message folder name");
-                                        matches!(&instance.final_event, Some(Event::Keep { .. })) || 
-                                            actions.iter().any(|a| if !folder_name.eq_ignore_ascii_case("INBOX") { 
+                                        matches!(&instance.final_event, Some(Event::Keep { .. })) ||
+                                            actions.iter().any(|a| if !folder_name.eq_ignore_ascii_case("INBOX") {
                                                 matches!(a, Event::FileInto { folder, .. } if folder == &folder_name )
                                             } else {
                                                 matches!(a, Event::Keep { .. })

@@ -32,10 +32,16 @@ use sieve::{
     Compiler,
 };
 
+use sieve::compiler::{
+    grammar::expr::{parser::ExpressionParser, tokenizer::Tokenizer},
+    VariableType,
+};
+
 static SIEVE_ALPHABET: &[u8] = b"0123abcd;\"\\ {}[](),\n";
 static ENVELOPE_ALPHABET: &[u8] = b"0123abcd<>@.";
 static URI_ALPHABET: &[u8] = b"abcdefg:@?&;.";
 static ADDR_ALPHABET: &[u8] = b"0123abcd<>@.;\"";
+static EXPR_ALPHABET: &[u8] = b"01235+-*/!&|<>=.()";
 
 fuzz_target!(|data: &[u8]| {
     let data_str = String::from_utf8_lossy(data);
@@ -52,6 +58,17 @@ fuzz_target!(|data: &[u8]| {
 
     validate_uri(&data_str);
     validate_uri(&String::from_utf8(into_alphabet(data, URI_ALPHABET)).unwrap());
+
+    ExpressionParser::from_tokenizer(Tokenizer::new(&data_str, |_, _| Ok(VariableType::Local(0))))
+        .parse()
+        .ok();
+
+    ExpressionParser::from_tokenizer(Tokenizer::new(
+        &String::from_utf8(into_alphabet(data, EXPR_ALPHABET)).unwrap(),
+        |_, _| Ok(VariableType::Local(0)),
+    ))
+    .parse()
+    .ok();
 });
 
 fn into_alphabet(data: &[u8], alphabet: &[u8]) -> Vec<u8> {
