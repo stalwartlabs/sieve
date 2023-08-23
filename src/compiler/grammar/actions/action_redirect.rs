@@ -28,17 +28,17 @@ use crate::compiler::{
         instruction::{CompilerState, Instruction},
         Capability,
     },
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Redirect {
     pub copy: bool,
-    pub address: StringItem,
+    pub address: Value,
     pub notify: Notify,
     pub return_of_content: Ret,
-    pub by_time: ByTime<StringItem>,
+    pub by_time: ByTime<Value>,
     pub list: bool,
 }
 
@@ -144,9 +144,9 @@ impl<'x> CompilerState<'x> {
                         token_info.line_pos,
                     )?;
                     let by_mode_ = self.tokens.expect_static_string()?;
-                    if by_mode_.eq_ignore_ascii_case(b"notify") {
+                    if by_mode_.eq_ignore_ascii_case("notify") {
                         by_mode = ByMode::Notify;
-                    } else if by_mode_.eq_ignore_ascii_case(b"return") {
+                    } else if by_mode_.eq_ignore_ascii_case("return") {
                         by_mode = ByMode::Return;
                     } else {
                         return Err(token_info.expected("\"notify\" or \"return\""));
@@ -178,9 +178,9 @@ impl<'x> CompilerState<'x> {
                         token_info.line_pos,
                     )?;
                     let ret_ = self.tokens.expect_static_string()?;
-                    if ret_.eq_ignore_ascii_case(b"full") {
+                    if ret_.eq_ignore_ascii_case("full") {
                         ret = Ret::Full;
-                    } else if ret_.eq_ignore_ascii_case(b"hdrs") {
+                    } else if ret_.eq_ignore_ascii_case("hdrs") {
                         ret = Ret::Hdrs;
                     } else {
                         return Err(token_info.expected("\"FULL\" or \"HDRS\""));
@@ -194,11 +194,11 @@ impl<'x> CompilerState<'x> {
                         token_info.line_pos,
                     )?;
                     let notify_ = self.tokens.expect_static_string()?;
-                    if notify_.eq_ignore_ascii_case(b"never") {
+                    if notify_.eq_ignore_ascii_case("never") {
                         notify = Notify::Never;
                     } else {
                         let mut items = Vec::new();
-                        for item in String::from_utf8_lossy(&notify_).split(',') {
+                        for item in notify_.split(',') {
                             let item = item.trim();
                             if item.eq_ignore_ascii_case("success") {
                                 items.push(NotifyItem::Success);

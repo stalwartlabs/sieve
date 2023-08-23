@@ -18,7 +18,9 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "EnvironmentVariable": "remote-host"
+              "Variable": {
+                "Environment": "remote-host"
+              }
             }
           ],
           "key_list": [

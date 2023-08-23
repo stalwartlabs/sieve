@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -35,15 +35,15 @@ use crate::compiler::grammar::{test::Test, MatchType};
 pub(crate) struct TestNotifyMethodCapability {
     pub comparator: Comparator,
     pub match_type: MatchType,
-    pub notification_uri: StringItem,
-    pub notification_capability: StringItem,
-    pub key_list: Vec<StringItem>,
+    pub notification_uri: Value,
+    pub notification_capability: Value,
+    pub key_list: Vec<Value>,
     pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestValidNotifyMethod {
-    pub notification_uris: Vec<StringItem>,
+    pub notification_uris: Vec<Value>,
     pub is_not: bool,
 }
 

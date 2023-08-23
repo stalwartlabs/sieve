@@ -24,11 +24,14 @@
 use std::borrow::Cow;
 
 use crate::{
-    compiler::grammar::{
-        tests::test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
-        MatchType,
+    compiler::{
+        grammar::{
+            tests::test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
+            MatchType,
+        },
+        Number,
     },
-    runtime::actions::action_notify::validate_uri,
+    runtime::{actions::action_notify::validate_uri, Variable},
     Context,
 };
 
@@ -39,7 +42,7 @@ impl TestValidNotifyMethod {
         let mut num_valid = 0;
 
         for uri in &self.notification_uris {
-            let uri = ctx.eval_string(uri);
+            let uri = ctx.eval_value(uri).into_cow();
             if let Some(scheme) = validate_uri(uri.as_ref()) {
                 if ctx
                     .runtime
@@ -58,9 +61,10 @@ impl TestValidNotifyMethod {
 
 impl TestNotifyMethodCapability {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let uri = ctx.eval_string(&self.notification_uri);
+        let uri = ctx.eval_value(&self.notification_uri).into_cow();
         if !ctx
-            .eval_string(&self.notification_capability)
+            .eval_value(&self.notification_capability)
+            .into_cow()
             .eq_ignore_ascii_case("online")
             || !validate_uri(uri.as_ref()).map_or(false, |scheme| {
                 ctx.runtime
@@ -74,26 +78,31 @@ impl TestNotifyMethodCapability {
 
         if let MatchType::Count(rel_match) = &self.match_type {
             for key in &self.key_list {
-                if rel_match.cmp_num(1.0, ctx.eval_string(key).as_ref()) {
+                if rel_match.cmp(&Number::from(1.0), &ctx.eval_value(key).to_number()) {
                     return TestResult::Bool(true ^ self.is_not);
                 }
             }
         } else {
             for key in &self.key_list {
-                let key = ctx.eval_string(key);
+                let key = ctx.eval_value(key);
                 if match &self.match_type {
-                    MatchType::Is => self.comparator.is("maybe", key.as_ref()),
-                    MatchType::Contains => self.comparator.contains("maybe", key.as_ref()),
+                    MatchType::Is => self.comparator.is(&Variable::from("maybe"), &key),
+                    MatchType::Contains => {
+                        self.comparator.contains("maybe", key.into_cow().as_ref())
+                    }
                     MatchType::Value(relation) => {
-                        self.comparator.relational(relation, "maybe", key.as_ref())
-                    }
-                    MatchType::Matches(_) => {
                         self.comparator
-                            .matches("maybe", key.as_ref(), 0, &mut Vec::new())
+                            .relational(relation, &Variable::from("maybe"), &key)
                     }
+                    MatchType::Matches(_) => self.comparator.matches(
+                        "maybe",
+                        key.into_cow().as_ref(),
+                        0,
+                        &mut Vec::new(),
+                    ),
                     MatchType::Regex(_) => {
                         self.comparator
-                            .regex("maybe", key.as_ref(), 0, &mut Vec::new())
+                            .regex("maybe", key.into_cow().as_ref(), 0, &mut Vec::new())
                     }
                     _ => false,
                 } {

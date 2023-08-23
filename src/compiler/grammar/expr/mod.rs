@@ -23,24 +23,51 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
-    CompileError, Value,
-};
+use crate::compiler::{Number, VariableType};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Reject {
-    pub ereject: bool,
-    pub reason: Value,
+pub mod eval;
+pub mod parser;
+pub mod tokenizer;
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub(crate) enum Expression {
+    Variable(VariableType),
+    Number(Number),
+    BinaryOperator(BinaryOperator),
+    UnaryOperator(UnaryOperator),
 }
 
-impl<'x> CompilerState<'x> {
-    pub(crate) fn parse_reject(&mut self, ereject: bool) -> Result<(), CompileError> {
-        let cmd = Instruction::Reject(Reject {
-            ereject,
-            reason: self.parse_string()?,
-        });
-        self.instructions.push(cmd);
-        Ok(())
-    }
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+
+    And,
+    Or,
+    Xor,
+
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum UnaryOperator {
+    Not,
+    Minus,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) enum Token {
+    Variable(VariableType),
+    Number(Number),
+    BinaryOperator(BinaryOperator),
+    UnaryOperator(UnaryOperator),
+    OpenParen,
+    CloseParen,
 }

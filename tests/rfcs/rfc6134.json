@@ -57,7 +57,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "8"
+            "Number": {
+              "Integer": 8
+            }
           },
           "match_type": {
             "Value": "Ge"
@@ -102,7 +104,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "3"
+            "Number": {
+              "Integer": 3
+            }
           },
           "match_type": {
             "Value": "Ge"
@@ -201,7 +205,9 @@
           "Local": 0
         },
         "value": {
-          "Text": "8"
+          "Number": {
+            "Integer": 8
+          }
         }
       }
     }
@@ -231,7 +237,9 @@
           "Local": 0
         },
         "value": {
-          "Text": "3"
+          "Number": {
+            "Integer": 3
+          }
         }
       }
     }
@@ -443,25 +451,33 @@
         "value": {
           "List": [
             {
-              "MatchVariable": 3
+              "Variable": {
+                "Match": 3
+              }
             },
             {
               "Text": "."
             },
             {
-              "MatchVariable": 4
+              "Variable": {
+                "Match": 4
+              }
             },
             {
               "Text": "."
             },
             {
-              "MatchVariable": 5
+              "Variable": {
+                "Match": 5
+              }
             },
             {
               "Text": "."
             },
             {
-              "MatchVariable": 6
+              "Variable": {
+                "Match": 6
+              }
             }
           ]
         }
@@ -477,7 +493,9 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "LocalVariable": 0
+              "Variable": {
+                "Local": 0
+              }
             }
           ],
           "key_list": [

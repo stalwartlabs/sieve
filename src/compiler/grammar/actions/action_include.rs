@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 /*
@@ -41,7 +41,7 @@ pub(crate) struct Include {
     pub location: Location,
     pub once: bool,
     pub optional: bool,
-    pub value: StringItem,
+    pub value: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

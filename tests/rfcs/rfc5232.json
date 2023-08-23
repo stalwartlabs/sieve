@@ -100,7 +100,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 0
+            "Variable": {
+              "Local": 0
+            }
           }
         ],
         "mailbox_id": null,
@@ -290,7 +292,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 0
+            "Variable": {
+              "Local": 0
+            }
           }
         ],
         "mailbox_id": null,
@@ -373,7 +377,9 @@
           ],
           "flags": [
             {
-              "Text": "2"
+              "Number": {
+                "Integer": 2
+              }
             }
           ],
           "is_not": false
@@ -510,7 +516,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ],
         "mailbox_id": null,
@@ -579,7 +587,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ],
         "mailbox_id": null,
@@ -638,7 +648,9 @@
       "Keep": {
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ]
       }
@@ -690,7 +702,9 @@
       "Keep": {
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ]
       }
@@ -793,7 +807,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ],
         "mailbox_id": null,
@@ -818,7 +834,9 @@
         },
         "flags": [
           {
-            "LocalVariable": 2
+            "Variable": {
+              "Local": 2
+            }
           }
         ],
         "mailbox_id": null,

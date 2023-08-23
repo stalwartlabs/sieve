@@ -22,9 +22,11 @@
 */
 
 use crate::{
-    compiler::grammar::{
-        actions::action_set::Variable, tests::test_hasflag::TestHasFlag, MatchType,
+    compiler::{
+        grammar::{tests::test_hasflag::TestHasFlag, MatchType},
+        Number, VariableType,
     },
+    runtime::Variable,
     Context,
 };
 
@@ -36,7 +38,7 @@ impl TestHasFlag {
         let variable_list = if !self.variable_list.is_empty() {
             &self.variable_list
         } else {
-            variable_list_.get_or_insert_with(|| vec![Variable::Global("__flags".to_string())])
+            variable_list_.get_or_insert_with(|| vec![VariableType::Global("__flags".to_string())])
         };
 
         let result = if let MatchType::Count(rel_match) = &self.match_type {
@@ -44,7 +46,7 @@ impl TestHasFlag {
             for variable in variable_list {
                 match ctx.get_variable(variable) {
                     Some(flags) if !flags.is_empty() => {
-                        flag_count += flags.split(' ').count();
+                        flag_count += flags.to_cow().split(' ').count();
                     }
                     _ => (),
                 }
@@ -52,7 +54,10 @@ impl TestHasFlag {
 
             let mut result = false;
             for key in &self.flags {
-                if rel_match.cmp_num(flag_count as f64, ctx.eval_string(key).as_ref()) {
+                if rel_match.cmp(
+                    &Number::from(flag_count as i64),
+                    &ctx.eval_value(key).to_number(),
+                ) {
                     result = true;
                     break;
                 }
@@ -64,15 +69,19 @@ impl TestHasFlag {
                 for variable in variable_list {
                     match ctx.get_variable(variable) {
                         Some(flags) if !flags.is_empty() => {
-                            for flag in flags.split(' ') {
+                            for flag in flags.to_cow().split(' ') {
                                 if match &self.match_type {
-                                    MatchType::Is => self.comparator.is(flag, check_flag),
+                                    MatchType::Is => self
+                                        .comparator
+                                        .is(&Variable::from(flag), &Variable::from(check_flag)),
                                     MatchType::Contains => {
                                         self.comparator.contains(flag, check_flag)
                                     }
-                                    MatchType::Value(rel_match) => {
-                                        self.comparator.relational(rel_match, flag, check_flag)
-                                    }
+                                    MatchType::Value(rel_match) => self.comparator.relational(
+                                        rel_match,
+                                        &Variable::from(flag),
+                                        &Variable::from(check_flag),
+                                    ),
                                     MatchType::Matches(capture_positions) => {
                                         self.comparator.matches(
                                             flag,

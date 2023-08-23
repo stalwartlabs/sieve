@@ -33,12 +33,13 @@ use crate::{
         },
         MatchType,
     },
+    runtime::Variable,
     Context,
 };
 
 impl AddHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        let header_name_ = ctx.eval_string(&self.field_name);
+        let header_name_ = ctx.eval_value(&self.field_name).into_cow();
         let mut header_name = String::with_capacity(header_name_.len());
 
         for ch in header_name_.chars() {
@@ -54,7 +55,8 @@ impl AddHeader {
                     ctx.insert_header(
                         ctx.part,
                         header_name,
-                        ctx.eval_string(&self.value)
+                        ctx.eval_value(&self.value)
+                            .into_cow()
                             .as_ref()
                             .remove_crlf(ctx.runtime.max_header_size),
                         self.last,
@@ -67,13 +69,14 @@ impl AddHeader {
 
 impl DeleteHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        let header_name =
-            if let Some(header_name) = HeaderName::parse(ctx.eval_string(&self.field_name)) {
-                header_name
-            } else {
-                return;
-            };
-        let value_patterns = ctx.eval_strings(&self.value_patterns);
+        let header_name = if let Some(header_name) =
+            HeaderName::parse(ctx.eval_value(&self.field_name).into_cow())
+        {
+            header_name
+        } else {
+            return;
+        };
+        let value_patterns = ctx.eval_values(&self.value_patterns);
         let mut deleted_headers = Vec::new();
         let mut deleted_bytes = 0;
 
@@ -90,23 +93,26 @@ impl DeleteHeader {
                     let did_match = ctx.find_header_values(header, &MimeOpts::None, |value| {
                         for pattern in &value_patterns {
                             if match &self.match_type {
-                                MatchType::Is => self.comparator.is(value, pattern.as_ref()),
+                                MatchType::Is => {
+                                    self.comparator.is(&Variable::from(value), pattern)
+                                }
                                 MatchType::Contains => {
-                                    self.comparator.contains(value, pattern.as_ref())
+                                    self.comparator.contains(value, pattern.to_cow().as_ref())
                                 }
-                                MatchType::Value(rel_match) => {
-                                    self.comparator
-                                        .relational(rel_match, value, pattern.as_ref())
-                                }
+                                MatchType::Value(rel_match) => self.comparator.relational(
+                                    rel_match,
+                                    &Variable::from(value),
+                                    pattern,
+                                ),
                                 MatchType::Matches(_) => self.comparator.matches(
                                     value,
-                                    pattern.as_ref(),
+                                    pattern.to_cow().as_ref(),
                                     0,
                                     &mut Vec::new(),
                                 ),
                                 MatchType::Regex(_) => self.comparator.regex(
                                     value,
-                                    pattern.as_ref(),
+                                    pattern.to_cow().as_ref(),
                                     0,
                                     &mut Vec::new(),
                                 ),

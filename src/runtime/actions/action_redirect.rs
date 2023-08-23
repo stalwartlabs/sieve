@@ -30,7 +30,7 @@ use crate::{
 
 impl Redirect {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        if let Some(address) = sanitize_address(ctx.eval_string(&self.address).as_ref()) {
+        if let Some(address) = sanitize_address(ctx.eval_value(&self.address).into_cow().as_ref()) {
             if ctx.num_redirects < ctx.runtime.max_redirects
                 && ctx.num_out_messages < ctx.runtime.max_out_messages
                 && ctx.message.parts[0]
@@ -44,7 +44,8 @@ impl Redirect {
                 if !self.list
                     && (address.eq_ignore_ascii_case(ctx.user_address.as_ref())
                         || ctx.envelope.iter().any(|(e, v)| {
-                            matches!(e, Envelope::From) && v.eq_ignore_ascii_case(address.as_str())
+                            matches!(e, Envelope::From)
+                                && v.to_cow().eq_ignore_ascii_case(address.as_str())
                         }))
                 {
                     return;
@@ -83,15 +84,17 @@ impl Redirect {
                             mode,
                             trace,
                         } => ByTime::Absolute {
-                            alimit: DateTime::parse_rfc3339(ctx.eval_string(alimit).as_ref())
-                                .and_then(|d| {
-                                    if d.is_valid() {
-                                        d.to_timestamp().into()
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(0),
+                            alimit: DateTime::parse_rfc3339(
+                                ctx.eval_value(alimit).into_cow().as_ref(),
+                            )
+                            .and_then(|d| {
+                                if d.is_valid() {
+                                    d.to_timestamp().into()
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0),
                             mode: mode.clone(),
                             trace: *trace,
                         },

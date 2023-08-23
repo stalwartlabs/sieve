@@ -22,16 +22,20 @@
 */
 
 use crate::{
-    compiler::grammar::actions::action_set::{Modifier, Set, Variable},
+    compiler::{
+        grammar::actions::action_set::{Modifier, Set},
+        VariableType,
+    },
+    runtime::Variable,
     Context, Event,
 };
 use std::fmt::Write;
 
 impl Set {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        let mut value = ctx.eval_string(&self.value).into_owned();
+        let mut value = ctx.eval_value(&self.value).into_owned();
         for modifier in &self.modifiers {
-            value = modifier.apply(&value, ctx);
+            value = modifier.apply(value.into_cow().as_ref(), ctx).into();
         }
 
         ctx.set_variable(&self.name, value);
@@ -39,51 +43,58 @@ impl Set {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn set_variable(&mut self, var_name: &Variable, mut variable: String) {
+    pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable<'x>) {
         if variable.len() > self.runtime.max_variable_size {
             let mut new_variable = String::with_capacity(self.runtime.max_variable_size);
-            for ch in variable.chars() {
+            for ch in variable.into_cow().chars() {
                 if ch.len_utf8() + new_variable.len() <= self.runtime.max_variable_size {
                     new_variable.push(ch);
                 } else {
                     break;
                 }
             }
-            variable = new_variable;
+            variable = new_variable.into();
         }
 
         match var_name {
-            Variable::Local(var_id) => {
+            VariableType::Local(var_id) => {
                 if let Some(var) = self.vars_local.get_mut(*var_id) {
-                    *var = variable;
+                    *var = variable.into_owned();
                 } else {
                     debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
-            Variable::Global(var_name) => {
-                self.vars_global.insert(var_name.clone(), variable);
+            VariableType::Global(var_name) => {
+                self.vars_global
+                    .insert(var_name.clone(), variable.into_owned());
             }
-            Variable::Envelope(env) => {
+            VariableType::Envelope(env) => {
                 self.queued_events = vec![Event::SetEnvelope {
                     envelope: *env,
-                    value: variable,
+                    value: variable.into_string(),
                 }]
                 .into_iter();
             }
+            _ => (),
         }
     }
 
-    pub(crate) fn get_variable(&self, var_name: &Variable) -> Option<&str> {
+    pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable<'x>> {
         match var_name {
-            Variable::Local(var_id) => self.vars_local.get(*var_id).map(|s| s.as_str()),
-            Variable::Global(var_name) => self.vars_global.get(var_name).map(|s| s.as_str()),
-            Variable::Envelope(env) => self.envelope.iter().find_map(|(name, val)| {
-                if name == env {
-                    Some(val.as_ref())
-                } else {
-                    None
-                }
-            }),
+            VariableType::Local(var_id) => self.vars_local.get(*var_id),
+            VariableType::Global(var_name) => self.vars_global.get(var_name),
+            VariableType::Envelope(env) => {
+                self.envelope.iter().find_map(
+                    |(name, val)| {
+                        if name == env {
+                            Some(val)
+                        } else {
+                            None
+                        }
+                    },
+                )
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -192,8 +203,8 @@ impl Modifier {
                 result
             }
             Modifier::Replace { find, replace } => input.replace(
-                ctx.eval_string(find).as_ref(),
-                ctx.eval_string(replace).as_ref(),
+                ctx.eval_value(find).into_cow().as_ref(),
+                ctx.eval_value(replace).into_cow().as_ref(),
             ),
         }
     }

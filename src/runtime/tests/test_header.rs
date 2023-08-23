@@ -21,15 +21,14 @@
  * for more details.
 */
 
-use std::borrow::Cow;
-
 use mail_parser::{parsers::MessageStream, Header, HeaderName, HeaderValue, RfcHeader};
 
 use crate::{
     compiler::{
         grammar::{actions::action_mime::MimeOpts, tests::test_header::TestHeader, MatchType},
-        lexer::string::StringItem,
+        Number, Value,
     },
+    runtime::Variable,
     Context, Event,
 };
 
@@ -37,13 +36,13 @@ use super::{mime::SubpartIterator, TestResult};
 
 impl TestHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let key_list = ctx.eval_strings(&self.key_list);
+        let key_list = ctx.eval_values(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
         let mime_opts = match &self.mime_opts {
             MimeOpts::Type => MimeOpts::Type,
             MimeOpts::Subtype => MimeOpts::Subtype,
             MimeOpts::ContentType => MimeOpts::ContentType,
-            MimeOpts::Param(params) => MimeOpts::Param(ctx.eval_strings(params)),
+            MimeOpts::Param(params) => MimeOpts::Param(ctx.eval_values(params)),
             MimeOpts::None => MimeOpts::None,
         };
 
@@ -58,10 +57,10 @@ impl TestHeader {
                         ctx.find_header_values(header, &mime_opts, |value| {
                             for key in &key_list {
                                 if is_is {
-                                    if self.comparator.is(value, key.as_ref()) {
+                                    if self.comparator.is(&Variable::from(value), key) {
                                         return true;
                                     }
-                                } else if self.comparator.contains(value, key.as_ref()) {
+                                } else if self.comparator.contains(value, key.to_cow().as_ref()) {
                                     return true;
                                 }
                             }
@@ -77,7 +76,10 @@ impl TestHeader {
                 |header, _, _| {
                     ctx.find_header_values(header, &mime_opts, |value| {
                         for key in &key_list {
-                            if self.comparator.relational(rel_match, value, key.as_ref()) {
+                            if self
+                                .comparator
+                                .relational(rel_match, &Variable::from(value), key)
+                            {
                                 return true;
                             }
                         }
@@ -98,7 +100,7 @@ impl TestHeader {
                                 if is_matches {
                                     if self.comparator.matches(
                                         value,
-                                        key.as_ref(),
+                                        key.to_cow().as_ref(),
                                         *capture_positions,
                                         &mut captured_values,
                                     ) {
@@ -106,7 +108,7 @@ impl TestHeader {
                                     }
                                 } else if self.comparator.regex(
                                     value,
-                                    key.as_ref(),
+                                    key.to_cow().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
                                 ) {
@@ -144,7 +146,7 @@ impl TestHeader {
                                         for (attr_name, _) in attributes {
                                             if params
                                                 .iter()
-                                                .any(|p| p.eq_ignore_ascii_case(attr_name))
+                                                .any(|p| p.to_cow().eq_ignore_ascii_case(attr_name))
                                             {
                                                 count += 1;
                                             }
@@ -160,7 +162,7 @@ impl TestHeader {
 
                 let mut result = false;
                 for key in &key_list {
-                    if rel_match.cmp_num(count as f64, key.as_ref()) {
+                    if rel_match.cmp(&Number::from(count), &key.to_number()) {
                         result = true;
                         break;
                     }
@@ -186,7 +188,7 @@ impl TestHeader {
                 if !values.is_empty() {
                     return TestResult::Event {
                         event: Event::ListContains {
-                            lists: ctx.eval_strings_owned(&self.key_list),
+                            lists: ctx.eval_values_owned(&self.key_list),
                             values,
                             match_as: self.comparator.as_match(),
                         },
@@ -205,7 +207,7 @@ impl TestHeader {
 impl<'x> Context<'x> {
     pub(crate) fn parse_header_names<'z: 'y, 'y>(
         &'z self,
-        header_names: &'y [StringItem],
+        header_names: &'y [Value],
     ) -> Vec<HeaderName<'y>> {
         let mut result = Vec::with_capacity(header_names.len());
         for header_name in header_names {
@@ -219,9 +221,9 @@ impl<'x> Context<'x> {
     #[inline(always)]
     pub(crate) fn parse_header_name<'z: 'y, 'y>(
         &'z self,
-        header_name: &'y StringItem,
+        header_name: &'y Value,
     ) -> Option<HeaderName<'y>> {
-        HeaderName::parse(self.eval_string(header_name))
+        HeaderName::parse(self.eval_value(header_name).into_cow())
     }
 
     pub(crate) fn find_headers(
@@ -290,7 +292,7 @@ impl<'x> Context<'x> {
     pub(crate) fn find_header_values(
         &self,
         header: &Header,
-        mime_opts: &MimeOpts<Cow<str>>,
+        mime_opts: &MimeOpts<Variable>,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
         let mut raw_header = None;
@@ -361,7 +363,7 @@ impl<'x> Context<'x> {
                 if let Some(attributes) = &ct.attributes {
                     for param in params {
                         for (attr_name, attr_value) in attributes {
-                            if param.eq_ignore_ascii_case(attr_name)
+                            if param.to_cow().eq_ignore_ascii_case(attr_name)
                                 && visitor_fnc(attr_value.as_ref())
                             {
                                 return true;

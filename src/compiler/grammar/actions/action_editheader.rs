@@ -29,8 +29,8 @@ use crate::compiler::{
         instruction::{CompilerState, Instruction},
         Capability, Comparator,
     },
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError, ErrorType,
+    lexer::{word::Word, Token},
+    CompileError, ErrorType, Value,
 };
 
 use crate::compiler::grammar::MatchType;
@@ -38,8 +38,8 @@ use crate::compiler::grammar::MatchType;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct AddHeader {
     pub last: bool,
-    pub field_name: StringItem,
-    pub value: StringItem,
+    pub field_name: Value,
+    pub value: Value,
 }
 
 /*
@@ -54,8 +54,8 @@ pub(crate) struct DeleteHeader {
     pub index: Option<i32>,
     pub comparator: Comparator,
     pub match_type: MatchType,
-    pub field_name: StringItem,
-    pub value_patterns: Vec<StringItem>,
+    pub field_name: Value,
+    pub value_patterns: Vec<Value>,
     pub mime_anychild: bool,
 }
 
@@ -75,7 +75,7 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     let string = self.parse_string_token(token_info)?;
                     if field_name.is_none() {
-                        if let StringItem::Text(header_name) = &string {
+                        if let Value::Text(header_name) = &string {
                             if HeaderName::parse(header_name).is_none() {
                                 return Err(self
                                     .tokens
@@ -88,7 +88,7 @@ impl<'x> CompilerState<'x> {
                     } else {
                         if matches!(
                             &string,
-                            StringItem::Text(value) if value.len() > self.compiler.max_header_size
+                            Value::Text(value) if value.len() > self.compiler.max_header_size
                         ) {
                             return Err(self
                                 .tokens
@@ -110,7 +110,7 @@ impl<'x> CompilerState<'x> {
     }
 
     pub(crate) fn parse_deleteheader(&mut self) -> Result<(), CompileError> {
-        let field_name: StringItem;
+        let field_name: Value;
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut index = None;
@@ -174,7 +174,7 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     field_name = self.parse_string_token(token_info)?;
-                    if let StringItem::Text(header_name) = &field_name {
+                    if let Value::Text(header_name) = &field_name {
                         if HeaderName::parse(header_name).is_none() {
                             return Err(self
                                 .tokens

@@ -277,7 +277,7 @@ use compiler::grammar::{
     Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::context::ScriptStack;
+use runtime::{context::ScriptStack, Variable};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -313,7 +313,7 @@ pub struct Runtime {
     pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
-    pub(crate) environment: AHashMap<String, Cow<'static, str>>,
+    pub(crate) environment: AHashMap<String, Variable<'static>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
@@ -346,7 +346,7 @@ pub struct Context<'x> {
 
     pub(crate) message: Message<'x>,
     pub(crate) message_size: usize,
-    pub(crate) envelope: Vec<(Envelope, Cow<'x, str>)>,
+    pub(crate) envelope: Vec<(Envelope, Variable<'x>)>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
     pub(crate) part: usize,
@@ -360,10 +360,10 @@ pub struct Context<'x> {
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
     pub(crate) script_stack: Vec<ScriptStack>,
-    pub(crate) vars_global: AHashMap<String, String>,
-    pub(crate) vars_env: AHashMap<String, Cow<'x, str>>,
-    pub(crate) vars_local: Vec<String>,
-    pub(crate) vars_match: Vec<String>,
+    pub(crate) vars_global: AHashMap<String, Variable<'static>>,
+    pub(crate) vars_env: AHashMap<String, Variable<'x>>,
+    pub(crate) vars_local: Vec<Variable<'static>>,
+    pub(crate) vars_match: Vec<Variable<'static>>,
 
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
@@ -569,15 +569,16 @@ mod tests {
         read_dir(path, &mut tests);
 
         for test in tests {
-            /*if !test
+            let cococ = "fd";
+            if !test
                 .file_name()
                 .unwrap()
                 .to_str()
                 .unwrap()
-                .contains("error")
+                .contains("expressions")
             {
                 continue;
-            }*/
+            }
             println!("===== {} =====", test.display());
             run_test(&test);
         }

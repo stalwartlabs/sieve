@@ -23,9 +23,14 @@
 
 use std::{borrow::Cow, fmt::Display};
 
-use crate::{runtime::RuntimeError, Compiler};
+use serde::{Deserialize, Serialize};
 
-use self::{grammar::Capability, lexer::tokenizer::TokenInfo};
+use crate::{runtime::RuntimeError, Compiler, Envelope};
+
+use self::{
+    grammar::{expr::Expression, Capability},
+    lexer::tokenizer::TokenInfo,
+};
 
 pub mod grammar;
 pub mod lexer;
@@ -45,6 +50,7 @@ pub enum ErrorType {
     InvalidUnicodeSequence(u32),
     InvalidNamespace(String),
     InvalidRegex(String),
+    InvalidExpression(String),
     InvalidUtf8String,
     InvalidHeaderName,
     InvalidArguments,
@@ -82,6 +88,58 @@ pub enum ErrorType {
 impl Default for Compiler {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum Value {
+    Text(String),
+    Number(Number),
+    Variable(VariableType),
+    Expression(Vec<Expression>),
+    List(Vec<Value>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum VariableType {
+    Local(usize),
+    Match(usize),
+    Global(String),
+    Environment(String),
+    Envelope(Envelope),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Number {
+    Integer(i64),
+    Float(f64),
+}
+
+impl Number {
+    #[cfg(test)]
+    pub fn to_float(&self) -> f64 {
+        match self {
+            Number::Integer(i) => *i as f64,
+            Number::Float(fl) => *fl,
+        }
+    }
+}
+
+impl From<Number> for usize {
+    fn from(value: Number) -> Self {
+        match value {
+            Number::Integer(i) => i as usize,
+            Number::Float(fl) => fl as usize,
+        }
+    }
+}
+
+impl Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Number::Integer(i) => i.fmt(f),
+            Number::Float(fl) => fl.fmt(f),
+        }
     }
 }
 
@@ -228,13 +286,13 @@ impl TokenInfo {
         }
     }
 
-    pub fn invalid_utf8(self) -> CompileError {
+    /*pub fn invalid_utf8(self) -> CompileError {
         CompileError {
             line_num: self.line_num,
             line_pos: self.line_pos,
             error_type: ErrorType::InvalidUtf8String,
         }
-    }
+    }*/
 
     pub fn custom(self, error_type: ErrorType) -> CompileError {
         CompileError {
@@ -260,6 +318,7 @@ impl Display for CompileError {
             }
             ErrorType::InvalidNamespace(value) => write!(f, "Invalid namespace {value:?}"),
             ErrorType::InvalidRegex(value) => write!(f, "Invalid regular expression {value:?}"),
+            ErrorType::InvalidExpression(value) => write!(f, "Invalid expression {value}"),
             ErrorType::InvalidUtf8String => write!(f, "Invalid UTF-8 string"),
             ErrorType::InvalidHeaderName => write!(f, "Invalid header name"),
             ErrorType::InvalidArguments => write!(f, "Invalid Arguments"),
@@ -355,6 +414,18 @@ mod tests {
             let mut file_name = file_name.unwrap().path();
             if file_name.extension().map_or(false, |e| e == "sieve") {
                 println!("Parsing {}", file_name.display());
+
+                /*if !file_name
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .contains("extensions")
+                {
+                    let test = "true";
+                    continue;
+                }*/
+
                 let script = fs::read(&file_name).unwrap();
                 file_name.set_extension("json");
                 let expected_result = fs::read(&file_name).unwrap();

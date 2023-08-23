@@ -35,15 +35,15 @@ use crate::{
 use super::{
     actions::action_include::IncludeResult,
     tests::{test_envelope::parse_envelope_address, TestResult},
-    RuntimeError,
+    RuntimeError, Variable,
 };
 
 #[derive(Clone, Debug)]
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
     pub(crate) prev_pos: usize,
-    pub(crate) prev_vars_local: Vec<String>,
-    pub(crate) prev_vars_match: Vec<String>,
+    pub(crate) prev_vars_local: Vec<Variable<'static>>,
+    pub(crate) prev_vars_match: Vec<Variable<'static>>,
 }
 
 impl<'x> Context<'x> {
@@ -111,11 +111,11 @@ impl<'x> Context<'x> {
                         prev_pos: self.pos,
                         prev_vars_local: std::mem::replace(
                             &mut self.vars_local,
-                            vec![String::with_capacity(0); num_vars],
+                            vec![Variable::default(); num_vars],
                         ),
                         prev_vars_match: std::mem::replace(
                             &mut self.vars_match,
-                            vec![String::with_capacity(0); num_match_vars],
+                            vec![Variable::default(); num_match_vars],
                         ),
                     });
                     self.pos = 0;
@@ -185,7 +185,7 @@ impl<'x> Context<'x> {
                             ) {
                                 for local_var in local_vars.iter_mut() {
                                     if !local_var.is_empty() {
-                                        *local_var = String::with_capacity(0);
+                                        *local_var = Variable::default();
                                     }
                                 }
                             } else {
@@ -230,7 +230,7 @@ impl<'x> Context<'x> {
                         self.final_event = None;
                         return Some(Ok(Event::Reject {
                             extended: reject.ereject,
-                            reason: self.eval_string(&reject.reason).into_owned(),
+                            reason: self.eval_value(&reject.reason).into_string(),
                         }));
                     }
                     Instruction::ForEveryPart(fep) => {
@@ -309,11 +309,11 @@ impl<'x> Context<'x> {
                                 prev_pos: self.pos,
                                 prev_vars_local: std::mem::replace(
                                     &mut self.vars_local,
-                                    vec![String::with_capacity(0); script.num_vars],
+                                    vec![Variable::default(); script.num_vars],
                                 ),
                                 prev_vars_match: std::mem::replace(
                                     &mut self.vars_match,
-                                    vec![String::with_capacity(0); script.num_match_vars],
+                                    vec![Variable::default(); script.num_match_vars],
                                 ),
                             });
                             self.pos = 0;
@@ -353,14 +353,14 @@ impl<'x> Context<'x> {
                     Instruction::Error(err) => {
                         self.finish_loop();
                         return Some(Err(RuntimeError::ScriptErrorMessage(
-                            self.eval_string(&err.message).into_owned(),
+                            self.eval_value(&err.message).into_string(),
                         )));
                     }
                     Instruction::Execute(execute) => {
                         return Some(Ok(Event::Execute {
                             command_type: execute.command_type,
-                            command: self.eval_string(&execute.command).into_owned(),
-                            arguments: self.eval_strings_owned(&execute.arguments),
+                            command: self.eval_value(&execute.command).into_string(),
+                            arguments: self.eval_values_owned(&execute.arguments),
                         }));
                     }
                     Instruction::Invalid(invalid) => {
@@ -374,7 +374,7 @@ impl<'x> Context<'x> {
                             command: command.to_string(),
                             params: params
                                 .iter()
-                                .map(|p| self.eval_string(p).to_string())
+                                .map(|p| self.eval_value(p).into_string())
                                 .collect(),
                         }));
                     }
@@ -476,17 +476,17 @@ impl<'x> Context<'x> {
                     self.envelope.push((envelope, value.to_string().into()));
                 }
             } else {
-                self.envelope.push((envelope, value.into()));
+                self.envelope.push((envelope, Variable::from(value.into())));
             }
         }
     }
 
-    pub fn with_vars_env(mut self, vars_env: AHashMap<String, Cow<'x, str>>) -> Self {
+    pub fn with_vars_env(mut self, vars_env: AHashMap<String, Variable<'x>>) -> Self {
         self.vars_env = vars_env;
         self
     }
 
-    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Cow<'x, str>)>) -> Self {
+    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Variable<'x>)>) -> Self {
         self.envelope = envelope;
         self
     }
@@ -529,14 +529,14 @@ impl<'x> Context<'x> {
         self
     }
 
-    pub fn set_env_variable(&mut self, name: impl Into<String>, value: impl Into<Cow<'x, str>>) {
+    pub fn set_env_variable(&mut self, name: impl Into<String>, value: impl Into<Variable<'x>>) {
         self.vars_env.insert(name.into(), value.into());
     }
 
     pub fn with_env_variable(
         mut self,
         name: impl Into<String>,
-        value: impl Into<Cow<'x, str>>,
+        value: impl Into<Variable<'x>>,
     ) -> Self {
         self.set_env_variable(name, value);
         self

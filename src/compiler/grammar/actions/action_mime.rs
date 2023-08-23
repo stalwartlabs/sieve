@@ -25,11 +25,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value, VariableType,
 };
 
-use super::action_set::{Modifier, Variable};
+use super::action_set::Modifier;
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct ForEveryPart {
@@ -38,24 +38,24 @@ pub(crate) struct ForEveryPart {
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Replace {
-    pub subject: Option<StringItem>,
-    pub from: Option<StringItem>,
-    pub replacement: StringItem,
+    pub subject: Option<Value>,
+    pub from: Option<Value>,
+    pub replacement: Value,
     pub mime: bool,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Enclose {
-    pub subject: Option<StringItem>,
-    pub headers: Vec<StringItem>,
-    pub value: StringItem,
+    pub subject: Option<Value>,
+    pub headers: Vec<Value>,
+    pub value: Value,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct ExtractText {
     pub modifiers: Vec<Modifier>,
     pub first: Option<usize>,
-    pub name: Variable,
+    pub name: VariableType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,10 +188,7 @@ impl<'x> CompilerState<'x> {
         Ok(())
     }
 
-    pub(crate) fn parse_mimeopts(
-        &mut self,
-        opts: Word,
-    ) -> Result<MimeOpts<StringItem>, CompileError> {
+    pub(crate) fn parse_mimeopts(&mut self, opts: Word) -> Result<MimeOpts<Value>, CompileError> {
         Ok(match opts {
             Word::Type => MimeOpts::Type,
             Word::Subtype => MimeOpts::Subtype,

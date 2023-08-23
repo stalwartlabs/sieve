@@ -23,7 +23,9 @@
           ],
           "key_list": [
             {
-              "Text": "3"
+              "Number": {
+                "Integer": 3
+              }
             }
           ],
           "match_type": {
@@ -77,7 +79,9 @@
           ],
           "key_list": [
             {
-              "Text": "5"
+              "Number": {
+                "Integer": 5
+              }
             }
           ],
           "address_part": "All",
@@ -203,7 +207,9 @@
           ],
           "key_list": [
             {
-              "Text": "1"
+              "Number": {
+                "Integer": 1
+              }
             }
           ],
           "address_part": "All",

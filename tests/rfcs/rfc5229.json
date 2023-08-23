@@ -37,7 +37,9 @@
               "Text": "regarding "
             },
             {
-              "LocalVariable": 0
+              "Variable": {
+                "Local": 0
+              }
             },
             {
               "Text": "{beep}"
@@ -78,7 +80,9 @@
                   "Text": "dear "
                 },
                 {
-                  "LocalVariable": 2
+                  "Variable": {
+                    "Local": 2
+                  }
                 }
               ]
             }
@@ -144,7 +148,9 @@
               "Text": "INBOX.lists."
             },
             {
-              "MatchVariable": 2
+              "Variable": {
+                "Match": 2
+              }
             }
           ]
         },
@@ -256,7 +262,9 @@
               "Text": "INBOX.business."
             },
             {
-              "MatchVariable": 2
+              "Variable": {
+                "Match": 2
+              }
             }
           ]
         },
@@ -381,13 +389,17 @@
               "Text": "Dear "
             },
             {
-              "LocalVariable": 3
+              "Variable": {
+                "Local": 3
+              }
             },
             {
               "Text": " "
             },
             {
-              "LocalVariable": 5
+              "Variable": {
+                "Local": 5
+              }
             },
             {
               "Text": ",\nI'm out, please leave a message after the meep.\n"
@@ -422,7 +434,9 @@
           "Local": 8
         },
         "value": {
-          "LocalVariable": 7
+          "Variable": {
+            "Local": 7
+          }
         }
       }
     }
@@ -438,7 +452,9 @@
           "Local": 8
         },
         "value": {
-          "LocalVariable": 7
+          "Variable": {
+            "Local": 7
+          }
         }
       }
     }
@@ -454,7 +470,9 @@
           "Local": 8
         },
         "value": {
-          "LocalVariable": 7
+          "Variable": {
+            "Local": 7
+          }
         }
       }
     }
@@ -471,7 +489,9 @@
           "Local": 8
         },
         "value": {
-          "LocalVariable": 7
+          "Variable": {
+            "Local": 7
+          }
         }
       }
     }
@@ -503,7 +523,9 @@
         "value": {
           "List": [
             {
-              "LocalVariable": 9
+              "Variable": {
+                "Local": 9
+              }
             },
             {
               "Text": " pending"
@@ -529,7 +551,9 @@
                   "Text": " "
                 },
                 {
-                  "LocalVariable": 9
+                  "Variable": {
+                    "Local": 9
+                  }
                 },
                 {
                   "Text": " "

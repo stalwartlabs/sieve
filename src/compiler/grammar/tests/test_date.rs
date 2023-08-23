@@ -27,16 +27,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError, ErrorType,
+    lexer::{word::Word, StringConstant, Token},
+    CompileError, ErrorType, Number, Value,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestDate {
-    pub header_name: StringItem,
-    pub key_list: Vec<StringItem>,
+    pub header_name: Value,
+    pub key_list: Vec<Value>,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub index: Option<i32>,
@@ -52,7 +52,7 @@ pub(crate) struct TestCurrentDate {
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub date_part: DatePart,
-    pub key_list: Vec<StringItem>,
+    pub key_list: Vec<Value>,
     pub is_not: bool,
 }
 
@@ -171,7 +171,7 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     if header_name.is_none() {
                         let header = self.parse_string_token(token_info)?;
-                        if let StringItem::Text(header_name) = &header {
+                        if let Value::Text(header_name) = &header {
                             if HeaderName::parse(header_name).is_none() {
                                 return Err(self
                                     .tokens
@@ -182,13 +182,11 @@ impl<'x> CompilerState<'x> {
                         header_name = header.into();
                     } else if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token {
-                            if let Ok(string) = std::str::from_utf8(string) {
-                                if let Some(date_part_) =
-                                    DATE_PART.get(&string.to_ascii_lowercase())
-                                {
-                                    date_part = (*date_part_).into();
-                                    continue;
-                                }
+                            if let Some(date_part_) =
+                                DATE_PART.get(&string.to_string().to_ascii_lowercase())
+                            {
+                                date_part = (*date_part_).into();
+                                continue;
                             }
                         }
                         return Err(token_info.expected("valid date part"));
@@ -262,13 +260,11 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token {
-                            if let Ok(string) = std::str::from_utf8(string) {
-                                if let Some(date_part_) =
-                                    DATE_PART.get(&string.to_ascii_lowercase())
-                                {
-                                    date_part = (*date_part_).into();
-                                    continue;
-                                }
+                            if let Some(date_part_) =
+                                DATE_PART.get(&string.to_string().to_ascii_lowercase())
+                            {
+                                date_part = (*date_part_).into();
+                                continue;
                             }
                         }
                         return Err(token_info.expected("valid date part"));
@@ -294,15 +290,17 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_timezone(&mut self) -> Result<i64, CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         if let Token::StringConstant(value) = &token_info.token {
-            if let Ok(value) = std::str::from_utf8(value) {
-                if let Ok(timezone) = value.parse::<i64>() {
-                    return match timezone {
-                        0..=1400 => Ok((timezone / 100 * 3600) + (timezone % 100 * 60)),
-                        -1200..=-1 => Ok((timezone / 100 * 3600) - (-timezone % 100 * 60)),
-                        _ => Err(token_info.expected("invalid timezone")),
-                    };
-                }
-            }
+            let timezone = match value {
+                StringConstant::String(value) => value.parse::<i64>().unwrap_or(i64::MAX),
+                StringConstant::Number(Number::Integer(n)) => *n,
+                StringConstant::Number(Number::Float(n)) => *n as i64,
+            };
+
+            return match timezone {
+                0..=1400 => Ok((timezone / 100 * 3600) + (timezone % 100 * 60)),
+                -1200..=-1 => Ok((timezone / 100 * 3600) - (-timezone % 100 * 60)),
+                _ => Err(token_info.expected("invalid timezone")),
+            };
         }
         Err(token_info.expected("string containing time zone"))
     }

@@ -24,14 +24,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::grammar::instruction::CompilerState;
-use crate::compiler::lexer::string::StringItem;
 use crate::compiler::CompileError;
+use crate::compiler::Value;
 
 use crate::compiler::grammar::test::Test;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestValidExtList {
-    pub list_names: Vec<StringItem>,
+    pub list_names: Vec<Value>,
     pub is_not: bool,
 }
 

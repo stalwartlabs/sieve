@@ -86,7 +86,9 @@
           },
           "key_list": [
             {
-              "Text": "17"
+              "Number": {
+                "Integer": 17
+              }
             }
           ],
           "match_type": {
@@ -133,7 +135,9 @@
           },
           "key_list": [
             {
-              "Text": "0"
+              "Number": {
+                "Integer": 0
+              }
             }
           ],
           "match_type": "Is",
@@ -163,7 +167,9 @@
           },
           "key_list": [
             {
-              "Text": "6"
+              "Number": {
+                "Integer": 6
+              }
             }
           ],
           "match_type": "Is",
@@ -209,7 +215,9 @@
           "date_part": "Weekday",
           "key_list": [
             {
-              "Text": "0"
+              "Number": {
+                "Integer": 0
+              }
             }
           ],
           "is_not": false
@@ -234,7 +242,9 @@
           "date_part": "Weekday",
           "key_list": [
             {
-              "Text": "6"
+              "Number": {
+                "Integer": 6
+              }
             }
           ],
           "is_not": false
@@ -288,7 +298,9 @@
           "date_part": "Hour",
           "key_list": [
             {
-              "Text": "17"
+              "Number": {
+                "Integer": 17
+              }
             }
           ],
           "is_not": false
@@ -444,7 +456,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -495,7 +509,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -561,7 +577,9 @@
           "Text": "Processing-date"
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }

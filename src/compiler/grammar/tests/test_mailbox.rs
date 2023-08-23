@@ -26,8 +26,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{instruction::CompilerState, Capability, Comparator},
-        lexer::{string::StringItem, word::Word, Token},
-        CompileError,
+        lexer::{word::Word, Token},
+        CompileError, Value,
     },
     Metadata,
 };
@@ -36,14 +36,14 @@ use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMailboxExists {
-    pub mailbox_names: Vec<StringItem>,
+    pub mailbox_names: Vec<Value>,
     pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestMetadataExists {
-    pub mailbox: Option<StringItem>,
-    pub annotation_names: Vec<StringItem>,
+    pub mailbox: Option<Value>,
+    pub annotation_names: Vec<Value>,
     pub is_not: bool,
 }
 
@@ -59,8 +59,8 @@ metadata [MATCH-TYPE] [COMPARATOR]
 pub(crate) struct TestMetadata {
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub medatata: Metadata<StringItem>,
-    pub key_list: Vec<StringItem>,
+    pub medatata: Metadata<Value>,
+    pub key_list: Vec<Value>,
     pub is_not: bool,
 }
 
@@ -100,7 +100,7 @@ impl<'x> CompilerState<'x> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut mailbox = None;
         let mut annotation_name = None;
-        let key_list: Vec<StringItem>;
+        let key_list: Vec<Value>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -161,7 +161,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut annotation_name = None;
-        let key_list: Vec<StringItem>;
+        let key_list: Vec<Value>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;

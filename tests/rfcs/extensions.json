@@ -1,0 +1,352 @@
+[
+  [
+    0,
+    {
+      "Require": [
+        "Variables"
+      ]
+    }
+  ],
+  [
+    1,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 0
+        },
+        "value": {
+          "Number": {
+            "Integer": 1
+          }
+        }
+      }
+    }
+  ],
+  [
+    2,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 1
+        },
+        "value": {
+          "Number": {
+            "Integer": 2
+          }
+        }
+      }
+    }
+  ],
+  [
+    3,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 2
+        },
+        "value": {
+          "Number": {
+            "Integer": -3
+          }
+        }
+      }
+    }
+  ],
+  [
+    4,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 3
+        },
+        "value": {
+          "Number": {
+            "Float": -4.2
+          }
+        }
+      }
+    }
+  ],
+  [
+    5,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 4
+        },
+        "value": {
+          "Number": {
+            "Float": 5.7
+          }
+        }
+      }
+    }
+  ],
+  [
+    6,
+    {
+      "Test": {
+        "String": {
+          "match_type": "Is",
+          "comparator": "AsciiCaseMap",
+          "source": [
+            {
+              "Expression": [
+                {
+                  "Variable": {
+                    "Local": 0
+                  }
+                },
+                {
+                  "Variable": {
+                    "Local": 1
+                  }
+                },
+                {
+                  "Variable": {
+                    "Local": 2
+                  }
+                },
+                {
+                  "BinaryOperator": "Divide"
+                },
+                {
+                  "BinaryOperator": "Multiply"
+                },
+                {
+                  "Variable": {
+                    "Local": 3
+                  }
+                },
+                {
+                  "BinaryOperator": "Subtract"
+                },
+                {
+                  "Variable": {
+                    "Local": 4
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                },
+                {
+                  "Variable": {
+                    "Global": "test"
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                }
+              ]
+            }
+          ],
+          "key_list": [
+            {
+              "Number": {
+                "Integer": 1
+              }
+            }
+          ],
+          "is_not": false
+        }
+      }
+    }
+  ],
+  [
+    7,
+    {
+      "Jz": 9
+    }
+  ],
+  [
+    8,
+    {
+      "Keep": {
+        "flags": []
+      }
+    }
+  ],
+  [
+    9,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 5
+        },
+        "value": {
+          "List": [
+            {
+              "Text": "The result of 2 + 3 is "
+            },
+            {
+              "Expression": [
+                {
+                  "Number": {
+                    "Integer": 2
+                  }
+                },
+                {
+                  "Number": {
+                    "Integer": 3
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  [
+    10,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 6
+        },
+        "value": {
+          "List": [
+            {
+              "Text": "The result of 2 + 3 is "
+            },
+            {
+              "Expression": [
+                {
+                  "Number": {
+                    "Integer": 2
+                  }
+                },
+                {
+                  "Number": {
+                    "Integer": 3
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                }
+              ]
+            },
+            {
+              "Text": " and 3 + 4 is "
+            },
+            {
+              "Expression": [
+                {
+                  "Number": {
+                    "Integer": 3
+                  }
+                },
+                {
+                  "Number": {
+                    "Integer": 4
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  [
+    11,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 7
+        },
+        "value": {
+          "List": [
+            {
+              "Text": "A is "
+            },
+            {
+              "Variable": {
+                "Local": 0
+              }
+            },
+            {
+              "Text": " and 2 + 2 is "
+            },
+            {
+              "Expression": [
+                {
+                  "Number": {
+                    "Integer": 2
+                  }
+                },
+                {
+                  "Number": {
+                    "Integer": 2
+                  }
+                },
+                {
+                  "BinaryOperator": "Add"
+                }
+              ]
+            },
+            {
+              "Text": "!"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  [
+    12,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 8
+        },
+        "value": {
+          "Text": "%{}"
+        }
+      }
+    }
+  ],
+  [
+    13,
+    {
+      "Set": {
+        "modifiers": [],
+        "name": {
+          "Local": 9
+        },
+        "value": {
+          "Expression": [
+            {
+              "Number": {
+                "Integer": 2
+              }
+            },
+            {
+              "Number": {
+                "Integer": 3
+              }
+            },
+            {
+              "BinaryOperator": "Add"
+            }
+          ]
+        }
+      }
+    }
+  ]
+]

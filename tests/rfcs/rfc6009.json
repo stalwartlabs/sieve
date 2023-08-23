@@ -85,7 +85,9 @@
           ],
           "key_list": [
             {
-              "Text": "1"
+              "Number": {
+                "Integer": 1
+              }
             }
           ],
           "address_part": "All",
@@ -173,7 +175,9 @@
           ],
           "key_list": [
             {
-              "Text": "0"
+              "Number": {
+                "Integer": 0
+              }
             }
           ],
           "address_part": "All",
@@ -229,7 +233,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }
@@ -244,7 +250,9 @@
           ],
           "key_list": [
             {
-              "LocalVariable": 0
+              "Variable": {
+                "Local": 0
+              }
             }
           ],
           "address_part": "All",
@@ -313,7 +321,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }
@@ -327,7 +337,9 @@
           "Local": 1
         },
         "value": {
-          "MatchVariable": 2
+          "Variable": {
+            "Match": 2
+          }
         }
       }
     }
@@ -345,7 +357,9 @@
           "date_part": "Iso8601",
           "key_list": [
             {
-              "LocalVariable": 0
+              "Variable": {
+                "Local": 0
+              }
             }
           ],
           "is_not": false
@@ -371,7 +385,9 @@
               "Text": "missed-"
             },
             {
-              "LocalVariable": 1
+              "Variable": {
+                "Local": 1
+              }
             }
           ]
         },
@@ -502,7 +518,9 @@
           "date_part": "Hour",
           "key_list": [
             {
-              "Text": "22"
+              "Number": {
+                "Integer": 22
+              }
             }
           ],
           "is_not": false
@@ -552,7 +570,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }
@@ -603,7 +623,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }

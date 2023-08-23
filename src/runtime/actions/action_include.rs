@@ -38,12 +38,12 @@ pub(crate) enum IncludeResult {
 
 impl Include {
     pub(crate) fn exec(&self, ctx: &Context) -> IncludeResult {
-        let script_name = ctx.eval_string(&self.value);
+        let script_name = ctx.eval_value(&self.value);
         if !script_name.is_empty() {
             let script_name = if self.location == Location::Global {
-                Script::Global(script_name.into_owned())
+                Script::Global(script_name.into_string())
             } else {
-                Script::Personal(script_name.into_owned())
+                Script::Personal(script_name.into_string())
             };
 
             let cached_script = ctx.script_cache.get(&script_name);

@@ -30,27 +30,27 @@ use crate::{
             test::Test,
             Capability,
         },
-        lexer::{string::StringItem, word::Word, Token},
-        CompileError,
+        lexer::{word::Word, Token},
+        CompileError, Value,
     },
     FileCarbonCopy,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Vacation {
-    pub subject: Option<StringItem>,
-    pub from: Option<StringItem>,
+    pub subject: Option<Value>,
+    pub from: Option<Value>,
     pub mime: bool,
-    pub fcc: Option<FileCarbonCopy<StringItem>>,
-    pub reason: StringItem,
+    pub fcc: Option<FileCarbonCopy<Value>>,
+    pub reason: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestVacation {
-    pub addresses: Vec<StringItem>,
+    pub addresses: Vec<Value>,
     pub period: Period,
-    pub handle: Option<StringItem>,
-    pub reason: StringItem,
+    pub handle: Option<Value>,
+    pub reason: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -30,7 +30,6 @@ use crate::{
         lexer::{tokenizer::Tokenizer, word::Word, Token},
         CompileError, ErrorType,
     },
-    runtime::string::IntoString,
     Compiler, Sieve,
 };
 
@@ -112,14 +111,14 @@ pub(crate) enum Instruction {
 
     // Testing
     #[cfg(test)]
-    External((String, Vec<crate::compiler::lexer::string::StringItem>)),
+    External((String, Vec<crate::compiler::Value>)),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
 
 pub(crate) struct Block {
     pub(crate) btype: Word,
-    pub(crate) label: Option<Vec<u8>>,
+    pub(crate) label: Option<String>,
     pub(crate) line_num: usize,
     pub(crate) line_pos: usize,
     pub(crate) last_block_start: usize,
@@ -254,9 +253,9 @@ impl Compiler {
                                 let label = state.tokens.expect_static_string()?;
                                 for block in &state.block_stack {
                                     if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
-                                        return Err(tag.custom(ErrorType::LabelAlreadyDefined(
-                                            label.into_string(),
-                                        )));
+                                        return Err(
+                                            tag.custom(ErrorType::LabelAlreadyDefined(label))
+                                        );
                                     }
                                 }
                                 Block::new(Word::ForEveryPart).with_label(label)
@@ -305,9 +304,7 @@ impl Compiler {
                                 }
 
                                 if !label_found {
-                                    return Err(
-                                        tag.custom(ErrorType::LabelUndefined(label.into_string()))
-                                    );
+                                    return Err(tag.custom(ErrorType::LabelUndefined(label)));
                                 }
                             } else {
                                 let mut label_found = false;
@@ -655,7 +652,7 @@ impl Compiler {
 
                 #[cfg(test)]
                 Token::Invalid(instruction) if instruction.contains("test") => {
-                    use crate::compiler::lexer::string::StringItem;
+                    use crate::compiler::Value;
 
                     if instruction == "test" {
                         let param = state.parse_string()?;
@@ -673,7 +670,7 @@ impl Compiler {
                         let mut params = Vec::new();
                         loop {
                             params.push(match state.tokens.unwrap_next()?.token {
-                                Token::StringConstant(s) => StringItem::Text(s.into_string()),
+                                Token::StringConstant(s) => Value::from(s),
                                 Token::StringVariable(s) => state
                                     .tokenize_string(&s, true)
                                     .map_err(|error_type| CompileError {
@@ -681,10 +678,12 @@ impl Compiler {
                                         line_pos: 0,
                                         error_type,
                                     })?,
-                                Token::Number(n) => StringItem::Text(n.to_string()),
-                                Token::Identifier(s) => StringItem::Text(s.to_string()),
-                                Token::Tag(s) => StringItem::Text(format!(":{s}")),
-                                Token::Invalid(s) => StringItem::Text(s),
+                                Token::Number(n) => {
+                                    Value::Number(crate::compiler::Number::Integer(n as i64))
+                                }
+                                Token::Identifier(s) => Value::Text(s.to_string()),
+                                Token::Tag(s) => Value::Text(format!(":{s}")),
+                                Token::Invalid(s) => Value::Text(s),
                                 Token::Semicolon => break,
                                 other => panic!("Invalid test param {other:?}"),
                             });
@@ -868,7 +867,7 @@ impl Block {
         }
     }
 
-    pub fn with_label(mut self, label: Vec<u8>) -> Self {
+    pub fn with_label(mut self, label: String) -> Self {
         self.label = label.into();
         self
     }

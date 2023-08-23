@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::grammar::instruction::{CompilerState, Instruction};
 use crate::compiler::grammar::Capability;
-use crate::compiler::lexer::string::StringItem;
 use crate::compiler::CompileError;
+use crate::compiler::Value;
 
 use crate::compiler::grammar::test::Test;
 
@@ -38,7 +38,7 @@ pub(crate) struct TestIhave {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Error {
-    pub message: StringItem,
+    pub message: Value,
 }
 
 impl<'x> CompilerState<'x> {

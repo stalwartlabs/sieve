@@ -24,9 +24,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{actions::action_set::Variable, instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-    CompileError, ErrorType,
+    grammar::{instruction::CompilerState, Capability, Comparator},
+    lexer::{tokenizer::TokenInfo, word::Word, Token},
+    CompileError, ErrorType, Value, VariableType,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -41,8 +41,8 @@ use crate::compiler::grammar::{test::Test, MatchType};
 pub(crate) struct TestHasFlag {
     pub comparator: Comparator,
     pub match_type: MatchType,
-    pub variable_list: Vec<Variable>,
-    pub flags: Vec<StringItem>,
+    pub variable_list: Vec<VariableType>,
+    pub flags: Vec<Value>,
     pub is_not: bool,
 }
 
@@ -102,7 +102,7 @@ impl<'x> CompilerState<'x> {
                     let mut variable_list = Vec::with_capacity(maybe_variables.len());
                     for variable in maybe_variables {
                         match variable {
-                            StringItem::Text(var_name) => {
+                            Value::Text(var_name) => {
                                 variable_list.push(self.register_variable(var_name).map_err(
                                     |error_type| CompileError {
                                         line_num,

@@ -33,7 +33,11 @@ use mail_parser::{
 };
 
 use crate::{
-    compiler::grammar::{tests::test_address::TestAddress, AddressPart, MatchType},
+    compiler::{
+        grammar::{tests::test_address::TestAddress, AddressPart, MatchType},
+        Number,
+    },
+    runtime::Variable,
     Context, Event,
 };
 
@@ -41,7 +45,7 @@ use super::TestResult;
 
 impl TestAddress {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let key_list = ctx.eval_strings(&self.key_list);
+        let key_list = ctx.eval_values(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
 
         let result = match &self.match_type {
@@ -55,10 +59,10 @@ impl TestAddress {
                         ctx.find_addresses(header, &self.address_part, |value| {
                             for key in &key_list {
                                 if is_is {
-                                    if self.comparator.is(value, key.as_ref()) {
+                                    if self.comparator.is(&Variable::from(value), key) {
                                         return true;
                                     }
-                                } else if self.comparator.contains(value, key.as_ref()) {
+                                } else if self.comparator.contains(value, key.to_cow().as_ref()) {
                                     return true;
                                 }
                             }
@@ -74,7 +78,10 @@ impl TestAddress {
                 |header, _, _| {
                     ctx.find_addresses(header, &self.address_part, |value| {
                         for key in &key_list {
-                            if self.comparator.relational(rel_match, value, key.as_ref()) {
+                            if self
+                                .comparator
+                                .relational(rel_match, &Variable::from(value), key)
+                            {
                                 return true;
                             }
                         }
@@ -95,7 +102,7 @@ impl TestAddress {
                                 if is_matches {
                                     if self.comparator.matches(
                                         value,
-                                        key.as_ref(),
+                                        key.to_cow().as_ref(),
                                         *capture_positions,
                                         &mut captured_positions,
                                     ) {
@@ -103,7 +110,7 @@ impl TestAddress {
                                     }
                                 } else if self.comparator.regex(
                                     value,
-                                    key.as_ref(),
+                                    key.to_cow().as_ref(),
                                     *capture_positions,
                                     &mut captured_positions,
                                 ) {
@@ -120,7 +127,7 @@ impl TestAddress {
                 result
             }
             MatchType::Count(rel_match) => {
-                let mut count = 0;
+                let mut count: i64 = 0;
                 ctx.find_headers(
                     &header_list,
                     self.index,
@@ -137,7 +144,7 @@ impl TestAddress {
 
                 let mut result = false;
                 for key in &key_list {
-                    if rel_match.cmp_num(count as f64, key.as_ref()) {
+                    if rel_match.cmp(&Number::from(count), &key.to_number()) {
                         result = true;
                         break;
                     }
@@ -164,7 +171,7 @@ impl TestAddress {
                 if !values.is_empty() {
                     return TestResult::Event {
                         event: Event::ListContains {
-                            lists: ctx.eval_strings_owned(&self.key_list),
+                            lists: ctx.eval_values_owned(&self.key_list),
                             values,
                             match_as: self.comparator.as_match(),
                         },

@@ -1036,7 +1036,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }

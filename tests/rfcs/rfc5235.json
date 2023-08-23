@@ -20,7 +20,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -65,7 +67,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "3"
+            "Number": {
+              "Integer": 3
+            }
           },
           "match_type": {
             "Value": "Ge"
@@ -104,7 +108,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -149,7 +155,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -194,7 +202,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "37"
+            "Number": {
+              "Integer": 37
+            }
           },
           "match_type": {
             "Value": "Lt"
@@ -243,7 +253,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Count": "Eq"
@@ -288,7 +300,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -333,7 +347,9 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": "37"
+            "Number": {
+              "Integer": 37
+            }
           },
           "match_type": {
             "Value": "Lt"
@@ -382,7 +398,9 @@
       "Test": {
         "VirusTest": {
           "value": {
-            "Text": "0"
+            "Number": {
+              "Integer": 0
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -420,7 +438,9 @@
       "Test": {
         "VirusTest": {
           "value": {
-            "Text": "4"
+            "Number": {
+              "Integer": 4
+            }
           },
           "match_type": {
             "Value": "Eq"
@@ -464,7 +484,9 @@
       "Test": {
         "VirusTest": {
           "value": {
-            "Text": "5"
+            "Number": {
+              "Integer": 5
+            }
           },
           "match_type": {
             "Value": "Eq"

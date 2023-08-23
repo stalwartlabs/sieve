@@ -179,7 +179,9 @@
               "Text": "Automatic response to: "
             },
             {
-              "MatchVariable": 1
+              "Variable": {
+                "Match": 1
+              }
             }
           ]
         },

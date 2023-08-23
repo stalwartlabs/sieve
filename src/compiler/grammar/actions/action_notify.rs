@@ -29,8 +29,8 @@ use crate::{
             instruction::{CompilerState, Instruction},
             Capability,
         },
-        lexer::{string::StringItem, word::Word, Token},
-        CompileError, ErrorType,
+        lexer::{word::Word, Token},
+        CompileError, ErrorType, Value,
     },
     runtime::actions::action_notify::{validate_from, validate_uri},
     FileCarbonCopy,
@@ -47,12 +47,12 @@ notify [":from" string]
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Notify {
-    pub from: Option<StringItem>,
-    pub importance: Option<StringItem>,
-    pub options: Vec<StringItem>,
-    pub message: Option<StringItem>,
-    pub fcc: Option<FileCarbonCopy<StringItem>>,
-    pub method: StringItem,
+    pub from: Option<Value>,
+    pub importance: Option<Value>,
+    pub options: Vec<Value>,
+    pub message: Option<Value>,
+    pub fcc: Option<FileCarbonCopy<Value>>,
+    pub method: Value,
 }
 
 impl<'x> CompilerState<'x> {
@@ -75,7 +75,7 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::From) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     let address = self.parse_string()?;
-                    if let StringItem::Text(address) = &address {
+                    if let Value::Text(address) = &address {
                         if address.is_empty() || !validate_from(address) {
                             return Err(token_info.custom(ErrorType::InvalidAddress));
                         }
@@ -141,7 +141,7 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     if let Token::StringConstant(uri) = &token_info.token {
-                        if validate_uri(std::str::from_utf8(uri).unwrap_or("")).is_none() {
+                        if validate_uri(uri.to_string().as_ref()).is_none() {
                             return Err(token_info.custom(ErrorType::InvalidURI));
                         }
                     }

@@ -23,11 +23,15 @@
 
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
-
 use crate::{
-    compiler::{grammar::instruction::CompilerState, ErrorType},
-    runtime::string::IntoString,
+    compiler::{
+        grammar::{
+            expr::{parser::ExpressionParser, tokenizer::Tokenizer},
+            instruction::CompilerState,
+        },
+        ErrorType, Number, Value, VariableType,
+    },
+    runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
 };
 
@@ -40,23 +44,12 @@ enum State {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum StringItem {
-    Text(String),
-    LocalVariable(usize),
-    MatchVariable(usize),
-    GlobalVariable(String),
-    EnvironmentVariable(String),
-    EnvelopeVariable(Envelope),
-    List(Vec<StringItem>),
-}
-
 impl<'x> CompilerState<'x> {
     pub(crate) fn tokenize_string(
         &mut self,
         bytes: &[u8],
         parse_decoded: bool,
-    ) -> Result<StringItem, ErrorType> {
+    ) -> Result<Value, ErrorType> {
         let mut state = State::None;
         let mut items = Vec::with_capacity(3);
         let mut last_ch = 0;
@@ -65,24 +58,90 @@ impl<'x> CompilerState<'x> {
         let mut var_is_number = true;
         let mut var_has_namespace = false;
 
+        let mut text_has_digits = true;
+        let mut text_has_dots = false;
+
         let mut hex_start = usize::MAX;
         let mut decode_buf = Vec::with_capacity(bytes.len());
+        let mut iter = bytes.iter().enumerate().peekable();
 
-        for (pos, &ch) in bytes.iter().enumerate() {
+        while let Some((mut pos, &ch)) = iter.next() {
             let mut is_var_error = false;
 
             match state {
-                State::None => {
-                    if ch == b'{' && last_ch == b'$' {
+                State::None => match ch {
+                    b'{' if last_ch == b'$' => {
                         decode_buf.pop();
                         var_start_pos = pos + 1;
                         var_is_number = true;
                         var_has_namespace = false;
                         state = State::Variable;
-                    } else {
+                    }
+                    b'{' if last_ch == b'%' => {
+                        decode_buf.pop();
+                        var_start_pos = pos + 1;
+
+                        // Add any text before the variable
+                        if !decode_buf.is_empty() {
+                            self.add_value(
+                                &mut items,
+                                &decode_buf,
+                                parse_decoded,
+                                text_has_digits,
+                                text_has_dots,
+                            )?;
+                            decode_buf.clear();
+                            text_has_digits = true;
+                            text_has_dots = false;
+                        }
+
+                        match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
+                            iter,
+                            |var_name, maybe_namespace| match self
+                                .parse_variable(var_name, maybe_namespace)
+                            {
+                                Ok(Some(var)) => Ok(var),
+                                _ => Err(format!("Invalid variable name {var_name:?}")),
+                            },
+                        ))
+                        .parse()
+                        {
+                            Ok(parser) => {
+                                iter = parser.tokenizer.iter;
+                                state = State::None;
+
+                                if !parser.output.is_empty() {
+                                    items.push(Value::Expression(parser.output));
+                                } else {
+                                    is_var_error = true;
+                                    pos = iter.peek().map(|(p, _)| *p).unwrap_or(bytes.len()) - 1;
+                                }
+                            }
+                            Err(err) => {
+                                return Err(ErrorType::InvalidExpression(format!(
+                                    "{}: {}",
+                                    std::str::from_utf8(bytes).unwrap_or_default(),
+                                    err
+                                )))
+                            }
+                        }
+                    }
+                    b'.' => {
+                        if text_has_dots {
+                            text_has_digits = false;
+                        } else {
+                            text_has_dots = true;
+                        }
                         decode_buf.push(ch);
                     }
-                }
+                    b'0'..=b'9' => {
+                        decode_buf.push(ch);
+                    }
+                    _ => {
+                        text_has_digits = false;
+                        decode_buf.push(ch);
+                    }
+                },
                 State::Variable => match ch {
                     b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
                         var_is_number = false;
@@ -96,83 +155,35 @@ impl<'x> CompilerState<'x> {
                         if pos > var_start_pos {
                             // Add any text before the variable
                             if !decode_buf.is_empty() {
-                                self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
+                                self.add_value(
+                                    &mut items,
+                                    &decode_buf,
+                                    parse_decoded,
+                                    text_has_digits,
+                                    text_has_dots,
+                                )?;
                                 decode_buf.clear();
+                                text_has_digits = true;
+                                text_has_dots = false;
                             }
 
-                            if !var_has_namespace {
-                                if !var_is_number {
-                                    let var_name =
-                                        String::from_utf8(bytes[var_start_pos..pos].to_vec())
-                                            .unwrap();
-                                    if self.is_var_global(&var_name) {
-                                        items.push(StringItem::GlobalVariable(var_name));
-                                    } else if let Some(var_id) = self.get_local_var(&var_name) {
-                                        items.push(StringItem::LocalVariable(var_id));
-                                    }
-                                } else {
-                                    let num_str =
-                                        std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
-                                    let num = num_str.parse().map_err(|_| {
-                                        ErrorType::InvalidNumber(num_str.to_string())
-                                    })?;
-                                    if num < MAX_MATCH_VARIABLES {
-                                        if self.register_match_var(num) {
-                                            let total_vars = num + 1;
-                                            if total_vars > self.vars_match_max {
-                                                self.vars_match_max = total_vars;
-                                            }
-                                            items.push(StringItem::MatchVariable(num));
-                                        }
-                                    } else {
-                                        return Err(ErrorType::InvalidMatchVariable(num));
-                                    }
-                                }
+                            // Parse variable type
+                            let var_name = std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
+                            let var_type = if !var_is_number {
+                                self.parse_variable(var_name, var_has_namespace)
                             } else {
-                                match std::str::from_utf8(&bytes[var_start_pos..pos])
-                                    .unwrap()
-                                    .to_lowercase()
-                                    .split_once('.')
-                                {
-                                    Some(("global", var_name)) if !var_name.is_empty() => {
-                                        items
-                                            .push(StringItem::GlobalVariable(var_name.to_string()));
-                                    }
-                                    Some(("env", var_name)) if !var_name.is_empty() => {
-                                        items.push(StringItem::EnvironmentVariable(
-                                            var_name.to_string(),
-                                        ));
-                                    }
-                                    Some(("envelope", var_name)) if !var_name.is_empty() => {
-                                        let envelope = match var_name {
-                                            "from" => Envelope::From,
-                                            "to" => Envelope::To,
-                                            "by_time_absolute" => Envelope::ByTimeAbsolute,
-                                            "by_time_relative" => Envelope::ByTimeRelative,
-                                            "by_mode" => Envelope::ByMode,
-                                            "by_trace" => Envelope::ByTrace,
-                                            "notify" => Envelope::Notify,
-                                            "orcpt" => Envelope::Orcpt,
-                                            "ret" => Envelope::Ret,
-                                            "envid" => Envelope::Envid,
-                                            _ => {
-                                                is_var_error = true;
-                                                Envelope::From
-                                            }
-                                        };
-                                        if !is_var_error {
-                                            items.push(StringItem::EnvelopeVariable(envelope));
-                                        }
-                                    }
-                                    /*Some((namespace, _)) => {
-                                        return Err(ErrorType::InvalidNamespace(
-                                            namespace.to_string(),
-                                        ));
-                                    }*/
-                                    _ => {
-                                        is_var_error = true;
-                                    }
+                                self.parse_match_variable(var_name)
+                            };
+
+                            match var_type {
+                                Ok(Some(var)) => items.push(Value::Variable(var)),
+                                Ok(None) => {}
+                                Err(
+                                    ErrorType::InvalidNamespace(_) | ErrorType::InvalidEnvelope(_),
+                                ) => {
+                                    is_var_error = true;
                                 }
+                                Err(e) => return Err(e),
                             }
 
                             state = State::None;
@@ -201,6 +212,7 @@ impl<'x> CompilerState<'x> {
                         is_var_error = true;
                     }
                 },
+
                 State::Encoded {
                     is_unicode,
                     initial_buf_size,
@@ -280,28 +292,120 @@ impl<'x> CompilerState<'x> {
         }
 
         if !decode_buf.is_empty() {
-            self.add_string_item(&mut items, &decode_buf, parse_decoded)?;
+            self.add_value(
+                &mut items,
+                &decode_buf,
+                parse_decoded,
+                text_has_digits,
+                text_has_dots,
+            )?;
         }
 
         Ok(match items.len() {
             1 => items.pop().unwrap(),
-            0 => StringItem::Text(String::new()),
-            _ => StringItem::List(items),
+            0 => Value::Text(String::new()),
+            _ => Value::List(items),
         })
     }
 
+    fn parse_match_variable(&mut self, var_name: &str) -> Result<Option<VariableType>, ErrorType> {
+        let num = var_name
+            .parse()
+            .map_err(|_| ErrorType::InvalidNumber(var_name.to_string()))?;
+        if num < MAX_MATCH_VARIABLES {
+            if self.register_match_var(num) {
+                let total_vars = num + 1;
+                if total_vars > self.vars_match_max {
+                    self.vars_match_max = total_vars;
+                }
+                Ok(Some(VariableType::Match(num)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Err(ErrorType::InvalidMatchVariable(num))
+        }
+    }
+
+    fn parse_variable(
+        &self,
+        var_name: &str,
+        maybe_namespace: bool,
+    ) -> Result<Option<VariableType>, ErrorType> {
+        if !maybe_namespace {
+            let var_name = var_name.to_string();
+            if self.is_var_global(&var_name) {
+                Ok(Some(VariableType::Global(var_name)))
+            } else if let Some(var_id) = self.get_local_var(&var_name) {
+                Ok(Some(VariableType::Local(var_id)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            match var_name.to_lowercase().split_once('.') {
+                Some(("global", var_name)) if !var_name.is_empty() => {
+                    Ok(Some(VariableType::Global(var_name.to_string())))
+                }
+                Some(("env", var_name)) if !var_name.is_empty() => {
+                    Ok(Some(VariableType::Environment(var_name.to_string())))
+                }
+                Some(("envelope", var_name)) if !var_name.is_empty() => {
+                    let envelope = match var_name {
+                        "from" => Envelope::From,
+                        "to" => Envelope::To,
+                        "by_time_absolute" => Envelope::ByTimeAbsolute,
+                        "by_time_relative" => Envelope::ByTimeRelative,
+                        "by_mode" => Envelope::ByMode,
+                        "by_trace" => Envelope::ByTrace,
+                        "notify" => Envelope::Notify,
+                        "orcpt" => Envelope::Orcpt,
+                        "ret" => Envelope::Ret,
+                        "envid" => Envelope::Envid,
+                        _ => {
+                            return Err(ErrorType::InvalidEnvelope(var_name.to_string()));
+                        }
+                    };
+                    Ok(Some(VariableType::Envelope(envelope)))
+                }
+                _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
+            }
+        }
+    }
+
     #[inline(always)]
-    fn add_string_item(
+    fn add_value(
         &mut self,
-        items: &mut Vec<StringItem>,
+        items: &mut Vec<Value>,
         buf: &[u8],
         parse_decoded: bool,
+        has_digits: bool,
+        has_dots: bool,
     ) -> Result<(), ErrorType> {
         if !parse_decoded {
-            items.push(StringItem::Text(buf.to_vec().into_string()));
+            items.push(if has_digits {
+                if has_dots {
+                    match std::str::from_utf8(buf)
+                        .ok()
+                        .and_then(|v| (v, v.parse::<f64>().ok()?).into())
+                    {
+                        Some((v, n)) if n.to_string() == v => Value::Number(Number::Float(n)),
+                        _ => Value::Text(buf.to_vec().into_string()),
+                    }
+                } else {
+                    match std::str::from_utf8(buf)
+                        .ok()
+                        .and_then(|v| (v, v.parse::<i64>().ok()?).into())
+                    {
+                        Some((v, n)) if n.to_string() == v => Value::Number(Number::Integer(n)),
+                        _ => Value::Text(buf.to_vec().into_string()),
+                    }
+                }
+            } else {
+                Value::Text(buf.to_vec().into_string())
+            });
         } else {
             match self.tokenize_string(buf, false)? {
-                StringItem::List(new_items) => items.extend(new_items),
+                Value::List(new_items) => items.extend(new_items),
                 item => items.push(item),
             }
         }
@@ -310,21 +414,32 @@ impl<'x> CompilerState<'x> {
     }
 }
 
-impl Display for StringItem {
+impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StringItem::Text(t) => f.write_str(t),
-            StringItem::LocalVariable(v) => write!(f, "${{{v}}}"),
-            StringItem::MatchVariable(v) => write!(f, "${{{v}}}"),
-            StringItem::GlobalVariable(v) => write!(f, "${{global.{v}}}"),
-            StringItem::EnvironmentVariable(v) => write!(f, "${{env.{v}}}"),
-            StringItem::List(l) => {
+            Value::Text(t) => f.write_str(t),
+            Value::List(l) => {
                 for i in l {
                     i.fmt(f)?;
                 }
                 Ok(())
             }
-            StringItem::EnvelopeVariable(env) => f.write_str(match env {
+            Value::Number(n) => n.fmt(f),
+            Value::Variable(v) => v.fmt(f),
+            Value::Expression(_) => f.write_str("%{}"),
+        }
+    }
+}
+
+impl Display for VariableType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VariableType::Local(v) => write!(f, "${{{v}}}"),
+            VariableType::Match(v) => write!(f, "${{{v}}}"),
+            VariableType::Global(v) => write!(f, "${{global.{v}}}"),
+            VariableType::Environment(v) => write!(f, "${{env.{v}}}"),
+
+            VariableType::Envelope(env) => f.write_str(match env {
                 Envelope::From => "${{envelope.from}}",
                 Envelope::To => "${{envelope.to}}",
                 Envelope::ByTimeAbsolute => "${{envelope.by_time_absolute}}",
@@ -343,13 +458,14 @@ impl Display for StringItem {
 #[cfg(test)]
 mod tests {
 
-    use super::StringItem;
+    use super::Value;
     use crate::compiler::grammar::instruction::{Block, CompilerState, Instruction, MAX_PARAMS};
     use crate::compiler::grammar::test::Test;
     use crate::compiler::grammar::tests::test_string::TestString;
     use crate::compiler::grammar::{Comparator, MatchType};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
+    use crate::compiler::VariableType;
     use crate::{AHashSet, Compiler};
 
     #[test]
@@ -362,8 +478,8 @@ mod tests {
             instructions: vec![Instruction::Test(Test::String(TestString {
                 match_type: MatchType::Regex(u64::MAX),
                 comparator: Comparator::AsciiCaseMap,
-                source: vec![StringItem::LocalVariable(0)],
-                key_list: vec![StringItem::LocalVariable(0)],
+                source: vec![Value::Variable(VariableType::Local(0))],
+                key_list: vec![Value::Variable(VariableType::Local(0))],
                 is_not: false,
             }))],
             block_stack: Vec::new(),
@@ -379,86 +495,80 @@ mod tests {
         };
 
         for (input, expected_result) in [
-            ("$${hex:24 24}", StringItem::Text("$$$".to_string())),
-            ("$${hex:40}", StringItem::Text("$@".to_string())),
-            ("${hex: 40 }", StringItem::Text("@".to_string())),
-            ("${HEX: 40}", StringItem::Text("@".to_string())),
-            ("${hex:40", StringItem::Text("${hex:40".to_string())),
-            ("${hex:400}", StringItem::Text("${hex:400}".to_string())),
-            (
-                "${hex:4${hex:30}}",
-                StringItem::Text("${hex:40}".to_string()),
-            ),
-            ("${unicode:40}", StringItem::Text("@".to_string())),
-            (
-                "${ unicode:40}",
-                StringItem::Text("${ unicode:40}".to_string()),
-            ),
-            ("${UNICODE:40}", StringItem::Text("@".to_string())),
-            ("${UnICoDE:0000040}", StringItem::Text("@".to_string())),
-            ("${Unicode:40}", StringItem::Text("@".to_string())),
+            ("$${hex:24 24}", Value::Text("$$$".to_string())),
+            ("$${hex:40}", Value::Text("$@".to_string())),
+            ("${hex: 40 }", Value::Text("@".to_string())),
+            ("${HEX: 40}", Value::Text("@".to_string())),
+            ("${hex:40", Value::Text("${hex:40".to_string())),
+            ("${hex:400}", Value::Text("${hex:400}".to_string())),
+            ("${hex:4${hex:30}}", Value::Text("${hex:40}".to_string())),
+            ("${unicode:40}", Value::Text("@".to_string())),
+            ("${ unicode:40}", Value::Text("${ unicode:40}".to_string())),
+            ("${UNICODE:40}", Value::Text("@".to_string())),
+            ("${UnICoDE:0000040}", Value::Text("@".to_string())),
+            ("${Unicode:40}", Value::Text("@".to_string())),
             (
                 "${Unicode:40 40 ",
-                StringItem::Text("${Unicode:40 40 ".to_string()),
+                Value::Text("${Unicode:40 40 ".to_string()),
             ),
             (
                 "${Unicode:Cool}",
-                StringItem::Text("${Unicode:Cool}".to_string()),
+                Value::Text("${Unicode:Cool}".to_string()),
             ),
-            ("", StringItem::Text("".to_string())),
+            ("", Value::Text("".to_string())),
             (
                 "${global.full}",
-                StringItem::GlobalVariable("full".to_string()),
+                Value::Variable(VariableType::Global("full".to_string())),
             ),
             (
                 "${BAD${global.Company}",
-                StringItem::List(vec![
-                    StringItem::Text("${BAD".to_string()),
-                    StringItem::GlobalVariable("company".to_string()),
+                Value::List(vec![
+                    Value::Text("${BAD".to_string()),
+                    Value::Variable(VariableType::Global("company".to_string())),
                 ]),
             ),
             (
                 "${President, ${global.Company} Inc.}",
-                StringItem::List(vec![
-                    StringItem::Text("${President, ".to_string()),
-                    StringItem::GlobalVariable("company".to_string()),
-                    StringItem::Text(" Inc.}".to_string()),
+                Value::List(vec![
+                    Value::Text("${President, ".to_string()),
+                    Value::Variable(VariableType::Global("company".to_string())),
+                    Value::Text(" Inc.}".to_string()),
                 ]),
             ),
             (
                 "dear${hex:20 24 7b}global.Name}",
-                StringItem::List(vec![
-                    StringItem::Text("dear ".to_string()),
-                    StringItem::GlobalVariable("name".to_string()),
+                Value::List(vec![
+                    Value::Text("dear ".to_string()),
+                    Value::Variable(VariableType::Global("name".to_string())),
                 ]),
             ),
             (
                 "INBOX.lists.${2}",
-                StringItem::List(vec![
-                    StringItem::Text("INBOX.lists.".to_string()),
-                    StringItem::MatchVariable(2),
+                Value::List(vec![
+                    Value::Text("INBOX.lists.".to_string()),
+                    Value::Variable(VariableType::Match(2)),
                 ]),
             ),
             (
                 "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test",
-                StringItem::Text("Ein unerhört großer Test".to_string()),
+                Value::Text("Ein unerhört großer Test".to_string()),
             ),
-            ("&%${}!", StringItem::Text("&%${}!".to_string())),
-            ("${doh!}", StringItem::Text("${doh!}".to_string())),
+            ("&%${}!", Value::Text("&%${}!".to_string())),
+            ("${doh!}", Value::Text("${doh!}".to_string())),
             (
                 "${hex: 20 }${global.hi}${hex: 20 }",
-                StringItem::List(vec![
-                    StringItem::Text(" ".to_string()),
-                    StringItem::GlobalVariable("hi".to_string()),
-                    StringItem::Text(" ".to_string()),
+                Value::List(vec![
+                    Value::Text(" ".to_string()),
+                    Value::Variable(VariableType::Global("hi".to_string())),
+                    Value::Text(" ".to_string()),
                 ]),
             ),
             (
                 "${hex:20 24 7b z}${global.hi}${unicode:}${unicode: }${hex:20}",
-                StringItem::List(vec![
-                    StringItem::Text("${hex:20 24 7b z}".to_string()),
-                    StringItem::GlobalVariable("hi".to_string()),
-                    StringItem::Text("${unicode:}${unicode: } ".to_string()),
+                Value::List(vec![
+                    Value::Text("${hex:20 24 7b z}".to_string()),
+                    Value::Variable(VariableType::Global("hi".to_string())),
+                    Value::Text("${unicode:}${unicode: } ".to_string()),
                 ]),
             ),
         ] {

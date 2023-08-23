@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -35,8 +35,8 @@ use crate::compiler::grammar::{test::Test, MatchType};
 pub(crate) struct TestString {
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub source: Vec<StringItem>,
-    pub key_list: Vec<StringItem>,
+    pub source: Vec<Value>,
+    pub key_list: Vec<Value>,
     pub is_not: bool,
 }
 
@@ -45,7 +45,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut source = None;
-        let key_list: Vec<StringItem>;
+        let key_list: Vec<Value>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;

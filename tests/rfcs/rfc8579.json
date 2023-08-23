@@ -71,7 +71,9 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "EnvironmentVariable": "imap.mailbox"
+              "Variable": {
+                "Environment": "imap.mailbox"
+              }
             }
           ],
           "key_list": [
@@ -123,7 +125,9 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "EnvironmentVariable": "imap.cause"
+              "Variable": {
+                "Environment": "imap.cause"
+              }
             }
           ],
           "key_list": [

@@ -26,15 +26,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::instruction::CompilerState,
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError, ErrorType,
+    lexer::{word::Word, Token},
+    CompileError, ErrorType, Value,
 };
 
 use crate::compiler::grammar::test::Test;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestDuplicate {
-    pub handle: Option<StringItem>,
+    pub handle: Option<Value>,
     pub dup_match: DupMatch,
     pub seconds: Option<u64>,
     pub last: bool,
@@ -43,8 +43,8 @@ pub(crate) struct TestDuplicate {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum DupMatch {
-    Header(StringItem),
-    UniqueId(StringItem),
+    Header(Value),
+    UniqueId(Value),
     Default,
 }
 
@@ -70,7 +70,7 @@ impl<'x> CompilerState<'x> {
                     self.validate_argument(2, None, line_num, line_pos)?;
                     self.tokens.next();
                     let header = self.parse_string()?;
-                    if let StringItem::Text(header_name) = &header {
+                    if let Value::Text(header_name) = &header {
                         if HeaderName::parse(header_name).is_none() {
                             return Err(self
                                 .tokens

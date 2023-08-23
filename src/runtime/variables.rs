@@ -23,11 +23,13 @@
 
 use crate::Context;
 
+use super::Variable;
+
 impl<'x> Context<'x> {
     pub(crate) fn set_match_variables(&mut self, set_vars: Vec<(usize, String)>) {
         for (var_num, value) in set_vars {
             if let Some(var) = self.vars_match.get_mut(var_num) {
-                *var = value;
+                *var = value.into();
             } else {
                 debug_assert!(false, "Invalid match varialbe {var_num}");
             }
@@ -40,7 +42,7 @@ impl<'x> Context<'x> {
             positions ^= 1 << index;
             if let Some(match_var) = self.vars_match.get_mut(index as usize) {
                 if !match_var.is_empty() {
-                    *match_var = String::with_capacity(0);
+                    *match_var = Variable::default();
                 }
             } else {
                 debug_assert!(false, "Failed to clear match variable at index {index}.");

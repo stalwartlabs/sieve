@@ -1,0 +1,54 @@
+require ["variables", "relational"];
+
+
+test "Expressions" {
+    set "A" "1";
+    set "B" "2";
+    set "C" "-3";
+    set "D" "-4.2";
+    set "E" "5.7";
+
+    set "global.a" "1";
+    set "global.b" "2";
+    set "global.c" "3";
+
+    if not string :is "The result of 2 + 2 is %{2 + 2}!" "The result of 2 + 2 is 4!"
+    {
+        test_fail "%{2 + 2} is not 4";
+    }
+
+    if not string :comparator "i;ascii-numeric" :value "gt" "%{2 * 3}" "5"
+    {
+        test_fail "%{2 * 3} is not greater than 5";
+    }
+
+    if not string :comparator "i;ascii-numeric" :value "lt" "%{9 / 2}" "101.6"
+    {
+        test_fail "%{9 / 2} is not lower than 101.6";
+    }
+
+    if not string :comparator "i;ascii-numeric" :value "eq" "%{(8 * 4 + 20 - 10) / 2}" "%{20 + 6 * 3 - 4 * 2 - 9}"
+    {
+        test_fail "%{(8 * 4 + 20 - 10) / 2} is not equal to %{20 + 6 * 3 - 4 * 2 - 9}";
+    }
+
+    if not string :comparator "i;ascii-numeric" :is "%{(A + B) / (C + D) * E}" "-2.375"
+    {
+        test_fail "(A + B) / (C + D) * E (%{(A + B) / (C + D) * E}) is not equal to -2.375";
+    }
+
+    if not string :is "%{global.a < global.b && global.c > global.a}" "1"
+    {
+        test_fail "global.a < global.b && global.c > global.a (%{global.a < global.b && global.c > global.a}) is not equal to 1";
+    }
+
+    if not string :is "%{global.a > global.b || global.c < global.a}" "0"
+    {
+        test_fail "global.a > global.b || global.c < global.a (%{global.a > global.b || global.c < global.a}) is not equal to 0";
+    }
+
+    if not string :is "%{global.a > global.b || !(global.c < global.a)}" "1"
+    {
+        test_fail "global.a > global.b || !(global.c < global.a) (%{global.a > global.b || !(global.c < global.a)}) is not equal to 1";
+    }
+}

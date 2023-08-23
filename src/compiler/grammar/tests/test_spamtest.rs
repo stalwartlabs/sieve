@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -38,7 +38,7 @@ use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestSpamTest {
-    pub value: StringItem,
+    pub value: Value,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub percent: bool,
@@ -47,7 +47,7 @@ pub(crate) struct TestSpamTest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestVirusTest {
-    pub value: StringItem,
+    pub value: Value,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub is_not: bool,

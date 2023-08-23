@@ -73,7 +73,9 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": "1"
+          "Number": {
+            "Integer": 1
+          }
         },
         "options": [],
         "message": {
@@ -146,7 +148,9 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": "1"
+          "Number": {
+            "Integer": 1
+          }
         },
         "options": [],
         "message": {
@@ -236,7 +240,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -293,7 +299,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -314,7 +322,9 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": "3"
+          "Number": {
+            "Integer": 3
+          }
         },
         "options": [],
         "message": {
@@ -436,7 +446,9 @@
               "Text": " [really: "
             },
             {
-              "MatchVariable": 1
+              "Variable": {
+                "Match": 1
+              }
             },
             {
               "Text": "]"
@@ -498,7 +510,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -555,7 +569,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -710,7 +726,9 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "LocalVariable": 0
+              "Variable": {
+                "Local": 0
+              }
             }
           ],
           "key_list": [
@@ -739,7 +757,9 @@
         "message": null,
         "fcc": null,
         "method": {
-          "LocalVariable": 0
+          "Variable": {
+            "Local": 0
+          }
         }
       }
     }
@@ -817,7 +837,9 @@
           "Local": 1
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -869,7 +891,9 @@
       "Notify": {
         "from": null,
         "importance": {
-          "Text": "1"
+          "Number": {
+            "Integer": 1
+          }
         },
         "options": [],
         "message": {

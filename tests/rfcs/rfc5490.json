@@ -177,7 +177,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 0
+          "Variable": {
+            "Match": 0
+          }
         }
       }
     }
@@ -264,7 +266,9 @@
               "Text": " [really: "
             },
             {
-              "MatchVariable": 1
+              "Variable": {
+                "Match": 1
+              }
             },
             {
               "Text": "]"
@@ -326,7 +330,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -383,7 +389,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }

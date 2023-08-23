@@ -117,13 +117,7 @@ pub(crate) enum Test {
     Execute(Execute),
 
     #[cfg(test)]
-    External(
-        (
-            String,
-            Vec<crate::compiler::lexer::string::StringItem>,
-            bool,
-        ),
-    ),
+    External((String, Vec<crate::compiler::Value>, bool)),
 }
 
 #[derive(Debug)]
@@ -513,8 +507,7 @@ impl<'x> CompilerState<'x> {
                     }
                     #[cfg(test)]
                     Token::Invalid(name) if name.contains("test") => {
-                        use crate::compiler::lexer::string::StringItem;
-                        use crate::runtime::string::IntoString;
+                        use crate::compiler::Value;
 
                         let mut params = Vec::new();
                         while !matches!(
@@ -524,7 +517,7 @@ impl<'x> CompilerState<'x> {
                                 | Token::CurlyOpen))
                         ) {
                             params.push(match self.tokens.unwrap_next()?.token {
-                                Token::StringConstant(s) => StringItem::Text(s.into_string()),
+                                Token::StringConstant(s) => Value::from(s),
                                 Token::StringVariable(s) => self
                                     .tokenize_string(&s, true)
                                     .map_err(|error_type| CompileError {
@@ -532,10 +525,12 @@ impl<'x> CompilerState<'x> {
                                         line_pos: 0,
                                         error_type,
                                     })?,
-                                Token::Number(n) => StringItem::Text(n.to_string()),
-                                Token::Identifier(s) => StringItem::Text(s.to_string()),
-                                Token::Tag(s) => StringItem::Text(format!(":{s}")),
-                                Token::Invalid(s) => StringItem::Text(s),
+                                Token::Number(n) => {
+                                    Value::Number(crate::compiler::Number::Integer(n as i64))
+                                }
+                                Token::Identifier(s) => Value::Text(s.to_string()),
+                                Token::Tag(s) => Value::Text(format!(":{s}")),
+                                Token::Invalid(s) => Value::Text(s),
                                 other => panic!("Invalid test param {other:?}"),
                             });
                         }

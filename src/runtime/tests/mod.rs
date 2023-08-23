@@ -81,7 +81,7 @@ impl Test {
                     mailboxes: test
                         .mailbox_names
                         .iter()
-                        .map(|m| Mailbox::Name(ctx.eval_string(m).into_owned()))
+                        .map(|m| Mailbox::Name(ctx.eval_value(m).into_string()))
                         .collect(),
                     special_use: Vec::new(),
                 },
@@ -95,7 +95,7 @@ impl Test {
                     mailboxes: test
                         .mailbox_ids
                         .iter()
-                        .map(|m| Mailbox::Id(ctx.eval_string(m).into_owned()))
+                        .map(|m| Mailbox::Id(ctx.eval_value(m).into_string()))
                         .collect(),
                     special_use: Vec::new(),
                 },
@@ -106,11 +106,11 @@ impl Test {
             Test::SpecialUseExists(test) => TestResult::Event {
                 event: Event::MailboxExists {
                     mailboxes: if let Some(mailbox) = &test.mailbox {
-                        vec![Mailbox::Name(ctx.eval_string(mailbox).into_owned())]
+                        vec![Mailbox::Name(ctx.eval_value(mailbox).into_string())]
                     } else {
                         Vec::new()
                     },
-                    special_use: ctx.eval_strings_owned(&test.attributes),
+                    special_use: ctx.eval_values_owned(&test.attributes),
                 },
                 is_not: test.is_not,
             },
@@ -118,8 +118,8 @@ impl Test {
             Test::Execute(test) => TestResult::Event {
                 event: Event::Execute {
                     command_type: test.command_type,
-                    command: ctx.eval_string(&test.command).into_owned(),
-                    arguments: ctx.eval_strings_owned(&test.arguments),
+                    command: ctx.eval_value(&test.command).into_string(),
+                    arguments: ctx.eval_values_owned(&test.arguments),
                 },
                 is_not: test.is_not,
             },
@@ -134,7 +134,7 @@ impl Test {
                     command: command.clone(),
                     params: params
                         .iter()
-                        .map(|p| ctx.eval_string(p).into_owned())
+                        .map(|p| ctx.eval_value(p).into_string())
                         .collect(),
                 },
                 is_not: *is_not,

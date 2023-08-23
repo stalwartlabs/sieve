@@ -25,18 +25,32 @@ use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
 use mail_parser::{Encoding, HeaderName, Message, MessagePart, PartType};
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    compiler::grammar::{Capability, Invalid},
+    compiler::{
+        grammar::{Capability, Invalid},
+        Number,
+    },
     Context, Input, Metadata, Runtime, Script, Sieve,
 };
 
 pub mod actions;
 pub mod context;
+pub mod eval;
 pub mod serialize;
-pub mod string;
 pub mod tests;
 pub mod variables;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Variable<'x> {
+    String(String),
+    StringRef(&'x str),
+    Integer(i64),
+    Float(f64),
+}
+
+impl Eq for Variable<'_> {}
 
 #[derive(Debug)]
 pub enum RuntimeError {
@@ -46,6 +60,144 @@ pub enum RuntimeError {
     CapabilityNotAllowed(Capability),
     CapabilityNotSupported(String),
     CPULimitReached,
+}
+
+impl<'x> Default for Variable<'x> {
+    fn default() -> Self {
+        Variable::StringRef("")
+    }
+}
+
+impl<'x> Variable<'x> {
+    pub fn into_cow(self) -> Cow<'x, str> {
+        match self {
+            Variable::String(s) => Cow::Owned(s),
+            Variable::StringRef(s) => Cow::Borrowed(s),
+            Variable::Integer(n) => Cow::Owned(n.to_string()),
+            Variable::Float(n) => Cow::Owned(n.to_string()),
+        }
+    }
+
+    pub fn to_cow<'y: 'x>(&'y self) -> Cow<'x, str> {
+        match self {
+            Variable::String(s) => Cow::Borrowed(s.as_str()),
+            Variable::StringRef(s) => Cow::Borrowed(*s),
+            Variable::Integer(n) => Cow::Owned(n.to_string()),
+            Variable::Float(n) => Cow::Owned(n.to_string()),
+        }
+    }
+
+    pub fn into_string(self) -> String {
+        match self {
+            Variable::String(s) => s,
+            Variable::StringRef(s) => s.to_string(),
+            Variable::Integer(n) => n.to_string(),
+            Variable::Float(n) => n.to_string(),
+        }
+    }
+
+    pub fn to_number(&self) -> Number {
+        let s = match self {
+            Variable::Integer(n) => return Number::Integer(*n),
+            Variable::Float(n) => return Number::Float(*n),
+            Variable::String(s) => s.as_str(),
+            Variable::StringRef(s) => *s,
+        };
+
+        if !s.contains('.') {
+            s.parse::<i64>()
+                .map_or(Number::Float(f64::MAX), Number::Integer)
+        } else {
+            s.parse::<f64>()
+                .map_or(Number::Float(f64::MAX), Number::Float)
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Variable::String(s) => s.len(),
+            Variable::StringRef(s) => s.len(),
+            Variable::Integer(_) | Variable::Float(_) => 2,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Variable::String(s) => s.is_empty(),
+            Variable::StringRef(s) => s.is_empty(),
+            _ => false,
+        }
+    }
+
+    pub fn into_owned(self) -> Variable<'static> {
+        match self {
+            Variable::String(s) => Variable::String(s),
+            Variable::StringRef(s) => Variable::String(s.to_string()),
+            Variable::Integer(n) => Variable::Integer(n),
+            Variable::Float(n) => Variable::Float(n),
+        }
+    }
+}
+
+impl<'x> From<&'x str> for Variable<'x> {
+    fn from(s: &'x str) -> Self {
+        Variable::StringRef(s)
+    }
+}
+
+impl From<String> for Variable<'_> {
+    fn from(s: String) -> Self {
+        Variable::String(s)
+    }
+}
+
+impl<'x> From<&'x String> for Variable<'x> {
+    fn from(s: &'x String) -> Self {
+        Variable::StringRef(s.as_str())
+    }
+}
+
+impl<'x> From<Cow<'x, str>> for Variable<'x> {
+    fn from(s: Cow<'x, str>) -> Self {
+        match s {
+            Cow::Borrowed(s) => Variable::StringRef(s),
+            Cow::Owned(s) => Variable::String(s),
+        }
+    }
+}
+
+impl From<Number> for Variable<'_> {
+    fn from(n: Number) -> Self {
+        match n {
+            Number::Integer(n) => Variable::Integer(n),
+            Number::Float(n) => Variable::Float(n),
+        }
+    }
+}
+
+impl PartialEq for Number {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Integer(a), Self::Integer(b)) => a == b,
+            (Self::Float(a), Self::Float(b)) => a == b,
+            (Self::Integer(a), Self::Float(b)) => (*a as f64) == *b,
+            (Self::Float(a), Self::Integer(b)) => *a == (*b as f64),
+        }
+    }
+}
+
+impl Eq for Number {}
+
+impl PartialOrd for Number {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let (a, b) = match (self, other) {
+            (Number::Integer(a), Number::Integer(b)) => return a.partial_cmp(b),
+            (Number::Float(a), Number::Float(b)) => (*a, *b),
+            (Number::Integer(a), Number::Float(b)) => (*a as f64, *b),
+            (Number::Float(a), Number::Integer(b)) => (*a, *b as f64),
+        };
+        a.partial_cmp(&b)
+    }
 }
 
 impl Runtime {
@@ -220,7 +372,7 @@ impl Runtime {
     pub fn set_env_variable(
         &mut self,
         name: impl Into<String>,
-        value: impl Into<Cow<'static, str>>,
+        value: impl Into<Variable<'static>>,
     ) {
         self.environment.insert(name.into(), value.into());
     }

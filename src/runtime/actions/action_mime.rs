@@ -28,9 +28,9 @@ use mail_parser::{
 };
 
 use crate::{
-    compiler::grammar::actions::{
-        action_mime::{Enclose, ExtractText, Replace},
-        action_set::Variable,
+    compiler::{
+        grammar::actions::action_mime::{Enclose, ExtractText, Replace},
+        VariableType,
     },
     Context, Event,
 };
@@ -51,7 +51,7 @@ impl Replace {
         ctx.has_changes = true;
 
         // Update part
-        let body = ctx.eval_string(&self.replacement).into_owned();
+        let body = ctx.eval_value(&self.replacement).into_string();
         let body_len = body.len();
 
         let part = &mut ctx.message.parts[ctx.part];
@@ -104,12 +104,14 @@ impl Replace {
 
             // Add From
             let mut add_from = true;
-            if let Some(from) = self.from.as_ref().map(|f| ctx.eval_string(f)) {
+            if let Some(from) = self.from.as_ref().map(|f| ctx.eval_value(f)) {
                 if !from.is_empty() {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("From".into()),
-                        from.as_ref().remove_crlf(ctx.runtime.max_header_size),
+                        from.into_cow()
+                            .as_ref()
+                            .remove_crlf(ctx.runtime.max_header_size),
                         true,
                     );
                     add_from = false;
@@ -125,12 +127,15 @@ impl Replace {
             }
 
             // Add Subject
-            if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_string(f)) {
+            if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_value(f)) {
                 if !subject.is_empty() {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("Subject".into()),
-                        subject.as_ref().remove_crlf(ctx.runtime.max_header_size),
+                        subject
+                            .into_cow()
+                            .as_ref()
+                            .remove_crlf(ctx.runtime.max_header_size),
                         true,
                     );
                 }
@@ -179,12 +184,13 @@ impl Replace {
 
 impl Enclose {
     pub(crate) fn exec(&self, ctx: &mut Context) {
-        let body = ctx.eval_string(&self.value).into_owned();
+        let body = ctx.eval_value(&self.value).into_string();
         let subject = self
             .subject
             .as_ref()
             .map(|s| {
-                ctx.eval_string(s)
+                ctx.eval_value(s)
+                    .into_cow()
                     .as_ref()
                     .remove_crlf(ctx.runtime.max_header_size)
             })
@@ -261,8 +267,10 @@ impl Enclose {
         let mut add_from = true;
 
         for header in &self.headers {
-            let header = ctx.eval_string(header);
-            if let Some((mut header_name, mut header_value)) = header.as_ref().split_once(':') {
+            let header = ctx.eval_value(header);
+            if let Some((mut header_name, mut header_value)) =
+                header.into_cow().as_ref().split_once(':')
+            {
                 header_name = header_name.trim();
                 header_value = header_value.trim();
                 if !header_value.is_empty() {
@@ -364,23 +372,24 @@ impl ExtractText {
         }
 
         match &self.name {
-            Variable::Local(var_id) => {
+            VariableType::Local(var_id) => {
                 if let Some(var) = ctx.vars_local.get_mut(*var_id) {
-                    *var = value;
+                    *var = value.into();
                 } else {
                     debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
-            Variable::Global(var_name) => {
-                ctx.vars_global.insert(var_name.clone(), value);
+            VariableType::Global(var_name) => {
+                ctx.vars_global.insert(var_name.clone(), value.into());
             }
-            Variable::Envelope(env) => {
+            VariableType::Envelope(env) => {
                 ctx.queued_events = vec![Event::SetEnvelope {
                     envelope: *env,
                     value,
                 }]
                 .into_iter();
             }
+            _ => (),
         }
     }
 }

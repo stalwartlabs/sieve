@@ -66,7 +66,7 @@ impl TestDuplicate {
                 }
                 value.into()
             }
-            DupMatch::UniqueId(s) => ctx.eval_string(s),
+            DupMatch::UniqueId(s) => ctx.eval_value(s).into_cow(),
             DupMatch::Default => ctx.message.message_id().unwrap_or("").into(),
         };
 
@@ -75,7 +75,7 @@ impl TestDuplicate {
                 id: if id.is_empty() {
                     return TestResult::Bool(false ^ self.is_not);
                 } else if let Some(handle) = &self.handle {
-                    format!("{}{}", ctx.eval_string(handle), id)
+                    format!("{}{}", ctx.eval_value(handle).into_cow(), id)
                 } else {
                     id.into_owned()
                 },

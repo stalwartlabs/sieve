@@ -106,7 +106,9 @@
           "handle": null,
           "dup_match": {
             "UniqueId": {
-              "MatchVariable": 0
+              "Variable": {
+                "Match": 0
+              }
             }
           },
           "seconds": null,
@@ -202,7 +204,9 @@
           "handle": null,
           "dup_match": {
             "UniqueId": {
-              "MatchVariable": 1
+              "Variable": {
+                "Match": 1
+              }
             }
           },
           "seconds": 60,
@@ -286,7 +290,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -343,7 +349,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -445,7 +453,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -502,7 +512,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }
@@ -556,7 +568,9 @@
           "Local": 0
         },
         "value": {
-          "MatchVariable": 1
+          "Variable": {
+            "Match": 1
+          }
         }
       }
     }

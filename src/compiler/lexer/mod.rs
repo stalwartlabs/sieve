@@ -25,9 +25,11 @@ pub mod string;
 pub mod tokenizer;
 pub mod word;
 
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
 use self::word::Word;
+
+use super::{Number, Value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Token {
@@ -39,12 +41,43 @@ pub(crate) enum Token {
     ParenthesisClose,
     Comma,
     Semicolon,
-    StringConstant(Vec<u8>),
+    StringConstant(StringConstant),
     StringVariable(Vec<u8>),
     Number(usize),
     Identifier(Word),
     Tag(Word),
     Invalid(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum StringConstant {
+    String(String),
+    Number(Number),
+}
+
+impl StringConstant {
+    pub fn to_string(&self) -> Cow<str> {
+        match self {
+            StringConstant::String(s) => s.as_str().into(),
+            StringConstant::Number(n) => n.to_string().into(),
+        }
+    }
+
+    pub fn into_string(self) -> String {
+        match self {
+            StringConstant::String(s) => s,
+            StringConstant::Number(n) => n.to_string(),
+        }
+    }
+}
+
+impl From<StringConstant> for Value {
+    fn from(value: StringConstant) -> Self {
+        match value {
+            StringConstant::String(s) => Value::Text(s),
+            StringConstant::Number(n) => Value::Number(n),
+        }
+    }
 }
 
 impl Display for Token {
@@ -62,9 +95,11 @@ impl Display for Token {
             Token::Identifier(w) => w.fmt(f),
             Token::Tag(t) => write!(f, ":{t}"),
             Token::Invalid(s) => f.write_str(s),
-            Token::StringConstant(s) | Token::StringVariable(s) => {
-                f.write_str(&String::from_utf8_lossy(s))
-            }
+            Token::StringVariable(s) => f.write_str(&String::from_utf8_lossy(s)),
+            Token::StringConstant(c) => match c {
+                StringConstant::String(s) => f.write_str(s),
+                StringConstant::Number(n) => write!(f, "{n}"),
+            },
         }
     }
 }
