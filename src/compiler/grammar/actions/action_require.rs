@@ -61,7 +61,7 @@ impl<'x> CompilerState<'x> {
                     Token::StringConstant(value) => {
                         self.add_capability(
                             &mut capabilities,
-                            Capability::parse(std::str::from_utf8(&value).unwrap_or("")),
+                            Capability::parse(value.to_string().as_ref()),
                         );
                         let token_info = self.tokens.unwrap_next()?;
                         match token_info.token {
@@ -80,7 +80,7 @@ impl<'x> CompilerState<'x> {
             Token::StringConstant(value) => {
                 self.add_capability(
                     &mut capabilities,
-                    Capability::parse(std::str::from_utf8(&value).unwrap_or("")),
+                    Capability::parse(value.to_string().as_ref()),
                 );
             }
             _ => {

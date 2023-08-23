@@ -24,11 +24,12 @@
 use std::{iter::Peekable, slice::Iter};
 
 use crate::{
-    compiler::{CompileError, ErrorType},
+    compiler::{CompileError, ErrorType, Number},
+    runtime::eval::IntoString,
     Compiler,
 };
 
-use super::{word::WORDS, Token};
+use super::{word::WORDS, StringConstant, Token};
 
 pub(crate) struct Tokenizer<'x> {
     pub compiler: &'x Compiler,
@@ -63,8 +64,16 @@ pub(crate) enum State {
     None,
     BracketComment,
     HashComment,
-    QuotedString(bool),
-    MultiLine(bool),
+    QuotedString(StringType),
+    MultiLine(StringType),
+}
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct StringType {
+    maybe_variable: bool,
+    has_other: bool,
+    has_digits: bool,
+    has_dots: bool,
 }
 
 impl<'x> Tokenizer<'x> {
@@ -155,12 +164,39 @@ impl<'x> Tokenizer<'x> {
         }
     }
 
-    pub fn get_string(&mut self, maybe_variable: bool) -> Result<TokenInfo, CompileError> {
+    pub fn get_string(&mut self, str_type: StringType) -> Result<TokenInfo, CompileError> {
         if self.buf.len() < self.compiler.max_string_size {
-            let token = if maybe_variable {
+            let token = if str_type.maybe_variable {
                 Token::StringVariable(self.buf.to_vec())
             } else {
-                Token::StringConstant(self.buf.to_vec())
+                let constant = self.buf.to_vec().into_string();
+                if !str_type.has_other && str_type.has_digits {
+                    if !str_type.has_dots {
+                        if let Some(number) = constant.parse::<i64>().ok().and_then(|n| {
+                            if n.to_string() == constant {
+                                Some(n)
+                            } else {
+                                None
+                            }
+                        }) {
+                            Token::StringConstant(StringConstant::Number(Number::Integer(number)))
+                        } else {
+                            Token::StringConstant(StringConstant::String(constant))
+                        }
+                    } else if let Some(number) = constant.parse::<f64>().ok().and_then(|n| {
+                        if n.to_string() == constant {
+                            Some(n)
+                        } else {
+                            None
+                        }
+                    }) {
+                        Token::StringConstant(StringConstant::Number(Number::Float(number)))
+                    } else {
+                        Token::StringConstant(StringConstant::String(constant))
+                    }
+                } else {
+                    Token::StringConstant(StringConstant::String(constant))
+                }
             };
 
             self.buf.clear();
@@ -246,10 +282,10 @@ impl<'x> Tokenizer<'x> {
         }
     }
 
-    pub fn expect_static_string(&mut self) -> Result<Vec<u8>, CompileError> {
+    pub fn expect_static_string(&mut self) -> Result<String, CompileError> {
         let next_token = self.unwrap_next()?;
         match next_token.token {
-            Token::StringConstant(s) => Ok(s),
+            Token::StringConstant(s) => Ok(s.into_string()),
             Token::BracketOpen => {
                 let mut string = None;
                 loop {
@@ -262,7 +298,7 @@ impl<'x> Tokenizer<'x> {
                         _ => return Err(token_info.expected("constant string")),
                     }
                 }
-                Ok(string.unwrap())
+                Ok(string.unwrap().into_string())
             }
             _ => Err(next_token.expected("constant string")),
         }
@@ -321,7 +357,7 @@ impl<'x> Iterator for Tokenizer<'x> {
                         if self.is_token_start() {
                             self.token_is_tag();
                         } else if self.token_bytes().eq_ignore_ascii_case(b"text") {
-                            self.state = State::MultiLine(false);
+                            self.state = State::MultiLine(StringType::default());
                             self.text_start();
                             while let Some((ch, _)) = self.next_byte() {
                                 if ch == b'\n' {
@@ -335,7 +371,7 @@ impl<'x> Iterator for Tokenizer<'x> {
                         }
                     }
                     b'"' => {
-                        self.state = State::QuotedString(false);
+                        self.state = State::QuotedString(StringType::default());
                         self.text_start();
                         if let Some(token) = self.get_current_token() {
                             return Some(Ok(token));
@@ -413,17 +449,20 @@ impl<'x> Iterator for Tokenizer<'x> {
                         self.new_line();
                     }
                 }
-                State::QuotedString(maybe_variable) => match ch {
+                State::QuotedString(mut str_type) => match ch {
                     b'"' if last_ch != b'\\' => {
                         self.state = State::None;
-                        return Some(self.get_string(maybe_variable));
+                        return Some(self.get_string(str_type));
                     }
                     b'\n' => {
                         self.new_line();
                         self.push_byte(b'\n');
+                        str_type.has_other = true;
+                        self.state = State::QuotedString(str_type);
                     }
-                    b'{' if last_ch == b'$' => {
-                        self.state = State::QuotedString(true);
+                    b'{' if (last_ch == b'$' || last_ch == b'%') => {
+                        str_type.maybe_variable = true;
+                        self.state = State::QuotedString(str_type);
                         self.push_byte(ch);
                     }
                     b'\\' => {
@@ -431,11 +470,31 @@ impl<'x> Iterator for Tokenizer<'x> {
                             self.push_byte(ch);
                         }
                     }
+                    b'0'..=b'9' => {
+                        if !str_type.has_digits {
+                            str_type.has_digits = true;
+                            self.state = State::QuotedString(str_type);
+                        }
+                        self.push_byte(ch);
+                    }
+                    b'.' => {
+                        if !str_type.has_dots {
+                            str_type.has_dots = true;
+                        } else {
+                            str_type.has_other = true;
+                        }
+                        self.state = State::QuotedString(str_type);
+                        self.push_byte(ch);
+                    }
                     _ => {
+                        if !str_type.has_other && ch != b'-' {
+                            str_type.has_other = true;
+                            self.state = State::QuotedString(str_type);
+                        }
                         self.push_byte(ch);
                     }
                 },
-                State::MultiLine(maybe_variable) => match ch {
+                State::MultiLine(mut str_type) => match ch {
                     b'.' if last_ch == b'\n' => {
                         let is_eof = match (self.next_byte(), self.peek_byte()) {
                             (Some((b'\r', _)), Some(b'\n')) => {
@@ -458,18 +517,39 @@ impl<'x> Iterator for Tokenizer<'x> {
                         if is_eof {
                             self.new_line();
                             self.state = State::None;
-                            return Some(self.get_string(maybe_variable));
+                            return Some(self.get_string(str_type));
                         }
                     }
                     b'\n' => {
                         self.new_line();
                         self.push_byte(b'\n');
                     }
-                    b'{' if last_ch == b'$' => {
-                        self.state = State::MultiLine(true);
+                    b'{' if (last_ch == b'$' || last_ch == b'%') => {
+                        str_type.maybe_variable = true;
+                        self.state = State::MultiLine(str_type);
+                        self.push_byte(ch);
+                    }
+                    b'0'..=b'9' => {
+                        if !str_type.has_digits {
+                            str_type.has_digits = true;
+                            self.state = State::MultiLine(str_type);
+                        }
+                        self.push_byte(ch);
+                    }
+                    b'.' => {
+                        if !str_type.has_dots {
+                            str_type.has_dots = true;
+                        } else {
+                            str_type.has_other = true;
+                        }
+                        self.state = State::MultiLine(str_type);
                         self.push_byte(ch);
                     }
                     _ => {
+                        if !str_type.has_other && ch != b'-' {
+                            str_type.has_other = true;
+                            self.state = State::MultiLine(str_type);
+                        }
                         self.push_byte(ch);
                     }
                 },

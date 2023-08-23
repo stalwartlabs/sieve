@@ -24,9 +24,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::grammar::instruction::{CompilerState, Instruction};
-use crate::compiler::lexer::string::StringItem;
 use crate::compiler::lexer::Token;
 use crate::compiler::CompileError;
+use crate::compiler::Value;
 use crate::CommandType;
 
 use crate::compiler::grammar::test::Test;
@@ -35,15 +35,15 @@ use crate::compiler::lexer::word::Word;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Execute {
-    pub command: StringItem,
+    pub command: Value,
     pub command_type: CommandType,
-    pub arguments: Vec<StringItem>,
+    pub arguments: Vec<Value>,
     pub is_not: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Error {
-    pub message: StringItem,
+    pub message: Value,
 }
 
 impl<'x> CompilerState<'x> {

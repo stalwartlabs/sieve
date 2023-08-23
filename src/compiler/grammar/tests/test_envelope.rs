@@ -27,10 +27,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{instruction::CompilerState, Capability, Comparator},
-        lexer::{string::StringItem, word::Word, Token},
-        CompileError, ErrorType,
+        lexer::{word::Word, Token},
+        CompileError, ErrorType, Value,
     },
-    runtime::string::IntoString,
     Envelope,
 };
 
@@ -39,7 +38,7 @@ use crate::compiler::grammar::{test::Test, AddressPart, MatchType};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestEnvelope {
     pub envelope_list: Vec<Envelope>,
-    pub key_list: Vec<StringItem>,
+    pub key_list: Vec<Value>,
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,

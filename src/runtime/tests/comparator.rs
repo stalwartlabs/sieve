@@ -25,17 +25,18 @@ use regex::Regex;
 
 use crate::{
     compiler::grammar::{Comparator, RelationalMatch},
+    runtime::Variable,
     MatchAs,
 };
 
 use super::glob::{glob_match, glob_match_capture};
 
 impl Comparator {
-    pub(crate) fn is(&self, a: &str, b: &str) -> bool {
+    pub(crate) fn is(&self, a: &Variable<'_>, b: &Variable<'_>) -> bool {
         match self {
-            Comparator::Octet => a == b,
-            Comparator::AsciiNumeric => a.parse::<f64>() == b.parse::<f64>(),
-            _ => a.to_lowercase() == b.to_lowercase(),
+            Comparator::Octet => a.to_cow() == b.to_cow(),
+            Comparator::AsciiNumeric => RelationalMatch::Eq.cmp(&a.to_number(), &b.to_number()),
+            _ => a.to_cow().to_lowercase() == b.to_cow().to_lowercase(),
         }
     }
 
@@ -47,14 +48,16 @@ impl Comparator {
             }
     }
 
-    pub(crate) fn relational(&self, relation: &RelationalMatch, a: &str, b: &str) -> bool {
+    pub(crate) fn relational(
+        &self,
+        relation: &RelationalMatch,
+        a: &Variable<'_>,
+        b: &Variable<'_>,
+    ) -> bool {
         match self {
-            Comparator::Octet => relation.cmp(a, b.as_ref()),
-            Comparator::AsciiNumeric => relation.cmp(
-                &a.parse::<f64>().unwrap_or(f64::MAX),
-                &b.parse::<f64>().unwrap_or(f64::MAX),
-            ),
-            _ => relation.cmp(&a.to_lowercase(), &b.to_lowercase()),
+            Comparator::Octet => relation.cmp(a.to_cow().as_ref(), b.to_cow().as_ref()),
+            Comparator::AsciiNumeric => relation.cmp(&a.to_number(), &b.to_number()),
+            _ => relation.cmp(&a.to_cow().to_lowercase(), &b.to_cow().to_lowercase()),
         }
     }
 
@@ -120,25 +123,17 @@ impl Comparator {
 }
 
 impl RelationalMatch {
-    pub(crate) fn cmp_num(&self, num: f64, value: &str) -> bool {
-        if let Ok(value) = value.parse::<f64>() {
-            self.cmp(&num, &value)
-        } else {
-            false
-        }
-    }
-
-    pub(crate) fn cmp<T>(&self, haystack: &T, needle: &T) -> bool
+    pub fn cmp<T>(&self, a: &T, b: &T) -> bool
     where
         T: PartialOrd + ?Sized,
     {
         match self {
-            RelationalMatch::Gt => haystack.gt(needle),
-            RelationalMatch::Ge => haystack.ge(needle),
-            RelationalMatch::Lt => haystack.lt(needle),
-            RelationalMatch::Le => haystack.le(needle),
-            RelationalMatch::Eq => haystack.eq(needle),
-            RelationalMatch::Ne => haystack.ne(needle),
+            RelationalMatch::Gt => a.gt(b),
+            RelationalMatch::Ge => a.ge(b),
+            RelationalMatch::Lt => a.lt(b),
+            RelationalMatch::Le => a.le(b),
+            RelationalMatch::Eq => a.eq(b),
+            RelationalMatch::Ne => a.ne(b),
         }
     }
 }

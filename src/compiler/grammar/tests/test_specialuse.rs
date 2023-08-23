@@ -23,11 +23,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::{
-    grammar::instruction::CompilerState,
-    lexer::{string::StringItem, Token},
-    CompileError,
-};
+use crate::compiler::{grammar::instruction::CompilerState, lexer::Token, CompileError, Value};
 
 use crate::compiler::grammar::test::Test;
 
@@ -38,8 +34,8 @@ use crate::compiler::grammar::test::Test;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestSpecialUseExists {
-    pub mailbox: Option<StringItem>,
-    pub attributes: Vec<StringItem>,
+    pub mailbox: Option<Value>,
+    pub attributes: Vec<Value>,
     pub is_not: bool,
 }
 

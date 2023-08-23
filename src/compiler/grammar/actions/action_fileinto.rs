@@ -28,18 +28,18 @@ use crate::compiler::{
         instruction::{CompilerState, Instruction},
         Capability,
     },
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct FileInto {
     pub copy: bool,
     pub create: bool,
-    pub folder: StringItem,
-    pub flags: Vec<StringItem>,
-    pub mailbox_id: Option<StringItem>,
-    pub special_use: Option<StringItem>,
+    pub folder: Value,
+    pub flags: Vec<Value>,
+    pub mailbox_id: Option<Value>,
+    pub special_use: Option<Value>,
 }
 
 impl<'x> CompilerState<'x> {

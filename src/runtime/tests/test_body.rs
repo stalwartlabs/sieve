@@ -24,10 +24,14 @@
 use mail_parser::{decoders::html::html_to_text, MimeHeaders, PartType};
 
 use crate::{
-    compiler::grammar::{
-        tests::test_body::{BodyTransform, TestBody},
-        MatchType,
+    compiler::{
+        grammar::{
+            tests::test_body::{BodyTransform, TestBody},
+            MatchType,
+        },
+        Number,
     },
+    runtime::Variable,
     Context,
 };
 
@@ -35,16 +39,16 @@ use super::{mime::ContentTypeFilter, TestResult};
 
 impl TestBody {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let key_list = ctx.eval_strings(&self.key_list);
+        let key_list = ctx.eval_values(&self.key_list);
         let ct_filter = match &self.body_transform {
             BodyTransform::Text | BodyTransform::Raw => Vec::new(),
             BodyTransform::Content(values) => {
                 let mut ct_filter = Vec::with_capacity(values.len());
                 for ct in values {
-                    let ct = ctx.eval_string(ct);
+                    let ct = ctx.eval_value(ct);
                     if ct.is_empty() {
                         break;
-                    } else if let Some(ctf) = ContentTypeFilter::parse(ct.as_ref()) {
+                    } else if let Some(ctf) = ContentTypeFilter::parse(ct.into_cow().as_ref()) {
                         ct_filter.push(ctf);
                     } else {
                         return TestResult::Bool(false ^ self.is_not);
@@ -64,7 +68,7 @@ impl TestBody {
             });
 
             for key in &self.key_list {
-                if rel_match.cmp_num(count as f64, ctx.eval_string(key).as_ref()) {
+                if rel_match.cmp(&Number::from(count), &ctx.eval_value(key).to_number()) {
                     result = true;
                     break;
                 }
@@ -156,22 +160,27 @@ impl TestBody {
 
                 for key in &key_list {
                     result = match &self.match_type {
-                        MatchType::Is => self.comparator.is(text.as_ref(), key.as_ref()),
-                        MatchType::Contains => {
-                            self.comparator.contains(text.as_ref(), key.as_ref())
-                        }
-                        MatchType::Value(rel_match) => {
-                            self.comparator
-                                .relational(rel_match, text.as_ref(), key.as_ref())
-                        }
-                        MatchType::Matches(_) => {
-                            self.comparator
-                                .matches(text.as_ref(), key.as_ref(), 0, &mut Vec::new())
-                        }
-                        MatchType::Regex(_) => {
-                            self.comparator
-                                .regex(text.as_ref(), key.as_ref(), 0, &mut Vec::new())
-                        }
+                        MatchType::Is => self.comparator.is(&Variable::from(text.as_ref()), key),
+                        MatchType::Contains => self
+                            .comparator
+                            .contains(text.as_ref(), key.to_cow().as_ref()),
+                        MatchType::Value(rel_match) => self.comparator.relational(
+                            rel_match,
+                            &Variable::from(text.as_ref()),
+                            key,
+                        ),
+                        MatchType::Matches(_) => self.comparator.matches(
+                            text.as_ref(),
+                            key.to_cow().as_ref(),
+                            0,
+                            &mut Vec::new(),
+                        ),
+                        MatchType::Regex(_) => self.comparator.regex(
+                            text.as_ref(),
+                            key.to_cow().as_ref(),
+                            0,
+                            &mut Vec::new(),
+                        ),
                         _ => false,
                     };
 

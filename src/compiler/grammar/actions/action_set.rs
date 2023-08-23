@@ -26,10 +26,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::instruction::{CompilerState, Instruction},
-        lexer::{string::StringItem, tokenizer::TokenInfo, word::Word, Token},
-        CompileError, ErrorType,
+        lexer::{tokenizer::TokenInfo, word::Word, Token},
+        CompileError, ErrorType, Value, VariableType,
     },
-    runtime::string::IntoString,
     Envelope,
 };
 
@@ -43,10 +42,7 @@ pub(crate) enum Modifier {
     QuoteRegex,
     EncodeUrl,
     Length,
-    Replace {
-        find: StringItem,
-        replace: StringItem,
-    },
+    Replace { find: Value, replace: Value },
 }
 
 impl Modifier {
@@ -68,15 +64,8 @@ impl Modifier {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Set {
     pub modifiers: Vec<Modifier>,
-    pub name: Variable,
-    pub value: StringItem,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Variable {
-    Local(usize),
-    Global(String),
-    Envelope(Envelope),
+    pub name: VariableType,
+    pub value: Value,
 }
 
 impl<'x> CompilerState<'x> {
@@ -135,7 +124,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_variable_name(
         &mut self,
         token_info: TokenInfo,
-    ) -> Result<Variable, CompileError> {
+    ) -> Result<VariableType, CompileError> {
         match token_info.token {
             Token::StringConstant(value) => {
                 self.register_variable(value.into_string())
@@ -149,23 +138,23 @@ impl<'x> CompilerState<'x> {
         }
     }
 
-    pub(crate) fn register_variable(&mut self, name: String) -> Result<Variable, ErrorType> {
+    pub(crate) fn register_variable(&mut self, name: String) -> Result<VariableType, ErrorType> {
         let name = name.to_lowercase();
         if let Some((namespace, part)) = name.split_once('.') {
             if namespace == "global" {
-                Ok(Variable::Global(part.to_string()))
+                Ok(VariableType::Global(part.to_string()))
             } else if namespace == "envelope" {
                 Envelope::try_from(part)
-                    .map(Variable::Envelope)
+                    .map(VariableType::Envelope)
                     .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string()))
             } else {
                 Err(ErrorType::InvalidNamespace(namespace.to_string()))
             }
         } else {
             Ok(if !self.is_var_global(&name) {
-                Variable::Local(self.register_local_var(name))
+                VariableType::Local(self.register_local_var(name))
             } else {
-                Variable::Global(name)
+                VariableType::Global(name)
             })
         }
     }

@@ -21,13 +21,15 @@
  * for more details.
 */
 
-use std::borrow::Cow;
-
 use crate::{
-    compiler::grammar::{
-        tests::test_spamtest::{TestSpamTest, TestVirusTest},
-        MatchType,
+    compiler::{
+        grammar::{
+            tests::test_spamtest::{TestSpamTest, TestVirusTest},
+            MatchType,
+        },
+        Number,
     },
+    runtime::Variable,
     Context, SpamStatus, VirusStatus,
 };
 
@@ -40,35 +42,34 @@ impl TestSpamTest {
         } else {
             ctx.spam_status.as_number()
         };
-        let value = ctx.eval_string(&self.value);
+        let value = ctx.eval_value(&self.value);
         let mut captured_values = Vec::new();
 
         let result = match &self.match_type {
-            MatchType::Is => self.comparator.is(status.as_ref(), value.as_ref()),
-            MatchType::Contains => self.comparator.contains(status.as_ref(), value.as_ref()),
-            MatchType::Value(rel_match) => {
-                self.comparator
-                    .relational(rel_match, status.as_ref(), value.as_ref())
-            }
+            MatchType::Is => self.comparator.is(&status, &value),
+            MatchType::Contains => self
+                .comparator
+                .contains(status.into_cow().as_ref(), value.into_cow().as_ref()),
+            MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.matches(
-                status.as_ref(),
-                value.as_ref(),
+                status.into_cow().as_ref(),
+                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
-                status.as_ref(),
-                value.as_ref(),
+                status.into_cow().as_ref(),
+                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
-            MatchType::Count(rel_match) => rel_match.cmp_num(
-                if matches!(&ctx.spam_status, SpamStatus::Unknown) {
+            MatchType::Count(rel_match) => rel_match.cmp(
+                &Number::from(if matches!(&ctx.spam_status, SpamStatus::Unknown) {
                     0.0
                 } else {
                     1.1
-                },
-                value.as_ref(),
+                }),
+                &value.to_number(),
             ),
             MatchType::List => false,
         };
@@ -84,35 +85,34 @@ impl TestSpamTest {
 impl TestVirusTest {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let status = ctx.virus_status.as_number();
-        let value = ctx.eval_string(&self.value);
+        let value = ctx.eval_value(&self.value);
         let mut captured_values = Vec::new();
 
         let result = match &self.match_type {
-            MatchType::Is => self.comparator.is(status.as_ref(), value.as_ref()),
-            MatchType::Contains => self.comparator.contains(status.as_ref(), value.as_ref()),
-            MatchType::Value(rel_match) => {
-                self.comparator
-                    .relational(rel_match, status.as_ref(), value.as_ref())
-            }
+            MatchType::Is => self.comparator.is(&status, &value),
+            MatchType::Contains => self
+                .comparator
+                .contains(status.into_cow().as_ref(), value.into_cow().as_ref()),
+            MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.regex(
-                status.as_ref(),
-                value.as_ref(),
+                status.into_cow().as_ref(),
+                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
-                status.as_ref(),
-                value.as_ref(),
+                status.into_cow().as_ref(),
+                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
-            MatchType::Count(rel_match) => rel_match.cmp_num(
-                if matches!(&ctx.virus_status, VirusStatus::Unknown) {
+            MatchType::Count(rel_match) => rel_match.cmp(
+                &Number::from(if matches!(&ctx.virus_status, VirusStatus::Unknown) {
                     0.0
                 } else {
                     1.1
-                },
-                value.as_ref(),
+                }),
+                &value.to_number(),
             ),
             MatchType::List => false,
         };
@@ -135,43 +135,39 @@ impl SpamStatus {
         }
     }
 
-    pub fn as_number(&self) -> Cow<'static, str> {
-        match self {
-            SpamStatus::Unknown => "0".into(),
-            SpamStatus::Ham => "1".into(),
+    pub(crate) fn as_number(&self) -> Variable<'static> {
+        Variable::Integer(match self {
+            SpamStatus::Unknown => 0,
+            SpamStatus::Ham => 1,
             SpamStatus::MaybeSpam(pct) => {
-                let n = (pct * 10.0) as u32;
-                (if n < 2 {
+                let n = (pct * 10.0) as i64;
+                if n < 2 {
                     2
                 } else if n > 9 {
                     9
                 } else {
                     n
-                })
-                .to_string()
-                .into()
+                }
             }
-            SpamStatus::Spam => "10".into(),
-        }
+            SpamStatus::Spam => 10,
+        })
     }
 
-    pub fn as_percentage(&self) -> Cow<'static, str> {
-        match self {
-            SpamStatus::Unknown | SpamStatus::Ham => "0".into(),
+    pub(crate) fn as_percentage(&self) -> Variable<'static> {
+        Variable::Integer(match self {
+            SpamStatus::Unknown | SpamStatus::Ham => 0,
             SpamStatus::MaybeSpam(pct) => {
-                let n = (pct * 100.0).ceil() as u32;
-                (if n > 100 {
+                let n = (pct * 100.0).ceil() as i64;
+                if n > 100 {
                     100
                 } else if n < 1 {
                     1
                 } else {
                     n
-                })
-                .to_string()
-                .into()
+                }
             }
-            SpamStatus::Spam => "100".into(),
-        }
+            SpamStatus::Spam => 100,
+        })
     }
 }
 
@@ -187,15 +183,15 @@ impl VirusStatus {
         }
     }
 
-    pub fn as_number(&self) -> &'static str {
-        match self {
-            VirusStatus::Unknown => "0",
-            VirusStatus::Clean => "1",
-            VirusStatus::Replaced => "2",
-            VirusStatus::Cured => "3",
-            VirusStatus::MaybeVirus => "4",
-            VirusStatus::Virus => "5",
-        }
+    pub(crate) fn as_number(&self) -> Variable<'static> {
+        Variable::Integer(match self {
+            VirusStatus::Unknown => 0,
+            VirusStatus::Clean => 1,
+            VirusStatus::Replaced => 2,
+            VirusStatus::Cured => 3,
+            VirusStatus::MaybeVirus => 4,
+            VirusStatus::Virus => 5,
+        })
     }
 }
 

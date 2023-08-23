@@ -25,15 +25,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestBody {
-    pub key_list: Vec<StringItem>,
+    pub key_list: Vec<Value>,
     pub body_transform: BodyTransform,
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -43,7 +43,7 @@ pub(crate) struct TestBody {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum BodyTransform {
     Raw,
-    Content(Vec<StringItem>),
+    Content(Vec<Value>),
     Text,
 }
 

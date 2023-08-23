@@ -21,13 +21,10 @@
  * for more details.
 */
 
-use crate::{
-    compiler::{
-        grammar::{instruction::CompilerState, Capability, Comparator},
-        lexer::{string::StringItem, word::Word, Token},
-        CompileError,
-    },
-    runtime::string::IntoString,
+use crate::compiler::{
+    grammar::{instruction::CompilerState, Capability, Comparator},
+    lexer::{word::Word, Token},
+    CompileError, Value, VariableType,
 };
 
 use crate::compiler::grammar::{test::Test, MatchType};
@@ -73,8 +70,10 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     if name.is_none() {
                         if let Token::StringConstant(s) = token_info.token {
-                            name = StringItem::EnvironmentVariable(s.into_string().to_lowercase())
-                                .into();
+                            name = Value::Variable(VariableType::Environment(
+                                s.into_string().to_lowercase(),
+                            ))
+                            .into();
                         } else {
                             return Err(token_info.expected("environment variable"));
                         }

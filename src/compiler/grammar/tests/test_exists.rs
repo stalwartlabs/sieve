@@ -26,15 +26,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError, ErrorType,
+    lexer::{word::Word, Token},
+    CompileError, ErrorType, Value,
 };
 
 use crate::compiler::grammar::test::Test;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestExists {
-    pub header_names: Vec<StringItem>,
+    pub header_names: Vec<Value>,
     pub mime_anychild: bool,
     pub is_not: bool,
 }
@@ -70,7 +70,7 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     let headers = self.parse_strings_token(token_info)?;
                     for header in &headers {
-                        if let StringItem::Text(header_name) = &header {
+                        if let Value::Text(header_name) = &header {
                             if HeaderName::parse(header_name).is_none() {
                                 return Err(self
                                     .tokens

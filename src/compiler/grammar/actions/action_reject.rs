@@ -25,14 +25,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::instruction::{CompilerState, Instruction},
-    lexer::string::StringItem,
-    CompileError,
+    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Reject {
     pub ereject: bool,
-    pub reason: StringItem,
+    pub reason: Value,
 }
 
 impl<'x> CompilerState<'x> {

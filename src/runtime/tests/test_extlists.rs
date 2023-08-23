@@ -30,7 +30,11 @@ impl TestValidExtList {
         let mut num_valid = 0;
 
         for list in &self.list_names {
-            if ctx.runtime.valid_ext_lists.contains(&ctx.eval_string(list)) {
+            if ctx
+                .runtime
+                .valid_ext_lists
+                .contains(&ctx.eval_value(list).into_cow())
+            {
                 num_valid += 1;
             }
         }

@@ -25,17 +25,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::instruction::{CompilerState, Instruction},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError, ErrorType,
+    lexer::{word::Word, Token},
+    CompileError, ErrorType, Value, VariableType,
 };
-
-use super::action_set::Variable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct EditFlags {
     pub action: Action,
-    pub name: Option<Variable>,
-    pub flags: Vec<StringItem>,
+    pub name: Option<VariableType>,
+    pub flags: Vec<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

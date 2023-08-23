@@ -28,13 +28,13 @@ use crate::compiler::{
         instruction::{CompilerState, Instruction},
         Capability,
     },
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Keep {
-    pub flags: Vec<StringItem>,
+    pub flags: Vec<Value>,
 }
 
 impl<'x> CompilerState<'x> {

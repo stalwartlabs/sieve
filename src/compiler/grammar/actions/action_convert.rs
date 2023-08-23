@@ -28,15 +28,14 @@ use crate::compiler::{
         instruction::{CompilerState, Instruction},
         test::Test,
     },
-    lexer::string::StringItem,
-    CompileError,
+    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Convert {
-    pub from_media_type: StringItem,
-    pub to_media_type: StringItem,
-    pub transcoding_params: Vec<StringItem>,
+    pub from_media_type: Value,
+    pub to_media_type: Value,
+    pub transcoding_params: Vec<Value>,
     pub is_not: bool,
 }
 

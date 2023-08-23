@@ -26,10 +26,14 @@ use std::borrow::Cow;
 use mail_parser::{parsers::MessageStream, DateTime, Header, HeaderValue};
 
 use crate::{
-    compiler::grammar::{
-        tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
-        MatchType,
+    compiler::{
+        grammar::{
+            tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
+            MatchType,
+        },
+        Number,
     },
+    runtime::Variable,
     Context, Event,
 };
 
@@ -60,7 +64,7 @@ impl TestDate {
 
                 let mut result = false;
                 for key in &self.key_list {
-                    if rel_match.cmp_num(date_count as f64, ctx.eval_string(key).as_ref()) {
+                    if rel_match.cmp(&Number::from(date_count), &ctx.eval_value(key).to_number()) {
                         result = true;
                         break;
                     }
@@ -87,7 +91,7 @@ impl TestDate {
                 if !values.is_empty() {
                     return TestResult::Event {
                         event: Event::ListContains {
-                            lists: ctx.eval_strings_owned(&self.key_list),
+                            lists: ctx.eval_values_owned(&self.key_list),
                             values,
                             match_as: self.comparator.as_match(),
                         },
@@ -97,7 +101,7 @@ impl TestDate {
                 false
             }
             _ => {
-                let key_list = ctx.eval_strings(&self.key_list);
+                let key_list = ctx.eval_values(&self.key_list);
                 let mut captured_values = Vec::new();
 
                 let result = ctx.find_headers(
@@ -110,26 +114,28 @@ impl TestDate {
                                 self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
                             for key in &key_list {
                                 if match &self.match_type {
-                                    MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
+                                    MatchType::Is => {
+                                        self.comparator.is(&Variable::from(&date_part), key)
+                                    }
                                     MatchType::Contains => {
-                                        self.comparator.contains(&date_part, key.as_ref())
+                                        self.comparator.contains(&date_part, key.to_cow().as_ref())
                                     }
                                     MatchType::Value(rel_match) => self.comparator.relational(
                                         rel_match,
-                                        &date_part,
-                                        key.as_ref(),
+                                        &Variable::from(&date_part),
+                                        key,
                                     ),
                                     MatchType::Matches(capture_positions) => {
                                         self.comparator.matches(
                                             &date_part,
-                                            key.as_ref(),
+                                            key.to_cow().as_ref(),
                                             *capture_positions,
                                             &mut captured_values,
                                         )
                                     }
                                     MatchType::Regex(capture_positions) => self.comparator.matches(
                                         &date_part,
-                                        key.as_ref(),
+                                        key.to_cow().as_ref(),
                                         *capture_positions,
                                         &mut captured_values,
                                     ),
@@ -161,7 +167,7 @@ impl TestCurrentDate {
         match &self.match_type {
             MatchType::Count(rel_match) => {
                 for key in &self.key_list {
-                    if rel_match.cmp_num(1.0, ctx.eval_string(key).as_ref()) {
+                    if rel_match.cmp(&Number::from(1.0), &ctx.eval_value(key).to_number()) {
                         result = true;
                         break;
                     }
@@ -178,7 +184,7 @@ impl TestCurrentDate {
                 if !value.is_empty() {
                     return TestResult::Event {
                         event: Event::ListContains {
-                            lists: ctx.eval_strings_owned(&self.key_list),
+                            lists: ctx.eval_values_owned(&self.key_list),
                             values: vec![value],
                             match_as: self.comparator.as_match(),
                         },
@@ -197,24 +203,26 @@ impl TestCurrentDate {
                 );
 
                 for key in &self.key_list {
-                    let key = ctx.eval_string(key);
+                    let key = ctx.eval_value(key);
 
                     if match &self.match_type {
-                        MatchType::Is => self.comparator.is(&date_part, key.as_ref()),
-                        MatchType::Contains => self.comparator.contains(&date_part, key.as_ref()),
+                        MatchType::Is => self.comparator.is(&Variable::from(&date_part), &key),
+                        MatchType::Contains => self
+                            .comparator
+                            .contains(&date_part, key.into_cow().as_ref()),
                         MatchType::Value(rel_match) => {
                             self.comparator
-                                .relational(rel_match, &date_part, key.as_ref())
+                                .relational(rel_match, &Variable::from(&date_part), &key)
                         }
                         MatchType::Matches(capture_positions) => self.comparator.matches(
                             &date_part,
-                            key.as_ref(),
+                            key.into_cow().as_ref(),
                             *capture_positions,
                             &mut captured_values,
                         ),
                         MatchType::Regex(capture_positions) => self.comparator.matches(
                             &date_part,
-                            key.as_ref(),
+                            key.into_cow().as_ref(),
                             *capture_positions,
                             &mut captured_values,
                         ),

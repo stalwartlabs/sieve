@@ -25,16 +25,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, test::Test, Capability, Comparator},
-    lexer::{string::StringItem, word::Word, Token},
-    CompileError,
+    lexer::{word::Word, Token},
+    CompileError, Value,
 };
 
 use crate::compiler::grammar::{AddressPart, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct TestAddress {
-    pub header_list: Vec<StringItem>,
-    pub key_list: Vec<StringItem>,
+    pub header_list: Vec<Value>,
+    pub key_list: Vec<Value>,
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
