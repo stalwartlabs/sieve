@@ -83,8 +83,8 @@ impl TestNotifyMethodCapability {
                 }
             }
         } else {
-            for key in &self.key_list {
-                let key = ctx.eval_value(key);
+            for pattern in &self.key_list {
+                let key = ctx.eval_value(pattern);
                 if match &self.match_type {
                     MatchType::Is => self.comparator.is(&Variable::from("maybe"), &key),
                     MatchType::Contains => {
@@ -102,7 +102,7 @@ impl TestNotifyMethodCapability {
                     ),
                     MatchType::Regex(_) => {
                         self.comparator
-                            .regex("maybe", key.into_cow().as_ref(), 0, &mut Vec::new())
+                            .regex(pattern, &key, "maybe", 0, &mut Vec::new())
                     }
                     _ => false,
                 } {

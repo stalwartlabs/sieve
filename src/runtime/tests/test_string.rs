@@ -76,8 +76,8 @@ impl TestString {
                 let mut captured_values = Vec::new();
                 let sources = ctx.eval_values(&self.source);
 
-                for key in &self.key_list {
-                    let key = ctx.eval_value(key);
+                for pattern in &self.key_list {
+                    let key = ctx.eval_value(pattern);
                     for source in &sources {
                         if !empty_is_null || !source.is_empty() {
                             result = match &self.match_type {
@@ -95,8 +95,9 @@ impl TestString {
                                     &mut captured_values,
                                 ),
                                 MatchType::Regex(capture_positions) => self.comparator.regex(
+                                    pattern,
+                                    &key,
                                     source.to_cow().as_ref(),
-                                    key.to_cow().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
                                 ),

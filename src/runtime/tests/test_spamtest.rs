@@ -58,8 +58,9 @@ impl TestSpamTest {
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
+                &self.value,
+                &value,
                 status.into_cow().as_ref(),
-                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
@@ -94,15 +95,16 @@ impl TestVirusTest {
                 .comparator
                 .contains(status.into_cow().as_ref(), value.into_cow().as_ref()),
             MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
-            MatchType::Matches(capture_positions) => self.comparator.regex(
+            MatchType::Matches(capture_positions) => self.comparator.matches(
                 status.into_cow().as_ref(),
                 value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
+                &self.value,
+                &value,
                 status.into_cow().as_ref(),
-                value.into_cow().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),

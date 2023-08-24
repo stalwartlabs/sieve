@@ -91,28 +91,31 @@ impl DeleteHeader {
             |header, part_id, header_pos| {
                 if !value_patterns.is_empty() {
                     let did_match = ctx.find_header_values(header, &MimeOpts::None, |value| {
-                        for pattern in &value_patterns {
+                        for (pattern_expr, pattern) in
+                            value_patterns.iter().zip(self.value_patterns.iter())
+                        {
                             if match &self.match_type {
                                 MatchType::Is => {
-                                    self.comparator.is(&Variable::from(value), pattern)
+                                    self.comparator.is(&Variable::from(value), pattern_expr)
                                 }
-                                MatchType::Contains => {
-                                    self.comparator.contains(value, pattern.to_cow().as_ref())
-                                }
+                                MatchType::Contains => self
+                                    .comparator
+                                    .contains(value, pattern_expr.to_cow().as_ref()),
                                 MatchType::Value(rel_match) => self.comparator.relational(
                                     rel_match,
                                     &Variable::from(value),
-                                    pattern,
+                                    pattern_expr,
                                 ),
                                 MatchType::Matches(_) => self.comparator.matches(
                                     value,
-                                    pattern.to_cow().as_ref(),
+                                    pattern_expr.to_cow().as_ref(),
                                     0,
                                     &mut Vec::new(),
                                 ),
                                 MatchType::Regex(_) => self.comparator.regex(
+                                    pattern,
+                                    pattern_expr,
                                     value,
-                                    pattern.to_cow().as_ref(),
                                     0,
                                     &mut Vec::new(),
                                 ),

@@ -200,8 +200,8 @@ impl<'x> CompilerState<'x> {
                 Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
             )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
             {
-                let key_list = self.parse_strings()?;
-                self.validate_match(&match_type, &key_list)?;
+                let mut key_list = self.parse_strings()?;
+                self.validate_match(&match_type, &mut key_list)?;
                 key_list
             } else {
                 Vec::new()

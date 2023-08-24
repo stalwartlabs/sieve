@@ -158,7 +158,7 @@ impl TestBody {
                 };
                 let mut result = false;
 
-                for key in &key_list {
+                for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
                     result = match &self.match_type {
                         MatchType::Is => self.comparator.is(&Variable::from(text.as_ref()), key),
                         MatchType::Contains => self
@@ -175,12 +175,10 @@ impl TestBody {
                             0,
                             &mut Vec::new(),
                         ),
-                        MatchType::Regex(_) => self.comparator.regex(
-                            text.as_ref(),
-                            key.to_cow().as_ref(),
-                            0,
-                            &mut Vec::new(),
-                        ),
+                        MatchType::Regex(_) => {
+                            self.comparator
+                                .regex(pattern, key, text.as_ref(), 0, &mut Vec::new())
+                        }
                         _ => false,
                     };
 

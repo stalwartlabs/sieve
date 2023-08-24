@@ -81,6 +81,7 @@ impl<'x> Context<'x> {
                                 data.push_str(&value.to_string());
                             }
                         }
+                        Value::Regex(_) => (),
                     }
                 }
                 data.into()
@@ -89,7 +90,8 @@ impl<'x> Context<'x> {
             Value::Expression(expr) => self
                 .eval_expression(expr)
                 .map(Variable::from)
-                .unwrap_or(Variable::String("".into())),
+                .unwrap_or(Variable::default()),
+            Value::Regex(r) => Variable::StringRef(&r.expr),
         }
     }
 

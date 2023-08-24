@@ -427,6 +427,7 @@ impl Display for Value {
             Value::Number(n) => n.fmt(f),
             Value::Variable(v) => v.fmt(f),
             Value::Expression(_) => f.write_str("%{}"),
+            Value::Regex(r) => f.write_str(&r.expr),
         }
     }
 }

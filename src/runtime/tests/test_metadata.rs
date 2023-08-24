@@ -82,8 +82,8 @@ impl TestMetadata {
         } else {
             let mut captured_values = Vec::new();
 
-            for key in &self.key_list {
-                let key = ctx.eval_value(key);
+            for pattern in &self.key_list {
+                let key = ctx.eval_value(pattern);
                 result = match &self.match_type {
                     MatchType::Is => self.comparator.is(&Variable::from(value), &key),
                     MatchType::Contains => self.comparator.contains(value, key.into_cow().as_ref()),
@@ -98,8 +98,9 @@ impl TestMetadata {
                         &mut captured_values,
                     ),
                     MatchType::Regex(capture_positions) => self.comparator.regex(
+                        pattern,
+                        &key,
                         value,
-                        key.into_cow().as_ref(),
                         *capture_positions,
                         &mut captured_values,
                     ),
