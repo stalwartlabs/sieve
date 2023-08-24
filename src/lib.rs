@@ -94,11 +94,8 @@
 //!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
-//!                 Event::Execute { command, arguments, .. } => {
-//!                     println!(
-//!                         "Script executed command {:?} with parameters {:?}",
-//!                         command, arguments
-//!                     );
+//!                 Event::Plugin { id, arguments } => {
+//!                     println!("Script executed plugin {id} with parameters {arguments:?}");
 //!                     // Set to true if the script succeeded
 //!                     input = false.into();
 //!                 }
@@ -271,10 +268,13 @@
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::grammar::{
-    actions::action_redirect::{ByTime, Notify, Ret},
-    instruction::Instruction,
-    Capability,
+use compiler::{
+    grammar::{
+        actions::action_redirect::{ByTime, Notify, Ret},
+        instruction::Instruction,
+        Capability,
+    },
+    Number, Regex,
 };
 use mail_parser::{HeaderName, Message};
 use runtime::{context::ScriptStack, Variable};
@@ -305,6 +305,9 @@ pub struct Compiler {
     pub(crate) max_local_variables: usize,
     pub(crate) max_header_size: usize,
     pub(crate) max_includes: usize,
+
+    // Plugins
+    pub(crate) plugins: AHashMap<String, PluginSchema>,
 }
 
 #[derive(Debug, Clone)]
@@ -379,6 +382,24 @@ pub enum Script {
     Global(String),
 }
 
+pub struct PluginSchema {
+    pub id: ExternalId,
+    pub tags: AHashMap<String, PluginSchemaTag>,
+    pub arguments: Vec<PluginSchemaArgument>,
+}
+
+pub enum PluginSchemaArgument {
+    Text,
+    Number,
+    Regex,
+    Array(Box<PluginSchemaArgument>),
+}
+
+pub struct PluginSchemaTag {
+    pub id: ExternalId,
+    pub argument: Option<PluginSchemaArgument>,
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Envelope {
     From,
@@ -419,10 +440,9 @@ pub enum Event {
         expiry: u64,
         last: bool,
     },
-    Execute {
-        command_type: CommandType,
-        command: String,
-        arguments: Vec<String>,
+    Plugin {
+        id: ExternalId,
+        arguments: Vec<PluginArgument<String, Number>>,
     },
     SetEnvelope {
         envelope: Envelope,
@@ -465,7 +485,17 @@ pub enum Event {
         message_id: usize,
         message: Vec<u8>,
     },
+}
 
+pub type ExternalId = u32;
+
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum PluginArgument<T, N> {
+    Tag(ExternalId),
+    Text(T),
+    Number(N),
+    Regex(Regex),
+    Array(Vec<PluginArgument<T, N>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
@@ -527,10 +557,4 @@ pub enum VirusStatus {
     Cured,
     MaybeVirus,
     Virus,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CommandType {
-    Binary,
-    Query,
 }

@@ -351,18 +351,13 @@ impl<'x> Context<'x> {
                             self.eval_value(&err.message).into_string(),
                         )));
                     }
-                    Instruction::Execute(execute) => {
-                        return Some(Ok(Event::Execute {
-                            command_type: execute.command_type,
-                            command: self.eval_value(&execute.command).into_string(),
-                            arguments: self.eval_values_owned(&execute.arguments),
-                        }));
+                    Instruction::Plugin(plugin) => {
+                        return Some(Ok(self.eval_plugin_arguments(plugin)));
                     }
                     Instruction::Invalid(invalid) => {
                         self.finish_loop();
                         return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
                     }
-
                 }
             }
 

@@ -48,7 +48,7 @@ use super::{
         action_set::Set,
         action_vacation::Vacation,
     },
-    tests::test_execute::Execute,
+    tests::test_plugin::Plugin,
     Capability, Clear, Invalid,
 };
 
@@ -106,10 +106,8 @@ pub(crate) enum Instruction {
     Include(Include),
     Return,
 
-    // Execute extension
-    Execute(Execute),
-
-    // Testing
+    // Plugin extension
+    Plugin(Plugin),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -532,16 +530,6 @@ impl Compiler {
                                 }
                             }
                         }
-
-                        Word::Execute => {
-                            state.validate_argument(
-                                0,
-                                Capability::Execute.into(),
-                                token_info.line_num,
-                                token_info.line_pos,
-                            )?;
-                            state.parse_execute()?;
-                        }
                         _ => {
                             state.ignore_instruction()?;
                             state.instructions.push(Instruction::Invalid(Invalid {
@@ -648,13 +636,23 @@ impl Compiler {
                     state.block = prev_block;
                 }
 
-                Token::Invalid(instruction) => {
-                    state.ignore_instruction()?;
-                    state.instructions.push(Instruction::Invalid(Invalid {
-                        name: instruction,
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                    }));
+                Token::Unknown(instruction) => {
+                    if let Some(schema) = self.plugins.get(&instruction) {
+                        state.validate_argument(
+                            0,
+                            Capability::Plugins.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        state.parse_plugin(schema)?;
+                    } else {
+                        state.ignore_instruction()?;
+                        state.instructions.push(Instruction::Invalid(Invalid {
+                            name: instruction,
+                            line_num: token_info.line_num,
+                            line_pos: token_info.line_pos,
+                        }));
+                    }
                 }
                 _ => {
                     return Err(token_info.expected("instruction"));

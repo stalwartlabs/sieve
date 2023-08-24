@@ -30,9 +30,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{Capability, Invalid},
-        Number,
+        Number, Regex,
     },
-    Context, Input, Metadata, Runtime, Script, Sieve,
+    Context, Input, Metadata, PluginArgument, Runtime, Script, Sieve,
 };
 
 pub mod actions;
@@ -197,6 +197,70 @@ impl PartialOrd for Number {
             (Number::Float(a), Number::Integer(b)) => (*a, *b as f64),
         };
         a.partial_cmp(&b)
+    }
+}
+
+impl PluginArgument<String, Number> {
+    pub fn unwrap_string(self) -> Option<String> {
+        match self {
+            PluginArgument::Text(s) => s.into(),
+            PluginArgument::Number(n) => n.to_string().into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_number(self) -> Option<Number> {
+        match self {
+            PluginArgument::Number(n) => n.into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_regex(self) -> Option<Regex> {
+        match self {
+            PluginArgument::Regex(r) => r.into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_array(self) -> Option<Vec<Self>> {
+        match self {
+            PluginArgument::Array(a) => a.into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_string_array(self) -> Option<Vec<String>> {
+        match self {
+            PluginArgument::Array(a) => a
+                .into_iter()
+                .filter_map(Self::unwrap_string)
+                .collect::<Vec<_>>()
+                .into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_number_array(self) -> Option<Vec<Number>> {
+        match self {
+            PluginArgument::Array(a) => a
+                .into_iter()
+                .filter_map(Self::unwrap_number)
+                .collect::<Vec<_>>()
+                .into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_regex_array(self) -> Option<Vec<Regex>> {
+        match self {
+            PluginArgument::Array(a) => a
+                .into_iter()
+                .filter_map(Self::unwrap_regex)
+                .collect::<Vec<_>>()
+                .into(),
+            _ => None,
+        }
     }
 }
 

@@ -115,12 +115,8 @@ impl Test {
                 is_not: test.is_not,
             },
             Test::Convert(test) => test.exec(ctx),
-            Test::Execute(test) => TestResult::Event {
-                event: Event::Execute {
-                    command_type: test.command_type,
-                    command: ctx.eval_value(&test.command).into_string(),
-                    arguments: ctx.eval_values_owned(&test.arguments),
-                },
+            Test::Plugin(test) => TestResult::Event {
+                event: ctx.eval_plugin_arguments(test),
                 is_not: test.is_not,
             },
             Test::True => TestResult::Bool(true),
