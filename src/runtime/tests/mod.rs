@@ -62,6 +62,12 @@ impl Test {
             Test::Size(test) => test.exec(ctx),
             Test::Body(test) => test.exec(ctx),
             Test::String(test) => test.exec(ctx, false),
+            Test::EvalExpression(expr) => TestResult::Bool(
+                ctx.eval_expression(&expr.expr)
+                    .unwrap_or_default()
+                    .is_non_zero()
+                    ^ expr.is_not,
+            ),
             Test::HasFlag(test) => test.exec(ctx),
             Test::Date(test) => test.exec(ctx),
             Test::CurrentDate(test) => test.exec(ctx),

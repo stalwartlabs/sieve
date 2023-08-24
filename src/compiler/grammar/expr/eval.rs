@@ -107,6 +107,19 @@ impl Number {
             },
         }
     }
+
+    pub fn is_non_zero(&self) -> bool {
+        match self {
+            Number::Integer(n) => *n != 0,
+            Number::Float(n) => *n != 0.0,
+        }
+    }
+}
+
+impl Default for Number {
+    fn default() -> Self {
+        Number::Integer(0)
+    }
 }
 
 trait IntoBool {
