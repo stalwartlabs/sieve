@@ -46,7 +46,7 @@ pub(crate) enum Token {
     Number(usize),
     Identifier(Word),
     Tag(Word),
-    Invalid(String),
+    Unknown(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,7 +94,7 @@ impl Display for Token {
             Token::Number(n) => write!(f, "{n}"),
             Token::Identifier(w) => w.fmt(f),
             Token::Tag(t) => write!(f, ":{t}"),
-            Token::Invalid(s) => f.write_str(s),
+            Token::Unknown(s) => f.write_str(s),
             Token::StringVariable(s) => f.write_str(&String::from_utf8_lossy(s)),
             Token::StringConstant(c) => match c {
                 StringConstant::String(s) => f.write_str(s),

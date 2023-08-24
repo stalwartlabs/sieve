@@ -1,4 +1,4 @@
-require "vnd.stalwart.execute";
+require "vnd.stalwart.plugins";
 
 test "Basic" {
     if execute :binary "always_fail" ["param1", "param2"] {

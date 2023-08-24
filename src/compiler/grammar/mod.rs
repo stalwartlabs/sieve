@@ -88,7 +88,7 @@ pub enum Capability {
     VirusTest,
 
     // Extensions
-    Execute,
+    Plugins,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -612,7 +612,7 @@ impl Display for Capability {
             Capability::SpamTest => f.write_str("spamtest"),
             Capability::SpamTestPlus => f.write_str("spamtestplus"),
             Capability::VirusTest => f.write_str("virustest"),
-            Capability::Execute => f.write_str("vnd.stalwart.execute"),
+            Capability::Plugins => f.write_str("vnd.stalwart.plugins"),
             Capability::Other(capability) => f.write_str(capability),
         }
     }
@@ -668,5 +668,5 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
     "virustest" => Capability::VirusTest,
 
     // Extensions
-    "vnd.stalwart.execute" => Capability::Execute,
+    "vnd.stalwart.plugins" => Capability::Plugins,
 };

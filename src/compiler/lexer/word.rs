@@ -150,9 +150,6 @@ pub(crate) enum Word {
     Value,
     VirusTest,
     Zone,
-    Execute,
-    Binary,
-    Query,
 }
 
 pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
@@ -279,9 +276,6 @@ pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
     "value" => Word::Value,
     "virustest" => Word::VirusTest,
     "zone" => Word::Zone,
-    "execute" => Word::Execute,
-    "binary" => Word::Binary,
-    "query" => Word::Query,
 };
 
 impl Display for Word {
@@ -410,9 +404,6 @@ impl Display for Word {
             Word::Value => f.write_str("value"),
             Word::VirusTest => f.write_str("virustest"),
             Word::Zone => f.write_str("zone"),
-            Word::Execute => f.write_str("execute"),
-            Word::Binary => f.write_str("binary"),
-            Word::Query => f.write_str("query"),
         }
     }
 }

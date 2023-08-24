@@ -94,11 +94,8 @@
 //!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
-//!                 Event::Execute { command, arguments, .. } => {
-//!                     println!(
-//!                         "Script executed command {:?} with parameters {:?}",
-//!                         command, arguments
-//!                     );
+//!                 Event::Plugin { id, arguments } => {
+//!                     println!("Script executed plugin {id} with parameters {arguments:?}");
 //!                     // Set to true if the script succeeded
 //!                     input = false.into();
 //!                 }
@@ -271,10 +268,13 @@
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::grammar::{
-    actions::action_redirect::{ByTime, Notify, Ret},
-    instruction::Instruction,
-    Capability,
+use compiler::{
+    grammar::{
+        actions::action_redirect::{ByTime, Notify, Ret},
+        instruction::Instruction,
+        Capability,
+    },
+    Number, Regex,
 };
 use mail_parser::{HeaderName, Message};
 use runtime::{context::ScriptStack, Variable};
@@ -305,6 +305,9 @@ pub struct Compiler {
     pub(crate) max_local_variables: usize,
     pub(crate) max_header_size: usize,
     pub(crate) max_includes: usize,
+
+    // Plugins
+    pub(crate) plugins: AHashMap<String, PluginSchema>,
 }
 
 #[derive(Debug, Clone)]
@@ -382,6 +385,24 @@ pub enum Script {
     Global(String),
 }
 
+pub struct PluginSchema {
+    pub id: ExternalId,
+    pub tags: AHashMap<String, PluginSchemaTag>,
+    pub arguments: Vec<PluginSchemaArgument>,
+}
+
+pub enum PluginSchemaArgument {
+    Text,
+    Number,
+    Regex,
+    Array(Box<PluginSchemaArgument>),
+}
+
+pub struct PluginSchemaTag {
+    pub id: ExternalId,
+    pub argument: Option<PluginSchemaArgument>,
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Envelope {
     From,
@@ -422,10 +443,9 @@ pub enum Event {
         expiry: u64,
         last: bool,
     },
-    Execute {
-        command_type: CommandType,
-        command: String,
-        arguments: Vec<String>,
+    Plugin {
+        id: ExternalId,
+        arguments: Vec<PluginArgument<String, Number>>,
     },
     SetEnvelope {
         envelope: Envelope,
@@ -468,12 +488,17 @@ pub enum Event {
         message_id: usize,
         message: Vec<u8>,
     },
+}
 
-    #[cfg(test)]
-    TestCommand {
-        command: String,
-        params: Vec<String>,
-    },
+pub type ExternalId = u32;
+
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum PluginArgument<T, N> {
+    Tag(ExternalId),
+    Text(T),
+    Number(N),
+    Regex(Regex),
+    Array(Vec<PluginArgument<T, N>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
@@ -537,12 +562,6 @@ pub enum VirusStatus {
     Virus,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CommandType {
-    Binary,
-    Query,
-}
-
 #[cfg(test)]
 mod tests {
     use std::{
@@ -557,7 +576,8 @@ mod tests {
 
     use crate::{
         compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary,
-        Compiler, Envelope, Event, Input, Mailbox, Recipient, Runtime, SpamStatus, VirusStatus,
+        Compiler, Envelope, Event, Input, Mailbox, PluginArgument, Recipient, Runtime, SpamStatus,
+        VirusStatus,
     };
 
     #[test]
@@ -601,6 +621,15 @@ mod tests {
 
     fn run_test(script_path: &Path) {
         let mut compiler = Compiler::new().with_max_string_size(10240);
+
+        // Register extensions
+        compiler
+            .register_plugin("execute")
+            .with_tag("query")
+            .with_tag("binary")
+            .with_string_argument()
+            .with_string_array_argument();
+
         let mut ancestors = script_path.ancestors();
         ancestors.next();
         let base_path = ancestors.next().unwrap();
@@ -623,7 +652,7 @@ mod tests {
                 .with_protected_header("Received")
                 .with_valid_notification_uri("mailto")
                 .with_max_out_messages(100)
-                .with_capability(Capability::Execute);
+                .with_capability(Capability::Plugins);
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {
@@ -733,99 +762,92 @@ mod tests {
                     Event::DuplicateId { id, .. } => {
                         input = duplicated_ids.contains(&id).into();
                     }
-                    Event::Execute {
-                        command, arguments, ..
-                    } => {
-                        assert_eq!(arguments, ["param1", "param2"]);
-                        input = (if command.eq_ignore_ascii_case("always_succeed") {
-                            true
-                        } else if command.eq_ignore_ascii_case("always_fail") {
-                            false
-                        } else {
-                            panic!("Unknown command {command}");
-                        })
-                        .into();
-                    }
+                    Event::Plugin { id, arguments } => {
+                        if id == u32::MAX {
+                            // Test functions
+                            input = Input::True;
+                            let mut arguments = arguments.into_iter();
+                            let command = arguments.next().unwrap().unwrap_string().unwrap();
+                            let mut params = arguments
+                                .map(|arg| arg.unwrap_string().unwrap())
+                                .collect::<Vec<_>>();
 
-                    Event::TestCommand {
-                        command,
-                        mut params,
-                    } => {
-                        input = Input::True;
-
-                        match command.as_str() {
-                            "test" => {
-                                current_test = params.pop().unwrap();
-                                println!("Running test '{current_test}'...");
-                            }
-                            "test_set" => {
-                                let mut params = params.into_iter();
-                                let target = params.next().expect("test_set parameter");
-                                if target == "message" {
-                                    let value = params.next().unwrap();
-                                    raw_message_ = if value.eq_ignore_ascii_case(":smtp") {
-                                        let mut message = None;
-                                        for action in actions.iter().rev() {
-                                            if let Event::SendMessage { message_id, .. } = action {
-                                                let message_ = actions
-                                                    .iter()
-                                                    .find_map(|item| {
-                                                        if let Event::CreatedMessage {
-                                                            message_id: message_id_,
-                                                            message,
-                                                        } = item
-                                                        {
-                                                            if message_id == message_id_ {
-                                                                return Some(message);
-                                                            }
-                                                        }
-                                                        None
-                                                    })
-                                                    .unwrap();
-                                                /*println!(
-                                                    "<[{}]>",
-                                                    std::str::from_utf8(message_).unwrap()
-                                                );*/
-                                                message = message_.into();
-                                                break;
-                                            }
-                                        }
-                                        message.expect("No SMTP message found").to_vec().into()
-                                    } else {
-                                        value.into_bytes().into()
-                                    };
-                                    prev_state = (
-                                        instance.pos,
-                                        instance.script_cache,
-                                        instance.script_stack,
-                                        instance.vars_global,
-                                        instance.vars_local,
-                                        instance.vars_match,
-                                    )
-                                        .into();
-
-                                    continue 'outer;
-                                } else if let Some(envelope) = target.strip_prefix("envelope.") {
-                                    let envelope =
-                                        Envelope::try_from(envelope.to_string()).unwrap();
-                                    instance.envelope.retain(|(e, _)| e != &envelope);
-                                    instance.set_envelope(envelope, params.next().unwrap());
-                                } else if target == "currentdate" {
-                                    let bytes = params.next().unwrap().into_bytes();
-                                    if let HeaderValue::DateTime(dt) =
-                                        MessageStream::new(&bytes).parse_date()
-                                    {
-                                        instance.current_time = dt.to_timestamp();
-                                    } else {
-                                        panic!("Invalid currentdate");
-                                    }
-                                } else {
-                                    panic!("test_set {target} not implemented.");
+                            match command.as_str() {
+                                "test" => {
+                                    current_test = params.pop().unwrap();
+                                    println!("Running test '{current_test}'...");
                                 }
-                            }
-                            "test_message" => {
-                                let mut params = params.into_iter();
-                                input = match params.next().unwrap().as_str() {
+                                "test_set" => {
+                                    let mut params = params.into_iter();
+                                    let target = params.next().expect("test_set parameter");
+                                    if target == "message" {
+                                        let value = params.next().unwrap();
+                                        raw_message_ = if value.eq_ignore_ascii_case(":smtp") {
+                                            let mut message = None;
+                                            for action in actions.iter().rev() {
+                                                if let Event::SendMessage { message_id, .. } =
+                                                    action
+                                                {
+                                                    let message_ = actions
+                                                        .iter()
+                                                        .find_map(|item| {
+                                                            if let Event::CreatedMessage {
+                                                                message_id: message_id_,
+                                                                message,
+                                                            } = item
+                                                            {
+                                                                if message_id == message_id_ {
+                                                                    return Some(message);
+                                                                }
+                                                            }
+                                                            None
+                                                        })
+                                                        .unwrap();
+                                                    /*println!(
+                                                        "<[{}]>",
+                                                        std::str::from_utf8(message_).unwrap()
+                                                    );*/
+                                                    message = message_.into();
+                                                    break;
+                                                }
+                                            }
+                                            message.expect("No SMTP message found").to_vec().into()
+                                        } else {
+                                            value.into_bytes().into()
+                                        };
+                                        prev_state = (
+                                            instance.pos,
+                                            instance.script_cache,
+                                            instance.script_stack,
+                                            instance.vars_global,
+                                            instance.vars_local,
+                                            instance.vars_match,
+                                        )
+                                            .into();
+
+                                        continue 'outer;
+                                    } else if let Some(envelope) = target.strip_prefix("envelope.")
+                                    {
+                                        let envelope =
+                                            Envelope::try_from(envelope.to_string()).unwrap();
+                                        instance.envelope.retain(|(e, _)| e != &envelope);
+                                        instance.set_envelope(envelope, params.next().unwrap());
+                                    } else if target == "currentdate" {
+                                        let bytes = params.next().unwrap().into_bytes();
+                                        if let HeaderValue::DateTime(dt) =
+                                            MessageStream::new(&bytes).parse_date()
+                                        {
+                                            instance.current_time = dt.to_timestamp();
+                                        } else {
+                                            panic!("Invalid currentdate");
+                                        }
+                                    } else {
+                                        panic!("test_set {target} not implemented.");
+                                    }
+                                }
+                                "test_message" => {
+                                    let mut params = params.into_iter();
+                                    input = match params.next().unwrap().as_str() {
                                     ":folder" => {
                                         let folder_name = params.next().expect("test_message folder name");
                                         matches!(&instance.final_event, Some(Event::Keep { .. })) ||
@@ -840,212 +862,241 @@ mod tests {
                                     }
                                     param => panic!("Invalid test_message param '{param}'" ),
                                 }.into();
-                            }
-                            "test_assert_message" => {
-                                let expected_message = params.first().expect("test_set parameter");
-                                let built_message = instance.build_message();
-                                if expected_message.as_bytes() != built_message {
-                                    //fs::write("_deleteme.json", serde_json::to_string_pretty(&Message::parse(&built_message).unwrap()).unwrap()).unwrap();
-                                    print!("<[");
-                                    print!("{}", String::from_utf8(built_message).unwrap());
-                                    println!("]>");
-                                    panic!("Message built incorrectly at '{current_test}'");
                                 }
-                            }
-                            "test_config_set" => {
-                                let mut params = params.into_iter();
-                                let name = params.next().unwrap();
-                                let value = params.next().expect("test_config_set value");
+                                "test_assert_message" => {
+                                    let expected_message =
+                                        params.first().expect("test_set parameter");
+                                    let built_message = instance.build_message();
+                                    if expected_message.as_bytes() != built_message {
+                                        //fs::write("_deleteme.json", serde_json::to_string_pretty(&Message::parse(&built_message).unwrap()).unwrap()).unwrap();
+                                        print!("<[");
+                                        print!("{}", String::from_utf8(built_message).unwrap());
+                                        println!("]>");
+                                        panic!("Message built incorrectly at '{current_test}'");
+                                    }
+                                }
+                                "test_config_set" => {
+                                    let mut params = params.into_iter();
+                                    let name = params.next().unwrap();
+                                    let value = params.next().expect("test_config_set value");
 
-                                match name.as_str() {
-                                    "sieve_editheader_protected"
-                                    | "sieve_editheader_forbid_add"
-                                    | "sieve_editheader_forbid_delete" => {
-                                        if !value.is_empty() {
-                                            for header_name in value.split(' ') {
-                                                instance
-                                                    .runtime
-                                                    .set_protected_header(header_name.to_string());
+                                    match name.as_str() {
+                                        "sieve_editheader_protected"
+                                        | "sieve_editheader_forbid_add"
+                                        | "sieve_editheader_forbid_delete" => {
+                                            if !value.is_empty() {
+                                                for header_name in value.split(' ') {
+                                                    instance.runtime.set_protected_header(
+                                                        header_name.to_string(),
+                                                    );
+                                                }
+                                            } else {
+                                                instance.runtime.protected_headers.clear();
                                             }
-                                        } else {
-                                            instance.runtime.protected_headers.clear();
                                         }
+                                        "sieve_variables_max_variable_size" => {
+                                            instance
+                                                .runtime
+                                                .set_max_variable_size(value.parse().unwrap());
+                                        }
+                                        "sieve_valid_ext_list" => {
+                                            instance.runtime.set_valid_ext_list(value);
+                                        }
+                                        "sieve_ext_list_item" => {
+                                            lists
+                                                .entry(value)
+                                                .or_insert_with(AHashSet::new)
+                                                .insert(params.next().expect("list item value"));
+                                        }
+                                        "sieve_duplicated_id" => {
+                                            duplicated_ids.insert(value);
+                                        }
+                                        "sieve_user_email" => {
+                                            instance.set_user_address(value);
+                                        }
+                                        "sieve_vacation_use_original_recipient" => {
+                                            instance.runtime.set_vacation_use_orig_rcpt(
+                                                value.eq_ignore_ascii_case("yes"),
+                                            );
+                                        }
+                                        "sieve_vacation_default_subject" => {
+                                            instance.runtime.set_vacation_default_subject(value);
+                                        }
+                                        "sieve_vacation_default_subject_template" => {
+                                            instance.runtime.set_vacation_subject_prefix(value);
+                                        }
+                                        "sieve_spam_status" => {
+                                            instance.set_spam_status(SpamStatus::from_number(
+                                                value.parse().unwrap(),
+                                            ));
+                                        }
+                                        "sieve_spam_status_plus" => {
+                                            instance.set_spam_status(
+                                                match value.parse::<u32>().unwrap() {
+                                                    0 => SpamStatus::Unknown,
+                                                    100.. => SpamStatus::Spam,
+                                                    n => SpamStatus::MaybeSpam((n as f64) / 100.0),
+                                                },
+                                            );
+                                        }
+                                        "sieve_virus_status" => {
+                                            instance.set_virus_status(VirusStatus::from_number(
+                                                value.parse().unwrap(),
+                                            ));
+                                        }
+                                        "sieve_editheader_max_header_size" => {
+                                            let mhs = if !value.is_empty() {
+                                                value.parse::<usize>().unwrap()
+                                            } else {
+                                                1024
+                                            };
+                                            instance.runtime.set_max_header_size(mhs);
+                                            compiler.set_max_header_size(mhs);
+                                        }
+                                        "sieve_include_max_includes" => {
+                                            compiler.set_max_includes(if !value.is_empty() {
+                                                value.parse::<usize>().unwrap()
+                                            } else {
+                                                3
+                                            });
+                                        }
+                                        "sieve_include_max_nesting_depth" => {
+                                            compiler.set_max_nested_blocks(if !value.is_empty() {
+                                                value.parse::<usize>().unwrap()
+                                            } else {
+                                                3
+                                            });
+                                        }
+                                        param => panic!("Invalid test_config_set param '{param}'"),
                                     }
-                                    "sieve_variables_max_variable_size" => {
-                                        instance
-                                            .runtime
-                                            .set_max_variable_size(value.parse().unwrap());
-                                    }
-                                    "sieve_valid_ext_list" => {
-                                        instance.runtime.set_valid_ext_list(value);
-                                    }
-                                    "sieve_ext_list_item" => {
-                                        lists
-                                            .entry(value)
-                                            .or_insert_with(AHashSet::new)
-                                            .insert(params.next().expect("list item value"));
-                                    }
-                                    "sieve_duplicated_id" => {
-                                        duplicated_ids.insert(value);
-                                    }
-                                    "sieve_user_email" => {
-                                        instance.set_user_address(value);
-                                    }
-                                    "sieve_vacation_use_original_recipient" => {
-                                        instance.runtime.set_vacation_use_orig_rcpt(
-                                            value.eq_ignore_ascii_case("yes"),
-                                        );
-                                    }
-                                    "sieve_vacation_default_subject" => {
-                                        instance.runtime.set_vacation_default_subject(value);
-                                    }
-                                    "sieve_vacation_default_subject_template" => {
-                                        instance.runtime.set_vacation_subject_prefix(value);
-                                    }
-                                    "sieve_spam_status" => {
-                                        instance.set_spam_status(SpamStatus::from_number(
-                                            value.parse().unwrap(),
-                                        ));
-                                    }
-                                    "sieve_spam_status_plus" => {
-                                        instance.set_spam_status(
-                                            match value.parse::<u32>().unwrap() {
-                                                0 => SpamStatus::Unknown,
-                                                100.. => SpamStatus::Spam,
-                                                n => SpamStatus::MaybeSpam((n as f64) / 100.0),
-                                            },
-                                        );
-                                    }
-                                    "sieve_virus_status" => {
-                                        instance.set_virus_status(VirusStatus::from_number(
-                                            value.parse().unwrap(),
-                                        ));
-                                    }
-                                    "sieve_editheader_max_header_size" => {
-                                        let mhs = if !value.is_empty() {
-                                            value.parse::<usize>().unwrap()
-                                        } else {
-                                            1024
-                                        };
-                                        instance.runtime.set_max_header_size(mhs);
-                                        compiler.set_max_header_size(mhs);
-                                    }
-                                    "sieve_include_max_includes" => {
-                                        compiler.set_max_includes(if !value.is_empty() {
-                                            value.parse::<usize>().unwrap()
-                                        } else {
-                                            3
-                                        });
-                                    }
-                                    "sieve_include_max_nesting_depth" => {
-                                        compiler.set_max_nested_blocks(if !value.is_empty() {
-                                            value.parse::<usize>().unwrap()
-                                        } else {
-                                            3
-                                        });
-                                    }
-                                    param => panic!("Invalid test_config_set param '{param}'"),
                                 }
-                            }
-                            "test_result_execute" => {
-                                input = (matches!(&instance.final_event, Some(Event::Keep { .. }))
-                                    || actions.iter().any(|a| {
-                                        matches!(
-                                            a,
-                                            Event::Keep { .. }
-                                                | Event::FileInto { .. }
-                                                | Event::SendMessage { .. }
-                                        )
-                                    }))
-                                .into();
-                            }
-                            "test_result_action" => {
-                                let param = params.first().expect("test_result_action parameter");
-                                input = if param == "reject" {
-                                    (actions.iter().any(|a| matches!(a, Event::Reject { .. })))
-                                        .into()
-                                } else if param == "redirect" {
+                                "test_result_execute" => {
+                                    input =
+                                        (matches!(&instance.final_event, Some(Event::Keep { .. }))
+                                            || actions.iter().any(|a| {
+                                                matches!(
+                                                    a,
+                                                    Event::Keep { .. }
+                                                        | Event::FileInto { .. }
+                                                        | Event::SendMessage { .. }
+                                                )
+                                            }))
+                                        .into();
+                                }
+                                "test_result_action" => {
                                     let param =
-                                        params.last().expect("test_result_action redirect address");
-                                    (actions
+                                        params.first().expect("test_result_action parameter");
+                                    input = if param == "reject" {
+                                        (actions.iter().any(|a| matches!(a, Event::Reject { .. })))
+                                            .into()
+                                    } else if param == "redirect" {
+                                        let param = params
+                                            .last()
+                                            .expect("test_result_action redirect address");
+                                        (actions
                                         .iter()
                                         .any(|a| matches!(a, Event::SendMessage { recipient: Recipient::Address(address), .. } if address == param)))
                                     .into()
-                                } else if param == "keep" {
-                                    (matches!(&instance.final_event, Some(Event::Keep { .. }))
-                                        || actions.iter().any(|a| matches!(a, Event::Keep { .. })))
-                                    .into()
-                                } else if param == "send_message" {
-                                    (actions
-                                        .iter()
-                                        .any(|a| matches!(a, Event::SendMessage { .. })))
-                                    .into()
-                                } else {
-                                    panic!("test_result_action {param} not implemented");
-                                };
-                            }
-                            "test_result_action_count" => {
-                                input = (actions.len()
-                                    == params.first().unwrap().parse::<usize>().unwrap())
-                                .into();
-                            }
-                            "test_imap_metadata_set" => {
-                                let mut params = params.into_iter();
-                                let first = params.next().expect("metadata parameter");
-                                let (mailbox, annotation) = if first == ":mailbox" {
-                                    (
-                                        params.next().expect("metadata mailbox name").into(),
-                                        params.next().expect("metadata annotation name"),
-                                    )
-                                } else {
-                                    (None, first)
-                                };
-                                let value = params.next().expect("metadata value");
-                                if let Some(mailbox) = mailbox {
-                                    instance.set_medatata((mailbox, annotation), value);
-                                } else {
-                                    instance.set_medatata(annotation, value);
+                                    } else if param == "keep" {
+                                        (matches!(&instance.final_event, Some(Event::Keep { .. }))
+                                            || actions
+                                                .iter()
+                                                .any(|a| matches!(a, Event::Keep { .. })))
+                                        .into()
+                                    } else if param == "send_message" {
+                                        (actions
+                                            .iter()
+                                            .any(|a| matches!(a, Event::SendMessage { .. })))
+                                        .into()
+                                    } else {
+                                        panic!("test_result_action {param} not implemented");
+                                    };
                                 }
-                            }
-                            "test_mailbox_create" => {
-                                mailboxes.push(params.pop().expect("mailbox to create"));
-                            }
-                            "test_result_reset" => {
-                                actions.clear();
-                                instance.final_event = Event::Keep {
-                                    flags: vec![],
-                                    message_id: 0,
+                                "test_result_action_count" => {
+                                    input = (actions.len()
+                                        == params.first().unwrap().parse::<usize>().unwrap())
+                                    .into();
                                 }
-                                .into();
-                                instance.metadata.clear();
-                                instance.has_changes = false;
-                                instance.num_redirects = 0;
-                                instance.runtime.vacation_use_orig_rcpt = false;
-                                mailboxes.clear();
-                                lists.clear();
-                                reset_test_boundary();
-                            }
-                            "test_script_compile" => {
-                                let mut include_path = PathBuf::from(base_path);
-                                include_path.push(params.first().unwrap());
+                                "test_imap_metadata_set" => {
+                                    let mut params = params.into_iter();
+                                    let first = params.next().expect("metadata parameter");
+                                    let (mailbox, annotation) = if first == ":mailbox" {
+                                        (
+                                            params.next().expect("metadata mailbox name").into(),
+                                            params.next().expect("metadata annotation name"),
+                                        )
+                                    } else {
+                                        (None, first)
+                                    };
+                                    let value = params.next().expect("metadata value");
+                                    if let Some(mailbox) = mailbox {
+                                        instance.set_medatata((mailbox, annotation), value);
+                                    } else {
+                                        instance.set_medatata(annotation, value);
+                                    }
+                                }
+                                "test_mailbox_create" => {
+                                    mailboxes.push(params.pop().expect("mailbox to create"));
+                                }
+                                "test_result_reset" => {
+                                    actions.clear();
+                                    instance.final_event = Event::Keep {
+                                        flags: vec![],
+                                        message_id: 0,
+                                    }
+                                    .into();
+                                    instance.metadata.clear();
+                                    instance.has_changes = false;
+                                    instance.num_redirects = 0;
+                                    instance.runtime.vacation_use_orig_rcpt = false;
+                                    mailboxes.clear();
+                                    lists.clear();
+                                    reset_test_boundary();
+                                }
+                                "test_script_compile" => {
+                                    let mut include_path = PathBuf::from(base_path);
+                                    include_path.push(params.first().unwrap());
 
-                                if let Ok(bytes) = fs::read(include_path.as_path()) {
-                                    let result = compiler.compile(&add_crlf(&bytes));
-                                    /*if let Err(err) = &result {
-                                        println!("Error: {:?}", err);
-                                    }*/
-                                    input = result.is_ok().into();
-                                } else {
-                                    panic!("Script {} not found.", include_path.display());
+                                    if let Ok(bytes) = fs::read(include_path.as_path()) {
+                                        let result = compiler.compile(&add_crlf(&bytes));
+                                        /*if let Err(err) = &result {
+                                            println!("Error: {:?}", err);
+                                        }*/
+                                        input = result.is_ok().into();
+                                    } else {
+                                        panic!("Script {} not found.", include_path.display());
+                                    }
                                 }
+                                "test_config_reload" => (),
+                                "test_fail" => {
+                                    panic!(
+                                        "Test '{}' failed: {}",
+                                        current_test,
+                                        params.pop().unwrap()
+                                    );
+                                }
+                                _ => panic!("Test command {command} not implemented."),
                             }
-                            "test_config_reload" => (),
-                            "test_fail" => {
-                                panic!("Test '{}' failed: {}", current_test, params.pop().unwrap());
-                            }
-                            _ => panic!("Test command {command} not implemented."),
+                        } else {
+                            let mut arguments = arguments
+                                .into_iter()
+                                .filter(|a| !matches!(a, PluginArgument::Tag(_)));
+                            let command = arguments.next().unwrap().unwrap_string().unwrap();
+                            let arguments =
+                                arguments.next().unwrap().unwrap_string_array().unwrap();
+
+                            assert_eq!(arguments, ["param1", "param2"]);
+                            input = (if command.eq_ignore_ascii_case("always_succeed") {
+                                true
+                            } else if command.eq_ignore_ascii_case("always_fail") {
+                                false
+                            } else {
+                                panic!("Unknown command {command}");
+                            })
+                            .into();
                         }
                     }
+
                     action => {
                         actions.push(action);
                         input = true.into();

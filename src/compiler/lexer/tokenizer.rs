@@ -98,7 +98,7 @@ impl<'x> Tokenizer<'x> {
 
     pub fn get_current_token(&mut self) -> Option<TokenInfo> {
         if !self.buf.is_empty() {
-            let mut word = std::str::from_utf8(&self.buf).unwrap();
+            let word = std::str::from_utf8(&self.buf).unwrap();
             let token = if let Some(word) = WORDS.get(word) {
                 if self.token_is_tag {
                     self.token_line_pos -= 1;
@@ -106,7 +106,7 @@ impl<'x> Tokenizer<'x> {
                 } else {
                     Token::Identifier(*word)
                 }
-            } else {
+            } else if self.buf.first().unwrap().is_ascii_digit() {
                 let multiplier = match self.buf.last().unwrap() {
                     b'k' => 1024,
                     b'm' => 1048576,
@@ -114,17 +114,23 @@ impl<'x> Tokenizer<'x> {
                     _ => 1,
                 };
 
-                if multiplier > 1 && self.buf.len() > 1 {
-                    word = std::str::from_utf8(&self.buf[..self.buf.len() - 1]).unwrap();
-                }
-
-                if let Ok(number) = word.parse::<usize>() {
+                if let Ok(number) = (if multiplier > 1 && self.buf.len() > 1 {
+                    std::str::from_utf8(&self.buf[..self.buf.len() - 1]).unwrap()
+                } else {
+                    word
+                })
+                .parse::<usize>()
+                {
                     Token::Number(number.saturating_mul(multiplier))
                 } else if self.token_is_tag {
-                    Token::Invalid(format!(":{word}"))
+                    Token::Unknown(format!(":{word}"))
                 } else {
-                    Token::Invalid(word.to_string())
+                    Token::Unknown(word.to_string())
                 }
+            } else if self.token_is_tag {
+                Token::Unknown(format!(":{word}"))
+            } else {
+                Token::Unknown(word.to_string())
             };
 
             self.reset_current_token();

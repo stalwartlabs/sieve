@@ -23,9 +23,13 @@
 
 use std::{borrow::Cow, fmt::Display};
 
+use ahash::AHashMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{runtime::RuntimeError, Compiler, Envelope};
+use crate::{
+    runtime::RuntimeError, Compiler, Envelope, ExternalId, PluginSchema, PluginSchemaArgument,
+    PluginSchemaTag,
+};
 
 use self::{
     grammar::{expr::Expression, Capability},
@@ -102,7 +106,7 @@ pub(crate) enum Value {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Regex {
+pub struct Regex {
     pub regex: fancy_regex::Regex,
     pub expr: String,
 }
@@ -165,6 +169,7 @@ impl Compiler {
             max_local_variables: 128,
             max_header_size: 1024,
             max_includes: 6,
+            plugins: AHashMap::new(),
         }
     }
 
@@ -255,6 +260,121 @@ impl Compiler {
 
     pub fn with_max_local_variables(mut self, size: usize) -> Self {
         self.max_local_variables = size;
+        self
+    }
+
+    pub fn register_plugin(&mut self, name: impl Into<String>) -> &mut PluginSchema {
+        let id = self.plugins.len() as ExternalId;
+        self.plugins
+            .entry(name.into())
+            .or_insert_with(|| PluginSchema {
+                id,
+                tags: AHashMap::new(),
+                arguments: Vec::new(),
+            })
+    }
+}
+
+impl PluginSchema {
+    pub fn with_id(&mut self, id: ExternalId) -> &mut Self {
+        self.id = id;
+        self
+    }
+
+    pub fn with_string_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Text);
+        self
+    }
+
+    pub fn with_number_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Number);
+        self
+    }
+
+    pub fn with_regex_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Regex);
+        self
+    }
+
+    pub fn with_string_array_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Array(Box::new(
+            PluginSchemaArgument::Text,
+        )));
+        self
+    }
+
+    pub fn with_number_array_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Array(Box::new(
+            PluginSchemaArgument::Number,
+        )));
+        self
+    }
+
+    pub fn with_regex_array_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Array(Box::new(
+            PluginSchemaArgument::Regex,
+        )));
+        self
+    }
+
+    pub fn with_argument(&mut self, argument: PluginSchemaArgument) -> &mut Self {
+        self.arguments.push(argument);
+        self
+    }
+
+    pub fn with_tagged_argument(
+        &mut self,
+        tag: impl Into<String>,
+        argument: PluginSchemaArgument,
+    ) -> &mut Self {
+        let id = self.tags.len() as ExternalId;
+        self.tags.insert(
+            tag.into(),
+            PluginSchemaTag {
+                id,
+                argument: argument.into(),
+            },
+        );
+        self
+    }
+
+    pub fn with_tagged_string_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(tag, PluginSchemaArgument::Text)
+    }
+
+    pub fn with_tagged_number_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(tag, PluginSchemaArgument::Number)
+    }
+
+    pub fn with_tagged_regex_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(tag, PluginSchemaArgument::Regex)
+    }
+
+    pub fn with_tagged_string_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(
+            tag,
+            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Text)),
+        )
+    }
+
+    pub fn with_tagged_number_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(
+            tag,
+            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Number)),
+        )
+    }
+
+    pub fn with_tagged_regex_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(
+            tag,
+            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Regex)),
+        )
+    }
+
+    pub fn with_tag(&mut self, tag: impl Into<String>) -> &mut Self {
+        let id = self.tags.len() as ExternalId;
+        self.tags
+            .insert(tag.into(), PluginSchemaTag { id, argument: None });
         self
     }
 }
@@ -439,6 +559,21 @@ mod tests {
         test_dir.push("rfcs");
         let mut tests_run = 0;
 
+        let mut compiler = Compiler::new().with_max_nested_foreverypart(10);
+
+        compiler
+            .register_plugin("plugin1")
+            .with_tag("tag1")
+            .with_tag("tag2")
+            .with_tagged_string_argument("string_arg")
+            .with_number_argument()
+            .with_string_array_argument();
+
+        compiler
+            .register_plugin("plugin2")
+            .with_tagged_number_array_argument("array_arg")
+            .with_regex_array_argument();
+
         for file_name in fs::read_dir(&test_dir).unwrap() {
             let mut file_name = file_name.unwrap().path();
             if file_name.extension().map_or(false, |e| e == "sieve") {
@@ -449,7 +584,7 @@ mod tests {
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .contains("extensions")
+                    .contains("plugins")
                 {
                     let test = "true";
                     continue;
@@ -461,10 +596,7 @@ mod tests {
 
                 tests_run += 1;
 
-                let sieve = Compiler::new()
-                    .with_max_nested_foreverypart(10)
-                    .compile(&script)
-                    .unwrap();
+                let sieve = compiler.compile(&script).unwrap();
                 let json_sieve = serde_json::to_string_pretty(
                     &sieve
                         .instructions

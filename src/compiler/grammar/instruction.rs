@@ -48,7 +48,7 @@ use super::{
         action_set::Set,
         action_vacation::Vacation,
     },
-    tests::test_execute::Execute,
+    tests::test_plugin::Plugin,
     Capability, Clear, Invalid,
 };
 
@@ -106,12 +106,8 @@ pub(crate) enum Instruction {
     Include(Include),
     Return,
 
-    // Execute extension
-    Execute(Execute),
-
-    // Testing
-    #[cfg(test)]
-    External((String, Vec<crate::compiler::Value>)),
+    // Plugin extension
+    Plugin(Plugin),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -534,16 +530,6 @@ impl Compiler {
                                 }
                             }
                         }
-
-                        Word::Execute => {
-                            state.validate_argument(
-                                0,
-                                Capability::Execute.into(),
-                                token_info.line_num,
-                                token_info.line_pos,
-                            )?;
-                            state.parse_execute()?;
-                        }
                         _ => {
                             state.ignore_instruction()?;
                             state.instructions.push(Instruction::Invalid(Invalid {
@@ -651,14 +637,22 @@ impl Compiler {
                 }
 
                 #[cfg(test)]
-                Token::Invalid(instruction) if instruction.contains("test") => {
+                Token::Unknown(instruction) if instruction.contains("test") => {
                     use crate::compiler::Value;
+                    use crate::PluginArgument;
 
-                    if instruction == "test" {
-                        let param = state.parse_string()?;
-                        state
-                            .instructions
-                            .push(Instruction::External((instruction, vec![param])));
+                    let has_arguments = instruction != "test";
+                    let mut plugin = Plugin {
+                        id: u32::MAX,
+                        arguments: vec![PluginArgument::Text(Value::Text(instruction))],
+                        is_not: false,
+                    };
+
+                    if !has_arguments {
+                        plugin
+                            .arguments
+                            .push(PluginArgument::Text(state.parse_string()?));
+                        state.instructions.push(Instruction::Plugin(plugin));
                         let mut new_block = Block::new(Word::Else);
                         new_block.line_num = state.tokens.line_num;
                         new_block.line_pos = state.tokens.pos - state.tokens.line_start;
@@ -667,40 +661,49 @@ impl Compiler {
                         state.block_stack.push(state.block);
                         state.block = new_block;
                     } else {
-                        let mut params = Vec::new();
                         loop {
-                            params.push(match state.tokens.unwrap_next()?.token {
-                                Token::StringConstant(s) => Value::from(s),
-                                Token::StringVariable(s) => state
-                                    .tokenize_string(&s, true)
-                                    .map_err(|error_type| CompileError {
-                                        line_num: 0,
-                                        line_pos: 0,
-                                        error_type,
-                                    })?,
-                                Token::Number(n) => {
-                                    Value::Number(crate::compiler::Number::Integer(n as i64))
-                                }
-                                Token::Identifier(s) => Value::Text(s.to_string()),
-                                Token::Tag(s) => Value::Text(format!(":{s}")),
-                                Token::Invalid(s) => Value::Text(s),
-                                Token::Semicolon => break,
-                                other => panic!("Invalid test param {other:?}"),
-                            });
+                            plugin.arguments.push(PluginArgument::Text(
+                                match state.tokens.unwrap_next()?.token {
+                                    Token::StringConstant(s) => Value::from(s),
+                                    Token::StringVariable(s) => state
+                                        .tokenize_string(&s, true)
+                                        .map_err(|error_type| CompileError {
+                                            line_num: 0,
+                                            line_pos: 0,
+                                            error_type,
+                                        })?,
+                                    Token::Number(n) => {
+                                        Value::Number(crate::compiler::Number::Integer(n as i64))
+                                    }
+                                    Token::Identifier(s) => Value::Text(s.to_string()),
+                                    Token::Tag(s) => Value::Text(format!(":{s}")),
+                                    Token::Unknown(s) => Value::Text(s),
+                                    Token::Semicolon => break,
+                                    other => panic!("Invalid test param {other:?}"),
+                                },
+                            ));
                         }
-                        state
-                            .instructions
-                            .push(Instruction::External((instruction, params)));
+                        state.instructions.push(Instruction::Plugin(plugin));
                     }
                 }
 
-                Token::Invalid(instruction) => {
-                    state.ignore_instruction()?;
-                    state.instructions.push(Instruction::Invalid(Invalid {
-                        name: instruction,
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                    }));
+                Token::Unknown(instruction) => {
+                    if let Some(schema) = self.plugins.get(&instruction) {
+                        state.validate_argument(
+                            0,
+                            Capability::Plugins.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        state.parse_plugin(schema)?;
+                    } else {
+                        state.ignore_instruction()?;
+                        state.instructions.push(Instruction::Invalid(Invalid {
+                            name: instruction,
+                            line_num: token_info.line_num,
+                            line_pos: token_info.line_pos,
+                        }));
+                    }
                 }
                 _ => {
                     return Err(token_info.expected("instruction"));
