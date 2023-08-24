@@ -51,4 +51,18 @@ test "Expressions" {
     {
         test_fail "global.a > global.b || !(global.c < global.a) (%{global.a > global.b || !(global.c < global.a)}) is not equal to 1";
     }
+
+    if not eval "global.a < global.b && global.c > global.a"
+    {
+        test_fail "global.a < global.b && global.c > global.a (%{global.a < global.b && global.c > global.a}) is not equal to 1";
+    }
+
+    if not eval "1" {
+        test_fail "1 is not true";
+    }
+
+    if eval "0" {
+        test_fail "0 is not false";
+    }
 }
+

@@ -30,6 +30,7 @@ use crate::compiler::{
 
 use super::{
     actions::{action_convert::Convert, action_vacation::TestVacation},
+    expr::{parser::ExpressionParser, tokenizer::Tokenizer, Expression},
     instruction::{CompilerState, Instruction},
     tests::{
         test_address::TestAddress,
@@ -113,8 +114,15 @@ pub(crate) enum Test {
     // RFC 5230
     Vacation(TestVacation),
 
-    // Plugin external command
+    // Stalwart proprietary
+    EvalExpression(EvalExpression),
     Plugin(Plugin),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct EvalExpression {
+    pub expr: Vec<Expression>,
+    pub is_not: bool,
 }
 
 #[derive(Debug)]
@@ -481,6 +489,47 @@ impl<'x> CompilerState<'x> {
                     )?;
                     self.parse_test_specialuseexists()?
                 }
+                Token::Identifier(Word::Eval) => {
+                    self.validate_argument(
+                        0,
+                        Capability::Plugins.into(),
+                        token_info.line_num,
+                        token_info.line_pos,
+                    )?;
+
+                    let mut next_token = self.tokens.unwrap_next()?;
+                    let expr = match next_token.token {
+                        Token::StringConstant(s) => s.into_string().into_bytes(),
+                        Token::StringVariable(s) => s,
+                        _ => return Err(next_token.expected("string")),
+                    };
+
+                    match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
+                        expr.iter().enumerate().peekable(),
+                        |var_name, maybe_namespace| match self
+                            .parse_variable(var_name, maybe_namespace)
+                        {
+                            Ok(Some(var)) => Ok(var),
+                            _ => Err(format!("Invalid variable name {var_name:?}")),
+                        },
+                    ))
+                    .parse()
+                    {
+                        Ok(parser) => Test::EvalExpression(EvalExpression {
+                            expr: parser.output,
+                            is_not: false,
+                        }),
+                        Err(err) => {
+                            let err = ErrorType::InvalidExpression(format!(
+                                "{}: {}",
+                                std::str::from_utf8(&expr).unwrap_or_default(),
+                                err
+                            ));
+                            next_token.token = Token::StringVariable(expr);
+                            return Err(next_token.custom(err));
+                        }
+                    }
+                }
 
                 Token::Identifier(word) => {
                     self.ignore_test()?;
@@ -645,6 +694,9 @@ impl Test {
                 op.is_not = true;
             }
             Test::Plugin(op) => {
+                op.is_not = true;
+            }
+            Test::EvalExpression(op) => {
                 op.is_not = true;
             }
             Test::Vacation(_) | Test::Invalid(_) => {}

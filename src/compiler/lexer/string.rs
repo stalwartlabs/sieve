@@ -327,7 +327,7 @@ impl<'x> CompilerState<'x> {
         }
     }
 
-    fn parse_variable(
+    pub fn parse_variable(
         &self,
         var_name: &str,
         maybe_namespace: bool,
