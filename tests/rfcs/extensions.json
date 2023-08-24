@@ -3,7 +3,8 @@
     0,
     {
       "Require": [
-        "Variables"
+        "Variables",
+        "Regex"
       ]
     }
   ],
@@ -346,6 +347,50 @@
             }
           ]
         }
+      }
+    }
+  ],
+  [
+    14,
+    {
+      "Test": {
+        "Address": {
+          "header_list": [
+            {
+              "Text": "from"
+            }
+          ],
+          "key_list": [
+            {
+              "Regex": "stephan(\\+.*)?@it\\.example\\.com"
+            },
+            {
+              "Regex": "stephan(\\+.*)?@friep\\.example\\.com"
+            }
+          ],
+          "address_part": "All",
+          "match_type": {
+            "Regex": 0
+          },
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_anychild": false,
+          "is_not": false
+        }
+      }
+    }
+  ],
+  [
+    15,
+    {
+      "Jz": 17
+    }
+  ],
+  [
+    16,
+    {
+      "Keep": {
+        "flags": []
       }
     }
   ]

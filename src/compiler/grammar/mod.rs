@@ -24,14 +24,13 @@
 use std::fmt::Display;
 
 use phf::phf_map;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use self::instruction::CompilerState;
 
 use super::{
     lexer::{tokenizer::TokenInfo, word::Word, Token},
-    CompileError, ErrorType, Value,
+    CompileError, ErrorType, Regex, Value,
 };
 
 pub mod actions;
@@ -427,16 +426,24 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn validate_match(
         &mut self,
         match_type: &MatchType,
-        key_list: &[Value],
+        key_list: &mut [Value],
     ) -> Result<(), CompileError> {
         if matches!(match_type, MatchType::Regex(_)) {
             for key in key_list {
-                if let Value::Text(regex) = key {
-                    if Regex::new(regex).is_err() {
-                        return Err(self
-                            .tokens
-                            .unwrap_next()?
-                            .custom(ErrorType::InvalidRegex(regex.to_string())));
+                if let Value::Text(expr) = key {
+                    match fancy_regex::Regex::new(expr) {
+                        Ok(regex) => {
+                            *key = Value::Regex(Regex {
+                                regex,
+                                expr: std::mem::take(expr),
+                            });
+                        }
+                        Err(err) => {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidRegex(format!("{expr}: {err}"))));
+                        }
                     }
                 }
             }

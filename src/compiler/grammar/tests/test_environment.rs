@@ -36,7 +36,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut name = None;
-        let key_list;
+        let mut key_list;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -84,7 +84,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
-        self.validate_match(&match_type, &key_list)?;
+        self.validate_match(&match_type, &mut key_list)?;
 
         Ok(Test::Environment(TestString {
             source: vec![name.unwrap()],

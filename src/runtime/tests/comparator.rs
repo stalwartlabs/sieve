@@ -21,10 +21,13 @@
  * for more details.
 */
 
-use regex::Regex;
+use std::borrow::Cow;
 
 use crate::{
-    compiler::grammar::{Comparator, RelationalMatch},
+    compiler::{
+        grammar::{Comparator, RelationalMatch},
+        Value,
+    },
     runtime::Variable,
     MatchAs,
 };
@@ -82,34 +85,38 @@ impl Comparator {
 
     pub(crate) fn regex(
         &self,
+        pattern: &Value,
+        pattern_expr: &Variable<'_>,
         value: &str,
-        pattern: &str,
         mut capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
     ) -> bool {
-        match Regex::new(pattern) {
-            Ok(re) => {
-                //TODO cache compilation
-                if capture_positions == 0 {
-                    re.is_match(value)
-                } else if let Some(captures) = re.captures(value) {
-                    captured_values.clear();
-                    while capture_positions != 0 {
-                        let index = 63 - capture_positions.leading_zeros();
-                        capture_positions ^= 1 << index;
-                        if let Some(match_var) = captures.get(index as usize) {
-                            captured_values.push((index as usize, match_var.as_str().to_string()));
-                        }
-                    }
-                    true
-                } else {
-                    false
+        let regex = if let Value::Regex(regex) = pattern {
+            Cow::Borrowed(&regex.regex)
+        } else {
+            match fancy_regex::Regex::new(pattern_expr.to_cow().as_ref()) {
+                Ok(regex) => Cow::Owned(regex),
+                Err(err) => {
+                    debug_assert!(false, "Failed to compile regex: {err:?}");
+                    return false;
                 }
             }
-            Err(err) => {
-                debug_assert!(false, "Failed to compile regex: {err:?}");
-                false
+        };
+
+        if capture_positions == 0 {
+            regex.is_match(value).unwrap_or_default()
+        } else if let Ok(Some(captures)) = regex.captures(value) {
+            captured_values.clear();
+            while capture_positions != 0 {
+                let index = 63 - capture_positions.leading_zeros();
+                capture_positions ^= 1 << index;
+                if let Some(match_var) = captures.get(index as usize) {
+                    captured_values.push((index as usize, match_var.as_str().to_string()));
+                }
             }
+            true
+        } else {
+            false
         }
     }
 

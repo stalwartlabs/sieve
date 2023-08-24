@@ -73,19 +73,20 @@ impl TestEnvelope {
                 let is_matches = matches!(&self.match_type, MatchType::Matches(_));
 
                 let result = ctx.find_envelopes(self, |value| {
-                    for key in &key_list {
+                    for (pattern_expr, pattern) in key_list.iter().zip(self.key_list.iter()) {
                         if is_matches {
                             if self.comparator.matches(
                                 value,
-                                key.to_cow().as_ref(),
+                                pattern_expr.to_cow().as_ref(),
                                 *capture_positions,
                                 &mut captured_positions,
                             ) {
                                 return true;
                             }
                         } else if self.comparator.regex(
+                            pattern,
+                            pattern_expr,
                             value,
-                            key.to_cow().as_ref(),
                             *capture_positions,
                             &mut captured_positions,
                         ) {

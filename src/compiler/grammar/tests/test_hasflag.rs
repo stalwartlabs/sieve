@@ -51,7 +51,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
 
-        let maybe_variables;
+        let mut maybe_variables;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -119,8 +119,8 @@ impl<'x> CompilerState<'x> {
                             }
                         }
                     }
-                    let flags = self.parse_strings()?;
-                    self.validate_match(&match_type, &flags)?;
+                    let mut flags = self.parse_strings()?;
+                    self.validate_match(&match_type, &mut flags)?;
 
                     Ok(Test::HasFlag(TestHasFlag {
                         comparator,
@@ -137,7 +137,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
             _ => {
-                self.validate_match(&match_type, &maybe_variables)?;
+                self.validate_match(&match_type, &mut maybe_variables)?;
 
                 Ok(Test::HasFlag(TestHasFlag {
                     comparator,

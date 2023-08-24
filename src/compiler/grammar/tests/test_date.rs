@@ -85,7 +85,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_name = None;
-        let key_list;
+        let mut key_list;
         let mut index = None;
         let mut index_last = false;
         let mut zone = Zone::Local;
@@ -201,7 +201,7 @@ impl<'x> CompilerState<'x> {
         if !mime && mime_anychild {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
-        self.validate_match(&match_type, &key_list)?;
+        self.validate_match(&match_type, &mut key_list)?;
 
         Ok(Test::Date(TestDate {
             header_name: header_name.unwrap(),
@@ -219,7 +219,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_currentdate(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
-        let key_list;
+        let mut key_list;
         let mut zone = None;
         let mut date_part = None;
 
@@ -275,7 +275,7 @@ impl<'x> CompilerState<'x> {
                 }
             }
         }
-        self.validate_match(&match_type, &key_list)?;
+        self.validate_match(&match_type, &mut key_list)?;
 
         Ok(Test::CurrentDate(TestCurrentDate {
             key_list,

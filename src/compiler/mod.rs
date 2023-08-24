@@ -23,7 +23,7 @@
 
 use std::{borrow::Cow, fmt::Display};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{runtime::RuntimeError, Compiler, Envelope};
 
@@ -97,7 +97,14 @@ pub(crate) enum Value {
     Number(Number),
     Variable(VariableType),
     Expression(Vec<Expression>),
+    Regex(Regex),
     List(Vec<Value>),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Regex {
+    pub regex: fancy_regex::Regex,
+    pub expr: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,7 +151,7 @@ impl Display for Number {
 }
 
 impl Compiler {
-    pub const VERSION: u32 = 1;
+    pub const VERSION: u32 = 2;
 
     pub fn new() -> Self {
         Compiler {
@@ -266,6 +273,36 @@ impl CompileError {
     }
 }
 
+impl PartialEq for Regex {
+    fn eq(&self, other: &Self) -> bool {
+        self.expr == other.expr
+    }
+}
+
+impl Eq for Regex {}
+
+impl Serialize for Regex {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.expr.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Regex {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        <String>::deserialize(deserializer).and_then(|expr| {
+            fancy_regex::Regex::new(&expr)
+                .map(|regex| Regex { regex, expr })
+                .map_err(|err| serde::de::Error::custom(err.to_string()))
+        })
+    }
+}
+
 impl TokenInfo {
     pub fn expected(self, expected: impl Into<Cow<'static, str>>) -> CompileError {
         CompileError {
@@ -285,14 +322,6 @@ impl TokenInfo {
             error_type: ErrorType::MissingTag(tag.into()),
         }
     }
-
-    /*pub fn invalid_utf8(self) -> CompileError {
-        CompileError {
-            line_num: self.line_num,
-            line_pos: self.line_pos,
-            error_type: ErrorType::InvalidUtf8String,
-        }
-    }*/
 
     pub fn custom(self, error_type: ErrorType) -> CompileError {
         CompileError {
