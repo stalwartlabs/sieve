@@ -28,7 +28,7 @@ use crate::{
     compiler::{
         grammar::{test::Test, MatchType},
         lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError, ErrorType,
+        CompileError, ErrorType, Value, VariableType,
     },
     Compiler, Sieve,
 };
@@ -48,6 +48,7 @@ use super::{
         action_set::Set,
         action_vacation::Vacation,
     },
+    expr::Expression,
     tests::test_plugin::Plugin,
     Capability, Clear, Invalid,
 };
@@ -112,6 +113,7 @@ pub(crate) enum Instruction {
 
 pub(crate) const MAX_PARAMS: usize = 11;
 
+#[derive(Debug)]
 pub(crate) struct Block {
     pub(crate) btype: Word,
     pub(crate) label: Option<String>,
@@ -138,6 +140,7 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) vars_num: usize,
     pub(crate) vars_num_max: usize,
     pub(crate) vars_match_max: usize,
+    pub(crate) vars_local: usize,
     pub(crate) param_check: [bool; MAX_PARAMS],
     pub(crate) includes_num: usize,
 }
@@ -163,6 +166,7 @@ impl Compiler {
             vars_num: 0,
             vars_num_max: 0,
             vars_match_max: 0,
+            vars_local: 0,
             param_check: [false; MAX_PARAMS],
             includes_num: 0,
         };
@@ -638,7 +642,6 @@ impl Compiler {
 
                 #[cfg(test)]
                 Token::Unknown(instruction) if instruction.contains("test") => {
-                    use crate::compiler::Value;
                     use crate::PluginArgument;
 
                     let has_arguments = instruction != "test";
@@ -711,19 +714,26 @@ impl Compiler {
             }
         }
 
-        if state.block_stack.is_empty() {
-            Ok(Sieve {
-                instructions: state.instructions,
-                num_vars: std::cmp::max(state.vars_num_max, state.vars_num),
-                num_match_vars: state.vars_match_max,
-            })
-        } else {
-            Err(CompileError {
+        if !state.block_stack.is_empty() {
+            return Err(CompileError {
                 line_num: state.block.line_num,
                 line_pos: state.block.line_pos,
                 error_type: ErrorType::UnterminatedBlock,
-            })
+            });
         }
+
+        // Map local variables
+        let mut num_vars = std::cmp::max(state.vars_num_max, state.vars_num);
+        if state.vars_local > 0 {
+            state.map_local_vars(num_vars);
+            num_vars += state.vars_local;
+        }
+
+        Ok(Sieve {
+            instructions: state.instructions,
+            num_vars,
+            num_match_vars: state.vars_match_max,
+        })
     }
 }
 
@@ -747,13 +757,22 @@ impl<'x> CompilerState<'x> {
         self.vars_global.contains(&name)
     }
 
-    pub(crate) fn register_local_var(&mut self, name: String) -> usize {
+    pub(crate) fn register_local_var(&mut self, name: String, register_as_local: bool) -> usize {
         if let Some(var_id) = self.get_local_var(&name) {
             var_id
-        } else {
+        } else if !register_as_local || self.block_stack.is_empty() {
             let var_id = self.vars_num;
             self.block.vars_local.insert(name, var_id);
             self.vars_num += 1;
+            var_id
+        } else {
+            let var_id = usize::MAX - self.vars_local;
+            self.block_stack
+                .first_mut()
+                .unwrap()
+                .vars_local
+                .insert(name, usize::MAX - self.vars_local);
+            self.vars_local += 1;
             var_id
         }
     }
@@ -848,6 +867,236 @@ impl<'x> CompilerState<'x> {
                 local_vars_idx: 0,
                 local_vars_num: 0,
             }));
+        }
+    }
+
+    fn map_local_vars(&mut self, last_id: usize) {
+        for instruction in &mut self.instructions {
+            match instruction {
+                Instruction::Test(v) => v.map_local_vars(last_id),
+                Instruction::Keep(k) => k.flags.map_local_vars(last_id),
+                Instruction::FileInto(v) => {
+                    v.folder.map_local_vars(last_id);
+                    v.flags.map_local_vars(last_id);
+                    v.mailbox_id.map_local_vars(last_id);
+                    v.special_use.map_local_vars(last_id);
+                }
+                Instruction::Redirect(v) => {
+                    v.address.map_local_vars(last_id);
+                    v.by_time.map_local_vars(last_id);
+                }
+                Instruction::Replace(v) => {
+                    v.subject.map_local_vars(last_id);
+                    v.from.map_local_vars(last_id);
+                    v.replacement.map_local_vars(last_id);
+                }
+                Instruction::Enclose(v) => {
+                    v.subject.map_local_vars(last_id);
+                    v.headers.map_local_vars(last_id);
+                    v.value.map_local_vars(last_id);
+                }
+                Instruction::ExtractText(v) => {
+                    v.name.map_local_vars(last_id);
+                }
+                Instruction::Convert(v) => {
+                    v.from_media_type.map_local_vars(last_id);
+                    v.to_media_type.map_local_vars(last_id);
+                    v.transcoding_params.map_local_vars(last_id);
+                }
+                Instruction::AddHeader(v) => {
+                    v.field_name.map_local_vars(last_id);
+                    v.value.map_local_vars(last_id);
+                }
+                Instruction::DeleteHeader(v) => {
+                    v.field_name.map_local_vars(last_id);
+                    v.value_patterns.map_local_vars(last_id);
+                }
+                Instruction::Set(v) => {
+                    v.name.map_local_vars(last_id);
+                    v.value.map_local_vars(last_id);
+                }
+                Instruction::Notify(v) => {
+                    v.from.map_local_vars(last_id);
+                    v.importance.map_local_vars(last_id);
+                    v.options.map_local_vars(last_id);
+                    v.message.map_local_vars(last_id);
+                    v.fcc.map_local_vars(last_id);
+                    v.method.map_local_vars(last_id);
+                }
+                Instruction::Reject(v) => {
+                    v.reason.map_local_vars(last_id);
+                }
+                Instruction::Vacation(v) => {
+                    v.subject.map_local_vars(last_id);
+                    v.from.map_local_vars(last_id);
+                    v.fcc.map_local_vars(last_id);
+                    v.reason.map_local_vars(last_id);
+                }
+                Instruction::Error(v) => {
+                    v.message.map_local_vars(last_id);
+                }
+                Instruction::EditFlags(v) => {
+                    v.name.map_local_vars(last_id);
+                    v.flags.map_local_vars(last_id);
+                }
+                Instruction::Include(v) => {
+                    v.value.map_local_vars(last_id);
+                }
+                Instruction::Plugin(v) => {
+                    v.arguments.map_local_vars(last_id);
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+pub trait MapLocalVars {
+    fn map_local_vars(&mut self, last_id: usize);
+}
+
+impl MapLocalVars for Test {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            Test::Address(v) => {
+                v.header_list.map_local_vars(last_id);
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::Envelope(v) => {
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::Exists(v) => {
+                v.header_names.map_local_vars(last_id);
+            }
+            Test::Header(v) => {
+                v.key_list.map_local_vars(last_id);
+                v.header_list.map_local_vars(last_id);
+                v.mime_opts.map_local_vars(last_id);
+            }
+            Test::Body(v) => {
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::Convert(v) => {
+                v.from_media_type.map_local_vars(last_id);
+                v.to_media_type.map_local_vars(last_id);
+                v.transcoding_params.map_local_vars(last_id);
+            }
+            Test::Date(v) => {
+                v.key_list.map_local_vars(last_id);
+                v.header_name.map_local_vars(last_id);
+            }
+            Test::CurrentDate(v) => {
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::Duplicate(v) => {
+                v.handle.map_local_vars(last_id);
+                v.dup_match.map_local_vars(last_id);
+            }
+            Test::String(v) => {
+                v.source.map_local_vars(last_id);
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::Environment(v) => {
+                v.source.map_local_vars(last_id);
+                v.key_list.map_local_vars(last_id);
+            }
+            Test::NotifyMethodCapability(v) => {
+                v.key_list.map_local_vars(last_id);
+                v.notification_capability.map_local_vars(last_id);
+                v.notification_uri.map_local_vars(last_id);
+            }
+            Test::ValidNotifyMethod(v) => {
+                v.notification_uris.map_local_vars(last_id);
+            }
+            Test::ValidExtList(v) => {
+                v.list_names.map_local_vars(last_id);
+            }
+            Test::HasFlag(v) => {
+                v.variable_list.map_local_vars(last_id);
+                v.flags.map_local_vars(last_id);
+            }
+            Test::MailboxExists(v) => {
+                v.mailbox_names.map_local_vars(last_id);
+            }
+            Test::Metadata(v) => {
+                v.key_list.map_local_vars(last_id);
+                v.medatata.map_local_vars(last_id);
+            }
+            Test::MetadataExists(v) => {
+                v.annotation_names.map_local_vars(last_id);
+                v.mailbox.map_local_vars(last_id);
+            }
+            Test::MailboxIdExists(v) => {
+                v.mailbox_ids.map_local_vars(last_id);
+            }
+            Test::SpamTest(v) => {
+                v.value.map_local_vars(last_id);
+            }
+            Test::VirusTest(v) => {
+                v.value.map_local_vars(last_id);
+            }
+            Test::SpecialUseExists(v) => {
+                v.mailbox.map_local_vars(last_id);
+                v.attributes.map_local_vars(last_id);
+            }
+            Test::Vacation(v) => {
+                v.addresses.map_local_vars(last_id);
+                v.handle.map_local_vars(last_id);
+                v.reason.map_local_vars(last_id);
+            }
+            Test::EvalExpression(v) => {
+                v.expr.map_local_vars(last_id);
+            }
+            Test::Plugin(v) => {
+                v.arguments.map_local_vars(last_id);
+            }
+            _ => (),
+        }
+    }
+}
+
+impl MapLocalVars for VariableType {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            VariableType::Local(id) if *id > last_id => {
+                *id = (usize::MAX - *id) + last_id;
+            }
+            _ => (),
+        }
+    }
+}
+
+impl MapLocalVars for Value {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            Value::Variable(var) => var.map_local_vars(last_id),
+            Value::Expression(expr) => expr.map_local_vars(last_id),
+            Value::List(items) => items.map_local_vars(last_id),
+            _ => (),
+        }
+    }
+}
+
+impl<T: MapLocalVars> MapLocalVars for Option<T> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        if let Some(value) = self {
+            value.map_local_vars(last_id);
+        }
+    }
+}
+
+impl MapLocalVars for Expression {
+    fn map_local_vars(&mut self, last_id: usize) {
+        if let Expression::Variable(var) = self {
+            var.map_local_vars(last_id)
+        }
+    }
+}
+
+impl<T: MapLocalVars> MapLocalVars for Vec<T> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        for item in self {
+            item.map_local_vars(last_id);
         }
     }
 }

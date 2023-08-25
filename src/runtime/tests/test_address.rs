@@ -29,7 +29,7 @@ use mail_parser::{
         },
         MessageStream,
     },
-    Header, HeaderName, HeaderValue,
+    Addr, Header, HeaderName, HeaderValue,
 };
 
 use crate::{
@@ -222,12 +222,7 @@ impl<'x> Context<'x> {
 
         match value {
             HeaderValue::Address(addr) => {
-                if let Some(addr) = addr
-                    .address
-                    .as_deref()
-                    .or(addr.name.as_deref())
-                    .and_then(|a| part.eval(a))
-                {
+                if let Some(addr) = part.eval(addr) {
                     visitor_fnc(addr)
                 } else {
                     false
@@ -235,12 +230,7 @@ impl<'x> Context<'x> {
             }
             HeaderValue::AddressList(addr_list) => {
                 for addr in addr_list {
-                    if let Some(addr) = addr
-                        .address
-                        .as_deref()
-                        .or(addr.name.as_deref())
-                        .and_then(|a| part.eval(a))
-                    {
+                    if let Some(addr) = part.eval(addr) {
                         if visitor_fnc(addr) {
                             return true;
                         }
@@ -250,12 +240,7 @@ impl<'x> Context<'x> {
             }
             HeaderValue::Group(group) => {
                 for addr in &group.addresses {
-                    if let Some(addr) = addr
-                        .address
-                        .as_deref()
-                        .or(addr.name.as_deref())
-                        .and_then(|a| part.eval(a))
-                    {
+                    if let Some(addr) = part.eval(addr) {
                         if visitor_fnc(addr) {
                             return true;
                         }
@@ -266,12 +251,7 @@ impl<'x> Context<'x> {
             HeaderValue::GroupList(group_list) => {
                 for group in group_list {
                     for addr in &group.addresses {
-                        if let Some(addr) = addr
-                            .address
-                            .as_deref()
-                            .or(addr.name.as_deref())
-                            .and_then(|a| part.eval(a))
-                        {
+                        if let Some(addr) = part.eval(addr) {
                             if visitor_fnc(addr) {
                                 return true;
                             }
@@ -286,7 +266,24 @@ impl<'x> Context<'x> {
 }
 
 impl AddressPart {
-    pub(crate) fn eval<'x>(&self, addr: &'x str) -> Option<&'x str> {
+    pub(crate) fn eval<'x>(&self, addr: &'x Addr<'x>) -> Option<&'x str> {
+        let email = addr.address.as_deref().or(addr.name.as_deref());
+        match (self, email) {
+            (AddressPart::All, _) => email,
+            (AddressPart::LocalPart, Some(email)) if !email.is_empty() => {
+                parse_address_local_part(email)
+            }
+            (AddressPart::Domain, Some(email)) if !email.is_empty() => parse_address_domain(email),
+            (AddressPart::User, Some(email)) if !email.is_empty() => parse_address_user_part(email),
+            (AddressPart::Detail, Some(email)) if !email.is_empty() => {
+                parse_address_detail_part(email)
+            }
+            (AddressPart::Name, _) => addr.name.as_deref(),
+            _ => email,
+        }
+    }
+
+    pub(crate) fn eval_string<'x>(&self, addr: &'x str) -> Option<&'x str> {
         if !addr.is_empty() {
             match self {
                 AddressPart::All => addr.into(),
@@ -294,6 +291,7 @@ impl AddressPart {
                 AddressPart::Domain => parse_address_domain(addr),
                 AddressPart::User => parse_address_user_part(addr),
                 AddressPart::Detail => parse_address_detail_part(addr),
+                _ => addr.into(),
             }
         } else {
             addr.into()

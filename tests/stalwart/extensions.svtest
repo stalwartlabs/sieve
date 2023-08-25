@@ -1,0 +1,105 @@
+require "vnd.stalwart.testsuite";
+require "relational";
+require "body";
+require "include";
+require "variables";
+
+test_set "message" text:
+From: Giovanni Doe <john.doe@example.org>
+To: Guglielmo Doe <bill.doe@example.net>
+Subject: Pranzo d'acqua fa volti sghembi
+
+V kožuščku hudobnega fanta stopiclja mizar
+
+.
+;
+
+
+test "Address :name extension" {
+    if not address :localpart :contains ["from"] "john" {
+		test_fail "failed to match local address part";
+	}
+
+    if not address :name :contains ["from"] "Giovanni" {
+		test_fail "failed to match name address part";
+	}
+
+    if address :name :contains ["from"] "john" {
+		test_fail "address part matched in name";
+	}
+
+    if address :localpart :contains ["from"] "Giovanni" {
+		test_fail "address part matched in name";
+	}
+
+}
+
+test "Body :subject extension" {
+    if not body :contains "fanta" {
+		test_fail "failed to match body";
+	}
+
+    if not body :subject :contains "Pranzo" {
+		test_fail "failed to match subject";
+	}
+
+    if body :contains "Pranzo" {
+		test_fail "subject matched without :subject tag";
+	}
+}
+
+test "Variable scopes" {
+	global "test";
+
+	set "test" "test";
+	set "local_test" "local_test";
+
+	if true {
+		if not string :is "${test}" "test" {
+			test_fail "failed to match global variable";
+		}
+		if not string :is "${local_test}" "local_test" {
+			test_fail "failed to match local variable";
+		}
+
+	}
+
+	if true {
+		set :local "inner_scope" "yes";
+	}
+
+	if true {
+		set "scope_a" "a";
+		if true {
+			set "scope_b" "b";
+			if true {
+				set "scope_c" "c";
+				if true {
+					set :local "deep_inner_scope" "abc";
+					set "local_scope" "xyz";
+				}
+				if not string :is "${scope_c}" "c" {
+					test_fail "variable contents were cleared = '${scope_c}'";
+				}
+			}
+			if not string :is "${scope_b}" "b" {
+				test_fail "variable contents were cleared = '${scope_b}'";
+			}
+		}
+		if not string :is "${scope_a}" "a" {
+			test_fail "variable contents were cleared = '${scope_a}'";
+		}
+	}
+
+	if not string :is "${inner_scope}" "yes" {
+		test_fail "failed to match inner scope variable = '${inner_scope}'";
+	}
+
+	if not string :is "${deep_inner_scope}" "abc" {
+		test_fail "failed to match deep inner scope variable = '${deep_inner_scope}'";
+	}
+
+	if not string :is "${local_scope}" "" {
+		test_fail "matched out of scope variable = '${local_scope}'";
+	}
+}

@@ -21,6 +21,7 @@
           "body_transform": "Raw",
           "match_type": "Contains",
           "comparator": "AsciiCaseMap",
+          "include_subject": false,
           "is_not": false
         }
       }
@@ -58,6 +59,7 @@
           },
           "match_type": "Contains",
           "comparator": "AsciiCaseMap",
+          "include_subject": false,
           "is_not": false
         }
       }
@@ -103,6 +105,7 @@
           },
           "match_type": "Contains",
           "comparator": "AsciiCaseMap",
+          "include_subject": false,
           "is_not": false
         }
       }
@@ -142,6 +145,7 @@
           "body_transform": "Text",
           "match_type": "Contains",
           "comparator": "AsciiCaseMap",
+          "include_subject": false,
           "is_not": false
         }
       }

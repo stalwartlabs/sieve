@@ -1,4 +1,4 @@
-require ["variables", "relational"];
+require ["variables", "relational", "vnd.stalwart.plugins"];
 
 
 test "Expressions" {
@@ -64,5 +64,42 @@ test "Expressions" {
     if eval "0" {
         test_fail "0 is not false";
     }
+
+    # Scopes
+    
+    if true {
+        set :local "is_set" "1";
+    }
+    
+    if false {
+        set :local "is_unset" "1";
+    }
+    
+    if not eval "is_set" {
+        test_fail "variable with local scope unavailable in expression";
+    }
+    
+    if eval "is_unset" {
+        test_fail "unset variable is true in expression";
+    }
+    
+    if not eval "is_set || is_unset" {
+        test_fail "set || unset is false in expression";
+    }
+
+    if eval "is_set && is_unset" {
+        test_fail "set && unset is true in expression";
+    }
+
+    if not eval "is_set + is_unset == 1" {
+        test_fail "set + unset != 1 in expression";
+    }
+
+    set "result" "%{is_set + is_set + is_unset + is_unset}";
+
+    if not string :is "${result}" "2" {
+        test_fail "set + set + unset + unset => '${result}' != 2 in expression";
+    }
+
 }
 

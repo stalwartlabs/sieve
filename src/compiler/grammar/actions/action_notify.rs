@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{
-            instruction::{CompilerState, Instruction},
+            instruction::{CompilerState, Instruction, MapLocalVars},
             Capability,
         },
         lexer::{word::Word, Token},
@@ -178,5 +178,14 @@ impl<'x> CompilerState<'x> {
             },
         }));
         Ok(())
+    }
+}
+
+impl MapLocalVars for FileCarbonCopy<Value> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        self.mailbox.map_local_vars(last_id);
+        self.mailbox_id.map_local_vars(last_id);
+        self.flags.map_local_vars(last_id);
+        self.special_use.map_local_vars(last_id);
     }
 }

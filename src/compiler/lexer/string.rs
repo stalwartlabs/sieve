@@ -489,6 +489,7 @@ mod tests {
             vars_global: AHashSet::new(),
             vars_num: 0,
             vars_num_max: 0,
+            vars_local: 0,
             tokens: Tokenizer::new(&c, b""),
             vars_match_max: usize::MAX,
             param_check: [false; MAX_PARAMS],

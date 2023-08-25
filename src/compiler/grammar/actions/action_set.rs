@@ -72,6 +72,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_set(&mut self) -> Result<(), CompileError> {
         let mut modifiers = Vec::new();
         let mut name = None;
+        let mut is_local = false;
         let value;
 
         loop {
@@ -100,9 +101,12 @@ impl<'x> CompilerState<'x> {
                         replace: self.parse_string_token(replace)?,
                     });
                 }
+                Token::Tag(Word::Local) => {
+                    is_local = true;
+                }
                 _ => {
                     if name.is_none() {
-                        name = self.parse_variable_name(token_info)?.into();
+                        name = self.parse_variable_name(token_info, is_local)?.into();
                     } else {
                         value = self.parse_string_token(token_info)?;
                         break;
@@ -124,35 +128,37 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_variable_name(
         &mut self,
         token_info: TokenInfo,
+        register_as_local: bool,
     ) -> Result<VariableType, CompileError> {
         match token_info.token {
-            Token::StringConstant(value) => {
-                self.register_variable(value.into_string())
-                    .map_err(|error_type| CompileError {
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                        error_type,
-                    })
-            }
+            Token::StringConstant(value) => self
+                .register_variable(value.into_string(), register_as_local)
+                .map_err(|error_type| CompileError {
+                    line_num: token_info.line_num,
+                    line_pos: token_info.line_pos,
+                    error_type,
+                }),
             _ => Err(token_info.custom(ErrorType::ExpectedConstantString)),
         }
     }
 
-    pub(crate) fn register_variable(&mut self, name: String) -> Result<VariableType, ErrorType> {
+    pub(crate) fn register_variable(
+        &mut self,
+        name: String,
+        register_as_local: bool,
+    ) -> Result<VariableType, ErrorType> {
         let name = name.to_lowercase();
         if let Some((namespace, part)) = name.split_once('.') {
-            if namespace == "global" {
-                Ok(VariableType::Global(part.to_string()))
-            } else if namespace == "envelope" {
-                Envelope::try_from(part)
+            match namespace {
+                "global" => Ok(VariableType::Global(part.to_string())),
+                "envelope" => Envelope::try_from(part)
                     .map(VariableType::Envelope)
-                    .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string()))
-            } else {
-                Err(ErrorType::InvalidNamespace(namespace.to_string()))
+                    .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string())),
+                _ => Err(ErrorType::InvalidNamespace(namespace.to_string())),
             }
         } else {
             Ok(if !self.is_var_global(&name) {
-                VariableType::Local(self.register_local_var(name))
+                VariableType::Local(self.register_local_var(name, register_as_local))
             } else {
                 VariableType::Global(name)
             })

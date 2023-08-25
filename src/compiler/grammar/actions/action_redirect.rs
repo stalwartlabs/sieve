@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
     grammar::{
-        instruction::{CompilerState, Instruction},
+        instruction::{CompilerState, Instruction, MapLocalVars},
         Capability,
     },
     lexer::{word::Word, Token},
@@ -247,5 +247,13 @@ impl<'x> CompilerState<'x> {
             list,
         }));
         Ok(())
+    }
+}
+
+impl MapLocalVars for ByTime<Value> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        if let ByTime::Absolute { alimit, .. } = self {
+            alimit.map_local_vars(last_id)
+        }
     }
 }

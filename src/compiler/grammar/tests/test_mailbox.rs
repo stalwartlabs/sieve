@@ -25,7 +25,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        grammar::{instruction::CompilerState, Capability, Comparator},
+        grammar::{
+            instruction::{CompilerState, MapLocalVars},
+            Capability, Comparator,
+        },
         lexer::{word::Word, Token},
         CompileError, Value,
     },
@@ -213,5 +216,19 @@ impl<'x> CompilerState<'x> {
             key_list,
             is_not: false,
         }))
+    }
+}
+
+impl MapLocalVars for Metadata<Value> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            Metadata::Mailbox { name, annotation } => {
+                name.map_local_vars(last_id);
+                annotation.map_local_vars(last_id);
+            }
+            Metadata::Server { annotation } => {
+                annotation.map_local_vars(last_id);
+            }
+        }
     }
 }
