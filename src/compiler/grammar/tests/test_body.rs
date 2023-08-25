@@ -37,6 +37,7 @@ pub(crate) struct TestBody {
     pub body_transform: BodyTransform,
     pub match_type: MatchType,
     pub comparator: Comparator,
+    pub include_subject: bool,
     pub is_not: bool,
 }
 
@@ -53,6 +54,7 @@ impl<'x> CompilerState<'x> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut key_list;
+        let mut include_subject = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -68,6 +70,10 @@ impl<'x> CompilerState<'x> {
                 Token::Tag(Word::Content) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     body_transform = BodyTransform::Content(self.parse_strings()?);
+                }
+                Token::Tag(Word::Subject) => {
+                    self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
+                    include_subject = true;
                 }
                 Token::Tag(
                     word @ (Word::Is
@@ -108,6 +114,7 @@ impl<'x> CompilerState<'x> {
             body_transform,
             match_type,
             comparator,
+            include_subject,
             is_not: false,
         }))
     }

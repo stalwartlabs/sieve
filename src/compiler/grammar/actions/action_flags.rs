@@ -64,7 +64,7 @@ impl<'x> CompilerState<'x> {
                         Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
                     )),
                 ) => EditFlags {
-                    name: self.parse_variable_name(token_info)?.into(),
+                    name: self.parse_variable_name(token_info, false)?.into(),
                     flags: self.parse_strings()?,
                     action,
                 },

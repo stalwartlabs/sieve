@@ -31,7 +31,7 @@ impl<'x> Context<'x> {
             if let Some(var) = self.vars_match.get_mut(var_num) {
                 *var = value.into();
             } else {
-                debug_assert!(false, "Invalid match varialbe {var_num}");
+                debug_assert!(false, "Invalid match variable {var_num}");
             }
         }
     }

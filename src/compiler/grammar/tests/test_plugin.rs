@@ -25,7 +25,7 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use crate::compiler::grammar::instruction::{CompilerState, Instruction};
+use crate::compiler::grammar::instruction::{CompilerState, Instruction, MapLocalVars};
 use crate::compiler::lexer::Token;
 use crate::compiler::{CompileError, Regex};
 use crate::compiler::{ErrorType, Value};
@@ -161,6 +161,17 @@ impl PluginSchemaArgument {
                 }
             }
             _ => unreachable!(),
+        }
+    }
+}
+
+impl MapLocalVars for PluginArgument<Value, Value> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            PluginArgument::Text(v) => v.map_local_vars(last_id),
+            PluginArgument::Number(v) => v.map_local_vars(last_id),
+            PluginArgument::Array(v) => v.map_local_vars(last_id),
+            _ => (),
         }
     }
 }

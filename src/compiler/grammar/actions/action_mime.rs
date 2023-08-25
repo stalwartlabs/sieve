@@ -140,6 +140,7 @@ impl<'x> CompilerState<'x> {
         let mut modifiers = Vec::new();
         let mut first = None;
         let name;
+        let mut is_local = false;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -170,8 +171,11 @@ impl<'x> CompilerState<'x> {
                         replace: self.parse_string_token(replace)?,
                     });
                 }
+                Token::Tag(Word::Local) => {
+                    is_local = true;
+                }
                 _ => {
-                    name = self.parse_variable_name(token_info)?;
+                    name = self.parse_variable_name(token_info, is_local)?;
                     break;
                 }
             }

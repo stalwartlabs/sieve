@@ -50,6 +50,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_hasflag(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
+        let mut is_local = false;
 
         let mut maybe_variables;
 
@@ -82,6 +83,9 @@ impl<'x> CompilerState<'x> {
                     self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
                     comparator = self.parse_comparator()?;
                 }
+                Token::Tag(Word::Local) => {
+                    is_local = true;
+                }
                 _ => {
                     maybe_variables = self.parse_strings_token(token_info)?;
                     break;
@@ -103,13 +107,15 @@ impl<'x> CompilerState<'x> {
                     for variable in maybe_variables {
                         match variable {
                             Value::Text(var_name) => {
-                                variable_list.push(self.register_variable(var_name).map_err(
-                                    |error_type| CompileError {
-                                        line_num,
-                                        line_pos,
-                                        error_type,
-                                    },
-                                )?);
+                                variable_list.push(
+                                    self.register_variable(var_name, is_local).map_err(
+                                        |error_type| CompileError {
+                                            line_num,
+                                            line_pos,
+                                            error_type,
+                                        },
+                                    )?,
+                                );
                             }
                             _ => {
                                 return Err(self

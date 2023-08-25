@@ -25,7 +25,7 @@ use mail_parser::HeaderName;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::instruction::CompilerState,
+    grammar::instruction::{CompilerState, MapLocalVars},
     lexer::{word::Word, Token},
     CompileError, ErrorType, Value,
 };
@@ -106,5 +106,15 @@ impl<'x> CompilerState<'x> {
             last,
             is_not: false,
         }))
+    }
+}
+
+impl MapLocalVars for DupMatch {
+    fn map_local_vars(&mut self, last_id: usize) {
+        match self {
+            DupMatch::Header(header) => header.map_local_vars(last_id),
+            DupMatch::UniqueId(unique_id) => unique_id.map_local_vars(last_id),
+            DupMatch::Default => {}
+        }
     }
 }

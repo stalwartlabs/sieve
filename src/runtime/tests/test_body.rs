@@ -39,7 +39,40 @@ use super::{mime::ContentTypeFilter, TestResult};
 
 impl TestBody {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+        // Check Subject (not a Sieve standard)
         let key_list = ctx.eval_values(&self.key_list);
+        if self.include_subject {
+            let subject = if !matches!(&self.body_transform, BodyTransform::Raw) {
+                ctx.message.subject().unwrap_or_default()
+            } else {
+                ctx.message.header_raw("Subject").unwrap_or_default()
+            };
+
+            for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
+                let result = match &self.match_type {
+                    MatchType::Is => self.comparator.is(&Variable::from(subject), key),
+                    MatchType::Contains => self.comparator.contains(subject, key.to_cow().as_ref()),
+                    MatchType::Value(rel_match) => {
+                        self.comparator
+                            .relational(rel_match, &Variable::from(subject), key)
+                    }
+                    MatchType::Matches(_) => {
+                        self.comparator
+                            .matches(subject, key.to_cow().as_ref(), 0, &mut Vec::new())
+                    }
+                    MatchType::Regex(_) => {
+                        self.comparator
+                            .regex(pattern, key, subject, 0, &mut Vec::new())
+                    }
+                    _ => break,
+                };
+
+                if result {
+                    return TestResult::Bool(result ^ self.is_not);
+                }
+            }
+        }
+
         let ct_filter = match &self.body_transform {
             BodyTransform::Text | BodyTransform::Raw => Vec::new(),
             BodyTransform::Content(values) => {

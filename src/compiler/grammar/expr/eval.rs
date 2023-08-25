@@ -31,7 +31,11 @@ impl<'x> Context<'x> {
         for expr in expr {
             match expr {
                 Expression::Variable(v) => {
-                    stack.push(self.variable(v)?.to_number());
+                    stack.push(
+                        self.variable(v)?
+                            .to_number_checked()
+                            .unwrap_or(Number::Integer(0)),
+                    );
                 }
                 Expression::Number(n) => {
                     stack.push(*n);

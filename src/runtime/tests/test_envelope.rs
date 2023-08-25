@@ -163,8 +163,9 @@ impl<'x> Context<'x> {
             if test_envelope.envelope_list.contains(name)
                 && match name {
                     Envelope::From | Envelope::To | Envelope::Orcpt => {
-                        if let Some(value) =
-                            test_envelope.address_part.eval(value.to_cow().as_ref())
+                        if let Some(value) = test_envelope
+                            .address_part
+                            .eval_string(value.to_cow().as_ref())
                         {
                             cb(value)
                         } else {

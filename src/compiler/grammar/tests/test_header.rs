@@ -25,7 +25,11 @@ use mail_parser::HeaderName;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
-    grammar::{actions::action_mime::MimeOpts, instruction::CompilerState, Capability, Comparator},
+    grammar::{
+        actions::action_mime::MimeOpts,
+        instruction::{CompilerState, MapLocalVars},
+        Capability, Comparator,
+    },
     lexer::{word::Word, Token},
     CompileError, ErrorType, Value,
 };
@@ -175,5 +179,13 @@ impl<'x> CompilerState<'x> {
             mime_anychild,
             is_not: false,
         }))
+    }
+}
+
+impl MapLocalVars for MimeOpts<Value> {
+    fn map_local_vars(&mut self, last_id: usize) {
+        if let MimeOpts::Param(value) = self {
+            value.map_local_vars(last_id)
+        }
     }
 }

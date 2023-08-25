@@ -61,7 +61,12 @@ impl<'x> CompilerState<'x> {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::Tag(
-                    word @ (Word::LocalPart | Word::Domain | Word::All | Word::User | Word::Detail),
+                    word @ (Word::LocalPart
+                    | Word::Domain
+                    | Word::All
+                    | Word::User
+                    | Word::Detail
+                    | Word::Name),
                 ) => {
                     self.validate_argument(
                         1,
@@ -174,6 +179,7 @@ impl From<Word> for AddressPart {
             Word::All => AddressPart::All,
             Word::User => AddressPart::User,
             Word::Detail => AddressPart::Detail,
+            Word::Name => AddressPart::Name,
             _ => unreachable!(),
         }
     }

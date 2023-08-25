@@ -97,19 +97,23 @@ impl<'x> Variable<'x> {
     }
 
     pub fn to_number(&self) -> Number {
+        self.to_number_checked()
+            .unwrap_or(Number::Float(f64::INFINITY))
+    }
+
+    pub fn to_number_checked(&self) -> Option<Number> {
         let s = match self {
-            Variable::Integer(n) => return Number::Integer(*n),
-            Variable::Float(n) => return Number::Float(*n),
-            Variable::String(s) => s.as_str(),
-            Variable::StringRef(s) => *s,
+            Variable::Integer(n) => return Number::Integer(*n).into(),
+            Variable::Float(n) => return Number::Float(*n).into(),
+            Variable::String(s) if !s.is_empty() => s.as_str(),
+            Variable::StringRef(s) if !s.is_empty() => *s,
+            _ => return None,
         };
 
         if !s.contains('.') {
-            s.parse::<i64>()
-                .map_or(Number::Float(f64::MAX), Number::Integer)
+            s.parse::<i64>().map(Number::Integer).ok()
         } else {
-            s.parse::<f64>()
-                .map_or(Number::Float(f64::MAX), Number::Float)
+            s.parse::<f64>().map(Number::Float).ok()
         }
     }
 

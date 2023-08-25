@@ -98,6 +98,7 @@ pub(crate) enum AddressPart {
     All,
     User,
     Detail,
+    Name,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
