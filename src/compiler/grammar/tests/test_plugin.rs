@@ -109,28 +109,35 @@ impl<'x> CompilerState<'x> {
                 }
             };
 
-            if let PluginSchemaArgument::Array(item_schema) = schema_arg {
-                let mut items = vec![];
-                for item in self.parse_strings()? {
-                    match item_schema.convert_argument(item) {
-                        Ok(arg) => {
-                            items.push(arg);
-                        }
-                        Err(err) => {
-                            return Err(self.tokens.unwrap_next()?.custom(err));
+            match schema_arg {
+                PluginSchemaArgument::Array(item_schema) => {
+                    let mut items = vec![];
+                    for item in self.parse_strings()? {
+                        match item_schema.convert_argument(item) {
+                            Ok(arg) => {
+                                items.push(arg);
+                            }
+                            Err(err) => {
+                                return Err(self.tokens.unwrap_next()?.custom(err));
+                            }
                         }
                     }
+                    plugin.arguments.push(PluginArgument::Array(items));
                 }
-                plugin.arguments.push(PluginArgument::Array(items));
-            } else {
-                match schema_arg.convert_argument(self.parse_string()?) {
+                PluginSchemaArgument::Variable => {
+                    let token = self.tokens.unwrap_next()?;
+                    plugin.arguments.push(PluginArgument::Variable(
+                        self.parse_variable_name(token, false)?,
+                    ));
+                }
+                _ => match schema_arg.convert_argument(self.parse_string()?) {
                     Ok(arg) => {
                         plugin.arguments.push(arg);
                     }
                     Err(err) => {
                         return Err(self.tokens.unwrap_next()?.custom(err));
                     }
-                }
+                },
             }
         }
 
@@ -160,7 +167,7 @@ impl PluginSchemaArgument {
                     ))
                 }
             }
-            _ => unreachable!(),
+            _ => Err(ErrorType::InvalidArguments),
         }
     }
 }
@@ -171,6 +178,7 @@ impl MapLocalVars for PluginArgument<Value, Value> {
             PluginArgument::Text(v) => v.map_local_vars(last_id),
             PluginArgument::Number(v) => v.map_local_vars(last_id),
             PluginArgument::Array(v) => v.map_local_vars(last_id),
+            PluginArgument::Variable(v) => v.map_local_vars(last_id),
             _ => (),
         }
     }
@@ -182,6 +190,7 @@ impl Display for PluginSchemaArgument {
             PluginSchemaArgument::Text => write!(f, "string"),
             PluginSchemaArgument::Number => write!(f, "number"),
             PluginSchemaArgument::Regex => write!(f, "regular expression"),
+            PluginSchemaArgument::Variable => write!(f, "variable"),
             PluginSchemaArgument::Array(item) => write!(f, "array of {}s", item),
         }
     }

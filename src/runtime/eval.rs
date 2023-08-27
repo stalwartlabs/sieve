@@ -128,11 +128,13 @@ impl<'x> Context<'x> {
                                 PluginArgument::Number(self.eval_value(n).to_number())
                             }
                             PluginArgument::Regex(r) => PluginArgument::Regex(r.clone()),
+                            PluginArgument::Variable(var) => PluginArgument::Variable(var.clone()),
                             PluginArgument::Array(_) => continue,
                         });
                     }
                     PluginArgument::Array(arr)
                 }
+                PluginArgument::Variable(var) => PluginArgument::Variable(var.clone()),
             });
         }
 

@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     compiler::{
         grammar::{Capability, Invalid},
-        Number, Regex,
+        Number, Regex, VariableType,
     },
     Context, Input, Metadata, PluginArgument, Runtime, Script, Sieve,
 };
@@ -582,6 +582,10 @@ impl Input {
 
     pub fn fail() -> Self {
         Input::False
+    }
+
+    pub fn variable(name: VariableType, value: Variable<'static>) -> Self {
+        Input::Variable { name, value }
     }
 }
 
