@@ -274,7 +274,7 @@ use compiler::{
         instruction::Instruction,
         Capability,
     },
-    Number, Regex,
+    Number, Regex, VariableType,
 };
 use mail_parser::{HeaderName, Message};
 use runtime::{context::ScriptStack, Variable};
@@ -395,6 +395,7 @@ pub enum PluginSchemaArgument {
     Text,
     Number,
     Regex,
+    Variable,
     Array(Box<PluginSchemaArgument>),
 }
 
@@ -498,6 +499,7 @@ pub enum PluginArgument<T, N> {
     Text(T),
     Number(N),
     Regex(Regex),
+    Variable(VariableType),
     Array(Vec<PluginArgument<T, N>>),
 }
 
@@ -535,7 +537,14 @@ pub enum Recipient {
 pub enum Input {
     True,
     False,
-    Script { name: Script, script: Arc<Sieve> },
+    Script {
+        name: Script,
+        script: Arc<Sieve>,
+    },
+    Variable {
+        name: VariableType,
+        value: Variable<'static>,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

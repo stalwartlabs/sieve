@@ -3,6 +3,7 @@ require "relational";
 require "body";
 require "include";
 require "variables";
+require "regex";
 
 test_set "message" text:
 From: Giovanni Doe <john.doe@example.org>
@@ -102,4 +103,14 @@ test "Variable scopes" {
 	if not string :is "${local_scope}" "" {
 		test_fail "matched out of scope variable = '${local_scope}'";
 	}
+
+	# Names captures
+	if address :regex :all "To" "(?<ADDR>.*)" {
+		set :local "ADDR" "${1}";
+	}
+
+	if not string :is "${ADDR}" "bill.doe@example.net" {
+		test_fail "match group failed = '${ADDR}'";
+	}
+
 }

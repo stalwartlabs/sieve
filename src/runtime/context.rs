@@ -122,6 +122,10 @@ impl<'x> Context<'x> {
                     self.test_result = false;
                 }
             }
+            Input::Variable { name, value } => {
+                self.set_variable(&name, value);
+                self.test_result ^= true;
+            }
         }
 
         // Return any queued events
