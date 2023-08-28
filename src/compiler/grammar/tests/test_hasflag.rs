@@ -125,7 +125,7 @@ impl<'x> CompilerState<'x> {
                             }
                         }
                     }
-                    let mut flags = self.parse_strings()?;
+                    let mut flags = self.parse_strings(false)?;
                     self.validate_match(&match_type, &mut flags)?;
 
                     Ok(Test::HasFlag(TestHasFlag {

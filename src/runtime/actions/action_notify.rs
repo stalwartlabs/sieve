@@ -234,8 +234,8 @@ impl Notify {
                         params
                             .to
                             .into_iter()
-                            .chain(params.cc.into_iter())
-                            .chain(params.bcc.into_iter())
+                            .chain(params.cc)
+                            .chain(params.bcc)
                             .map(|addr| {
                                 if let Some((addr, _)) = addr
                                     .rsplit_once('<')

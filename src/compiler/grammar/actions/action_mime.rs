@@ -119,7 +119,7 @@ impl<'x> CompilerState<'x> {
                 }
                 Token::Tag(Word::Headers) => {
                     self.validate_argument(2, None, token_info.line_num, token_info.line_pos)?;
-                    headers = self.parse_strings()?;
+                    headers = self.parse_strings(false)?;
                 }
                 _ => {
                     value = self.parse_string_token(token_info)?;
@@ -197,7 +197,7 @@ impl<'x> CompilerState<'x> {
             Word::Type => MimeOpts::Type,
             Word::Subtype => MimeOpts::Subtype,
             Word::ContentType => MimeOpts::ContentType,
-            Word::Param => MimeOpts::Param(self.parse_strings()?),
+            Word::Param => MimeOpts::Param(self.parse_strings(false)?),
             _ => MimeOpts::None,
         })
     }

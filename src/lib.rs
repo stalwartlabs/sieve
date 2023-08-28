@@ -316,7 +316,7 @@ pub struct Runtime {
     pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
-    pub(crate) environment: AHashMap<String, Variable<'static>>,
+    pub(crate) environment: AHashMap<Cow<'static, str>, Variable<'static>>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
@@ -363,8 +363,8 @@ pub struct Context<'x> {
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
     pub(crate) script_stack: Vec<ScriptStack>,
-    pub(crate) vars_global: AHashMap<String, Variable<'static>>,
-    pub(crate) vars_env: AHashMap<String, Variable<'x>>,
+    pub(crate) vars_global: AHashMap<Cow<'static, str>, Variable<'static>>,
+    pub(crate) vars_env: AHashMap<Cow<'static, str>, Variable<'x>>,
     pub(crate) vars_local: Vec<Variable<'static>>,
     pub(crate) vars_match: Vec<Variable<'static>>,
 
@@ -537,14 +537,14 @@ pub enum Recipient {
 pub enum Input {
     True,
     False,
-    Script {
-        name: Script,
-        script: Arc<Sieve>,
-    },
-    Variable {
-        name: VariableType,
-        value: Variable<'static>,
-    },
+    Script { name: Script, script: Arc<Sieve> },
+    Variables { list: Vec<SetVariable> },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SetVariable {
+    pub name: VariableType,
+    pub value: Variable<'static>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

@@ -92,7 +92,7 @@ impl<'x> CompilerState<'x> {
                 }
                 Token::Tag(Word::Options) => {
                     self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
-                    options = self.parse_strings()?;
+                    options = self.parse_strings(false)?;
                 }
                 Token::Tag(Word::Create) => {
                     self.validate_argument(
@@ -137,7 +137,7 @@ impl<'x> CompilerState<'x> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    flags = self.parse_strings()?;
+                    flags = self.parse_strings(false)?;
                 }
                 _ => {
                     if let Token::StringConstant(uri) = &token_info.token {

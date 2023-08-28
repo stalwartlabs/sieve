@@ -122,8 +122,10 @@ impl<'x> Context<'x> {
                     self.test_result = false;
                 }
             }
-            Input::Variable { name, value } => {
-                self.set_variable(&name, value);
+            Input::Variables { list } => {
+                for item in list {
+                    self.set_variable(&item.name, item.value);
+                }
                 self.test_result ^= true;
             }
         }
@@ -470,7 +472,7 @@ impl<'x> Context<'x> {
         }
     }
 
-    pub fn with_vars_env(mut self, vars_env: AHashMap<String, Variable<'x>>) -> Self {
+    pub fn with_vars_env(mut self, vars_env: AHashMap<Cow<'static, str>, Variable<'x>>) -> Self {
         self.vars_env = vars_env;
         self
     }
@@ -518,13 +520,17 @@ impl<'x> Context<'x> {
         self
     }
 
-    pub fn set_env_variable(&mut self, name: impl Into<String>, value: impl Into<Variable<'x>>) {
+    pub fn set_env_variable(
+        &mut self,
+        name: impl Into<Cow<'static, str>>,
+        value: impl Into<Variable<'x>>,
+    ) {
         self.vars_env.insert(name.into(), value.into());
     }
 
     pub fn with_env_variable(
         mut self,
-        name: impl Into<String>,
+        name: impl Into<Cow<'static, str>>,
         value: impl Into<Variable<'x>>,
     ) -> Self {
         self.set_env_variable(name, value);

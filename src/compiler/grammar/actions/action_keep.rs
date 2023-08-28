@@ -49,7 +49,7 @@ impl<'x> CompilerState<'x> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    self.parse_strings()?
+                    self.parse_strings(false)?
                 }
                 _ => Vec::new(),
             },

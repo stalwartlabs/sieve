@@ -32,7 +32,7 @@ use crate::{
         grammar::{Capability, Invalid},
         Number, Regex, VariableType,
     },
-    Context, Input, Metadata, PluginArgument, Runtime, Script, Sieve,
+    Context, Input, Metadata, PluginArgument, Runtime, Script, SetVariable, Sieve,
 };
 
 pub mod actions;
@@ -234,6 +234,13 @@ impl PluginArgument<String, Number> {
         }
     }
 
+    pub fn unwrap_variable(self) -> Option<VariableType> {
+        match self {
+            PluginArgument::Variable(v) => v.into(),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_string_array(self) -> Option<Vec<String>> {
         match self {
             PluginArgument::Array(a) => a
@@ -261,6 +268,17 @@ impl PluginArgument<String, Number> {
             PluginArgument::Array(a) => a
                 .into_iter()
                 .filter_map(Self::unwrap_regex)
+                .collect::<Vec<_>>()
+                .into(),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_variable_array(self) -> Option<Vec<VariableType>> {
+        match self {
+            PluginArgument::Array(a) => a
+                .into_iter()
+                .filter_map(Self::unwrap_variable)
                 .collect::<Vec<_>>()
                 .into(),
             _ => None,
@@ -439,7 +457,7 @@ impl Runtime {
 
     pub fn set_env_variable(
         &mut self,
-        name: impl Into<String>,
+        name: impl Into<Cow<'static, str>>,
         value: impl Into<Variable<'static>>,
     ) {
         self.environment.insert(name.into(), value.into());
@@ -447,7 +465,7 @@ impl Runtime {
 
     pub fn with_env_variable(
         mut self,
-        name: impl Into<String>,
+        name: impl Into<Cow<'static, str>>,
         value: impl Into<Cow<'static, str>>,
     ) -> Self {
         self.set_env_variable(name.into(), value.into());
@@ -587,8 +605,8 @@ impl Input {
         Input::False
     }
 
-    pub fn variable(name: VariableType, value: Variable<'static>) -> Self {
-        Input::Variable { name, value }
+    pub fn variables(list: Vec<SetVariable>) -> Self {
+        Input::Variables { list }
     }
 }
 

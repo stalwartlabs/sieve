@@ -66,18 +66,19 @@ impl<'x> CompilerState<'x> {
             arguments: vec![],
             is_not: false,
         };
+        let mut tags = vec![];
         let mut schema_args = schema.arguments.iter();
 
         while let Some(token_info) = self.tokens.peek() {
             let token_info = token_info?;
-            let schema_arg = match &token_info.token {
+            let (target, schema_arg) = match &token_info.token {
                 Token::Tag(tag) => {
                     let tag = tag.to_string();
                     let token_info = self.tokens.unwrap_next()?;
                     if let Some(tagged_arg) = schema.tags.get(&tag) {
-                        plugin.arguments.push(PluginArgument::Tag(tagged_arg.id));
+                        tags.push(PluginArgument::Tag(tagged_arg.id));
                         if let Some(schema_arg) = &tagged_arg.argument {
-                            schema_arg
+                            (&mut tags, schema_arg)
                         } else {
                             continue;
                         }
@@ -90,9 +91,9 @@ impl<'x> CompilerState<'x> {
                         tag.strip_prefix(':').and_then(|tag| schema.tags.get(tag))
                     {
                         self.tokens.unwrap_next()?;
-                        plugin.arguments.push(PluginArgument::Tag(tagged_arg.id));
+                        tags.push(PluginArgument::Tag(tagged_arg.id));
                         if let Some(schema_arg) = &tagged_arg.argument {
-                            schema_arg
+                            (&mut tags, schema_arg)
                         } else {
                             continue;
                         }
@@ -102,7 +103,7 @@ impl<'x> CompilerState<'x> {
                 }
                 _ => {
                     if let Some(schema_arg) = schema_args.next() {
-                        schema_arg
+                        (&mut plugin.arguments, schema_arg)
                     } else {
                         break;
                     }
@@ -112,27 +113,40 @@ impl<'x> CompilerState<'x> {
             match schema_arg {
                 PluginSchemaArgument::Array(item_schema) => {
                     let mut items = vec![];
-                    for item in self.parse_strings()? {
-                        match item_schema.convert_argument(item) {
-                            Ok(arg) => {
-                                items.push(arg);
+                    if matches!(item_schema.as_ref(), PluginSchemaArgument::Variable) {
+                        for item in self.parse_static_strings()? {
+                            match self.register_variable(item, false) {
+                                Ok(var) => {
+                                    items.push(PluginArgument::Variable(var));
+                                }
+                                Err(err) => {
+                                    return Err(self.tokens.unwrap_next()?.custom(err));
+                                }
                             }
-                            Err(err) => {
-                                return Err(self.tokens.unwrap_next()?.custom(err));
+                        }
+                    } else {
+                        for item in self.parse_strings(true)? {
+                            match item_schema.convert_argument(item) {
+                                Ok(arg) => {
+                                    items.push(arg);
+                                }
+                                Err(err) => {
+                                    return Err(self.tokens.unwrap_next()?.custom(err));
+                                }
                             }
                         }
                     }
-                    plugin.arguments.push(PluginArgument::Array(items));
+                    target.push(PluginArgument::Array(items));
                 }
                 PluginSchemaArgument::Variable => {
                     let token = self.tokens.unwrap_next()?;
-                    plugin.arguments.push(PluginArgument::Variable(
+                    target.push(PluginArgument::Variable(
                         self.parse_variable_name(token, false)?,
                     ));
                 }
                 _ => match schema_arg.convert_argument(self.parse_string()?) {
                     Ok(arg) => {
-                        plugin.arguments.push(arg);
+                        target.push(arg);
                     }
                     Err(err) => {
                         return Err(self.tokens.unwrap_next()?.custom(err));
@@ -146,6 +160,8 @@ impl<'x> CompilerState<'x> {
                 .unwrap_next()?
                 .expected(format!("expected a {schema_arg}"));
         }
+
+        plugin.arguments.extend(tags);
 
         Ok(plugin)
     }

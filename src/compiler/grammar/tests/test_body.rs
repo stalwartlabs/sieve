@@ -69,7 +69,7 @@ impl<'x> CompilerState<'x> {
                 }
                 Token::Tag(Word::Content) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
-                    body_transform = BodyTransform::Content(self.parse_strings()?);
+                    body_transform = BodyTransform::Content(self.parse_strings(false)?);
                 }
                 Token::Tag(Word::Subject) => {
                     self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;

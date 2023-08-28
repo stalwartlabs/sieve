@@ -380,7 +380,8 @@ impl ExtractText {
                 }
             }
             VariableType::Global(var_name) => {
-                ctx.vars_global.insert(var_name.clone(), value.into());
+                ctx.vars_global
+                    .insert(var_name.to_string().into(), value.into());
             }
             VariableType::Envelope(env) => {
                 ctx.queued_events = vec![Event::SetEnvelope {
