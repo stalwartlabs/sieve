@@ -65,7 +65,7 @@ impl<'x> CompilerState<'x> {
                     )),
                 ) => EditFlags {
                     name: self.parse_variable_name(token_info, false)?.into(),
-                    flags: self.parse_strings()?,
+                    flags: self.parse_strings(false)?,
                     action,
                 },
                 (Token::BracketOpen, _)

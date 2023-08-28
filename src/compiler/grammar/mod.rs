@@ -283,7 +283,7 @@ impl<'x> CompilerState<'x> {
                     })
             }
             Token::BracketOpen => {
-                let mut items = self.parse_string_list()?;
+                let mut items = self.parse_string_list(false)?;
                 match items.pop() {
                     Some(s) if items.is_empty() => Ok(s),
                     _ => Err(next_token.expected("string")),
@@ -293,10 +293,10 @@ impl<'x> CompilerState<'x> {
         }
     }
 
-    pub(crate) fn parse_strings(&mut self) -> Result<Vec<Value>, CompileError> {
+    pub(crate) fn parse_strings(&mut self, allow_empty: bool) -> Result<Vec<Value>, CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
-            Token::BracketOpen => self.parse_string_list(),
+            Token::BracketOpen => self.parse_string_list(allow_empty),
             Token::StringConstant(s) => Ok(vec![Value::from(s)]),
             Token::StringVariable(s) => {
                 self.tokenize_string(&s, true)
@@ -344,12 +344,15 @@ impl<'x> CompilerState<'x> {
                         error_type,
                     })
             }
-            Token::BracketOpen => self.parse_string_list(),
+            Token::BracketOpen => self.parse_string_list(false),
             _ => Err(token_info.expected("string")),
         }
     }
 
-    pub(crate) fn parse_string_list(&mut self) -> Result<Vec<Value>, CompileError> {
+    pub(crate) fn parse_string_list(
+        &mut self,
+        allow_empty: bool,
+    ) -> Result<Vec<Value>, CompileError> {
         let mut strings = Vec::new();
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -367,7 +370,7 @@ impl<'x> CompilerState<'x> {
                     })?);
                 }
                 Token::Comma => (),
-                Token::BracketClose if !strings.is_empty() => break,
+                Token::BracketClose if !strings.is_empty() || allow_empty => break,
                 _ => return Err(token_info.expected("string or string list")),
             }
         }

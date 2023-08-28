@@ -289,6 +289,11 @@ impl PluginSchema {
         self
     }
 
+    pub fn with_variable_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Variable);
+        self
+    }
+
     pub fn with_string_array_argument(&mut self) -> &mut Self {
         self.arguments.push(PluginSchemaArgument::Array(Box::new(
             PluginSchemaArgument::Text,
@@ -306,6 +311,13 @@ impl PluginSchema {
     pub fn with_regex_array_argument(&mut self) -> &mut Self {
         self.arguments.push(PluginSchemaArgument::Array(Box::new(
             PluginSchemaArgument::Regex,
+        )));
+        self
+    }
+
+    pub fn with_variable_array_argument(&mut self) -> &mut Self {
+        self.arguments.push(PluginSchemaArgument::Array(Box::new(
+            PluginSchemaArgument::Variable,
         )));
         self
     }
@@ -343,6 +355,10 @@ impl PluginSchema {
         self.with_tagged_argument(tag, PluginSchemaArgument::Regex)
     }
 
+    pub fn with_tagged_variable_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(tag, PluginSchemaArgument::Variable)
+    }
+
     pub fn with_tagged_string_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
         self.with_tagged_argument(
             tag,
@@ -361,6 +377,13 @@ impl PluginSchema {
         self.with_tagged_argument(
             tag,
             PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Regex)),
+        )
+    }
+
+    pub fn with_tagged_variable_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
+        self.with_tagged_argument(
+            tag,
+            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Variable)),
         )
     }
 

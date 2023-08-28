@@ -33,11 +33,11 @@ impl<'x> Context<'x> {
         match var {
             VariableType::Local(var_num) => self.vars_local.get(*var_num),
             VariableType::Match(var_num) => self.vars_match.get(*var_num),
-            VariableType::Global(var_name) => self.vars_global.get(var_name),
+            VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
             VariableType::Environment(var_name) => self
                 .vars_env
-                .get(var_name)
-                .or_else(|| self.runtime.environment.get(var_name)),
+                .get(var_name.as_str())
+                .or_else(|| self.runtime.environment.get(var_name.as_str())),
             VariableType::Envelope(envelope) => {
                 self.envelope
                     .iter()

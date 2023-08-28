@@ -77,7 +77,7 @@ servermetadata [MATCH-TYPE] [COMPARATOR]
 impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxExists(TestMailboxExists {
-            mailbox_names: self.parse_strings()?,
+            mailbox_names: self.parse_strings(false)?,
             is_not: false,
         }))
     }
@@ -85,7 +85,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_metadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MetadataExists(TestMetadataExists {
             mailbox: self.parse_string()?.into(),
-            annotation_names: self.parse_strings()?,
+            annotation_names: self.parse_strings(false)?,
             is_not: false,
         }))
     }
@@ -93,7 +93,7 @@ impl<'x> CompilerState<'x> {
     pub(crate) fn parse_test_servermetadataexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MetadataExists(TestMetadataExists {
             mailbox: None,
-            annotation_names: self.parse_strings()?,
+            annotation_names: self.parse_strings(false)?,
             is_not: false,
         }))
     }

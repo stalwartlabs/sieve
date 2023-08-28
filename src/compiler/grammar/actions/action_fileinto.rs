@@ -79,7 +79,7 @@ impl<'x> CompilerState<'x> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    flags = self.parse_strings()?;
+                    flags = self.parse_strings(false)?;
                 }
                 Token::Tag(Word::MailboxId) => {
                     self.validate_argument(

@@ -66,7 +66,7 @@ impl<'x> Context<'x> {
             }
             VariableType::Global(var_name) => {
                 self.vars_global
-                    .insert(var_name.clone(), variable.into_owned());
+                    .insert(var_name.to_string().into(), variable.into_owned());
             }
             VariableType::Envelope(env) => {
                 self.queued_events = vec![Event::SetEnvelope {
@@ -82,7 +82,7 @@ impl<'x> Context<'x> {
     pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable<'x>> {
         match var_name {
             VariableType::Local(var_id) => self.vars_local.get(*var_id),
-            VariableType::Global(var_name) => self.vars_global.get(var_name),
+            VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
             VariableType::Envelope(env) => {
                 self.envelope.iter().find_map(
                     |(name, val)| {

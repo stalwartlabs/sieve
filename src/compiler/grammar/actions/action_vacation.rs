@@ -181,11 +181,11 @@ impl<'x> CompilerState<'x> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    flags = self.parse_strings()?;
+                    flags = self.parse_strings(false)?;
                 }
                 Token::Tag(Word::Addresses) => {
                     self.validate_argument(11, None, token_info.line_num, token_info.line_pos)?;
-                    addresses = self.parse_strings()?;
+                    addresses = self.parse_strings(false)?;
                 }
                 _ => {
                     reason = self.parse_string_token(token_info)?;
