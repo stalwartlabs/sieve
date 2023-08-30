@@ -23,13 +23,15 @@
 
 use std::fmt::Display;
 
+use mail_parser::HeaderName;
+
 use crate::{
     compiler::{
         grammar::{
             expr::{parser::ExpressionParser, tokenizer::Tokenizer},
             instruction::CompilerState,
         },
-        ErrorType, Number, Value, VariableType,
+        ErrorType, HeaderPart, HeaderVariable, Number, Value, VariableType,
     },
     runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
@@ -143,7 +145,7 @@ impl<'x> CompilerState<'x> {
                     }
                 },
                 State::Variable => match ch {
-                    b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
+                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'[' | b']' | b'*' | b'-' => {
                         var_is_number = false;
                     }
                     b'.' => {
@@ -367,8 +369,122 @@ impl<'x> CompilerState<'x> {
                     };
                     Ok(Some(VariableType::Envelope(envelope)))
                 }
+                Some(("header", var_name)) if !var_name.is_empty() => {
+                    self.parse_header_variable(var_name)
+                }
                 _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
             }
+        }
+    }
+
+    fn parse_header_variable(&self, var_name: &str) -> Result<Option<VariableType>, ErrorType> {
+        enum State {
+            Name,
+            Index,
+            Part,
+            PartIndex,
+        }
+        let mut has_name = false;
+        let mut hdr_name = String::new();
+        let mut hdr_index = String::new();
+        let mut part = String::new();
+        let mut part_index = String::new();
+        let mut state = State::Name;
+
+        for ch in var_name.chars() {
+            match state {
+                State::Name => match ch {
+                    '[' => {
+                        state = if hdr_index.is_empty() {
+                            State::Index
+                        } else if part.is_empty() {
+                            State::PartIndex
+                        } else {
+                            return Err(ErrorType::InvalidExpression(var_name.to_string()));
+                        };
+                        has_name = true;
+                    }
+                    '.' => {
+                        state = State::Part;
+                        has_name = true;
+                    }
+                    ' ' | '\t' | '\r' | '\n' => {}
+                    _ => {
+                        if !has_name {
+                            hdr_name.push(ch);
+                        } else {
+                            return Err(ErrorType::InvalidExpression(var_name.to_string()));
+                        }
+                    }
+                },
+                State::Index => match ch {
+                    ']' => {
+                        state = State::Name;
+                    }
+                    ' ' | '\t' | '\r' | '\n' => {}
+                    _ => {
+                        hdr_index.push(ch);
+                    }
+                },
+                State::Part => match ch {
+                    '[' => {
+                        state = State::PartIndex;
+                    }
+                    ' ' | '\t' | '\r' | '\n' => {}
+                    _ => {
+                        part.push(ch);
+                    }
+                },
+                State::PartIndex => match ch {
+                    ']' => {
+                        state = State::Name;
+                    }
+                    ' ' | '\t' | '\r' | '\n' => {}
+                    _ => {
+                        part_index.push(ch);
+                    }
+                },
+            }
+        }
+
+        if !hdr_name.is_empty() {
+            Ok(Some(VariableType::Header(HeaderVariable {
+                name: HeaderName::parse(hdr_name)
+                    .ok_or_else(|| ErrorType::InvalidExpression(var_name.to_string()))?,
+                part: match part.as_str() {
+                    "" => HeaderPart::Text,
+                    "name" => HeaderPart::Name,
+                    "addr" | "address" => HeaderPart::Address,
+                    "type" => HeaderPart::Type,
+                    "subtype" => HeaderPart::Subtype,
+                    "raw" => HeaderPart::Raw,
+                    _ => {
+                        if let Some(attr) = part.strip_prefix("attr.") {
+                            HeaderPart::Attribute(attr.to_string())
+                        } else {
+                            return Err(ErrorType::InvalidExpression(var_name.to_string()));
+                        }
+                    }
+                },
+                index_hdr: match hdr_index.as_str() {
+                    "" => -1,
+                    "*" => 0,
+                    _ => hdr_index
+                        .parse()
+                        .map(|v| if v == 0 { 1 } else { v })
+                        .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
+                },
+                index_part: match part_index.as_str() {
+                    "" => -1,
+                    "*" => 0,
+                    _ => part_index
+                        .parse()
+                        .map(|v| if v == 0 { 1 } else { v })
+                        .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
+                },
+            })))
+        } else {
+            Err(ErrorType::InvalidExpression(var_name.to_string()))
         }
     }
 
@@ -452,12 +568,41 @@ impl Display for VariableType {
                 Envelope::Ret => "${{envelope.ret}}",
                 Envelope::Envid => "${{envelope.envit}}",
             }),
+
+            VariableType::Header(hdr) => {
+                write!(f, "${{header.{}", hdr.name.as_str())?;
+                if hdr.index_hdr != 0 {
+                    write!(f, "[{}]", hdr.index_hdr)?;
+                } else {
+                    f.write_str("[*]")?;
+                }
+                if hdr.part != HeaderPart::Text {
+                    f.write_str(".")?;
+                    f.write_str(match &hdr.part {
+                        HeaderPart::Name => "name",
+                        HeaderPart::Address => "address",
+                        HeaderPart::Type => "type",
+                        HeaderPart::Subtype => "subtype",
+                        HeaderPart::Raw => "raw",
+                        HeaderPart::Attribute(attr) => attr.as_str(),
+                        HeaderPart::Text => unreachable!(),
+                    })?;
+                }
+                if hdr.index_part != 0 {
+                    write!(f, "[{}]", hdr.index_part)?;
+                } else {
+                    f.write_str("[*]")?;
+                }
+                f.write_str("}")
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use mail_parser::{HeaderName, RfcHeader};
 
     use super::Value;
     use crate::compiler::grammar::instruction::{Block, CompilerState, Instruction, MAX_PARAMS};
@@ -466,7 +611,7 @@ mod tests {
     use crate::compiler::grammar::{Comparator, MatchType};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
-    use crate::compiler::VariableType;
+    use crate::compiler::{HeaderPart, HeaderVariable, VariableType};
     use crate::{AHashSet, Compiler};
 
     #[test]
@@ -572,6 +717,78 @@ mod tests {
                     Value::Variable(VariableType::Global("hi".to_string())),
                     Value::Text("${unicode:}${unicode: } ".to_string()),
                 ]),
+            ),
+            (
+                "${header.from}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Text,
+                    index_hdr: -1,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from.addr}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Address,
+                    index_hdr: -1,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from[1]}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Text,
+                    index_hdr: 1,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from[*]}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Text,
+                    index_hdr: 0,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from[20].name}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Name,
+                    index_hdr: 20,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from[*].addr}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Address,
+                    index_hdr: 0,
+                    index_part: -1,
+                })),
+            ),
+            (
+                "${header.from[-5].name[2]}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Name,
+                    index_hdr: -5,
+                    index_part: 2,
+                })),
+            ),
+            (
+                "${header.from[*].raw[*]}",
+                Value::Variable(VariableType::Header(HeaderVariable {
+                    name: HeaderName::Rfc(RfcHeader::From),
+                    part: HeaderPart::Raw,
+                    index_hdr: 0,
+                    index_part: 0,
+                })),
             ),
         ] {
             assert_eq!(

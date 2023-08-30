@@ -356,6 +356,8 @@ pub struct Context<'x> {
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
 
+    pub(crate) line_iter: IntoIter<(String, usize)>,
+
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,
 
@@ -661,7 +663,8 @@ mod tests {
                 .with_protected_header("Received")
                 .with_valid_notification_uri("mailto")
                 .with_max_out_messages(100)
-                .with_capability(Capability::Plugins);
+                .with_capability(Capability::Plugins)
+                .with_capability(Capability::ForEveryLine);
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {

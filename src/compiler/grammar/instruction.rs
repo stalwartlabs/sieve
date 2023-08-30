@@ -50,7 +50,7 @@ use super::{
     },
     expr::Expression,
     tests::test_plugin::Plugin,
-    Capability, Clear, Invalid,
+    Capability, Clear, ForEveryLine, Invalid,
 };
 
 use super::tests::test_ihave::Error;
@@ -109,6 +109,10 @@ pub(crate) enum Instruction {
 
     // Plugin extension
     Plugin(Plugin),
+
+    // For every line extension
+    ForEveryLineInit(Value),
+    ForEveryLine(ForEveryLine),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -272,15 +276,16 @@ impl Compiler {
                                 }));
                         }
                         Word::Break => {
-                            state.validate_argument(
-                                0,
-                                Capability::ForEveryPart.into(),
-                                token_info.line_num,
-                                token_info.line_pos,
-                            )?;
                             if let Some(Ok(Token::Tag(Word::Name))) =
                                 state.tokens.peek().map(|r| r.map(|t| &t.token))
                             {
+                                state.validate_argument(
+                                    0,
+                                    Capability::ForEveryPart.into(),
+                                    token_info.line_num,
+                                    token_info.line_pos,
+                                )?;
+
                                 let tag = state.tokens.next().unwrap().unwrap();
                                 let label = state.tokens.expect_static_string()?;
                                 let mut label_found = false;
@@ -307,23 +312,32 @@ impl Compiler {
                                     return Err(tag.custom(ErrorType::LabelUndefined(label)));
                                 }
                             } else {
-                                let mut label_found = false;
-                                state.instructions.push(Instruction::ForEveryPartPop(1));
-                                if let Word::ForEveryPart = &state.block.btype {
-                                    state.block.break_jmps.push(state.instructions.len());
-                                    label_found = true;
+                                let mut block_found = None;
+                                if matches!(
+                                    &state.block.btype,
+                                    Word::ForEveryPart | Word::ForEveryLine
+                                ) {
+                                    block_found = Some(&mut state.block);
                                 } else {
                                     for block in state.block_stack.iter_mut().rev() {
-                                        if let Word::ForEveryPart = &block.btype {
-                                            block.break_jmps.push(state.instructions.len());
-                                            label_found = true;
+                                        if matches!(
+                                            &block.btype,
+                                            Word::ForEveryPart | Word::ForEveryLine
+                                        ) {
+                                            block_found = Some(block);
                                             break;
                                         }
                                     }
                                 }
-                                if !label_found {
-                                    return Err(token_info.custom(ErrorType::BreakOutsideLoop));
+
+                                let block = block_found.ok_or_else(|| {
+                                    token_info.custom(ErrorType::BreakOutsideLoop)
+                                })?;
+                                if matches!(block.btype, Word::ForEveryPart) {
+                                    state.instructions.push(Instruction::ForEveryPartPop(1));
                                 }
+
+                                block.break_jmps.push(state.instructions.len());
                             }
 
                             state.instructions.push(Instruction::Jmp(usize::MAX));
@@ -534,6 +548,43 @@ impl Compiler {
                                 }
                             }
                         }
+
+                        // ForEveryLine extension
+                        Word::ForEveryLine => {
+                            state.validate_argument(
+                                0,
+                                Capability::ForEveryLine.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+
+                            if state
+                                .block_stack
+                                .iter()
+                                .any(|b| matches!(&b.btype, Word::ForEveryLine))
+                            {
+                                return Err(token_info.custom(ErrorType::TooManyNestedBlocks));
+                            }
+
+                            let var_idx = state.vars_num;
+                            is_new_block = Block::new(Word::ForEveryLine)
+                                .with_local_var("line", state.vars_num)
+                                .with_local_var("line_num", state.vars_num + 1)
+                                .into();
+                            state.vars_num += 2;
+
+                            let source = state.parse_string()?;
+                            state
+                                .instructions
+                                .push(Instruction::ForEveryLineInit(source));
+                            state
+                                .instructions
+                                .push(Instruction::ForEveryLine(ForEveryLine {
+                                    var_idx,
+                                    jz_pos: usize::MAX,
+                                }));
+                        }
+
                         _ => {
                             state.ignore_instruction()?;
                             state.instructions.push(Instruction::Invalid(Invalid {
@@ -631,6 +682,27 @@ impl Compiler {
                                 }
                             }
                             state.last_block_type = Word::Else;
+                        }
+                        Word::ForEveryLine => {
+                            state
+                                .instructions
+                                .push(Instruction::Jmp(prev_block.last_block_start));
+                            let cur_pos = state.instructions.len();
+                            if let Instruction::ForEveryLine(fep) =
+                                &mut state.instructions[prev_block.last_block_start]
+                            {
+                                fep.jz_pos = cur_pos;
+                            } else {
+                                debug_assert!(false, "This should not have happened.");
+                            }
+                            for pos in state.block.break_jmps {
+                                if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
+                                    *jmp_pos = cur_pos;
+                                } else {
+                                    debug_assert!(false, "This should not have happened.");
+                                }
+                            }
+                            state.last_block_type = Word::Not;
                         }
                         _ => {
                             debug_assert!(false, "This should not have happened.");
@@ -1121,6 +1193,11 @@ impl Block {
 
     pub fn with_label(mut self, label: String) -> Self {
         self.label = label.into();
+        self
+    }
+
+    pub fn with_local_var(mut self, name: impl Into<String>, id: usize) -> Self {
+        self.vars_local.insert(name.into(), id);
         self
     }
 }

@@ -1,0 +1,104 @@
+require "vnd.stalwart.testsuite";
+require "relational";
+require "body";
+require "include";
+require "variables";
+require "regex";
+
+test_set "message" text:
+From: "Cosmo Kramer" <kramer@kramerica.com>
+From: George Constanza <george@yankees.com>
+From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
+To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
+    jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
+Date: Sat, 20 Nov 2021 14:22:01 -0800
+Subject: Why not both importing AND exporting? =?utf-8?b?4pi6?=
+Content-Type: image/gif; name*1="about "; name*0="Book ";
+              name*2*=utf-8''%e2%98%95 tables.gif
+Content-Transfer-Encoding: Base64
+Content-Disposition: attachment
+
+R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
+.
+;
+
+test "Header Variables" {
+    if not string :is "${header.subject}" "Why not both importing AND exporting? ☺" {
+		test_fail "failed to match header.subject: ${header.subject}";
+	}
+
+    if not string :is "${header.from.name}" "Art Vandelay (Vandelay Industries)" {
+		test_fail "failed to match header.from.name: ${header.from.name}";
+	}
+
+    if not string :is "${header.from.addr}" "art@vandelay.com" {
+		test_fail "failed to match header.from.addr: ${header.from.addr}";
+	}
+
+    if not string :is "${header.from.raw}" "Art Vandelay <art@vandelay.com> (Vandelay Industries)" {
+		test_fail "failed to match header.from.raw: ${header.from.raw}";
+	}
+
+    if not string :is "${header.from[1].name}" "Cosmo Kramer" {
+		test_fail "failed to match header.from[1].name: ${header.from[1].name}";
+	}
+
+    if not string :is "${header.from[-1].name}" "Art Vandelay (Vandelay Industries)" {
+		test_fail "failed to match header.from[-1].name: ${header.from[-1].name}";
+	}
+
+    if not string :is "${header.from[2].name}" "George Constanza" {
+		test_fail "failed to match header.from[2].name: ${header.from[2].name}";
+	}
+
+    if not string :is "${header.from[*].addr}" "kramer@kramerica.com
+george@yankees.com
+art@vandelay.com" {
+		test_fail "failed to match header.from[*].addr: ${header.from[*].addr}";
+	}
+
+    if not string :is "${header.to.addr}" "john@example.com" {
+		test_fail "failed to match header.to.addr: ${header.to.addr}";
+	}
+
+    if not string :is "${header.to.addr[-1]}" "john@example.com" {
+		test_fail "failed to match header.to.addr[-1]: ${header.to.addr[-1]}";
+	}
+
+    if not string :is "${header.to.addr[1]}" "james@vandelay.com" {
+		test_fail "failed to match header.to.addr[1]: ${header.to.addr[1]}";
+	}
+
+    if not string :is "${header.to.addr[2]}" "jane@example.com" {
+		test_fail "failed to match header.to.addr[2]: ${header.to.addr[2]}";
+	}
+
+    if not string :is "${header.to.addr[*]}" "james@vandelay.com
+jane@example.com
+john@example.com" {
+		test_fail "failed to match header.to.addr[*]: ${header.to.addr[*]}";
+	}
+
+    if not string :is "${header.to[*][*]}" "James Smythe <james@vandelay.com>
+<jane@example.com>
+John Smîth <john@example.com>" {
+		test_fail "failed to match header.to[*][*]: ${header.to[*][*]}";
+	}
+
+    if not string :is "${header.content-type}" "image/gif" {
+		test_fail "failed to match header.content-type: ${header.content-type}";
+	}
+
+    if not string :is "${header.content-type.type}" "image" {
+		test_fail "failed to match header.content-type.type: ${header.content-type.type}";
+	}
+
+    if not string :is "${header.content-type.subtype}" "gif" {
+		test_fail "failed to match header.content-type.subtype: ${header.content-type.subtype}";
+	}
+
+    if not string :is "${header.content-type.attr.name}" "Book about ☕ tables.gif" {
+		test_fail "failed to match header.content-type.attr.name: ${header.content-type.attr.name}";
+	}
+
+}

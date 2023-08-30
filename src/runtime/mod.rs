@@ -141,6 +141,15 @@ impl<'x> Variable<'x> {
             Variable::Float(n) => Variable::Float(n),
         }
     }
+
+    pub fn as_ref<'y: 'x>(&'y self) -> Variable<'x> {
+        match self {
+            Variable::String(s) => Variable::StringRef(s.as_str()),
+            Variable::StringRef(s) => Variable::StringRef(s),
+            Variable::Integer(n) => Variable::Integer(*n),
+            Variable::Float(n) => Variable::Float(*n),
+        }
+    }
 }
 
 impl<'x> From<&'x str> for Variable<'x> {

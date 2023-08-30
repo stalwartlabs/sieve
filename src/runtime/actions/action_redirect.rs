@@ -40,7 +40,7 @@ impl Redirect {
                     .count()
                     < ctx.runtime.max_received_headers
             {
-                // Try to avoid fowarding loops
+                // Try to avoid forwarding loops
                 if !self.list
                     && (address.eq_ignore_ascii_case(ctx.user_address.as_ref())
                         || ctx.envelope.iter().any(|(e, v)| {

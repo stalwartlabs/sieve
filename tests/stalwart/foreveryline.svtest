@@ -1,0 +1,122 @@
+require "vnd.stalwart.testsuite";
+require "vnd.stalwart.plugins";
+require "vnd.stalwart.foreveryline";
+require "relational";
+require "body";
+require "foreverypart";
+require "variables";
+require "extracttext";
+
+test_set "message" text:
+From: "Cosmo Kramer" <kramer@kramerica.com>
+From: George Constanza <george@yankees.com>
+From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
+To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
+    jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
+Date: Sat, 20 Nov 2021 14:22:01 -0800
+Subject: Is dinner ready?
+
+Hi.
+
+We lost the game. 
+Are you hungry yet?
+
+Joe.
+.
+;
+
+
+test "ForEveryLine - body" {
+    set "body" "";
+    set "did_iterate" "0";
+
+    foreverypart {
+        extracttext "body";
+        break;
+    }
+
+    foreveryline "${body}" {
+        if eval "line_num == 1" {
+            if not string :is "${line}" "Hi." {
+                test_fail "${line_num} = '${line}'";
+            }
+        } elsif eval "line_num == 2" {
+            if not string :is "${line}" "" {
+                test_fail "${line_num} = '${line}'";
+            }
+        } elsif eval "line_num == 3" {
+            if not string :is "${line}" "We lost the game." {
+                test_fail "${line_num} = '${line}'";
+            }
+        } elsif eval "line_num == 4" {
+            set "did_iterate" "1";
+            break;
+        } else {
+            test_fail "break failed ${line_num} = '${line}'";
+        }
+    }
+
+    if eval "!did_iterate" {
+        test_fail "test #1 did not iterate";
+    }
+
+    set "did_iterate" "0";
+
+    foreverypart :name "main" {
+        extracttext "sub_body";
+        foreveryline "${sub_body}" {
+            if eval "line_num == 1" {
+                if not string :is "${line}" "Hi." {
+                    test_fail "${line_num} = '${line}'";
+                }
+            } elsif eval "line_num == 2" {
+                if not string :is "${line}" "" {
+                    test_fail "${line_num} = '${line}'";
+                }
+            } elsif eval "line_num == 3" {
+                if not string :is "${line}" "We lost the game." {
+                    test_fail "${line_num} = '${line}'";
+                }
+            } elsif eval "line_num == 4" {
+                set "did_iterate" "1";
+                break :name "main";
+            } else {
+                test_fail "break failed ${line_num} = '${line}'";
+            }
+        }        
+    }
+
+    if eval "!did_iterate" {
+        test_fail "test #2 did not iterate";
+    }
+}
+
+
+test "ForEveryLine - headers" {
+
+    set "did_iterate" "0";
+
+    foreveryline "${header.to[*].addr[*]}" {
+        if eval "line_num == 1" {
+            if not string :is "${line}" "james@vandelay.com" {
+                test_fail "${line_num} = '${line}'";
+            }
+        } elsif eval "line_num == 2" {
+            if not string :is "${line}" "jane@example.com" {
+                test_fail "${line_num} = '${line}'";
+            }
+        } elsif eval "line_num == 3" {
+            set "did_iterate" "1";
+            if not string :is "${line}" "john@example.com" {
+                test_fail "${line_num} = '${line}'";
+            }
+        } else {
+            test_fail "invalid ${line_num} = '${line}'";
+        }
+    }
+
+    if eval "!did_iterate" {
+        test_fail "test did not iterate";
+    }
+
+}

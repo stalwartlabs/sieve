@@ -89,6 +89,7 @@ pub enum Capability {
 
     // Extensions
     Plugins,
+    ForEveryLine,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -143,6 +144,12 @@ pub struct Invalid {
     pub(crate) name: String,
     pub(crate) line_num: usize,
     pub(crate) line_pos: usize,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+pub(crate) struct ForEveryLine {
+    pub var_idx: usize,
+    pub jz_pos: usize,
 }
 
 impl<'x> CompilerState<'x> {
@@ -617,6 +624,7 @@ impl Display for Capability {
             Capability::SpamTestPlus => f.write_str("spamtestplus"),
             Capability::VirusTest => f.write_str("virustest"),
             Capability::Plugins => f.write_str("vnd.stalwart.plugins"),
+            Capability::ForEveryLine => f.write_str("vnd.stalwart.foreveryline"),
             Capability::Other(capability) => f.write_str(capability),
         }
     }
@@ -673,4 +681,5 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
 
     // Extensions
     "vnd.stalwart.plugins" => Capability::Plugins,
+    "vnd.stalwart.foreveryline" => Capability::ForEveryLine,
 };

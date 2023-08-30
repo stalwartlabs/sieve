@@ -57,6 +57,7 @@ impl<'x> Context<'x> {
             part: 0,
             part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
+            line_iter: Vec::new().into_iter(),
             pos: usize::MAX,
             test_result: false,
             script_cache: AHashMap::new(),
@@ -279,6 +280,44 @@ impl<'x> Context<'x> {
                             }
                         }
                     }
+                    Instruction::ForEveryLineInit(source) => {
+                        let source = self.eval_value(source).into_cow();
+
+                        self.line_iter = if !source.is_empty() {
+                            source
+                                .split('\n')
+                                .enumerate()
+                                .map(|(i, line)| (line.trim().to_string(), i))
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                        } else {
+                            Vec::new().into_iter()
+                        };
+                    }
+                    Instruction::ForEveryLine(fep) => {
+                        if let Some((line, line_num)) = self.line_iter.next() {
+                            if let Some(var) = self.vars_local.get_mut(fep.var_idx) {
+                                *var = Variable::from(line);
+                            } else {
+                                debug_assert!(false, "Non-existent local variable {}", fep.var_idx);
+                            }
+                            if let Some(var) = self.vars_local.get_mut(fep.var_idx + 1) {
+                                *var = Variable::Integer((line_num + 1) as i64);
+                            } else {
+                                debug_assert!(
+                                    false,
+                                    "Non-existent local variable {}",
+                                    fep.var_idx + 1
+                                );
+                            }
+                        } else {
+                            debug_assert!(fep.jz_pos > self.pos - 1);
+                            self.pos = fep.jz_pos;
+                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            continue;
+                        }
+                    }
+
                     Instruction::Replace(replace) => replace.exec(self),
                     Instruction::Enclose(enclose) => enclose.exec(self),
                     Instruction::ExtractText(extract) => {
@@ -586,5 +625,13 @@ impl<'x> Context<'x> {
         } else {
             self.user_address.to_string()
         }
+    }
+
+    pub fn message(&self) -> &Message<'x> {
+        &self.message
+    }
+
+    pub fn part(&self) -> usize {
+        self.part
     }
 }
