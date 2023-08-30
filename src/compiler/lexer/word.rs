@@ -150,8 +150,11 @@ pub(crate) enum Word {
     Value,
     VirusTest,
     Zone,
+
+    // Extensions
     Eval,
     Local,
+    ForEveryLine,
 }
 
 pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
@@ -280,6 +283,7 @@ pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
     "zone" => Word::Zone,
     "eval" => Word::Eval,
     "local" => Word::Local,
+    "foreveryline" => Word::ForEveryLine,
 };
 
 impl Display for Word {
@@ -410,6 +414,7 @@ impl Display for Word {
             Word::Zone => f.write_str("zone"),
             Word::Eval => f.write_str("eval"),
             Word::Local => f.write_str("local"),
+            Word::ForEveryLine => f.write_str("foreveryline"),
         }
     }
 }

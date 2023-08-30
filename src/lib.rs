@@ -353,6 +353,8 @@ pub struct Context<'x> {
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
 
+    pub(crate) line_iter: IntoIter<(String, usize)>,
+
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,
 

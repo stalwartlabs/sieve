@@ -24,6 +24,7 @@
 use std::{borrow::Cow, fmt::Display};
 
 use ahash::AHashMap;
+use mail_parser::HeaderName;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
@@ -118,6 +119,26 @@ pub enum VariableType {
     Global(String),
     Environment(String),
     Envelope(Envelope),
+    Header(HeaderVariable),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HeaderVariable {
+    pub name: HeaderName<'static>,
+    pub part: HeaderPart,
+    pub index_hdr: i32,
+    pub index_part: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HeaderPart {
+    Text,
+    Raw,
+    Name,
+    Address,
+    Type,
+    Subtype,
+    Attribute(String),
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
