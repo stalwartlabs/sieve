@@ -31,7 +31,7 @@ use crate::{
             expr::{parser::ExpressionParser, tokenizer::Tokenizer},
             instruction::CompilerState,
         },
-        ErrorType, HeaderPart, HeaderVariable, Number, Value, VariableType,
+        ErrorType, HeaderPart, HeaderVariable, MessagePart, Number, Value, VariableType,
     },
     runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
@@ -372,6 +372,13 @@ impl<'x> CompilerState<'x> {
                 Some(("header", var_name)) if !var_name.is_empty() => {
                     self.parse_header_variable(var_name)
                 }
+                Some(("body", var_name)) if !var_name.is_empty() => match var_name {
+                    "text" => Ok(Some(VariableType::Part(MessagePart::TextBody(false)))),
+                    "html" => Ok(Some(VariableType::Part(MessagePart::HtmlBody(false)))),
+                    "to_text" => Ok(Some(VariableType::Part(MessagePart::TextBody(true)))),
+                    "to_html" => Ok(Some(VariableType::Part(MessagePart::HtmlBody(true)))),
+                    _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
+                },
                 _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
             }
         }
@@ -593,6 +600,19 @@ impl Display for VariableType {
                 } else {
                     f.write_str("[*]")?;
                 }
+                f.write_str("}")
+            }
+            VariableType::Part(part) => {
+                write!(
+                    f,
+                    "${{body.{}",
+                    match part {
+                        MessagePart::TextBody(true) => "to_text",
+                        MessagePart::TextBody(false) => "text",
+                        MessagePart::HtmlBody(true) => "to_html",
+                        MessagePart::HtmlBody(false) => "html",
+                    }
+                )?;
                 f.write_str("}")
             }
         }

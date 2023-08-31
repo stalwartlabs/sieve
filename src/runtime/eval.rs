@@ -21,13 +21,17 @@
  * for more details.
 */
 
-use std::{borrow::Cow, cmp::Ordering};
+use std::cmp::Ordering;
 
-use mail_parser::{Addr, Group, Header, HeaderValue};
+use mail_parser::{
+    decoders::html::{html_to_text, text_to_html},
+    Addr, Group, Header, HeaderValue, PartType,
+};
 
 use crate::{
     compiler::{
-        grammar::tests::test_plugin::Plugin, HeaderPart, HeaderVariable, Value, VariableType,
+        grammar::tests::test_plugin::Plugin, HeaderPart, HeaderVariable, MessagePart, Value,
+        VariableType,
     },
     Context, Event, PluginArgument,
 };
@@ -55,6 +59,28 @@ impl<'x> Context<'x> {
                 }
             }),
             VariableType::Header(header) => self.eval_header(header),
+            VariableType::Part(part) => match part {
+                MessagePart::TextBody(convert) => {
+                    let part = self.message.parts.get(*self.message.text_body.first()?)?;
+                    match &part.body {
+                        PartType::Text(text) => Some(text.as_ref().into()),
+                        PartType::Html(html) if *convert => {
+                            Some(html_to_text(html.as_ref()).into())
+                        }
+                        _ => None,
+                    }
+                }
+                MessagePart::HtmlBody(convert) => {
+                    let part = self.message.parts.get(*self.message.html_body.first()?)?;
+                    match &part.body {
+                        PartType::Html(html) => Some(html.as_ref().into()),
+                        PartType::Text(text) if *convert => {
+                            Some(text_to_html(text.as_ref()).into())
+                        }
+                        _ => None,
+                    }
+                }
+            },
         }
     }
 
@@ -102,32 +128,32 @@ impl<'x> Context<'x> {
     fn eval_header<'z: 'x>(&'z self, header: &HeaderVariable) -> Option<Variable<'x>> {
         let part = self.message.part(self.part)?;
         let mut headers = part.headers.iter().filter(|h| h.name == header.name);
+        let mut result = Vec::new();
         match header.index_hdr.cmp(&0) {
-            Ordering::Greater => headers
-                .nth((header.index_hdr - 1) as usize)
-                .and_then(|h| header.eval_part(h, self.message.raw_message()))
-                .map(Variable::from),
-            Ordering::Less => headers
-                .rev()
-                .nth((header.index_hdr.unsigned_abs() - 1) as usize)
-                .and_then(|h| header.eval_part(h, self.message.raw_message()))
-                .map(Variable::from),
-            Ordering::Equal => {
-                let value = headers
-                    .filter_map(|h| header.eval_part(h, self.message.raw_message()))
-                    .fold(String::new(), |mut acc, f| {
-                        if !acc.is_empty() {
-                            acc.push_str("\r\n");
-                        }
-                        acc.push_str(&f);
-                        acc
-                    });
-                if !value.is_empty() {
-                    Some(Variable::from(value))
-                } else {
-                    None
+            Ordering::Greater => {
+                if let Some(h) = headers.nth((header.index_hdr - 1) as usize) {
+                    header.eval_part(h, self.message.raw_message(), &mut result);
                 }
             }
+            Ordering::Less => {
+                if let Some(h) = headers
+                    .rev()
+                    .nth((header.index_hdr.unsigned_abs() - 1) as usize)
+                {
+                    header.eval_part(h, self.message.raw_message(), &mut result);
+                }
+            }
+            Ordering::Equal => {
+                for h in headers {
+                    header.eval_part(h, self.message.raw_message(), &mut result);
+                }
+            }
+        }
+
+        if !result.is_empty() {
+            Some(Variable::Array(result))
+        } else {
+            None
         }
     }
 
@@ -182,25 +208,32 @@ impl<'x> Context<'x> {
 }
 
 impl HeaderVariable {
-    fn eval_part<'x>(&self, header: &'x Header<'x>, raw: &'x [u8]) -> Option<Cow<'x, str>> {
-        match &self.part {
+    fn eval_part<'x>(&self, header: &'x Header<'x>, raw: &'x [u8], result: &mut Vec<Variable<'x>>) {
+        let var = match &self.part {
             HeaderPart::Text => match &header.value {
-                HeaderValue::Text(v) if self.include_single_part() => Some(Cow::from(v.as_ref())),
+                HeaderValue::Text(v) if self.include_single_part() => {
+                    Some(Variable::from(v.as_ref()))
+                }
                 HeaderValue::TextList(list) => match self.index_part.cmp(&0) {
                     Ordering::Greater => list
                         .get((self.index_part - 1) as usize)
-                        .map(|v| Cow::from(v.as_ref())),
+                        .map(|v| Variable::from(v.as_ref())),
                     Ordering::Less => list
                         .iter()
                         .rev()
                         .nth((self.index_part.unsigned_abs() - 1) as usize)
-                        .map(|v| Cow::from(v.as_ref())),
-                    Ordering::Equal => Cow::from(list.join("\r\n")).into(),
+                        .map(|v| Variable::from(v.as_ref())),
+                    Ordering::Equal => {
+                        for item in list {
+                            result.push(Variable::from(item.as_ref()));
+                        }
+                        return;
+                    }
                 },
                 HeaderValue::ContentType(ct) => if let Some(st) = &ct.c_subtype {
-                    Cow::from(format!("{}/{}", ct.c_type, st))
+                    Variable::from(format!("{}/{}", ct.c_type, st))
                 } else {
-                    Cow::from(ct.c_type.as_ref())
+                    Variable::from(ct.c_type.as_ref())
                 }
                 .into(),
                 HeaderValue::Address(addr) if self.include_single_part() => addr.to_text().into(),
@@ -217,18 +250,10 @@ impl HeaderVariable {
                         .nth((self.index_part.unsigned_abs() - 1) as usize)
                         .map(|a| a.to_text()),
                     Ordering::Equal => {
-                        let list = list.iter().fold(String::new(), |mut acc, f| {
-                            if !acc.is_empty() {
-                                acc.push_str("\r\n");
-                            }
-                            acc.push_str(&f.to_text());
-                            acc
-                        });
-                        if !list.is_empty() {
-                            Some(Cow::from(list))
-                        } else {
-                            None
+                        for item in list {
+                            result.push(item.to_text());
                         }
+                        return;
                     }
                 },
                 HeaderValue::GroupList(groups) => {
@@ -242,114 +267,88 @@ impl HeaderVariable {
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
                             .map(|a| a.to_text()),
                         Ordering::Equal => {
-                            let list = groups.fold(String::new(), |mut acc, f| {
-                                if !acc.is_empty() {
-                                    acc.push_str("\r\n");
-                                }
-                                acc.push_str(&f.to_text());
-                                acc
-                            });
-                            if !list.is_empty() {
-                                Some(Cow::from(list))
-                            } else {
-                                None
+                            for item in groups {
+                                result.push(item.to_text());
                             }
+                            return;
                         }
                     }
                 }
-                HeaderValue::DateTime(_) => {
-                    std::str::from_utf8(raw.get(header.offset_start..header.offset_end)?)
-                        .ok()
-                        .map(|s| s.trim())
-                        .map(Cow::from)
-                }
+                HeaderValue::DateTime(_) => raw
+                    .get(header.offset_start..header.offset_end)
+                    .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                    .map(|s| s.trim())
+                    .map(Variable::from),
                 _ => None,
             },
             HeaderPart::Name | HeaderPart::Address => match &header.value {
                 HeaderValue::Address(addr) if self.include_single_part() => {
-                    addr.part(&self.part).map(Cow::from)
+                    addr.part(&self.part).map(Variable::from)
                 }
                 HeaderValue::AddressList(list)
                 | HeaderValue::Group(Group {
                     addresses: list, ..
                 }) => match self.index_part.cmp(&0) {
                     Ordering::Greater => list
-                        .get((self.index_part - 1) as usize)?
-                        .part(&self.part)
-                        .map(Cow::from),
+                        .get((self.index_part - 1) as usize)
+                        .and_then(|a| a.part(&self.part))
+                        .map(Variable::from),
                     Ordering::Less => list
                         .iter()
                         .rev()
-                        .nth((self.index_part.unsigned_abs() - 1) as usize)?
-                        .part(&self.part)
-                        .map(Cow::from),
+                        .nth((self.index_part.unsigned_abs() - 1) as usize)
+                        .and_then(|a| a.part(&self.part))
+                        .map(Variable::from),
                     Ordering::Equal => {
-                        let list = list.iter().filter_map(|addr| addr.part(&self.part)).fold(
-                            String::new(),
-                            |mut acc, f| {
-                                if !acc.is_empty() {
-                                    acc.push_str("\r\n");
-                                }
-                                acc.push_str(f);
-                                acc
-                            },
-                        );
-                        if !list.is_empty() {
-                            Some(Cow::from(list))
-                        } else {
-                            None
+                        for item in list {
+                            if let Some(part) = item.part(&self.part) {
+                                result.push(Variable::from(part));
+                            }
                         }
+                        return;
                     }
                 },
                 HeaderValue::GroupList(groups) => {
                     let mut groups = groups.iter().flat_map(|group| group.addresses.iter());
                     match self.index_part.cmp(&0) {
                         Ordering::Greater => groups
-                            .nth((self.index_part - 1) as usize)?
-                            .part(&self.part)
-                            .map(Cow::from),
+                            .nth((self.index_part - 1) as usize)
+                            .and_then(|a| a.part(&self.part))
+                            .map(Variable::from),
                         Ordering::Less => groups
                             .rev()
-                            .nth((self.index_part.unsigned_abs() - 1) as usize)?
-                            .part(&self.part)
-                            .map(Cow::from),
+                            .nth((self.index_part.unsigned_abs() - 1) as usize)
+                            .and_then(|a| a.part(&self.part))
+                            .map(Variable::from),
                         Ordering::Equal => {
-                            let list = groups.filter_map(|addr| addr.part(&self.part)).fold(
-                                String::new(),
-                                |mut acc, f| {
-                                    if !acc.is_empty() {
-                                        acc.push_str("\r\n");
-                                    }
-                                    acc.push_str(f);
-                                    acc
-                                },
-                            );
-                            if !list.is_empty() {
-                                Some(Cow::from(list))
-                            } else {
-                                None
+                            for item in groups {
+                                if let Some(part) = item.part(&self.part) {
+                                    result.push(Variable::from(part));
+                                }
                             }
+                            return;
                         }
                     }
                 }
                 _ => None,
             },
 
-            HeaderPart::Raw => {
-                std::str::from_utf8(raw.get(header.offset_start..header.offset_end)?)
-                    .ok()
-                    .map(|s| s.trim())
-                    .map(Cow::from)
-            }
+            HeaderPart::Raw => raw
+                .get(header.offset_start..header.offset_end)
+                .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                .map(|s| s.trim())
+                .map(Variable::from),
             _ => {
                 if let HeaderValue::ContentType(ct) = &header.value {
                     match &self.part {
-                        HeaderPart::Type => Cow::from(ct.c_type.as_ref()).into(),
-                        HeaderPart::Subtype => ct.c_subtype.as_ref().map(|s| Cow::from(s.as_ref())),
+                        HeaderPart::Type => Variable::from(ct.c_type.as_ref()).into(),
+                        HeaderPart::Subtype => {
+                            ct.c_subtype.as_ref().map(|s| Variable::from(s.as_ref()))
+                        }
                         HeaderPart::Attribute(attr) => ct.attributes.as_ref().and_then(|attrs| {
                             attrs.iter().find_map(|(k, v)| {
                                 if k.eq_ignore_ascii_case(attr) {
-                                    Some(Cow::from(v.as_ref()))
+                                    Some(Variable::from(v.as_ref()))
                                 } else {
                                     None
                                 }
@@ -361,6 +360,10 @@ impl HeaderVariable {
                     None
                 }
             }
+        };
+
+        if let Some(var) = var {
+            result.push(var);
         }
     }
 
@@ -372,7 +375,7 @@ impl HeaderVariable {
 
 trait GetAddressPart<'x> {
     fn part<'z: 'x>(&'z self, part: &HeaderPart) -> Option<&'x str>;
-    fn to_text<'z: 'x>(&'z self) -> Cow<'x, str>;
+    fn to_text<'z: 'x>(&'z self) -> Variable<'x>;
 }
 
 impl<'x> GetAddressPart<'x> for Addr<'x> {
@@ -384,23 +387,27 @@ impl<'x> GetAddressPart<'x> for Addr<'x> {
         }
     }
 
-    fn to_text<'z: 'x>(&'z self) -> Cow<'x, str> {
+    fn to_text<'z: 'x>(&'z self) -> Variable<'x> {
         if let Some(name) = &self.name {
             if let Some(address) = &self.address {
-                Cow::from(format!("{name} <{address}>"))
+                Variable::String(format!("{name} <{address}>"))
             } else {
-                Cow::from(name.as_ref())
+                Variable::StringRef(name.as_ref())
             }
         } else if let Some(address) = &self.address {
-            Cow::from(format!("<{address}>"))
+            Variable::String(format!("<{address}>"))
         } else {
-            Cow::from("")
+            Variable::StringRef("")
         }
     }
 }
 
 pub(crate) trait IntoString: Sized {
     fn into_string(self) -> String;
+}
+
+pub(crate) trait ToString: Sized {
+    fn to_string(&self) -> String;
 }
 
 impl IntoString for Vec<u8> {
