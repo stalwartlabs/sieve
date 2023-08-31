@@ -308,6 +308,15 @@ pub struct Compiler {
 
     // Plugins
     pub(crate) plugins: AHashMap<String, PluginSchema>,
+    pub(crate) functions: AHashMap<String, usize>,
+}
+
+pub type Function = fn(Variable<'_>) -> Variable<'static>;
+
+#[derive(Default, Clone)]
+pub struct FunctionMap {
+    pub(crate) map: AHashMap<String, usize>,
+    pub(crate) functions: Vec<Function>,
 }
 
 #[derive(Debug, Clone)]
@@ -320,6 +329,7 @@ pub struct Runtime {
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
+    pub(crate) functions: Vec<Function>,
 
     pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,

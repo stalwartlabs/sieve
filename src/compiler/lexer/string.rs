@@ -31,7 +31,7 @@ use crate::{
             expr::{parser::ExpressionParser, tokenizer::Tokenizer},
             instruction::CompilerState,
         },
-        ErrorType, HeaderPart, HeaderVariable, MessagePart, Number, Value, VariableType,
+        ErrorType, HeaderPart, HeaderVariable, MessagePart, Number, Transform, Value, VariableType,
     },
     runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
@@ -145,7 +145,7 @@ impl<'x> CompilerState<'x> {
                     }
                 },
                 State::Variable => match ch {
-                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'[' | b']' | b'*' | b'-' => {
+                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'[' | b']' | b'*' | b'-' | b'(' | b')' => {
                         var_is_number = false;
                     }
                     b'.' => {
@@ -331,25 +331,37 @@ impl<'x> CompilerState<'x> {
 
     pub fn parse_variable(
         &self,
-        var_name: &str,
+        mut var_name: &str,
         maybe_namespace: bool,
     ) -> Result<Option<VariableType>, ErrorType> {
         if !maybe_namespace {
-            let var_name = var_name.to_string();
-            if self.is_var_global(&var_name) {
-                Ok(Some(VariableType::Global(var_name)))
-            } else if let Some(var_id) = self.get_local_var(&var_name) {
+            if self.is_var_global(var_name) {
+                Ok(Some(VariableType::Global(var_name.to_string())))
+            } else if let Some(var_id) = self.get_local_var(var_name) {
                 Ok(Some(VariableType::Local(var_id)))
             } else {
                 Ok(None)
             }
         } else {
-            match var_name.to_lowercase().split_once('.') {
+            let mut functions = vec![];
+            while let Some(fnc_name) = var_name.strip_suffix("()") {
+                if let Some((var_name_, fnc_id)) = fnc_name
+                    .rsplit_once('.')
+                    .and_then(|(v, f)| (v.trim(), self.compiler.functions.get(f.trim())?).into())
+                {
+                    var_name = var_name_;
+                    functions.push(*fnc_id);
+                } else {
+                    return Err(ErrorType::InvalidExpression(var_name.to_string()));
+                }
+            }
+
+            let var = match var_name.to_lowercase().split_once('.') {
                 Some(("global", var_name)) if !var_name.is_empty() => {
-                    Ok(Some(VariableType::Global(var_name.to_string())))
+                    VariableType::Global(var_name.to_string())
                 }
                 Some(("env", var_name)) if !var_name.is_empty() => {
-                    Ok(Some(VariableType::Environment(var_name.to_string())))
+                    VariableType::Environment(var_name.to_string())
                 }
                 Some(("envelope", var_name)) if !var_name.is_empty() => {
                     let envelope = match var_name {
@@ -367,24 +379,43 @@ impl<'x> CompilerState<'x> {
                             return Err(ErrorType::InvalidEnvelope(var_name.to_string()));
                         }
                     };
-                    Ok(Some(VariableType::Envelope(envelope)))
+                    VariableType::Envelope(envelope)
                 }
                 Some(("header", var_name)) if !var_name.is_empty() => {
-                    self.parse_header_variable(var_name)
+                    self.parse_header_variable(var_name)?
                 }
                 Some(("body", var_name)) if !var_name.is_empty() => match var_name {
-                    "text" => Ok(Some(VariableType::Part(MessagePart::TextBody(false)))),
-                    "html" => Ok(Some(VariableType::Part(MessagePart::HtmlBody(false)))),
-                    "to_text" => Ok(Some(VariableType::Part(MessagePart::TextBody(true)))),
-                    "to_html" => Ok(Some(VariableType::Part(MessagePart::HtmlBody(true)))),
-                    _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
+                    "text" => VariableType::Part(MessagePart::TextBody(false)),
+                    "html" => VariableType::Part(MessagePart::HtmlBody(false)),
+                    "to_text" => VariableType::Part(MessagePart::TextBody(true)),
+                    "to_html" => VariableType::Part(MessagePart::HtmlBody(true)),
+                    _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
                 },
-                _ => Err(ErrorType::InvalidNamespace(var_name.to_string())),
+                None => {
+                    if self.is_var_global(var_name) {
+                        VariableType::Global(var_name.to_string())
+                    } else if let Some(var_id) = self.get_local_var(var_name) {
+                        VariableType::Local(var_id)
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
+            };
+
+            if !functions.is_empty() {
+                functions.reverse();
+                Ok(Some(VariableType::Transform(Transform {
+                    variable: Box::new(var),
+                    functions,
+                })))
+            } else {
+                Ok(Some(var))
             }
         }
     }
 
-    fn parse_header_variable(&self, var_name: &str) -> Result<Option<VariableType>, ErrorType> {
+    fn parse_header_variable(&self, var_name: &str) -> Result<VariableType, ErrorType> {
         enum State {
             Name,
             Index,
@@ -455,7 +486,7 @@ impl<'x> CompilerState<'x> {
         }
 
         if !hdr_name.is_empty() {
-            Ok(Some(VariableType::Header(HeaderVariable {
+            Ok(VariableType::Header(HeaderVariable {
                 name: HeaderName::parse(hdr_name)
                     .ok_or_else(|| ErrorType::InvalidExpression(var_name.to_string()))?,
                 part: match part.as_str() {
@@ -489,7 +520,7 @@ impl<'x> CompilerState<'x> {
                         .map(|v| if v == 0 { 1 } else { v })
                         .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
                 },
-            })))
+            }))
         } else {
             Err(ErrorType::InvalidExpression(var_name.to_string()))
         }
@@ -615,6 +646,7 @@ impl Display for VariableType {
                 )?;
                 f.write_str("}")
             }
+            VariableType::Transform(t) => t.variable.fmt(f),
         }
     }
 }

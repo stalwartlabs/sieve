@@ -81,6 +81,13 @@ impl<'x> Context<'x> {
                     }
                 }
             },
+            VariableType::Transform(transform) => {
+                let mut var = self.variable(&transform.variable)?;
+                for fnc_id in &transform.functions {
+                    var = (self.runtime.functions.get(*fnc_id)?)(var);
+                }
+                Some(var)
+            }
         }
     }
 
