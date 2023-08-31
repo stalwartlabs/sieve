@@ -308,6 +308,15 @@ pub struct Compiler {
 
     // Plugins
     pub(crate) plugins: AHashMap<String, PluginSchema>,
+    pub(crate) functions: AHashMap<String, usize>,
+}
+
+pub type Function = fn(Variable<'_>) -> Variable<'static>;
+
+#[derive(Default, Clone)]
+pub struct FunctionMap {
+    pub(crate) map: AHashMap<String, usize>,
+    pub(crate) functions: Vec<Function>,
 }
 
 #[derive(Debug, Clone)]
@@ -320,6 +329,7 @@ pub struct Runtime {
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
+    pub(crate) functions: Vec<Function>,
 
     pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,
@@ -587,8 +597,8 @@ mod tests {
 
     use crate::{
         compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary,
-        Compiler, Envelope, Event, Input, Mailbox, PluginArgument, Recipient, Runtime, SpamStatus,
-        VirusStatus,
+        Compiler, Envelope, Event, FunctionMap, Input, Mailbox, PluginArgument, Recipient, Runtime,
+        SpamStatus, VirusStatus,
     };
 
     #[test]
@@ -631,7 +641,18 @@ mod tests {
     }
 
     fn run_test(script_path: &Path) {
-        let mut compiler = Compiler::new().with_max_string_size(10240);
+        let mut fnc_map = FunctionMap::new()
+            .with_function("trim", |v| v.to_cow().trim().to_string().into())
+            .with_function("len", |v| v.to_cow().len().into())
+            .with_function("to_lowercase", |v| {
+                v.to_cow().to_lowercase().to_string().into()
+            })
+            .with_function("to_uppercase", |v| {
+                v.to_cow().to_uppercase().to_string().into()
+            });
+        let mut compiler = Compiler::new()
+            .with_max_string_size(10240)
+            .register_functions(&mut fnc_map);
 
         // Register extensions
         compiler
@@ -664,7 +685,8 @@ mod tests {
                 .with_valid_notification_uri("mailto")
                 .with_max_out_messages(100)
                 .with_capability(Capability::Plugins)
-                .with_capability(Capability::ForEveryLine);
+                .with_capability(Capability::ForEveryLine)
+                .with_functions(&mut fnc_map.clone());
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {

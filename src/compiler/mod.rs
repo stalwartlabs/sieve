@@ -28,8 +28,8 @@ use mail_parser::HeaderName;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    runtime::RuntimeError, Compiler, Envelope, ExternalId, PluginSchema, PluginSchemaArgument,
-    PluginSchemaTag,
+    runtime::RuntimeError, Compiler, Envelope, ExternalId, FunctionMap, PluginSchema,
+    PluginSchemaArgument, PluginSchemaTag,
 };
 
 use self::{
@@ -121,6 +121,13 @@ pub enum VariableType {
     Envelope(Envelope),
     Header(HeaderVariable),
     Part(MessagePart),
+    Transform(Transform),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Transform {
+    pub variable: Box<VariableType>,
+    pub functions: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -198,6 +205,7 @@ impl Compiler {
             max_header_size: 1024,
             max_includes: 6,
             plugins: AHashMap::new(),
+            functions: AHashMap::new(),
         }
     }
 
@@ -300,6 +308,11 @@ impl Compiler {
                 tags: AHashMap::new(),
                 arguments: Vec::new(),
             })
+    }
+
+    pub fn register_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
+        self.functions = std::mem::take(&mut fnc_map.map);
+        self
     }
 }
 

@@ -1,0 +1,42 @@
+require "vnd.stalwart.testsuite";
+require "vnd.stalwart.plugins";
+require "vnd.stalwart.foreveryline";
+require "relational";
+require "body";
+require "foreverypart";
+require "variables";
+require "extracttext";
+
+test_set "message" text:
+From: "Cosmo Kramer" <kramer@kramerica.com>
+From: George Constanza <george@yankees.com>
+From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
+To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
+    jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
+Date: Sat, 20 Nov 2021 14:22:01 -0800
+Subject: Is dinner ready?
+
+Hi.
+
+We lost the game. 
+Are you hungry yet?
+
+Joe.
+.
+;
+
+
+test "Functions" {
+    if not string :is "${header.subject.len()}" "16" {
+        test_fail "header.subject.len() is ${header.subject.len()}";
+    }
+
+    set "my_untrimmed_text" "  hello world   ";
+    if string :is "${my_untrimmed_text.trim()}" "${my_untrimmed_text}" {
+        test_fail "trim() failed";
+    }
+
+    if string :is "${my_untrimmed_text.trim().len()}" "${my_untrimmed_text.len()}" {
+        test_fail "chained functions failed ${my_untrimmed_text.trim().len()} != ${my_untrimmed_text.len()}";
+    }
+}

@@ -32,7 +32,8 @@ use crate::{
         grammar::{Capability, Invalid},
         Number, Regex, VariableType,
     },
-    Context, Input, Metadata, PluginArgument, Runtime, Script, SetVariable, Sieve,
+    Context, Function, FunctionMap, Input, Metadata, PluginArgument, Runtime, Script, SetVariable,
+    Sieve,
 };
 
 use self::eval::ToString;
@@ -199,6 +200,36 @@ impl From<Number> for Variable<'_> {
     }
 }
 
+impl From<usize> for Variable<'_> {
+    fn from(n: usize) -> Self {
+        Variable::Integer(n as i64)
+    }
+}
+
+impl From<i64> for Variable<'_> {
+    fn from(n: i64) -> Self {
+        Variable::Integer(n)
+    }
+}
+
+impl From<f64> for Variable<'_> {
+    fn from(n: f64) -> Self {
+        Variable::Float(n)
+    }
+}
+
+impl From<i32> for Variable<'_> {
+    fn from(n: i32) -> Self {
+        Variable::Integer(n as i64)
+    }
+}
+
+impl From<bool> for Variable<'_> {
+    fn from(b: bool) -> Self {
+        Variable::Integer(i64::from(b))
+    }
+}
+
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -360,6 +391,7 @@ impl Runtime {
             default_vacation_expiry: 30 * 86400,
             default_duplicate_expiry: 7 * 86400,
             local_hostname: "localhost".into(),
+            functions: Vec::new(),
         }
     }
 
@@ -598,6 +630,15 @@ impl Runtime {
         self
     }
 
+    pub fn with_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
+        self.functions = std::mem::take(&mut fnc_map.functions);
+        self
+    }
+
+    pub fn set_functions(&mut self, fnc_map: &mut FunctionMap) {
+        self.functions = std::mem::take(&mut fnc_map.functions);
+    }
+
     pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
         Context::new(
             self,
@@ -619,6 +660,18 @@ impl Runtime {
 
     pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x> {
         Context::new(self, message)
+    }
+}
+
+impl FunctionMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_function(mut self, name: impl Into<String>, fnc: Function) -> Self {
+        self.map.insert(name.into(), self.functions.len());
+        self.functions.push(fnc);
+        self
     }
 }
 
