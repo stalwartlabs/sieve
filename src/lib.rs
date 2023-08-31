@@ -265,7 +265,7 @@
 //! Copyright (C) 2020-2023, Stalwart Labs Ltd.
 //!
 
-use std::{borrow::Cow, sync::Arc, vec::IntoIter};
+use std::{borrow::Cow, iter::Enumerate, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::{
@@ -356,7 +356,7 @@ pub struct Context<'x> {
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
 
-    pub(crate) line_iter: IntoIter<(String, usize)>,
+    pub(crate) line_iter: Enumerate<IntoIter<Variable<'static>>>,
 
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,

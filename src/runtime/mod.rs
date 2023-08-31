@@ -35,6 +35,8 @@ use crate::{
     Context, Input, Metadata, PluginArgument, Runtime, Script, SetVariable, Sieve,
 };
 
+use self::eval::ToString;
+
 pub mod actions;
 pub mod context;
 pub mod eval;
@@ -48,6 +50,7 @@ pub enum Variable<'x> {
     StringRef(&'x str),
     Integer(i64),
     Float(f64),
+    Array(Vec<Variable<'x>>),
 }
 
 impl Eq for Variable<'_> {}
@@ -75,6 +78,7 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => Cow::Borrowed(s),
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
+            Variable::Array(l) => Cow::Owned(l.to_string()),
         }
     }
 
@@ -84,6 +88,7 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => Cow::Borrowed(*s),
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
+            Variable::Array(l) => Cow::Owned(l.to_string()),
         }
     }
 
@@ -93,6 +98,7 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => s.to_string(),
             Variable::Integer(n) => n.to_string(),
             Variable::Float(n) => n.to_string(),
+            Variable::Array(l) => l.to_string(),
         }
     }
 
@@ -122,6 +128,7 @@ impl<'x> Variable<'x> {
             Variable::String(s) => s.len(),
             Variable::StringRef(s) => s.len(),
             Variable::Integer(_) | Variable::Float(_) => 2,
+            Variable::Array(l) => l.iter().map(|v| v.len()).sum(),
         }
     }
 
@@ -139,6 +146,9 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => Variable::String(s.to_string()),
             Variable::Integer(n) => Variable::Integer(n),
             Variable::Float(n) => Variable::Float(n),
+            Variable::Array(l) => {
+                Variable::Array(l.into_iter().map(Variable::into_owned).collect())
+            }
         }
     }
 
@@ -148,6 +158,7 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => Variable::StringRef(s),
             Variable::Integer(n) => Variable::Integer(*n),
             Variable::Float(n) => Variable::Float(*n),
+            Variable::Array(l) => Variable::Array(l.iter().map(Variable::as_ref).collect()),
         }
     }
 }
@@ -210,6 +221,25 @@ impl PartialOrd for Number {
             (Number::Float(a), Number::Integer(b)) => (*a, *b as f64),
         };
         a.partial_cmp(&b)
+    }
+}
+
+impl<'x> self::eval::ToString for Vec<Variable<'x>> {
+    fn to_string(&self) -> String {
+        let mut result = String::with_capacity(self.len() * 10);
+        for item in self {
+            if !result.is_empty() {
+                result.push_str("\r\n");
+            }
+            match item {
+                Variable::String(v) => result.push_str(v),
+                Variable::StringRef(v) => result.push_str(v),
+                Variable::Integer(v) => result.push_str(&v.to_string()),
+                Variable::Float(v) => result.push_str(&v.to_string()),
+                Variable::Array(_) => {}
+            }
+        }
+        result
     }
 }
 

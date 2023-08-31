@@ -91,7 +91,6 @@ test "ForEveryLine - body" {
     }
 }
 
-
 test "ForEveryLine - headers" {
 
     set "did_iterate" "0";
@@ -119,4 +118,24 @@ test "ForEveryLine - headers" {
         test_fail "test did not iterate";
     }
 
+}
+
+test "ForEveryLine - body variable" {
+    set "body_lines" "0";
+    set "body_empty_lines" "0";
+
+    foreveryline "${body.text}" {
+        set "body_lines" "%{body_lines + 1}";
+        if string :is "${line}" "" {
+            set "body_empty_lines" "%{body_empty_lines + 1}";
+        }
+    }
+
+    if eval "body_lines > 4 && body_empty_lines / body_lines >= 0.8 && body_empty_lines / body_lines <= 0.9" {
+        test_fail "bad ratio";
+    }
+
+    if eval "body_lines != 7 || body_empty_lines != 3" {
+        test_fail "got ${body_lines} and ${body_empty_lines}";
+    }
 }

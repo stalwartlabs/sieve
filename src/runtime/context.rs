@@ -57,7 +57,7 @@ impl<'x> Context<'x> {
             part: 0,
             part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
-            line_iter: Vec::new().into_iter(),
+            line_iter: Vec::new().into_iter().enumerate(),
             pos: usize::MAX,
             test_result: false,
             script_cache: AHashMap::new(),
@@ -281,23 +281,36 @@ impl<'x> Context<'x> {
                         }
                     }
                     Instruction::ForEveryLineInit(source) => {
-                        let source = self.eval_value(source).into_cow();
-
-                        self.line_iter = if !source.is_empty() {
-                            source
-                                .split('\n')
-                                .enumerate()
-                                .map(|(i, line)| (line.trim().to_string(), i))
+                        self.line_iter = match self.eval_value(source) {
+                            Variable::Array(arr) if !arr.is_empty() => arr
+                                .into_iter()
+                                .map(|v| v.into_owned())
                                 .collect::<Vec<_>>()
                                 .into_iter()
-                        } else {
-                            Vec::new().into_iter()
+                                .enumerate(),
+                            Variable::String(s) => s
+                                .split('\n')
+                                .map(|line| Variable::String(line.trim().to_string()))
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .enumerate(),
+                            Variable::StringRef(s) => s
+                                .split('\n')
+                                .map(|line| Variable::String(line.trim().to_string()))
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .enumerate(),
+                            Variable::Integer(n) => {
+                                vec![Variable::Integer(n)].into_iter().enumerate()
+                            }
+                            Variable::Float(n) => vec![Variable::Float(n)].into_iter().enumerate(),
+                            _ => Vec::new().into_iter().enumerate(),
                         };
                     }
                     Instruction::ForEveryLine(fep) => {
-                        if let Some((line, line_num)) = self.line_iter.next() {
+                        if let Some((line_num, line)) = self.line_iter.next() {
                             if let Some(var) = self.vars_local.get_mut(fep.var_idx) {
-                                *var = Variable::from(line);
+                                *var = line;
                             } else {
                                 debug_assert!(false, "Non-existent local variable {}", fep.var_idx);
                             }
