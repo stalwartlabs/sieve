@@ -99,6 +99,19 @@ where
                     self.is_eof = true;
                     break;
                 }
+                b'(' | b'[' if self.buf.last().map_or(false, |c| c.is_ascii_alphanumeric()) => {
+                    self.buf.push(ch);
+                }
+                b')' if self.buf.contains(&b'(') => {
+                    self.buf.push(b')');
+                }
+                b']' if self.buf.contains(&b'[') => {
+                    self.buf.push(b']');
+                }
+                b'*' if self.buf.last().map_or(false, |&c| c == b'[') => {
+                    self.buf.push(ch);
+                }
+
                 _ => {
                     let prev_token = if !self.buf.is_empty() {
                         self.is_start = false;
