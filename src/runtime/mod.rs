@@ -212,6 +212,12 @@ impl From<i64> for Variable<'_> {
     }
 }
 
+impl From<u64> for Variable<'_> {
+    fn from(n: u64) -> Self {
+        Variable::Integer(n as i64)
+    }
+}
+
 impl From<f64> for Variable<'_> {
     fn from(n: f64) -> Self {
         Variable::Float(n)

@@ -101,4 +101,8 @@ John Smîth <john@example.com>" {
 		test_fail "failed to match header.content-type.attr.name: ${header.content-type.attr.name}";
 	}
 
+	if not string :is "${header.date.date}" "1637446921" {
+		test_fail "failed to match header.date.date: ${header.date.date}";
+	}
+
 }
