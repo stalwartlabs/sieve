@@ -649,7 +649,16 @@ mod tests {
             })
             .with_function("to_uppercase", |v| {
                 v.to_cow().to_uppercase().to_string().into()
-            });
+            })
+            .with_function("is_uppercase", |v| {
+                v.to_cow()
+                    .as_ref()
+                    .chars()
+                    .filter(|c| c.is_alphabetic())
+                    .all(|c| c.is_uppercase())
+                    .into()
+            })
+            .with_function("char_count", |v| v.to_cow().as_ref().chars().count().into());
         let mut compiler = Compiler::new()
             .with_max_string_size(10240)
             .register_functions(&mut fnc_map);

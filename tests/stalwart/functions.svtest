@@ -31,6 +31,14 @@ test "Functions" {
         test_fail "header.subject.len() is ${header.subject.len()}";
     }
 
+    if not eval "header.subject.len() == 16" {
+        test_fail "eval header.subject.len() is %{header.subject.len() == 16}";
+    }
+
+    if not eval "header.to[*].name[*].trim().char_count() > 20" {
+        test_fail "eval header.to[*].name[*].trim().char_count() (${header.to[*].name[*].trim().char_count()}) is %{header.to[*].name[*].trim().char_count() > 20}";
+    }
+
     set "my_untrimmed_text" "  hello world   ";
     if string :is "${my_untrimmed_text.trim()}" "${my_untrimmed_text}" {
         test_fail "trim() failed";
