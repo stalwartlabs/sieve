@@ -153,6 +153,7 @@ pub enum HeaderPart {
     Type,
     Subtype,
     Attribute(String),
+    Date,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

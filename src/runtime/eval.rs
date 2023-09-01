@@ -25,6 +25,7 @@ use std::cmp::Ordering;
 
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
+    parsers::MessageStream,
     Addr, Group, Header, HeaderValue, PartType,
 };
 
@@ -339,6 +340,17 @@ impl HeaderVariable {
                 }
                 _ => None,
             },
+            HeaderPart::Date => {
+                if let HeaderValue::DateTime(dt) = &header.value {
+                    Variable::from(dt.to_timestamp()).into()
+                } else {
+                    raw.get(header.offset_start..header.offset_end)
+                        .and_then(|bytes| match MessageStream::new(bytes).parse_date() {
+                            HeaderValue::DateTime(dt) => Variable::from(dt.to_timestamp()).into(),
+                            _ => None,
+                        })
+                }
+            }
 
             HeaderPart::Raw => raw
                 .get(header.offset_start..header.offset_end)

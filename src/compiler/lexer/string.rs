@@ -496,6 +496,7 @@ impl<'x> CompilerState<'x> {
                     "type" => HeaderPart::Type,
                     "subtype" => HeaderPart::Subtype,
                     "raw" => HeaderPart::Raw,
+                    "date" => HeaderPart::Date,
                     _ => {
                         if let Some(attr) = part.strip_prefix("attr.") {
                             HeaderPart::Attribute(attr.to_string())
@@ -622,6 +623,7 @@ impl Display for VariableType {
                         HeaderPart::Type => "type",
                         HeaderPart::Subtype => "subtype",
                         HeaderPart::Raw => "raw",
+                        HeaderPart::Date => "date",
                         HeaderPart::Attribute(attr) => attr.as_str(),
                         HeaderPart::Text => unreachable!(),
                     })?;
