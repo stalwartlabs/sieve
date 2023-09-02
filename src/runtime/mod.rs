@@ -129,7 +129,7 @@ impl<'x> Variable<'x> {
             Variable::String(s) => s.len(),
             Variable::StringRef(s) => s.len(),
             Variable::Integer(_) | Variable::Float(_) => 2,
-            Variable::Array(l) => l.iter().map(|v| v.len()).sum(),
+            Variable::Array(l) => l.iter().map(|v| v.len() + 2).sum(),
         }
     }
 

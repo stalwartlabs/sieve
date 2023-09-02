@@ -384,6 +384,18 @@ impl<'x> CompilerState<'x> {
                 Some(("header", var_name)) if !var_name.is_empty() => {
                     self.parse_header_variable(var_name)?
                 }
+                Some(("headers", var_name)) if !var_name.is_empty() => {
+                    VariableType::Header(HeaderVariable {
+                        name: HeaderName::Other("".into()),
+                        part: match var_name {
+                            "raw" => HeaderPart::Raw,
+                            "text" => HeaderPart::Text,
+                            _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
+                        },
+                        index_hdr: 0,
+                        index_part: 0,
+                    })
+                }
                 Some(("body", var_name)) if !var_name.is_empty() => match var_name {
                     "text" => VariableType::Part(MessagePart::TextBody(false)),
                     "html" => VariableType::Part(MessagePart::HtmlBody(false)),
