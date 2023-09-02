@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Group, Header, HeaderValue, PartType,
+    Addr, Group, Header, HeaderName, HeaderValue, PartType,
 };
 
 use crate::{
@@ -134,26 +134,53 @@ impl<'x> Context<'x> {
     }
 
     fn eval_header<'z: 'x>(&'z self, header: &HeaderVariable) -> Option<Variable<'x>> {
-        let part = self.message.part(self.part)?;
-        let mut headers = part.headers.iter().filter(|h| h.name == header.name);
         let mut result = Vec::new();
-        match header.index_hdr.cmp(&0) {
-            Ordering::Greater => {
-                if let Some(h) = headers.nth((header.index_hdr - 1) as usize) {
-                    header.eval_part(h, self.message.raw_message(), &mut result);
+        let part = self.message.part(self.part)?;
+        let raw = self.message.raw_message();
+        if !matches!(&header.name, HeaderName::Other(name) if name.is_empty()) {
+            let mut headers = part.headers.iter().filter(|h| h.name == header.name);
+            match header.index_hdr.cmp(&0) {
+                Ordering::Greater => {
+                    if let Some(h) = headers.nth((header.index_hdr - 1) as usize) {
+                        header.eval_part(h, raw, &mut result);
+                    }
+                }
+                Ordering::Less => {
+                    if let Some(h) = headers
+                        .rev()
+                        .nth((header.index_hdr.unsigned_abs() - 1) as usize)
+                    {
+                        header.eval_part(h, raw, &mut result);
+                    }
+                }
+                Ordering::Equal => {
+                    for h in headers {
+                        header.eval_part(h, raw, &mut result);
+                    }
                 }
             }
-            Ordering::Less => {
-                if let Some(h) = headers
-                    .rev()
-                    .nth((header.index_hdr.unsigned_abs() - 1) as usize)
-                {
-                    header.eval_part(h, self.message.raw_message(), &mut result);
-                }
-            }
-            Ordering::Equal => {
-                for h in headers {
-                    header.eval_part(h, self.message.raw_message(), &mut result);
+        } else {
+            for h in &part.headers {
+                match &header.part {
+                    HeaderPart::Raw => {
+                        if let Some(var) = raw
+                            .get(h.offset_field..h.offset_end)
+                            .map(sanitize_raw_header)
+                        {
+                            result.push(Variable::from(var));
+                        }
+                    }
+                    HeaderPart::Text => {
+                        if let HeaderValue::Text(text) = &h.value {
+                            result.push(Variable::from(format!("{}: {}", h.name.as_str(), text)));
+                        } else if let HeaderValue::Text(text) =
+                            MessageStream::new(raw.get(h.offset_start..h.offset_end).unwrap_or(b""))
+                                .parse_unstructured()
+                        {
+                            result.push(Variable::from(format!("{}: {}", h.name.as_str(), text)));
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
@@ -354,8 +381,7 @@ impl HeaderVariable {
 
             HeaderPart::Raw => raw
                 .get(header.offset_start..header.offset_end)
-                .and_then(|bytes| std::str::from_utf8(bytes).ok())
-                .map(|s| s.trim())
+                .map(sanitize_raw_header)
                 .map(Variable::from),
             _ => {
                 if let HeaderValue::ContentType(ct) = &header.value {
@@ -434,4 +460,25 @@ impl IntoString for Vec<u8> {
         String::from_utf8(self)
             .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned())
     }
+}
+
+fn sanitize_raw_header(bytes: &[u8]) -> String {
+    let mut result = Vec::with_capacity(bytes.len());
+    let mut last_is_space = false;
+
+    for &ch in bytes {
+        if ch.is_ascii_whitespace() {
+            last_is_space = true;
+        } else {
+            if last_is_space {
+                if !result.is_empty() {
+                    result.push(b' ');
+                }
+                last_is_space = false;
+            }
+            result.push(ch);
+        }
+    }
+
+    result.into_string()
 }

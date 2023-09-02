@@ -14,7 +14,10 @@ From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
 To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
     jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
 Date: Sat, 20 Nov 2021 14:22:01 -0800
-Subject: Is dinner ready?
+X-Test:  this   is  a test
+   with plenty of whitespace
+Subject: Is 
+ dinner ready?
 
 Hi.
 
@@ -119,6 +122,33 @@ test "ForEveryLine - headers" {
     }
 
 }
+
+test "ForEveryLine - all headers" {
+
+    set "did_iterate" "0";
+    foreveryline "${headers.raw}" {
+        if allof(eval "line_num == 6", not string :is "${line}" "X-Test: this is a test with plenty of whitespace") {
+            test_fail "${line} ${line_num}";
+            set "did_iterate" "1";
+        }
+        set "did_iterate" "${line_num}";
+    }
+    if eval "did_iterate != 7" {
+        test_fail "test did not iterate ${did_iterate}";
+    }
+
+    set "did_iterate" "0";
+    foreveryline "${headers.text}" {
+        if allof(eval "line_num == 4", not string :is "${line}" "To: \"Colleagues\": \"James Smythe\" <james@vandelay.com>; Friends: jane@example.com, John Smîth <john@example.com>;") {
+            test_fail "${line} ${line_num}";
+        }
+        set "did_iterate" "${line_num}";
+    }
+    if eval "did_iterate != 7" {
+        test_fail "test did not iterate ${did_iterate}";
+    }
+}
+
 
 test "ForEveryLine - body variable" {
     set "body_lines" "0";
