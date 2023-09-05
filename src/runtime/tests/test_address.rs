@@ -29,7 +29,7 @@ use mail_parser::{
         },
         MessageStream,
     },
-    Addr, Header, HeaderName, HeaderValue,
+    Addr, Address, Header, HeaderValue,
 };
 
 use crate::{
@@ -197,38 +197,8 @@ impl<'x> Context<'x> {
         part: &AddressPart,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
-        let mut raw_header = None;
-        let value_;
-        let value = if let HeaderName::Rfc(_) = &header.name {
-            value_ = None;
-            &header.value
-        } else {
-            let bytes = if header.offset_end > 0 {
-                self.message
-                    .raw_message
-                    .get(header.offset_start..header.offset_end)
-                    .unwrap_or(b"")
-            } else if let HeaderValue::Text(text) = &header.value {
-                // Inserted header
-                raw_header = format!("{text}\n").into_bytes().into();
-                raw_header.as_deref().unwrap()
-            } else {
-                b""
-            };
-
-            value_ = MessageStream::new(bytes).parse_address().into();
-            value_.as_ref().unwrap()
-        };
-
-        match value {
-            HeaderValue::Address(addr) => {
-                if let Some(addr) = part.eval(addr) {
-                    visitor_fnc(addr)
-                } else {
-                    false
-                }
-            }
-            HeaderValue::AddressList(addr_list) => {
+        match &header.value {
+            HeaderValue::Address(Address::List(addr_list)) => {
                 for addr in addr_list {
                     if let Some(addr) = part.eval(addr) {
                         if visitor_fnc(addr) {
@@ -238,17 +208,7 @@ impl<'x> Context<'x> {
                 }
                 false
             }
-            HeaderValue::Group(group) => {
-                for addr in &group.addresses {
-                    if let Some(addr) = part.eval(addr) {
-                        if visitor_fnc(addr) {
-                            return true;
-                        }
-                    }
-                }
-                false
-            }
-            HeaderValue::GroupList(group_list) => {
+            HeaderValue::Address(Address::Group(group_list)) => {
                 for group in group_list {
                     for addr in &group.addresses {
                         if let Some(addr) = part.eval(addr) {
@@ -260,7 +220,47 @@ impl<'x> Context<'x> {
                 }
                 false
             }
-            _ => visitor_fnc(""),
+            _ => {
+                let mut raw_header = None;
+                let bytes = if header.offset_end > 0 {
+                    self.message
+                        .raw_message
+                        .get(header.offset_start..header.offset_end)
+                        .unwrap_or(b"")
+                } else if let HeaderValue::Text(text) = &header.value {
+                    // Inserted header
+                    raw_header = format!("{text}\n").into_bytes().into();
+                    raw_header.as_deref().unwrap()
+                } else {
+                    b""
+                };
+
+                match MessageStream::new(bytes).parse_address() {
+                    HeaderValue::Address(Address::List(addr_list)) => {
+                        for addr in &addr_list {
+                            if let Some(addr) = part.eval(addr) {
+                                if visitor_fnc(addr) {
+                                    return true;
+                                }
+                            }
+                        }
+                        false
+                    }
+                    HeaderValue::Address(Address::Group(group_list)) => {
+                        for group in group_list {
+                            for addr in &group.addresses {
+                                if let Some(addr) = part.eval(addr) {
+                                    if visitor_fnc(addr) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        false
+                    }
+                    _ => visitor_fnc(""),
+                }
+            }
         }
     }
 }

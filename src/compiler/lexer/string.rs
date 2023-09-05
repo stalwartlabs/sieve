@@ -668,7 +668,7 @@ impl Display for VariableType {
 #[cfg(test)]
 mod tests {
 
-    use mail_parser::{HeaderName, RfcHeader};
+    use mail_parser::HeaderName;
 
     use super::Value;
     use crate::compiler::grammar::instruction::{Block, CompilerState, Instruction, MAX_PARAMS};
@@ -787,7 +787,7 @@ mod tests {
             (
                 "${header.from}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Text,
                     index_hdr: -1,
                     index_part: -1,
@@ -796,7 +796,7 @@ mod tests {
             (
                 "${header.from.addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Address,
                     index_hdr: -1,
                     index_part: -1,
@@ -805,7 +805,7 @@ mod tests {
             (
                 "${header.from[1]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Text,
                     index_hdr: 1,
                     index_part: -1,
@@ -814,7 +814,7 @@ mod tests {
             (
                 "${header.from[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Text,
                     index_hdr: 0,
                     index_part: -1,
@@ -823,7 +823,7 @@ mod tests {
             (
                 "${header.from[20].name}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Name,
                     index_hdr: 20,
                     index_part: -1,
@@ -832,7 +832,7 @@ mod tests {
             (
                 "${header.from[*].addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Address,
                     index_hdr: 0,
                     index_part: -1,
@@ -841,7 +841,7 @@ mod tests {
             (
                 "${header.from[-5].name[2]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Name,
                     index_hdr: -5,
                     index_part: 2,
@@ -850,7 +850,7 @@ mod tests {
             (
                 "${header.from[*].raw[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::Rfc(RfcHeader::From),
+                    name: HeaderName::From,
                     part: HeaderPart::Raw,
                     index_hdr: 0,
                     index_part: 0,

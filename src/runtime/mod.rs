@@ -24,7 +24,7 @@
 use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
-use mail_parser::{Encoding, HeaderName, Message, MessagePart, PartType};
+use mail_parser::{Encoding, HeaderName, Message, MessageParser, MessagePart, PartType};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -648,19 +648,21 @@ impl Runtime {
     pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
         Context::new(
             self,
-            Message::parse(raw_message).unwrap_or_else(|| Message {
-                parts: vec![MessagePart {
-                    headers: vec![],
-                    is_encoding_problem: false,
-                    body: PartType::Text("".into()),
-                    encoding: Encoding::None,
-                    offset_header: 0,
-                    offset_body: 0,
-                    offset_end: 0,
-                }],
-                raw_message: b""[..].into(),
-                ..Default::default()
-            }),
+            MessageParser::new()
+                .parse(raw_message)
+                .unwrap_or_else(|| Message {
+                    parts: vec![MessagePart {
+                        headers: vec![],
+                        is_encoding_problem: false,
+                        body: PartType::Text("".into()),
+                        encoding: Encoding::None,
+                        offset_header: 0,
+                        offset_body: 0,
+                        offset_end: 0,
+                    }],
+                    raw_message: b""[..].into(),
+                    ..Default::default()
+                }),
         )
     }
 

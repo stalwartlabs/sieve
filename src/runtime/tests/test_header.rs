@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use mail_parser::{parsers::MessageStream, Header, HeaderName, HeaderValue, RfcHeader};
+use mail_parser::{parsers::MessageStream, Header, HeaderName, HeaderValue};
 
 use crate::{
     compiler::{
@@ -325,13 +325,11 @@ impl<'x> Context<'x> {
             (MimeOpts::None, HeaderValue::Text(text))
                 if matches!(
                     &header.name,
-                    HeaderName::Rfc(
-                        RfcHeader::Subject
-                            | RfcHeader::Comments
-                            | RfcHeader::ContentDescription
-                            | RfcHeader::ContentLocation
-                            | RfcHeader::ContentTransferEncoding,
-                    )
+                    HeaderName::Subject
+                        | HeaderName::Comments
+                        | HeaderName::ContentDescription
+                        | HeaderName::ContentLocation
+                        | HeaderName::ContentTransferEncoding,
                 ) =>
             {
                 visitor_fnc(text.as_ref())

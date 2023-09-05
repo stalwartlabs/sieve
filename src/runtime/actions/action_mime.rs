@@ -24,7 +24,7 @@
 use std::cmp::Reverse;
 
 use mail_parser::{
-    decoders::html::html_to_text, Encoding, HeaderName, Message, MessagePart, PartType, RfcHeader,
+    decoders::html::html_to_text, Encoding, HeaderName, Message, MessagePart, PartType,
 };
 
 use crate::{
@@ -76,24 +76,23 @@ impl Replace {
             for mut header in prev_headers {
                 let mut size = header.offset_end - header.offset_field;
                 match &header.name {
-                    HeaderName::Rfc(RfcHeader::Subject) => {
+                    HeaderName::Subject => {
                         if self.subject.is_some() {
                             header.name = HeaderName::Other("Original-Subject".into());
                             header.offset_field = header.offset_start;
                             size += "Original-".len();
                         }
                     }
-                    HeaderName::Rfc(RfcHeader::From) => {
+                    HeaderName::From => {
                         if self.from.is_some() {
                             header.name = HeaderName::Other("Original-From".into());
                             header.offset_field = header.offset_start;
                             size += "Original-".len();
                         }
                     }
-                    HeaderName::Rfc(
-                        RfcHeader::To | RfcHeader::Cc | RfcHeader::Bcc | RfcHeader::Received,
-                    ) => (),
-                    HeaderName::Rfc(RfcHeader::Date) => {
+
+                    HeaderName::To | HeaderName::Cc | HeaderName::Bcc | HeaderName::Received => (),
+                    HeaderName::Date => {
                         add_date = false;
                     }
                     _ => continue,
@@ -277,13 +276,13 @@ impl Enclose {
                     if let Some(name) = HeaderName::parse(header_name) {
                         if !ctx.runtime.protected_headers.contains(&name) {
                             match &name {
-                                HeaderName::Rfc(RfcHeader::Date) => {
+                                HeaderName::Date => {
                                     add_date = false;
                                 }
-                                HeaderName::Rfc(RfcHeader::From) => {
+                                HeaderName::From => {
                                     add_from = false;
                                 }
-                                HeaderName::Rfc(RfcHeader::MessageId) => {
+                                HeaderName::MessageId => {
                                     add_message_id = false;
                                 }
                                 _ => (),
@@ -465,8 +464,7 @@ impl<'x> Context<'x> {
 
                         message.extend_from_slice(header.name.as_str().as_bytes());
                         message.extend_from_slice(b": ");
-                        message
-                            .extend_from_slice(header.value.as_text_ref().unwrap_or("").as_bytes());
+                        message.extend_from_slice(header.value.as_text().unwrap_or("").as_bytes());
                         message.extend_from_slice(b"\r\n");
                     }
                 }
@@ -512,7 +510,7 @@ impl<'x> Context<'x> {
                                 if ct_pos != usize::MAX {
                                     part.headers[ct_pos]
                                         .value
-                                        .as_text_ref()
+                                        .as_text()
                                         .and_then(|h| h.split_once("boundary=\""))
                                         .and_then(|(_, h)| h.split_once('\"'))
                                         .map(|(h, _)| h)

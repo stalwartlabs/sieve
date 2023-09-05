@@ -592,7 +592,8 @@ mod tests {
 
     use ahash::{AHashMap, AHashSet};
     use mail_parser::{
-        parsers::MessageStream, Addr, Encoding, HeaderValue, Message, MessagePart, PartType,
+        parsers::MessageStream, Encoding, HeaderValue, Message, MessageParser, MessagePart,
+        PartType,
     };
 
     use crate::{
@@ -698,21 +699,24 @@ mod tests {
                 .with_functions(&mut fnc_map.clone());
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
-            instance.message = Message::parse(&raw_message).unwrap_or_else(|| Message {
-                html_body: vec![],
-                text_body: vec![],
-                attachments: vec![],
-                parts: vec![MessagePart {
-                    headers: vec![],
-                    is_encoding_problem: false,
-                    body: PartType::Text("".into()),
-                    encoding: Encoding::None,
-                    offset_header: 0,
-                    offset_body: 0,
-                    offset_end: 0,
-                }],
-                raw_message: b""[..].into(),
-            });
+            instance.message =
+                MessageParser::new()
+                    .parse(&raw_message)
+                    .unwrap_or_else(|| Message {
+                        html_body: vec![],
+                        text_body: vec![],
+                        attachments: vec![],
+                        parts: vec![MessagePart {
+                            headers: vec![],
+                            is_encoding_problem: false,
+                            body: PartType::Text("".into()),
+                            encoding: Encoding::None,
+                            offset_header: 0,
+                            offset_body: 0,
+                            offset_end: 0,
+                        }],
+                        raw_message: b""[..].into(),
+                    });
             instance.message_size = raw_message.len();
             if let Some((pos, script_cache, script_stack, vars_global, vars_local, vars_match)) =
                 prev_state.take()
@@ -727,17 +731,19 @@ mod tests {
             instance.set_env_variable("vnd.stalwart.default_mailbox", "INBOX");
             instance.set_env_variable("vnd.stalwart.username", "john.doe");
             instance.set_user_address("MAILER-DAEMON");
-            if let HeaderValue::Address(Addr {
-                address: Some(addr),
-                ..
-            }) = instance.message.from()
+            if let Some(addr) = instance
+                .message
+                .from()
+                .and_then(|a| a.first())
+                .and_then(|a| a.address.as_ref())
             {
                 instance.set_envelope(Envelope::From, addr.to_string());
             }
-            if let HeaderValue::Address(Addr {
-                address: Some(addr),
-                ..
-            }) = instance.message.to()
+            if let Some(addr) = instance
+                .message
+                .to()
+                .and_then(|a| a.first())
+                .and_then(|a| a.address.as_ref())
             {
                 instance.set_envelope(Envelope::To, addr.to_string());
             }
