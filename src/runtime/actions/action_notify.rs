@@ -22,7 +22,7 @@
 */
 
 use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
-use mail_parser::{decoders::quoted_printable::HEX_MAP, HeaderName, RfcHeader};
+use mail_parser::{decoders::quoted_printable::HEX_MAP, HeaderName};
 
 use crate::{
     compiler::grammar::actions::{
@@ -41,7 +41,7 @@ impl Notify {
             if matches!(&header.name, HeaderName::Other(name) if name.eq_ignore_ascii_case("Auto-Submitted"))
                 && header
                     .value
-                    .as_text_ref()
+                    .as_text()
                     .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
             {
                 return;
@@ -135,17 +135,17 @@ impl Notify {
             let mut has_message_id = false;
             for (header, value) in &params.headers {
                 match header {
-                    HeaderName::Rfc(RfcHeader::Subject) => {
+                    HeaderName::Subject => {
                         has_subject = value.into();
                         continue;
                     }
-                    HeaderName::Rfc(RfcHeader::Date) => {
+                    HeaderName::Date => {
                         has_date = true;
                     }
-                    HeaderName::Rfc(RfcHeader::MessageId) => {
+                    HeaderName::MessageId => {
                         has_message_id = true;
                     }
-                    HeaderName::Rfc(RfcHeader::From) => {
+                    HeaderName::From => {
                         continue;
                     }
                     _ => (),
@@ -370,13 +370,13 @@ pub(crate) fn parse_uri(uri: &str) -> Option<(&str, &str)> {
 }
 
 pub enum Mailto {
-    Header(RfcHeader),
+    Header(HeaderName<'static>),
     Body,
     Other(String),
 }
 
 enum State {
-    Address((RfcHeader, bool)),
+    Address((HeaderName<'static>, bool)),
     ParamName,
     ParamValue(Mailto),
 }
@@ -393,7 +393,7 @@ struct MailtoMessage {
 fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
     let mut params = MailtoMessage::default();
 
-    let mut state = State::Address((RfcHeader::To, false));
+    let mut state = State::Address((HeaderName::To, false));
     let mut buf = Vec::new();
     let uri_ = uri.as_bytes();
     let mut iter = uri_.iter();
@@ -413,18 +413,18 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
                                 if *has_at {
                                     insert_address(
                                         &mut params,
-                                        *header,
+                                        header.clone(),
                                         String::from_utf8(std::mem::take(&mut buf)).ok()?,
                                     );
                                     has_addresses = true;
-                                    state = State::Address((*header, false));
+                                    state = State::Address((header.clone(), false));
                                 } else {
                                     return None;
                                 }
                             }
                             b'@' => {
                                 if !*has_at {
-                                    state = State::Address((*header, true));
+                                    state = State::Address((header.clone(), true));
                                     buf.push(ch);
                                 } else {
                                     return None;
@@ -444,10 +444,10 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
                 State::Address((header, true)) => {
                     insert_address(
                         &mut params,
-                        *header,
+                        header.clone(),
                         String::from_utf8(std::mem::take(&mut buf)).ok()?,
                     );
-                    state = State::Address((*header, false));
+                    state = State::Address((header.clone(), false));
                     has_addresses = true;
                 }
                 State::ParamValue(_) => buf.push(ch),
@@ -458,7 +458,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
                     if !buf.is_empty() {
                         insert_address(
                             &mut params,
-                            *header,
+                            header.clone(),
                             String::from_utf8(std::mem::take(&mut buf)).ok()?,
                         );
                         has_addresses = true;
@@ -471,7 +471,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
             b'@' => match &state {
                 State::Address((header, false)) if !buf.is_empty() => {
                     buf.push(ch);
-                    state = State::Address((*header, true));
+                    state = State::Address((header.clone(), true));
                 }
                 State::ParamName | State::ParamValue(_) => buf.push(ch),
                 _ => return None,
@@ -479,17 +479,21 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
             b'=' => match &state {
                 State::ParamName if !buf.is_empty() => {
                     let param = String::from_utf8(std::mem::take(&mut buf)).ok()?;
-                    state = if let Some(HeaderName::Rfc(header)) = HeaderName::parse(&param) {
-                        if matches!(header, RfcHeader::To | RfcHeader::Cc | RfcHeader::Bcc) {
-                            State::Address((header, false))
-                        } else {
-                            State::ParamValue(Mailto::Header(header))
-                        }
-                    } else if param.eq_ignore_ascii_case("body") {
-                        State::ParamValue(Mailto::Body)
-                    } else {
-                        State::ParamValue(Mailto::Other(param))
-                    };
+                    state = HeaderName::parse(param)
+                        .map(|hdr| match hdr {
+                            HeaderName::To | HeaderName::Cc | HeaderName::Bcc => {
+                                State::Address((hdr, false))
+                            }
+                            HeaderName::Other(param) => {
+                                if param.eq_ignore_ascii_case("body") {
+                                    State::ParamValue(Mailto::Body)
+                                } else {
+                                    State::ParamValue(Mailto::Other(param.into_owned()))
+                                }
+                            }
+                            _ => State::ParamValue(Mailto::Header(hdr)),
+                        })
+                        .unwrap_or_else(|| State::ParamValue(Mailto::Other(String::new())));
                 }
                 State::ParamValue(_) => buf.push(ch),
                 _ => return None,
@@ -509,13 +513,9 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
                     if !buf.is_empty() {
                         let value = String::from_utf8(std::mem::take(&mut buf)).ok()?;
                         match param {
-                            Mailto::Header(header) => {
-                                params.headers.push((HeaderName::Rfc(header), value))
-                            }
+                            Mailto::Header(header) => params.headers.push((header, value)),
                             Mailto::Body => params.body = value.into(),
-                            Mailto::Other(header) => params
-                                .headers
-                                .push((HeaderName::Other(header.into()), value)),
+                            Mailto::Other(header) => params.headers.push((header.into(), value)),
                         }
                     }
                     state = State::ParamName;
@@ -552,7 +552,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
                     .push((HeaderName::Other(value.into()), String::new()));
             }
             State::ParamValue(param) => match param {
-                Mailto::Header(header) => params.headers.push((HeaderName::Rfc(header), value)),
+                Mailto::Header(header) => params.headers.push((header, value)),
                 Mailto::Body => params.body = value.into(),
                 Mailto::Other(header) => params
                     .headers
@@ -570,7 +570,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
 }
 
 #[inline(always)]
-fn insert_address(params: &mut MailtoMessage, name: RfcHeader, value: String) {
+fn insert_address(params: &mut MailtoMessage, name: HeaderName, value: String) {
     if !params
         .to
         .iter()
@@ -579,13 +579,13 @@ fn insert_address(params: &mut MailtoMessage, name: RfcHeader, value: String) {
         .any(|v| v.eq_ignore_ascii_case(&value))
     {
         match name {
-            RfcHeader::To => {
+            HeaderName::To => {
                 params.to.push(value);
             }
-            RfcHeader::Cc => {
+            HeaderName::Cc => {
                 params.cc.push(value);
             }
-            RfcHeader::Bcc => {
+            HeaderName::Bcc => {
                 params.bcc.push(value);
             }
             _ => (),

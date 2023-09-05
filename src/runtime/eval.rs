@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Group, Header, HeaderName, HeaderValue, PartType,
+    Addr, Header, HeaderName, HeaderValue, PartType,
 };
 
 use crate::{
@@ -271,38 +271,18 @@ impl HeaderVariable {
                     Variable::from(ct.c_type.as_ref())
                 }
                 .into(),
-                HeaderValue::Address(addr) if self.include_single_part() => addr.to_text().into(),
-                HeaderValue::AddressList(list)
-                | HeaderValue::Group(Group {
-                    addresses: list, ..
-                }) => match self.index_part.cmp(&0) {
-                    Ordering::Greater => list
-                        .get((self.index_part - 1) as usize)
-                        .map(|a| a.to_text()),
-                    Ordering::Less => list
-                        .iter()
-                        .rev()
-                        .nth((self.index_part.unsigned_abs() - 1) as usize)
-                        .map(|a| a.to_text()),
-                    Ordering::Equal => {
-                        for item in list {
-                            result.push(item.to_text());
-                        }
-                        return;
-                    }
-                },
-                HeaderValue::GroupList(groups) => {
-                    let mut groups = groups.iter().flat_map(|group| group.addresses.iter());
+                HeaderValue::Address(list) => {
+                    let mut list = list.iter();
                     match self.index_part.cmp(&0) {
-                        Ordering::Greater => groups
+                        Ordering::Greater => list
                             .nth((self.index_part - 1) as usize)
                             .map(|a| a.to_text()),
-                        Ordering::Less => groups
+                        Ordering::Less => list
                             .rev()
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
                             .map(|a| a.to_text()),
                         Ordering::Equal => {
-                            for item in groups {
+                            for item in list {
                                 result.push(item.to_text());
                             }
                             return;
@@ -317,46 +297,20 @@ impl HeaderVariable {
                 _ => None,
             },
             HeaderPart::Name | HeaderPart::Address => match &header.value {
-                HeaderValue::Address(addr) if self.include_single_part() => {
-                    addr.part(&self.part).map(Variable::from)
-                }
-                HeaderValue::AddressList(list)
-                | HeaderValue::Group(Group {
-                    addresses: list, ..
-                }) => match self.index_part.cmp(&0) {
-                    Ordering::Greater => list
-                        .get((self.index_part - 1) as usize)
-                        .and_then(|a| a.part(&self.part))
-                        .map(Variable::from),
-                    Ordering::Less => list
-                        .iter()
-                        .rev()
-                        .nth((self.index_part.unsigned_abs() - 1) as usize)
-                        .and_then(|a| a.part(&self.part))
-                        .map(Variable::from),
-                    Ordering::Equal => {
-                        for item in list {
-                            if let Some(part) = item.part(&self.part) {
-                                result.push(Variable::from(part));
-                            }
-                        }
-                        return;
-                    }
-                },
-                HeaderValue::GroupList(groups) => {
-                    let mut groups = groups.iter().flat_map(|group| group.addresses.iter());
+                HeaderValue::Address(list) => {
+                    let mut list = list.iter();
                     match self.index_part.cmp(&0) {
-                        Ordering::Greater => groups
+                        Ordering::Greater => list
                             .nth((self.index_part - 1) as usize)
                             .and_then(|a| a.part(&self.part))
                             .map(Variable::from),
-                        Ordering::Less => groups
+                        Ordering::Less => list
                             .rev()
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
                             .and_then(|a| a.part(&self.part))
                             .map(Variable::from),
                         Ordering::Equal => {
-                            for item in groups {
+                            for item in list {
                                 if let Some(part) = item.part(&self.part) {
                                     result.push(Variable::from(part));
                                 }

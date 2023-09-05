@@ -24,7 +24,7 @@
 use std::borrow::Cow;
 
 use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
-use mail_parser::{Addr, HeaderName, HeaderValue, RfcHeader};
+use mail_parser::{HeaderName, HeaderValue};
 
 use crate::{
     compiler::grammar::{
@@ -97,45 +97,42 @@ impl TestVacation {
         let mut received_count = 0;
         for header in &ctx.message.parts[0].headers {
             match &header.name {
-                HeaderName::Rfc(header_name) => match header_name {
-                    RfcHeader::To
-                    | RfcHeader::Cc
-                    | RfcHeader::Bcc
-                    | RfcHeader::ResentTo
-                    | RfcHeader::ResentBcc
-                    | RfcHeader::ResentCc
-                        if !found_rcpt =>
-                    {
-                        found_rcpt = ctx.find_addresses(header, &AddressPart::All, |addr| {
-                            user_addresses.iter().any(|a| a.eq_ignore_ascii_case(addr))
-                        });
-                    }
-                    RfcHeader::ListArchive
-                    | RfcHeader::ListHelp
-                    | RfcHeader::ListId
-                    | RfcHeader::ListOwner
-                    | RfcHeader::ListPost
-                    | RfcHeader::ListSubscribe
-                    | RfcHeader::ListUnsubscribe => {
-                        // Do not send vacation responses to lists
-                        return TestResult::Bool(false);
-                    }
-                    RfcHeader::Received => {
-                        received_count += 1;
-                    }
-                    _ => (),
-                },
+                HeaderName::To
+                | HeaderName::Cc
+                | HeaderName::Bcc
+                | HeaderName::ResentTo
+                | HeaderName::ResentBcc
+                | HeaderName::ResentCc
+                    if !found_rcpt =>
+                {
+                    found_rcpt = ctx.find_addresses(header, &AddressPart::All, |addr| {
+                        user_addresses.iter().any(|a| a.eq_ignore_ascii_case(addr))
+                    });
+                }
+                HeaderName::ListArchive
+                | HeaderName::ListHelp
+                | HeaderName::ListId
+                | HeaderName::ListOwner
+                | HeaderName::ListPost
+                | HeaderName::ListSubscribe
+                | HeaderName::ListUnsubscribe => {
+                    // Do not send vacation responses to lists
+                    return TestResult::Bool(false);
+                }
+                HeaderName::Received => {
+                    received_count += 1;
+                }
                 HeaderName::Other(header_name) => {
                     if header_name.eq_ignore_ascii_case("Auto-Submitted") {
                         if header
                             .value
-                            .as_text_ref()
+                            .as_text()
                             .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
                         {
                             return TestResult::Bool(false);
                         }
                     } else if header_name.eq_ignore_ascii_case("X-Auto-Response-Suppress") {
-                        if header.value.as_text_ref().map_or(false, |v| {
+                        if header.value.as_text().map_or(false, |v| {
                             v.to_ascii_lowercase()
                                 .split(',')
                                 .any(|v| ["all", "oof"].contains(&v.trim()))
@@ -145,12 +142,13 @@ impl TestVacation {
                     } else if header_name.eq_ignore_ascii_case("Precedence")
                         && header
                             .value
-                            .as_text_ref()
+                            .as_text()
                             .map_or(false, |v| v.eq_ignore_ascii_case("bulk"))
                     {
                         return TestResult::Bool(false);
                     }
                 }
+                _ => (),
             }
         }
 
@@ -201,53 +199,51 @@ impl Vacation {
         let mut vacation_to_full = None;
         let mut references = None;
         for header in &ctx.message.parts[0].headers {
-            if let HeaderName::Rfc(header_name) = &header.name {
-                match header_name {
-                    RfcHeader::Subject if vacation_subject.is_empty() => {
-                        if let Some(subject) = header.value.as_text_ref() {
-                            let mut vacation_subject_ = String::with_capacity(MAX_SUBJECT_LEN);
-                            let mut iter = ctx
-                                .runtime
-                                .vacation_subject_prefix
-                                .chars()
-                                .chain(subject.chars())
-                                .enumerate();
+            match &header.name {
+                HeaderName::Subject if vacation_subject.is_empty() => {
+                    if let Some(subject) = header.value.as_text() {
+                        let mut vacation_subject_ = String::with_capacity(MAX_SUBJECT_LEN);
+                        let mut iter = ctx
+                            .runtime
+                            .vacation_subject_prefix
+                            .chars()
+                            .chain(subject.chars())
+                            .enumerate();
 
-                            #[allow(clippy::while_let_on_iterator)]
-                            while let Some((pos, char)) = iter.next() {
-                                if pos < MAX_SUBJECT_LEN {
-                                    vacation_subject_.push(char);
-                                } else {
-                                    break;
-                                }
+                        #[allow(clippy::while_let_on_iterator)]
+                        while let Some((pos, char)) = iter.next() {
+                            if pos < MAX_SUBJECT_LEN {
+                                vacation_subject_.push(char);
+                            } else {
+                                break;
                             }
-                            if iter.next().is_some() {
-                                vacation_subject_.push('…');
-                            }
-                            vacation_subject = vacation_subject_.into();
                         }
-                    }
-                    RfcHeader::MessageId => {
-                        message_id = header.value.as_text_ref();
-                    }
-                    RfcHeader::References => {
-                        if header.offset_start > 0 {
-                            references = (&ctx.message.raw_message
-                                [header.offset_start..header.offset_end])
-                                .into();
+                        if iter.next().is_some() {
+                            vacation_subject_.push('…');
                         }
+                        vacation_subject = vacation_subject_.into();
                     }
-                    RfcHeader::From | RfcHeader::Sender => {
-                        if matches!(&header.value, HeaderValue::Address(Addr { address: Some(address), ..}) if address.eq_ignore_ascii_case(vacation_to.as_ref()))
-                            && header.offset_start > 0
-                        {
-                            vacation_to_full = (&ctx.message.raw_message
-                                [header.offset_start..header.offset_end])
-                                .into();
-                        }
-                    }
-                    _ => (),
                 }
+                HeaderName::MessageId => {
+                    message_id = header.value.as_text();
+                }
+                HeaderName::References => {
+                    if header.offset_start > 0 {
+                        references = (&ctx.message.raw_message
+                            [header.offset_start..header.offset_end])
+                            .into();
+                    }
+                }
+                HeaderName::From | HeaderName::Sender => {
+                    if matches!(&header.value, HeaderValue::Address(address) if address.contains(vacation_to.as_ref()))
+                        && header.offset_start > 0
+                    {
+                        vacation_to_full = (&ctx.message.raw_message
+                            [header.offset_start..header.offset_end])
+                            .into();
+                    }
+                }
+                _ => (),
             }
         }
 

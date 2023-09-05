@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use mail_parser::{DateTime, HeaderName, RfcHeader};
+use mail_parser::{DateTime, HeaderName};
 
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
@@ -36,7 +36,7 @@ impl Redirect {
                 && ctx.message.parts[0]
                     .headers
                     .iter()
-                    .filter(|h| matches!(&h.name, HeaderName::Rfc(RfcHeader::Received)))
+                    .filter(|h| matches!(&h.name, HeaderName::Received))
                     .count()
                     < ctx.runtime.max_received_headers
             {
