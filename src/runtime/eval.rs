@@ -26,13 +26,13 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Header, HeaderName, HeaderValue, PartType,
+    Addr, Header, HeaderName, HeaderValue, Host, PartType,
 };
 
 use crate::{
     compiler::{
-        grammar::tests::test_plugin::Plugin, HeaderPart, HeaderVariable, MessagePart, Value,
-        VariableType,
+        grammar::tests::test_plugin::Plugin, ContentTypePart, HeaderPart, HeaderVariable,
+        MessagePart, ReceivedHostname, ReceivedPart, Value, VariableType,
     },
     Context, Event, PluginArgument,
 };
@@ -137,8 +137,11 @@ impl<'x> Context<'x> {
         let mut result = Vec::new();
         let part = self.message.part(self.part)?;
         let raw = self.message.raw_message();
-        if !matches!(&header.name, HeaderName::Other(name) if name.is_empty()) {
-            let mut headers = part.headers.iter().filter(|h| h.name == header.name);
+        if !header.name.is_empty() {
+            let mut headers = part
+                .headers
+                .iter()
+                .filter(|h| header.name.contains(&h.name));
             match header.index_hdr.cmp(&0) {
                 Ordering::Greater => {
                     if let Some(h) = headers.nth((header.index_hdr - 1) as usize) {
@@ -180,7 +183,9 @@ impl<'x> Context<'x> {
                             result.push(Variable::from(format!("{}: {}", h.name.as_str(), text)));
                         }
                     }
-                    _ => {}
+                    _ => {
+                        header.eval_part(h, raw, &mut result);
+                    }
                 }
             }
         }
@@ -296,22 +301,22 @@ impl HeaderVariable {
                     .map(Variable::from),
                 _ => None,
             },
-            HeaderPart::Name | HeaderPart::Address => match &header.value {
+            HeaderPart::Address(addr) => match &header.value {
                 HeaderValue::Address(list) => {
                     let mut list = list.iter();
                     match self.index_part.cmp(&0) {
                         Ordering::Greater => list
                             .nth((self.index_part - 1) as usize)
-                            .and_then(|a| a.part(&self.part))
+                            .and_then(|a| addr.eval(a))
                             .map(Variable::from),
                         Ordering::Less => list
                             .rev()
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
-                            .and_then(|a| a.part(&self.part))
+                            .and_then(|a| addr.eval(a))
                             .map(Variable::from),
                         Ordering::Equal => {
                             for item in list {
-                                if let Some(part) = item.part(&self.part) {
+                                if let Some(part) = addr.eval(item) {
                                     result.push(Variable::from(part));
                                 }
                             }
@@ -332,33 +337,79 @@ impl HeaderVariable {
                         })
                 }
             }
+            HeaderPart::Id => match &header.name {
+                HeaderName::MessageId | HeaderName::ResentMessageId => match &header.value {
+                    HeaderValue::Text(id) => Variable::from(id.as_ref()).into(),
+                    HeaderValue::TextList(ids) => {
+                        for id in ids {
+                            result.push(Variable::from(id.as_ref()));
+                        }
+                        return;
+                    }
+                    _ => None,
+                },
+                HeaderName::Other(_) => {
+                    match MessageStream::new(
+                        raw.get(header.offset_start..header.offset_end)
+                            .unwrap_or(b""),
+                    )
+                    .parse_id()
+                    {
+                        HeaderValue::Text(id) => Variable::from(id).into(),
+                        HeaderValue::TextList(ids) => {
+                            for id in ids {
+                                result.push(Variable::from(id));
+                            }
+                            return;
+                        }
+                        _ => None,
+                    }
+                }
+                _ => None,
+            },
 
             HeaderPart::Raw => raw
                 .get(header.offset_start..header.offset_end)
                 .map(sanitize_raw_header)
                 .map(Variable::from),
-            _ => {
-                if let HeaderValue::ContentType(ct) = &header.value {
-                    match &self.part {
-                        HeaderPart::Type => Variable::from(ct.c_type.as_ref()).into(),
-                        HeaderPart::Subtype => {
-                            ct.c_subtype.as_ref().map(|s| Variable::from(s.as_ref()))
-                        }
-                        HeaderPart::Attribute(attr) => ct.attributes.as_ref().and_then(|attrs| {
-                            attrs.iter().find_map(|(k, v)| {
-                                if k.eq_ignore_ascii_case(attr) {
-                                    Some(Variable::from(v.as_ref()))
-                                } else {
-                                    None
-                                }
-                            })
-                        }),
-                        _ => None,
+            _ => match (&header.value, &self.part) {
+                (HeaderValue::ContentType(ct), HeaderPart::ContentType(part)) => match part {
+                    ContentTypePart::Type => Variable::from(ct.c_type.as_ref()).into(),
+                    ContentTypePart::Subtype => {
+                        ct.c_subtype.as_ref().map(|s| Variable::from(s.as_ref()))
                     }
-                } else {
-                    None
-                }
-            }
+                    ContentTypePart::Attribute(attr) => ct.attributes.as_ref().and_then(|attrs| {
+                        attrs.iter().find_map(|(k, v)| {
+                            if k.eq_ignore_ascii_case(attr) {
+                                Some(Variable::from(v.as_ref()))
+                            } else {
+                                None
+                            }
+                        })
+                    }),
+                },
+                (HeaderValue::Received(rcvd), HeaderPart::Received(part)) => match part {
+                    ReceivedPart::From(from) => rcvd
+                        .from()
+                        .or_else(|| rcvd.helo())
+                        .and_then(|v| from.to_variable(v)),
+                    ReceivedPart::FromIp => rcvd.from_ip().map(|ip| Variable::from(ip.to_string())),
+                    ReceivedPart::FromIpRev => rcvd.from_iprev().map(Variable::from),
+                    ReceivedPart::By(by) => rcvd.by().and_then(|v: &Host<'_>| by.to_variable(v)),
+                    ReceivedPart::For => rcvd.for_().map(Variable::from),
+                    ReceivedPart::With => rcvd.with().map(|v| Variable::from(v.as_str())),
+                    ReceivedPart::TlsVersion => {
+                        rcvd.tls_version().map(|v| Variable::from(v.as_str()))
+                    }
+                    ReceivedPart::TlsCipher => rcvd.tls_cipher().map(Variable::from),
+                    ReceivedPart::Id => rcvd.id().map(Variable::from),
+                    ReceivedPart::Ident => rcvd.ident().map(Variable::from),
+                    ReceivedPart::Via => rcvd.via().map(Variable::from),
+                    ReceivedPart::Date => rcvd.date().map(|d| Variable::from(d.to_timestamp())),
+                    ReceivedPart::DateRaw => rcvd.date().map(|d| Variable::from(d.to_rfc822())),
+                },
+                _ => None,
+            },
         };
 
         if let Some(var) = var {
@@ -372,20 +423,11 @@ impl HeaderVariable {
     }
 }
 
-trait GetAddressPart<'x> {
-    fn part<'z: 'x>(&'z self, part: &HeaderPart) -> Option<&'x str>;
+trait AddrToText<'x> {
     fn to_text<'z: 'x>(&'z self) -> Variable<'x>;
 }
 
-impl<'x> GetAddressPart<'x> for Addr<'x> {
-    fn part<'z: 'x>(&'z self, part: &HeaderPart) -> Option<&'x str> {
-        match part {
-            HeaderPart::Address => self.address.as_ref().map(|s| s.as_ref()),
-            HeaderPart::Name => self.name.as_ref().map(|s| s.as_ref()),
-            _ => None,
-        }
-    }
-
+impl<'x> AddrToText<'x> for Addr<'x> {
     fn to_text<'z: 'x>(&'z self) -> Variable<'x> {
         if let Some(name) = &self.name {
             if let Some(address) = &self.address {
@@ -397,6 +439,17 @@ impl<'x> GetAddressPart<'x> for Addr<'x> {
             Variable::String(format!("<{address}>"))
         } else {
             Variable::StringRef("")
+        }
+    }
+}
+
+impl ReceivedHostname {
+    fn to_variable<'x>(&self, host: &'x Host<'x>) -> Option<Variable<'x>> {
+        match (self, host) {
+            (ReceivedHostname::Name, Host::Name(name)) => Variable::from(name.as_ref()).into(),
+            (ReceivedHostname::Ip, Host::IpAddr(ip)) => Variable::from(ip.to_string()).into(),
+            (ReceivedHostname::Any, _) => Variable::from(host.to_string()).into(),
+            _ => None,
         }
     }
 }

@@ -33,7 +33,7 @@ use crate::{
 };
 
 use self::{
-    grammar::{expr::Expression, Capability},
+    grammar::{expr::Expression, AddressPart, Capability},
     lexer::tokenizer::TokenInfo,
 };
 
@@ -132,7 +132,7 @@ pub struct Transform {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HeaderVariable {
-    pub name: HeaderName<'static>,
+    pub name: Vec<HeaderName<'static>>,
     pub part: HeaderPart,
     pub index_hdr: i32,
     pub index_part: i32,
@@ -147,13 +147,43 @@ pub enum MessagePart {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HeaderPart {
     Text,
+    Date,
+    Id,
+    Address(AddressPart),
+    ContentType(ContentTypePart),
+    Received(ReceivedPart),
     Raw,
-    Name,
-    Address,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ContentTypePart {
     Type,
     Subtype,
     Attribute(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReceivedPart {
+    From(ReceivedHostname),
+    FromIp,
+    FromIpRev,
+    By(ReceivedHostname),
+    For,
+    With,
+    TlsVersion,
+    TlsCipher,
+    Id,
+    Ident,
+    Via,
     Date,
+    DateRaw,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReceivedHostname {
+    Name,
+    Ip,
+    Any,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

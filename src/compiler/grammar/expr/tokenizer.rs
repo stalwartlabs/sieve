@@ -102,6 +102,9 @@ where
                 b'(' | b'[' if self.buf.last().map_or(false, |c| c.is_ascii_alphanumeric()) => {
                     self.buf.push(ch);
                 }
+                b'-' if self.buf.last().map_or(false, |c| *c == b'[') => {
+                    self.buf.push(ch);
+                }
                 b')' if self.buf.contains(&b'(') => {
                     self.buf.push(b')');
                 }
@@ -190,7 +193,7 @@ where
                             }
                         }
                         _ => {
-                            return Err(format!("Invalid character {ch}",));
+                            return Err(format!("Invalid character {:?}", char::from(ch),));
                         }
                     };
                     self.is_start = ch == b'(';
