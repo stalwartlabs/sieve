@@ -30,8 +30,10 @@ use crate::{
         grammar::{
             expr::{parser::ExpressionParser, tokenizer::Tokenizer},
             instruction::CompilerState,
+            AddressPart,
         },
-        ErrorType, HeaderPart, HeaderVariable, MessagePart, Number, Transform, Value, VariableType,
+        ContentTypePart, ErrorType, HeaderPart, HeaderVariable, MessagePart, Number,
+        ReceivedHostname, ReceivedPart, Transform, Value, VariableType,
     },
     runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
@@ -193,23 +195,31 @@ impl<'x> CompilerState<'x> {
                             is_var_error = true;
                         }
                     }
-                    b':' if parse_decoded => match bytes.get(var_start_pos..pos) {
-                        Some(enc) if enc.eq_ignore_ascii_case(b"hex") => {
-                            state = State::Encoded {
-                                is_unicode: false,
-                                initial_buf_size: decode_buf.len(),
-                            };
-                        }
-                        Some(enc) if enc.eq_ignore_ascii_case(b"unicode") => {
-                            state = State::Encoded {
-                                is_unicode: true,
-                                initial_buf_size: decode_buf.len(),
-                            };
-                        }
-                        _ => {
+                    b':' => {
+                        if parse_decoded && !var_has_namespace {
+                            match bytes.get(var_start_pos..pos) {
+                                Some(enc) if enc.eq_ignore_ascii_case(b"hex") => {
+                                    state = State::Encoded {
+                                        is_unicode: false,
+                                        initial_buf_size: decode_buf.len(),
+                                    };
+                                }
+                                Some(enc) if enc.eq_ignore_ascii_case(b"unicode") => {
+                                    state = State::Encoded {
+                                        is_unicode: true,
+                                        initial_buf_size: decode_buf.len(),
+                                    };
+                                }
+                                _ => {
+                                    is_var_error = true;
+                                }
+                            }
+                        } else if var_has_namespace {
+                            var_is_number = false;
+                        } else {
                             is_var_error = true;
                         }
-                    },
+                    }
                     _ => {
                         is_var_error = true;
                     }
@@ -384,18 +394,6 @@ impl<'x> CompilerState<'x> {
                 Some(("header", var_name)) if !var_name.is_empty() => {
                     self.parse_header_variable(var_name)?
                 }
-                Some(("headers", var_name)) if !var_name.is_empty() => {
-                    VariableType::Header(HeaderVariable {
-                        name: HeaderName::Other("".into()),
-                        part: match var_name {
-                            "raw" => HeaderPart::Raw,
-                            "text" => HeaderPart::Text,
-                            _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
-                        },
-                        index_hdr: 0,
-                        index_part: 0,
-                    })
-                }
                 Some(("body", var_name)) if !var_name.is_empty() => match var_name {
                     "text" => VariableType::Part(MessagePart::TextBody(false)),
                     "html" => VariableType::Part(MessagePart::HtmlBody(false)),
@@ -428,13 +426,16 @@ impl<'x> CompilerState<'x> {
     }
 
     fn parse_header_variable(&self, var_name: &str) -> Result<VariableType, ErrorType> {
+        #[derive(Debug)]
         enum State {
             Name,
             Index,
             Part,
             PartIndex,
         }
+        let mut name = vec![];
         let mut has_name = false;
+        let mut has_wildcard = false;
         let mut hdr_name = String::new();
         let mut hdr_index = String::new();
         let mut part = String::new();
@@ -459,12 +460,21 @@ impl<'x> CompilerState<'x> {
                         has_name = true;
                     }
                     ' ' | '\t' | '\r' | '\n' => {}
+                    '*' if !has_wildcard && hdr_name.is_empty() && name.is_empty() => {
+                        has_wildcard = true;
+                    }
+                    ':' if !hdr_name.is_empty() && !has_wildcard => {
+                        name.push(
+                            HeaderName::parse(std::mem::take(&mut hdr_name)).ok_or_else(|| {
+                                ErrorType::InvalidExpression(var_name.to_string())
+                            })?,
+                        );
+                    }
+                    _ if !has_name && !has_wildcard => {
+                        hdr_name.push(ch);
+                    }
                     _ => {
-                        if !has_name {
-                            hdr_name.push(ch);
-                        } else {
-                            return Err(ErrorType::InvalidExpression(var_name.to_string()));
-                        }
+                        return Err(ErrorType::InvalidExpression(var_name.to_string()));
                     }
                 },
                 State::Index => match ch {
@@ -498,27 +508,80 @@ impl<'x> CompilerState<'x> {
         }
 
         if !hdr_name.is_empty() {
-            Ok(VariableType::Header(HeaderVariable {
-                name: HeaderName::parse(hdr_name)
+            name.push(
+                HeaderName::parse(hdr_name)
                     .ok_or_else(|| ErrorType::InvalidExpression(var_name.to_string()))?,
+            );
+        }
+
+        if !name.is_empty() || has_wildcard {
+            Ok(VariableType::Header(HeaderVariable {
+                name,
                 part: match part.as_str() {
-                    "" => HeaderPart::Text,
-                    "name" => HeaderPart::Name,
-                    "addr" | "address" => HeaderPart::Address,
-                    "type" => HeaderPart::Type,
-                    "subtype" => HeaderPart::Subtype,
+                    "" | "text" => HeaderPart::Text,
+                    // Addresses
+                    "name" | "addr.name" => HeaderPart::Address(AddressPart::Name),
+                    "addr" | "addr.all" => HeaderPart::Address(AddressPart::All),
+                    "addr.domain" => HeaderPart::Address(AddressPart::Domain),
+                    "addr.local" => HeaderPart::Address(AddressPart::LocalPart),
+                    "addr.user" => HeaderPart::Address(AddressPart::User),
+                    "addr.detail" => HeaderPart::Address(AddressPart::Detail),
+
+                    // Content-type
+                    "type" => HeaderPart::ContentType(ContentTypePart::Type),
+                    "subtype" => HeaderPart::ContentType(ContentTypePart::Subtype),
+
+                    // Received
+                    "rcvd" => HeaderPart::Text,
+                    "rcvd.from" => HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Any)),
+                    "rcvd.from.name" => {
+                        HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Name))
+                    }
+                    "rcvd.from.ip" => {
+                        HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Ip))
+                    }
+                    "rcvd.ip" => HeaderPart::Received(ReceivedPart::FromIp),
+                    "rcvd.iprev" => HeaderPart::Received(ReceivedPart::FromIpRev),
+                    "rcvd.by" => HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Any)),
+                    "rcvd.by.name" => {
+                        HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Name))
+                    }
+                    "rcvd.by.ip" => HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Ip)),
+                    "rcvd.for" => HeaderPart::Received(ReceivedPart::For),
+                    "rcvd.with" => HeaderPart::Received(ReceivedPart::With),
+                    "rcvd.tls" => HeaderPart::Received(ReceivedPart::TlsVersion),
+                    "rcvd.cipher" => HeaderPart::Received(ReceivedPart::TlsCipher),
+                    "rcvd.id" => HeaderPart::Received(ReceivedPart::Id),
+                    "rcvd.ident" => HeaderPart::Received(ReceivedPart::Ident),
+                    "rcvd.date" => HeaderPart::Received(ReceivedPart::Date),
+                    "rcvd.date.raw" => HeaderPart::Received(ReceivedPart::DateRaw),
+
+                    // Id
+                    "id" => HeaderPart::Id,
+
+                    // Raw
                     "raw" => HeaderPart::Raw,
+
+                    // Date
                     "date" => HeaderPart::Date,
+
+                    // Content-type attributes
                     _ => {
                         if let Some(attr) = part.strip_prefix("attr.") {
-                            HeaderPart::Attribute(attr.to_string())
+                            HeaderPart::ContentType(ContentTypePart::Attribute(attr.to_string()))
                         } else {
                             return Err(ErrorType::InvalidExpression(var_name.to_string()));
                         }
                     }
                 },
                 index_hdr: match hdr_index.as_str() {
-                    "" => -1,
+                    "" => {
+                        if !has_wildcard {
+                            -1
+                        } else {
+                            0
+                        }
+                    }
                     "*" => 0,
                     _ => hdr_index
                         .parse()
@@ -526,7 +589,13 @@ impl<'x> CompilerState<'x> {
                         .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
                 },
                 index_part: match part_index.as_str() {
-                    "" => -1,
+                    "" => {
+                        if !has_wildcard {
+                            -1
+                        } else {
+                            0
+                        }
+                    }
                     "*" => 0,
                     _ => part_index
                         .parse()
@@ -621,13 +690,17 @@ impl Display for VariableType {
             }),
 
             VariableType::Header(hdr) => {
-                write!(f, "${{header.{}", hdr.name.as_str())?;
+                write!(
+                    f,
+                    "${{header.{}",
+                    hdr.name.first().map(|h| h.as_str()).unwrap_or_default()
+                )?;
                 if hdr.index_hdr != 0 {
                     write!(f, "[{}]", hdr.index_hdr)?;
                 } else {
                     f.write_str("[*]")?;
                 }
-                if hdr.part != HeaderPart::Text {
+                /*if hdr.part != HeaderPart::Text {
                     f.write_str(".")?;
                     f.write_str(match &hdr.part {
                         HeaderPart::Name => "name",
@@ -639,7 +712,7 @@ impl Display for VariableType {
                         HeaderPart::Attribute(attr) => attr.as_str(),
                         HeaderPart::Text => unreachable!(),
                     })?;
-                }
+                }*/
                 if hdr.index_part != 0 {
                     write!(f, "[{}]", hdr.index_part)?;
                 } else {
@@ -677,7 +750,7 @@ mod tests {
     use crate::compiler::grammar::{Comparator, MatchType};
     use crate::compiler::lexer::tokenizer::Tokenizer;
     use crate::compiler::lexer::word::Word;
-    use crate::compiler::{HeaderPart, HeaderVariable, VariableType};
+    use crate::compiler::{AddressPart, HeaderPart, HeaderVariable, VariableType};
     use crate::{AHashSet, Compiler};
 
     #[test]
@@ -787,7 +860,7 @@ mod tests {
             (
                 "${header.from}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
+                    name: vec![HeaderName::From],
                     part: HeaderPart::Text,
                     index_hdr: -1,
                     index_part: -1,
@@ -796,8 +869,8 @@ mod tests {
             (
                 "${header.from.addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
-                    part: HeaderPart::Address,
+                    name: vec![HeaderName::From],
+                    part: HeaderPart::Address(AddressPart::All),
                     index_hdr: -1,
                     index_part: -1,
                 })),
@@ -805,7 +878,7 @@ mod tests {
             (
                 "${header.from[1]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
+                    name: vec![HeaderName::From],
                     part: HeaderPart::Text,
                     index_hdr: 1,
                     index_part: -1,
@@ -814,7 +887,7 @@ mod tests {
             (
                 "${header.from[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
+                    name: vec![HeaderName::From],
                     part: HeaderPart::Text,
                     index_hdr: 0,
                     index_part: -1,
@@ -823,8 +896,8 @@ mod tests {
             (
                 "${header.from[20].name}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
-                    part: HeaderPart::Name,
+                    name: vec![HeaderName::From],
+                    part: HeaderPart::Address(AddressPart::Name),
                     index_hdr: 20,
                     index_part: -1,
                 })),
@@ -832,8 +905,8 @@ mod tests {
             (
                 "${header.from[*].addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
-                    part: HeaderPart::Address,
+                    name: vec![HeaderName::From],
+                    part: HeaderPart::Address(AddressPart::All),
                     index_hdr: 0,
                     index_part: -1,
                 })),
@@ -841,8 +914,8 @@ mod tests {
             (
                 "${header.from[-5].name[2]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
-                    part: HeaderPart::Name,
+                    name: vec![HeaderName::From],
+                    part: HeaderPart::Address(AddressPart::Name),
                     index_hdr: -5,
                     index_part: 2,
                 })),
@@ -850,7 +923,7 @@ mod tests {
             (
                 "${header.from[*].raw[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: HeaderName::From,
+                    name: vec![HeaderName::From],
                     part: HeaderPart::Raw,
                     index_hdr: 0,
                     index_part: 0,

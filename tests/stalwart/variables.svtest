@@ -1,4 +1,6 @@
 require "vnd.stalwart.testsuite";
+require "vnd.stalwart.plugins";
+require "vnd.stalwart.eval";
 require "relational";
 require "body";
 require "include";
@@ -11,10 +13,20 @@ From: George Constanza <george@yankees.com>
 From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
 To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
     jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
+Cc: bill@example.com, tom@foobar.org
 Date: Sat, 20 Nov 2021 14:22:01 -0800
+Message-ID: <test@id>
+Resent-Message-ID: test@resent
+X-Message-ID: <test@x-id>
+X-Original-Message-ID: test@x-orig
 Subject: Why not both importing AND exporting? =?utf-8?b?4pi6?=
+Received: from out-25.smtp.host.com (other.smtp.host.com [192.30.252.208]) (using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+	by mail.stalw.art (Stalwart SMTP) with ESMTPS id 41A2C80D73C;
+	Tue, 29 Aug 2023 16:20:12 +0000
+Received: from ietfa.amsl.com (localhost [IPv6:::1]) by ietfa.amsl.com (Postfix) with ESMTP 
+	id 6296FC13AE3E for <hello@domain.comt>; Mon, 28 Aug 2023 02:21:37 -0700 (PDT)
 Content-Type: image/gif; name*1="about "; name*0="Book ";
-              name*2*=utf-8''%e2%98%95 tables.gif
+	name*2*=utf-8''%e2%98%95 tables.gif
 Content-Transfer-Encoding: Base64
 Content-Disposition: attachment
 
@@ -22,7 +34,55 @@ R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
 .
 ;
 
-test "Header Variables" {
+test "Header Variables - Received" {
+
+	if not string :is "${header.received[1].rcvd.from}" "out-25.smtp.host.com" {
+		test_fail "failed to match header.received[1].rcvd.from: ${header.received[1].rcvd.from}";
+	}
+
+	if not string :is "${header.received[1].rcvd.from.name}" "out-25.smtp.host.com" {
+		test_fail "failed to match header.received[1].rcvd.from.name: ${header.received[1].rcvd.from.name}";
+	}
+
+	if not string :is "${header.received[1].rcvd.from.ip}" "" {
+		test_fail "failed to match header.received[1].rcvd.from.ip: ${header.received[1].rcvd.from.ip}";
+	}
+
+	if not string :is "${header.received[1].rcvd.ip}" "192.30.252.208" {
+		test_fail "failed to match header.received[1].rcvd.ip: ${header.received[1].rcvd.ip}";
+	}
+
+	if not string :is "${header.received[1].rcvd.iprev}" "other.smtp.host.com" {
+		test_fail "failed to match header.received[1].rcvd.iprev: ${header.received[1].rcvd.iprev}";
+	}
+
+	if not string :is "${header.received[1].rcvd.tls}" "TLSv1.3" {
+		test_fail "failed to match header.received[1].rcvd.tls: ${header.received[1].rcvd.tls}";
+	}
+
+	if not string :is "${header.received[1].rcvd.cipher}" "TLS13_AES_256_GCM_SHA384" {
+		test_fail "failed to match header.received[1].rcvd.cipher: ${header.received[1].rcvd.cipher}";
+	}
+
+	if not string :is "${header.received[-1].rcvd.from}" "ietfa.amsl.com" {
+		test_fail "failed to match header.received[-1].rcvd.from: ${header.received[-1].rcvd.from}";
+	}
+
+	if not string :is "${header.received[-1].rcvd.date.raw}" "Mon, 28 Aug 2023 02:21:37 -0700" {
+		test_fail "failed to match header.received[-1].rcvd.date.raw: ${header.received[-1].rcvd.date.raw}";
+	}
+
+	if not string :is "${header.received[-1].rcvd.date}" "1693214497" {
+		test_fail "failed to match header.received[-1].rcvd.date: ${header.received[-1].rcvd.date}";
+	}
+
+	if eval "header.received[-1].rcvd.date > header.received[1].rcvd.date" {
+		test_fail "header.received[-1].rcvd.date <= header.received[1].rcvd.date: ${header.received[-1].rcvd.date} <= ${header.received[1].rcvd.date}";
+	}
+
+}
+
+test "Header Variables - Addresses" {
     if not string :is "${header.subject}" "Why not both importing AND exporting? ☺" {
 		test_fail "failed to match header.subject: ${header.subject}";
 	}
@@ -84,6 +144,33 @@ john@example.com" {
 John Smîth <john@example.com>" {
 		test_fail "failed to match header.to[*][*]: ${header.to[*][*]}";
 	}
+
+	if not string :is "${header.to:cc[*][*]}" "James Smythe <james@vandelay.com>
+<jane@example.com>
+John Smîth <john@example.com>
+<bill@example.com>
+<tom@foobar.org>" {
+		test_fail "failed to match header.to:cc[*][*]: ${header.to:cc[*][*]}";
+	}
+
+	if not string :is "${header.to:cc[*].addr[*]}" "james@vandelay.com
+jane@example.com
+john@example.com
+bill@example.com
+tom@foobar.org" {
+		test_fail "failed to match header.to:cc[*].addr[*]: ${header.to:cc[*].addr[*]}";
+	}
+
+	if not string :is "${header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]}" "test@id
+test@resent
+test@x-id
+test@x-orig" {
+		test_fail "failed to match header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]: ${header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]}";
+	}
+
+}
+
+test "Header Variables - Content-Type" {
 
     if not string :is "${header.content-type}" "image/gif" {
 		test_fail "failed to match header.content-type: ${header.content-type}";

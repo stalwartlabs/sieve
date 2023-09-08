@@ -1,6 +1,7 @@
 require "vnd.stalwart.testsuite";
 require "vnd.stalwart.plugins";
 require "vnd.stalwart.foreveryline";
+require "vnd.stalwart.eval";
 require "relational";
 require "body";
 require "foreverypart";

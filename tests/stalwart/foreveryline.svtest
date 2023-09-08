@@ -1,6 +1,7 @@
 require "vnd.stalwart.testsuite";
 require "vnd.stalwart.plugins";
 require "vnd.stalwart.foreveryline";
+require "vnd.stalwart.eval";
 require "relational";
 require "body";
 require "foreverypart";
@@ -126,7 +127,7 @@ test "ForEveryLine - headers" {
 test "ForEveryLine - all headers" {
 
     set "did_iterate" "0";
-    foreveryline "${headers.raw}" {
+    foreveryline "${header.*.raw}" {
         if allof(eval "line_num == 6", not string :is "${line}" "X-Test: this is a test with plenty of whitespace") {
             test_fail "${line} ${line_num}";
             set "did_iterate" "1";
@@ -138,7 +139,7 @@ test "ForEveryLine - all headers" {
     }
 
     set "did_iterate" "0";
-    foreveryline "${headers.text}" {
+    foreveryline "${header.*.text}" {
         if allof(eval "line_num == 4", not string :is "${line}" "To: \"Colleagues\": \"James Smythe\" <james@vandelay.com>; Friends: jane@example.com, John Smîth <john@example.com>;") {
             test_fail "${line} ${line_num}";
         }

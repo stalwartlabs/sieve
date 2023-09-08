@@ -696,6 +696,7 @@ mod tests {
                 .with_max_out_messages(100)
                 .with_capability(Capability::Plugins)
                 .with_capability(Capability::ForEveryLine)
+                .with_capability(Capability::Eval)
                 .with_functions(&mut fnc_map.clone());
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();

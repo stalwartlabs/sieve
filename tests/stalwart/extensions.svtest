@@ -1,4 +1,5 @@
 require "vnd.stalwart.testsuite";
+require "vnd.stalwart.eval";
 require "relational";
 require "body";
 require "include";

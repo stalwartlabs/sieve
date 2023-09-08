@@ -492,7 +492,7 @@ impl<'x> CompilerState<'x> {
                 Token::Identifier(Word::Eval) => {
                     self.validate_argument(
                         0,
-                        Capability::Plugins.into(),
+                        Capability::Eval.into(),
                         token_info.line_num,
                         token_info.line_pos,
                     )?;

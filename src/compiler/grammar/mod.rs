@@ -88,12 +88,13 @@ pub enum Capability {
     VirusTest,
 
     // Extensions
+    Eval,
     Plugins,
     ForEveryLine,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum AddressPart {
+pub enum AddressPart {
     LocalPart,
     Domain,
     All,
@@ -625,6 +626,7 @@ impl Display for Capability {
             Capability::VirusTest => f.write_str("virustest"),
             Capability::Plugins => f.write_str("vnd.stalwart.plugins"),
             Capability::ForEveryLine => f.write_str("vnd.stalwart.foreveryline"),
+            Capability::Eval => f.write_str("vnd.stalwart.eval"),
             Capability::Other(capability) => f.write_str(capability),
         }
     }
@@ -682,4 +684,5 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
     // Extensions
     "vnd.stalwart.plugins" => Capability::Plugins,
     "vnd.stalwart.foreveryline" => Capability::ForEveryLine,
+    "vnd.stalwart.eval" => Capability::Eval,
 };
