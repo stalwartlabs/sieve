@@ -308,14 +308,14 @@ pub struct Compiler {
 
     // Plugins
     pub(crate) plugins: AHashMap<String, PluginSchema>,
-    pub(crate) functions: AHashMap<String, usize>,
+    pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function = fn(Variable<'_>) -> Variable<'static>;
+pub type Function = fn(Vec<Variable<'_>>) -> Variable<'static>;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap {
-    pub(crate) map: AHashMap<String, usize>,
+    pub(crate) map: AHashMap<String, (u32, u32)>,
     pub(crate) functions: Vec<Function>,
 }
 

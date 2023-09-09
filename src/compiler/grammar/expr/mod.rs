@@ -33,8 +33,10 @@ pub mod tokenizer;
 pub(crate) enum Expression {
     Variable(VariableType),
     Number(Number),
+    String(String),
     BinaryOperator(BinaryOperator),
     UnaryOperator(UnaryOperator),
+    Function { id: u32, num_args: u32 },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -65,9 +67,16 @@ pub(crate) enum UnaryOperator {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum Token {
     Variable(VariableType),
+    Function {
+        name: String,
+        id: u32,
+        num_args: u32,
+    },
     Number(Number),
+    String(String),
     BinaryOperator(BinaryOperator),
     UnaryOperator(UnaryOperator),
     OpenParen,
     CloseParen,
+    Comma,
 }

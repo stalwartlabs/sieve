@@ -121,7 +121,6 @@ pub enum VariableType {
     Envelope(Envelope),
     Header(HeaderVariable),
     Part(MessagePart),
-    Transform(Transform),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,6 +141,9 @@ pub struct HeaderVariable {
 pub enum MessagePart {
     TextBody(bool),
     HtmlBody(bool),
+    Contents,
+    Raw,
+    Name,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
