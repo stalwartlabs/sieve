@@ -21,33 +21,62 @@
  * for more details.
 */
 
-use crate::{compiler::Number, Context};
+use std::{cmp::Ordering, fmt::Display};
+
+use crate::{compiler::Number, runtime::Variable, Context};
 
 use super::{BinaryOperator, Expression, UnaryOperator};
 
 impl<'x> Context<'x> {
-    pub(crate) fn eval_expression(&self, expr: &[Expression]) -> Option<Number> {
+    pub(crate) fn eval_expression<'y: 'x, 'z>(
+        &'y self,
+        expr: &'z [Expression],
+    ) -> Option<Variable<'x>> {
         let mut stack = Vec::with_capacity(expr.len());
         for expr in expr {
             match expr {
                 Expression::Variable(v) => {
-                    stack.push(
-                        self.variable(v)?
-                            .to_number_checked()
-                            .unwrap_or(Number::Integer(0)),
-                    );
+                    stack.push(self.variable(v)?);
                 }
-                Expression::Number(n) => {
-                    stack.push(*n);
+                Expression::Number(val) => {
+                    stack.push(Variable::from(*val));
+                }
+                Expression::String(val) => {
+                    stack.push(Variable::from(val.to_string()));
                 }
                 Expression::UnaryOperator(op) => {
-                    let value = stack.last_mut()?;
-                    *value = value.apply_unary(*op);
+                    let value = stack.pop()?;
+                    stack.push(match op {
+                        UnaryOperator::Not => value.op_not(),
+                        UnaryOperator::Minus => value.op_minus(),
+                    });
                 }
                 Expression::BinaryOperator(op) => {
                     let right = stack.pop()?;
-                    let left = stack.last_mut()?;
-                    *left = left.apply_binary(*op, right);
+                    let left = stack.pop()?;
+                    stack.push(match op {
+                        BinaryOperator::Add => left.op_add(right),
+                        BinaryOperator::Subtract => left.op_subtract(right),
+                        BinaryOperator::Multiply => left.op_multiply(right),
+                        BinaryOperator::Divide => left.op_divide(right),
+                        BinaryOperator::And => left.op_and(right),
+                        BinaryOperator::Or => left.op_or(right),
+                        BinaryOperator::Xor => left.op_xor(right),
+                        BinaryOperator::Eq => left.op_eq(right),
+                        BinaryOperator::Ne => left.op_ne(right),
+                        BinaryOperator::Lt => left.op_lt(right),
+                        BinaryOperator::Le => left.op_le(right),
+                        BinaryOperator::Gt => left.op_gt(right),
+                        BinaryOperator::Ge => left.op_ge(right),
+                    });
+                }
+                Expression::Function { id, num_args } => {
+                    let num_args = *num_args as usize;
+                    let mut args = vec![Variable::Integer(0); num_args];
+                    for arg_num in 0..num_args {
+                        args[num_args - arg_num - 1] = stack.pop()?;
+                    }
+                    stack.push((self.runtime.functions.get(*id as usize)?)(args));
                 }
             }
         }
@@ -55,63 +84,232 @@ impl<'x> Context<'x> {
     }
 }
 
-impl Number {
-    fn apply_binary(self, op: BinaryOperator, other: Number) -> Number {
-        let (a, b) = match (self, other) {
-            (Number::Integer(a), Number::Integer(b)) => {
-                return match op {
-                    BinaryOperator::Add => Number::Integer(a.saturating_add(b)),
-                    BinaryOperator::Subtract => Number::Integer(a.saturating_sub(b)),
-                    BinaryOperator::Multiply => Number::Integer(a.saturating_mul(b)),
-                    BinaryOperator::Divide => {
-                        Number::Float(if b != 0 { a as f64 / b as f64 } else { 0.0 })
-                    }
-                    BinaryOperator::And => (a.into_bool() & b.into_bool()).into(),
-                    BinaryOperator::Or => (a.into_bool() | b.into_bool()).into(),
-                    BinaryOperator::Xor => (a.into_bool() ^ b.into_bool()).into(),
-                    BinaryOperator::Eq => Number::Integer(i64::from(a == b)),
-                    BinaryOperator::Ne => Number::Integer(i64::from(a != b)),
-                    BinaryOperator::Lt => Number::Integer(i64::from(a < b)),
-                    BinaryOperator::Le => Number::Integer(i64::from(a <= b)),
-                    BinaryOperator::Gt => Number::Integer(i64::from(a > b)),
-                    BinaryOperator::Ge => Number::Integer(i64::from(a >= b)),
+impl<'x> Variable<'x> {
+    fn op_add(self, other: Variable<'x>) -> Variable<'x> {
+        match (self, other) {
+            (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_add(b)),
+            (Variable::Float(a), Variable::Float(b)) => Variable::Float(a + b),
+            (Variable::Integer(i), Variable::Float(f))
+            | (Variable::Float(f), Variable::Integer(i)) => Variable::Float(i as f64 + f),
+            (Variable::Array(mut a), b) => {
+                a.push(b);
+                Variable::Array(a)
+            }
+            (a, Variable::Array(mut b)) => {
+                b.insert(0, a);
+                Variable::Array(b)
+            }
+            (Variable::String(a), b) => Variable::String(format!("{}{}", a, b)),
+            (a, Variable::String(b)) => Variable::String(format!("{}{}", a, b)),
+            (Variable::StringRef(a), b) => Variable::String(format!("{}{}", a, b)),
+            (a, Variable::StringRef(b)) => Variable::String(format!("{}{}", a, b)),
+        }
+    }
+
+    fn op_subtract(self, other: Variable<'x>) -> Variable<'x> {
+        match (self, other) {
+            (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_sub(b)),
+            (Variable::Float(a), Variable::Float(b)) => Variable::Float(a - b),
+            (Variable::Integer(a), Variable::Float(b)) => Variable::Float(a as f64 - b),
+            (Variable::Float(a), Variable::Integer(b)) => Variable::Float(a - b as f64),
+            (Variable::Array(mut a), b) | (b, Variable::Array(mut a)) => {
+                a.retain(|v| *v != b);
+                Variable::Array(a)
+            }
+            (a, b) => a.parse_number().op_subtract(b.parse_number()),
+        }
+    }
+
+    fn op_multiply(self, other: Variable<'x>) -> Variable<'x> {
+        match (self, other) {
+            (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_mul(b)),
+            (Variable::Float(a), Variable::Float(b)) => Variable::Float(a * b),
+            (Variable::Integer(i), Variable::Float(f))
+            | (Variable::Float(f), Variable::Integer(i)) => Variable::Float(i as f64 * f),
+            (a, b) => a.parse_number().op_multiply(b.parse_number()),
+        }
+    }
+
+    fn op_divide(self, other: Variable<'x>) -> Variable<'x> {
+        match (self, other) {
+            (Variable::Integer(a), Variable::Integer(b)) => {
+                Variable::Float(if b != 0 { a as f64 / b as f64 } else { 0.0 })
+            }
+            (Variable::Float(a), Variable::Float(b)) => {
+                Variable::Float(if b != 0.0 { a / b } else { 0.0 })
+            }
+            (Variable::Integer(a), Variable::Float(b)) => {
+                Variable::Float(if b != 0.0 { a as f64 / b } else { 0.0 })
+            }
+            (Variable::Float(a), Variable::Integer(b)) => {
+                Variable::Float(if b != 0 { a / b as f64 } else { 0.0 })
+            }
+            (a, b) => a.parse_number().op_divide(b.parse_number()),
+        }
+    }
+
+    fn op_and(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self.to_bool() & other.to_bool()))
+    }
+
+    fn op_or(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self.to_bool() | other.to_bool()))
+    }
+
+    fn op_xor(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self.to_bool() ^ other.to_bool()))
+    }
+
+    fn op_eq(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self == other))
+    }
+
+    fn op_ne(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self != other))
+    }
+
+    fn op_lt(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self < other))
+    }
+
+    fn op_le(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self <= other))
+    }
+
+    fn op_gt(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self > other))
+    }
+
+    fn op_ge(self, other: Variable<'x>) -> Variable<'x> {
+        Variable::Integer(i64::from(self >= other))
+    }
+
+    fn op_not(self) -> Variable<'x> {
+        Variable::Integer(i64::from(!self.to_bool()))
+    }
+
+    fn op_minus(self) -> Variable<'x> {
+        match self {
+            Variable::Integer(n) => Variable::Integer(-n),
+            Variable::Float(n) => Variable::Float(-n),
+            _ => self.parse_number().op_minus(),
+        }
+    }
+
+    pub fn parse_number(&self) -> Variable<'x> {
+        match self {
+            Variable::String(s) if !s.is_empty() => {
+                if let Ok(n) = s.parse::<i64>() {
+                    Variable::Integer(n)
+                } else if let Ok(n) = s.parse::<f64>() {
+                    Variable::Float(n)
+                } else {
+                    Variable::Integer(0)
                 }
             }
-            (Number::Float(a), Number::Float(b)) => (a, b),
-            (Number::Integer(a), Number::Float(b)) => (a as f64, b),
-            (Number::Float(a), Number::Integer(b)) => (a, b as f64),
-        };
-
-        match op {
-            BinaryOperator::Add => Number::Float(a + b),
-            BinaryOperator::Subtract => Number::Float(a - b),
-            BinaryOperator::Multiply => Number::Float(a * b),
-            BinaryOperator::Divide => Number::Float(if b != 0.0 { a / b } else { 0.0 }),
-            BinaryOperator::And => (a.into_bool() & b.into_bool()).into(),
-            BinaryOperator::Or => (a.into_bool() | b.into_bool()).into(),
-            BinaryOperator::Xor => (a.into_bool() ^ b.into_bool()).into(),
-            BinaryOperator::Eq => Number::Integer(i64::from(a == b)),
-            BinaryOperator::Ne => Number::Integer(i64::from(a != b)),
-            BinaryOperator::Lt => Number::Integer(i64::from(a < b)),
-            BinaryOperator::Le => Number::Integer(i64::from(a <= b)),
-            BinaryOperator::Gt => Number::Integer(i64::from(a > b)),
-            BinaryOperator::Ge => Number::Integer(i64::from(a >= b)),
+            Variable::StringRef(s) if !s.is_empty() => {
+                if let Ok(n) = s.parse::<i64>() {
+                    Variable::Integer(n)
+                } else if let Ok(n) = s.parse::<f64>() {
+                    Variable::Float(n)
+                } else {
+                    Variable::Integer(0)
+                }
+            }
+            Variable::Integer(n) => Variable::Integer(*n),
+            Variable::Float(n) => Variable::Float(*n),
+            Variable::Array(l) => Variable::Integer(l.is_empty() as i64),
+            _ => Variable::Integer(0),
         }
     }
 
-    fn apply_unary(self, op: UnaryOperator) -> Number {
-        match op {
-            UnaryOperator::Not => match self {
-                Number::Integer(n) => Number::Integer(i64::from(n == 0)),
-                Number::Float(n) => Number::Integer(i64::from(n == 0.0)),
-            },
-            UnaryOperator::Minus => match self {
-                Number::Integer(n) => Number::Integer(-n),
-                Number::Float(n) => Number::Float(-n),
-            },
+    fn to_bool(&self) -> bool {
+        match self {
+            Variable::Float(f) => *f != 0.0,
+            Variable::Integer(n) => *n != 0,
+            Variable::String(s) => !s.is_empty(),
+            Variable::StringRef(s) => !s.is_empty(),
+            Variable::Array(a) => !a.is_empty(),
         }
     }
+}
 
+impl<'x> PartialEq for Variable<'x> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Integer(a), Self::Integer(b)) => a == b,
+            (Self::Float(a), Self::Float(b)) => a == b,
+            (Self::Integer(a), Self::Float(b)) | (Self::Float(b), Self::Integer(a)) => {
+                *a as f64 == *b
+            }
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::StringRef(a), Self::StringRef(b)) => a == b,
+            (Self::String(a), Self::StringRef(b)) | (Self::StringRef(b), Self::String(a)) => a == b,
+            (Self::String(_) | Self::StringRef(_), Self::Integer(_) | Self::Float(_)) => {
+                &self.parse_number() == other
+            }
+            (Self::Integer(_) | Self::Float(_), Self::String(_) | Self::StringRef(_)) => {
+                self == &other.parse_number()
+            }
+            (Self::Array(a), Self::Array(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Variable<'_> {}
+
+impl<'x> PartialOrd for Variable<'x> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (Self::Integer(a), Self::Integer(b)) => a.partial_cmp(b),
+            (Self::Float(a), Self::Float(b)) => a.partial_cmp(b),
+            (Self::Integer(a), Self::Float(b)) => (*a as f64).partial_cmp(b),
+            (Self::Float(a), Self::Integer(b)) => a.partial_cmp(&(*b as f64)),
+            (Self::String(a), Self::String(b)) => a.partial_cmp(b),
+            (Self::StringRef(a), Self::StringRef(b)) => a.partial_cmp(b),
+            (Self::String(a), Self::StringRef(b)) => a.as_str().partial_cmp(b),
+            (Self::StringRef(a), Self::String(b)) => a.partial_cmp(&b.as_str()),
+            (Self::String(_) | Self::StringRef(_), Self::Integer(_) | Self::Float(_)) => {
+                self.parse_number().partial_cmp(other)
+            }
+            (Self::Integer(_) | Self::Float(_), Self::String(_) | Self::StringRef(_)) => {
+                self.partial_cmp(&other.parse_number())
+            }
+            (Self::Array(a), Self::Array(b)) => a.partial_cmp(b),
+            (Self::Array(_) | Self::String(_) | Self::StringRef(_), _) => Ordering::Greater.into(),
+            (_, Self::Array(_)) => Ordering::Less.into(),
+        }
+    }
+}
+
+impl<'x> Ord for Variable<'x> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Greater)
+    }
+}
+
+impl Display for Variable<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Variable::String(v) => v.fmt(f),
+            Variable::StringRef(v) => v.fmt(f),
+            Variable::Integer(v) => v.fmt(f),
+            Variable::Float(v) => v.fmt(f),
+            Variable::Array(v) => {
+                for (i, v) in v.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str("\n")?;
+                    }
+                    v.fmt(f)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Number {
     pub fn is_non_zero(&self) -> bool {
         match self {
             Number::Integer(n) => *n != 0,
@@ -176,36 +374,62 @@ impl From<i32> for Number {
 mod test {
     use ahash::{HashMap, HashMapExt};
 
-    use crate::compiler::{
-        grammar::expr::{parser::ExpressionParser, tokenizer::Tokenizer, Expression},
-        Number, VariableType,
+    use crate::{
+        compiler::{
+            grammar::expr::{
+                parser::ExpressionParser, tokenizer::Tokenizer, BinaryOperator, Expression, Token,
+                UnaryOperator,
+            },
+            VariableType,
+        },
+        runtime::Variable,
     };
 
     use evalexpr::*;
 
     pub trait EvalExpression {
-        fn eval(&self, variables: &HashMap<String, Number>) -> Option<Number>;
+        fn eval(&self, variables: &HashMap<String, Variable>) -> Option<Variable>;
     }
 
     impl EvalExpression for Vec<Expression> {
-        fn eval(&self, variables: &HashMap<String, Number>) -> Option<Number> {
+        fn eval(&self, variables: &HashMap<String, Variable>) -> Option<Variable> {
             let mut stack = Vec::with_capacity(self.len());
             for expr in self.iter() {
                 match expr {
                     Expression::Variable(VariableType::Global(v)) => {
-                        stack.push(*variables.get(v)?);
+                        stack.push(variables.get(v)?.as_ref().into_owned());
                     }
-                    Expression::Number(n) => {
-                        stack.push(*n);
+                    Expression::Number(val) => {
+                        stack.push(Variable::from(*val));
+                    }
+                    Expression::String(val) => {
+                        stack.push(Variable::from(val.to_string()));
                     }
                     Expression::UnaryOperator(op) => {
                         let value = stack.pop()?;
-                        stack.push(value.apply_unary(*op));
+                        stack.push(match op {
+                            UnaryOperator::Not => value.op_not(),
+                            UnaryOperator::Minus => value.op_minus(),
+                        });
                     }
                     Expression::BinaryOperator(op) => {
                         let right = stack.pop()?;
                         let left = stack.pop()?;
-                        stack.push(left.apply_binary(*op, right));
+                        stack.push(match op {
+                            BinaryOperator::Add => left.op_add(right),
+                            BinaryOperator::Subtract => left.op_subtract(right),
+                            BinaryOperator::Multiply => left.op_multiply(right),
+                            BinaryOperator::Divide => left.op_divide(right),
+                            BinaryOperator::And => left.op_and(right),
+                            BinaryOperator::Or => left.op_or(right),
+                            BinaryOperator::Xor => left.op_xor(right),
+                            BinaryOperator::Eq => left.op_eq(right),
+                            BinaryOperator::Ne => left.op_ne(right),
+                            BinaryOperator::Lt => left.op_lt(right),
+                            BinaryOperator::Le => left.op_le(right),
+                            BinaryOperator::Gt => left.op_gt(right),
+                            BinaryOperator::Ge => left.op_ge(right),
+                        });
                     }
                     _ => unreachable!("Invalid expression"),
                 }
@@ -217,16 +441,16 @@ mod test {
     #[test]
     fn eval_expression() {
         let mut variables = HashMap::from_iter([
-            ("A".to_string(), Number::Integer(0)),
-            ("B".to_string(), Number::Integer(0)),
-            ("C".to_string(), Number::Integer(0)),
-            ("D".to_string(), Number::Integer(0)),
-            ("E".to_string(), Number::Integer(0)),
-            ("F".to_string(), Number::Integer(0)),
-            ("G".to_string(), Number::Integer(0)),
-            ("H".to_string(), Number::Integer(0)),
-            ("I".to_string(), Number::Integer(0)),
-            ("J".to_string(), Number::Integer(0)),
+            ("A".to_string(), Variable::Integer(0)),
+            ("B".to_string(), Variable::Integer(0)),
+            ("C".to_string(), Variable::Integer(0)),
+            ("D".to_string(), Variable::Integer(0)),
+            ("E".to_string(), Variable::Integer(0)),
+            ("F".to_string(), Variable::Integer(0)),
+            ("G".to_string(), Variable::Integer(0)),
+            ("H".to_string(), Variable::Integer(0)),
+            ("I".to_string(), Variable::Integer(0)),
+            ("J".to_string(), Variable::Integer(0)),
         ]);
         let num_vars = variables.len();
 
@@ -290,13 +514,13 @@ mod test {
             "-A - B - (- C - D) - E - (-F)",
         ] {
             for (pos, v) in variables.values_mut().enumerate() {
-                *v = Number::Integer(pos as i64 + 1);
+                *v = Variable::Integer(pos as i64 + 1);
             }
 
             assert_expr(expr, &variables);
 
             for (pos, v) in variables.values_mut().enumerate() {
-                *v = Number::Integer((num_vars - pos) as i64);
+                *v = Variable::Integer((num_vars - pos) as i64);
             }
 
             assert_expr(expr, &variables);
@@ -315,16 +539,15 @@ mod test {
             "!(true && true) || !false",
             "!(!true || !false) && (!false) && !(!true)",
         ] {
-            let result = parse_expression(expr.replace("true", "1").replace("false", "0").as_str())
-                .eval(&HashMap::new())
-                .unwrap();
+            let pexp = parse_expression(expr.replace("true", "1").replace("false", "0").as_str());
+            let result = pexp.eval(&HashMap::new()).unwrap();
 
             //println!("{} => {:?}", expr, result);
 
             match (eval(expr).expect(expr), result) {
-                (Value::Float(a), Number::Float(b)) if a == b => (),
-                (Value::Float(a), Number::Integer(b)) if a == b as f64 => (),
-                (Value::Boolean(a), Number::Integer(b)) if a == (b != 0) => (),
+                (Value::Float(a), Variable::Float(b)) if a == b => (),
+                (Value::Float(a), Variable::Integer(b)) if a == b as f64 => (),
+                (Value::Boolean(a), Variable::Integer(b)) if a == (b != 0) => (),
                 (a, b) => {
                     panic!("{} => {:?} != {:?}", expr, a, b)
                 }
@@ -332,7 +555,7 @@ mod test {
         }
     }
 
-    fn assert_expr(expr: &str, variables: &HashMap<String, Number>) {
+    fn assert_expr(expr: &str, variables: &HashMap<String, Variable>) {
         let e = parse_expression(expr);
 
         let result = e.eval(variables).unwrap();
@@ -354,16 +577,18 @@ mod test {
             parse_expression(&str_expr)
                 .eval(&HashMap::new())
                 .unwrap()
+                .to_number()
                 .to_float(),
-            result.to_float()
+            result.to_number().to_float()
         );
 
         assert_eq!(
             parse_expression(&str_expr_float)
                 .eval(&HashMap::new())
                 .unwrap()
+                .to_number()
                 .to_float(),
-            result.to_float()
+            result.to_number().to_float()
         );
 
         //println!("{str_expr} ({e:?}) => {result:?}");
@@ -381,9 +606,9 @@ mod test {
                 .expect(&str_expr),
             result,
         ) {
-            (Value::Float(a), Number::Float(b)) if a == b => (),
-            (Value::Float(a), Number::Integer(b)) if a == b as f64 => (),
-            (Value::Boolean(a), Number::Integer(b)) if a == (b != 0) => (),
+            (Value::Float(a), Variable::Float(b)) if a == b => (),
+            (Value::Float(a), Variable::Integer(b)) if a == b as f64 => (),
+            (Value::Boolean(a), Variable::Integer(b)) if a == (b != 0) => (),
             (a, b) => {
                 panic!("{} => {:?} != {:?}", str_expr, a, b)
             }
@@ -392,7 +617,7 @@ mod test {
 
     fn parse_expression(expr: &str) -> Vec<Expression> {
         ExpressionParser::from_tokenizer(Tokenizer::new(expr, |var_name: &str, _: bool| {
-            Ok::<_, String>(VariableType::Global(var_name.to_string()))
+            Ok::<_, String>(Token::Variable(VariableType::Global(var_name.to_string())))
         }))
         .parse()
         .unwrap()

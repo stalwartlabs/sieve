@@ -21,13 +21,11 @@
  * for more details.
 */
 
-use crate::compiler::VariableType;
-
 use super::{tokenizer::Tokenizer, BinaryOperator, Expression, Token};
 
-pub struct ExpressionParser<'x, F>
+pub(crate) struct ExpressionParser<'x, F>
 where
-    F: Fn(&str, bool) -> Result<VariableType, String>,
+    F: Fn(&str, bool) -> Result<Token, String>,
 {
     pub(crate) tokenizer: Tokenizer<'x, F>,
     pub(crate) output: Vec<Expression>,
@@ -36,7 +34,7 @@ where
 
 impl<'x, F> ExpressionParser<'x, F>
 where
-    F: Fn(&str, bool) -> Result<VariableType, String>,
+    F: Fn(&str, bool) -> Result<Token, String>,
 {
     pub fn from_tokenizer(tokenizer: Tokenizer<'x, F>) -> Self {
         Self {
@@ -47,27 +45,67 @@ where
     }
 
     pub fn parse(mut self) -> Result<Self, String> {
+        let mut arg_count: Vec<i32> = vec![];
+
         while let Some(token) = self.tokenizer.next()? {
             match token {
-                Token::Variable(v) => self.output.push(Expression::Variable(v)),
-                Token::Number(n) => self.output.push(Expression::Number(n)),
+                Token::Variable(v) => {
+                    if let Some(x) = arg_count.last_mut() {
+                        *x = x.saturating_add(1);
+                    }
+                    self.output.push(Expression::Variable(v))
+                }
+                Token::Number(n) => {
+                    if let Some(x) = arg_count.last_mut() {
+                        *x = x.saturating_add(1);
+                    }
+                    self.output.push(Expression::Number(n))
+                }
+                Token::String(s) => {
+                    if let Some(x) = arg_count.last_mut() {
+                        *x = x.saturating_add(1);
+                    }
+                    self.output.push(Expression::String(s))
+                }
                 Token::UnaryOperator(uop) => self.operator_stack.push(Token::UnaryOperator(uop)),
                 Token::OpenParen => self.operator_stack.push(token),
                 Token::CloseParen => {
-                    while let Some(token) = self.operator_stack.pop() {
-                        match token {
-                            Token::OpenParen => break,
-                            Token::BinaryOperator(bop) => {
+                    loop {
+                        match self.operator_stack.pop() {
+                            Some(Token::OpenParen) => {
+                                break;
+                            }
+                            Some(Token::BinaryOperator(bop)) => {
                                 self.output.push(Expression::BinaryOperator(bop))
                             }
-                            Token::UnaryOperator(uop) => {
+                            Some(Token::UnaryOperator(uop)) => {
                                 self.output.push(Expression::UnaryOperator(uop))
                             }
                             _ => return Err("Mismatched parentheses".to_string()),
                         }
                     }
+
+                    if let Some(Token::Function { id, num_args, name }) = self.operator_stack.last()
+                    {
+                        let got_args = arg_count.pop().unwrap();
+                        if got_args != *num_args as i32 {
+                            return Err(format!(
+                                "Expression function {:?} expected {} arguments, got {}",
+                                name, num_args, got_args
+                            ));
+                        }
+                        let expr = Expression::Function {
+                            id: *id,
+                            num_args: *num_args,
+                        };
+                        self.operator_stack.pop();
+                        self.output.push(expr);
+                    }
                 }
                 Token::BinaryOperator(bop) => {
+                    if let Some(x) = arg_count.last_mut() {
+                        *x = x.saturating_sub(1);
+                    }
                     while let Some(top_token) = self.operator_stack.last() {
                         match top_token {
                             Token::BinaryOperator(top_bop) => {
@@ -88,6 +126,30 @@ where
                         }
                     }
                     self.operator_stack.push(Token::BinaryOperator(bop));
+                }
+                Token::Function { id, name, num_args } => {
+                    if let Some(x) = arg_count.last_mut() {
+                        *x = x.saturating_add(1);
+                    }
+                    arg_count.push(0);
+                    self.operator_stack
+                        .push(Token::Function { id, name, num_args })
+                }
+                Token::Comma => {
+                    while let Some(token) = self.operator_stack.last() {
+                        match token {
+                            Token::OpenParen => break,
+                            Token::BinaryOperator(bop) => {
+                                self.output.push(Expression::BinaryOperator(*bop));
+                                self.operator_stack.pop();
+                            }
+                            Token::UnaryOperator(uop) => {
+                                self.output.push(Expression::UnaryOperator(*uop));
+                                self.operator_stack.pop();
+                            }
+                            _ => break,
+                        }
+                    }
                 }
             }
         }

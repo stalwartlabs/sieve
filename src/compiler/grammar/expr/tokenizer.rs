@@ -26,19 +26,16 @@ use std::{
     slice::Iter,
 };
 
-use crate::{
-    compiler::{Number, VariableType},
-    runtime::eval::IntoString,
-};
+use crate::{compiler::Number, runtime::eval::IntoString};
 
 use super::{BinaryOperator, Token, UnaryOperator};
 
-pub struct Tokenizer<'x, F>
+pub(crate) struct Tokenizer<'x, F>
 where
-    F: Fn(&str, bool) -> Result<VariableType, String>,
+    F: Fn(&str, bool) -> Result<Token, String>,
 {
     pub(crate) iter: Peekable<Enumerate<Iter<'x, u8>>>,
-    variable_map: F,
+    token_map: F,
     buf: Vec<u8>,
     depth: u32,
     next_token: Vec<Token>,
@@ -51,14 +48,15 @@ where
 
 impl<'x, F> Tokenizer<'x, F>
 where
-    F: Fn(&str, bool) -> Result<VariableType, String>,
+    F: Fn(&str, bool) -> Result<Token, String>,
 {
-    pub fn new(expr: &'x str, variable_map: F) -> Self {
-        Self::from_iter(expr.as_bytes().iter().enumerate().peekable(), variable_map)
+    #[cfg(test)]
+    pub fn new(expr: &'x str, token_map: F) -> Self {
+        Self::from_iter(expr.as_bytes().iter().enumerate().peekable(), token_map)
     }
 
     #[allow(clippy::should_implement_trait)]
-    pub(crate) fn from_iter(iter: Peekable<Enumerate<Iter<'x, u8>>>, variable_map: F) -> Self {
+    pub(crate) fn from_iter(iter: Peekable<Enumerate<Iter<'x, u8>>>, token_map: F) -> Self {
         Self {
             iter,
             buf: Vec::new(),
@@ -69,7 +67,7 @@ where
             has_alpha: false,
             is_start: true,
             is_eof: false,
-            variable_map,
+            token_map,
         }
     }
 
@@ -99,14 +97,13 @@ where
                     self.is_eof = true;
                     break;
                 }
-                b'(' | b'[' if self.buf.last().map_or(false, |c| c.is_ascii_alphanumeric()) => {
+                b'[' if self.buf.last().map_or(false, |c| c.is_ascii_alphanumeric()) => {
                     self.buf.push(ch);
                 }
-                b'-' if self.buf.last().map_or(false, |c| *c == b'[') => {
+                b'-' if self.buf.last().map_or(false, |c| *c == b'[')
+                    || matches!(self.buf.get(0..7), Some(b"header.")) =>
+                {
                     self.buf.push(ch);
-                }
-                b')' if self.buf.contains(&b'(') => {
-                    self.buf.push(b')');
                 }
                 b']' if self.buf.contains(&b'[') => {
                     self.buf.push(b']');
@@ -114,7 +111,6 @@ where
                 b'*' if self.buf.last().map_or(false, |&c| c == b'[') => {
                     self.buf.push(ch);
                 }
-
                 _ => {
                     let prev_token = if !self.buf.is_empty() {
                         self.is_start = false;
@@ -185,11 +181,42 @@ where
                             }
                             _ => Token::BinaryOperator(BinaryOperator::Lt),
                         },
+                        b',' => {
+                            if self.depth == 0 {
+                                return Err("Comma outside of function call".to_string());
+                            }
+                            Token::Comma
+                        }
                         b' ' => {
                             if prev_token.is_some() {
                                 return Ok(prev_token);
                             } else {
                                 continue;
+                            }
+                        }
+                        b'\"' | b'\'' => {
+                            let mut buf = Vec::with_capacity(16);
+                            let stop_ch = ch;
+                            let mut last_ch = 0;
+                            let mut found_end = false;
+
+                            for (_, &ch) in self.iter.by_ref() {
+                                if ch == stop_ch && last_ch != b'\\' {
+                                    found_end = true;
+                                    break;
+                                } else if ch != b'\\' || last_ch == b'\\' {
+                                    buf.push(ch);
+                                }
+                                last_ch = ch;
+                            }
+
+                            if found_end {
+                                Token::String(
+                                    String::from_utf8(buf)
+                                        .map_err(|_| "Invalid UTF-8".to_string())?,
+                                )
+                            } else {
+                                return Err("Unterminated string".to_string());
                             }
                         }
                         _ => {
@@ -233,7 +260,7 @@ where
                     .map_err(|_| format!("Invalid integer value {}", buf,))
             }
         } else {
-            let result = (self.variable_map)(&buf, self.has_dot).map(Token::Variable);
+            let result = (self.token_map)(&buf, self.has_dot);
             self.has_alpha = false;
             self.has_number = false;
             self.has_dot = false;

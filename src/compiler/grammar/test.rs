@@ -506,11 +506,8 @@ impl<'x> CompilerState<'x> {
 
                     match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
                         expr.iter().enumerate().peekable(),
-                        |var_name, maybe_namespace| match self
-                            .parse_variable(var_name, maybe_namespace)
-                        {
-                            Ok(Some(var)) => Ok(var),
-                            _ => Err(format!("Invalid variable name {var_name:?}")),
+                        |var_name, maybe_namespace| {
+                            self.parse_expr_fnc_or_var(var_name, maybe_namespace)
                         },
                     ))
                     .parse()

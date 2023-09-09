@@ -28,12 +28,12 @@ use mail_parser::HeaderName;
 use crate::{
     compiler::{
         grammar::{
-            expr::{parser::ExpressionParser, tokenizer::Tokenizer},
+            expr::{self, parser::ExpressionParser, tokenizer::Tokenizer},
             instruction::CompilerState,
             AddressPart,
         },
         ContentTypePart, ErrorType, HeaderPart, HeaderVariable, MessagePart, Number,
-        ReceivedHostname, ReceivedPart, Transform, Value, VariableType,
+        ReceivedHostname, ReceivedPart, Value, VariableType,
     },
     runtime::eval::IntoString,
     Envelope, MAX_MATCH_VARIABLES,
@@ -101,11 +101,8 @@ impl<'x> CompilerState<'x> {
 
                         match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
                             iter,
-                            |var_name, maybe_namespace| match self
-                                .parse_variable(var_name, maybe_namespace)
-                            {
-                                Ok(Some(var)) => Ok(var),
-                                _ => Err(format!("Invalid variable name {var_name:?}")),
+                            |var_name, maybe_namespace| {
+                                self.parse_expr_fnc_or_var(var_name, maybe_namespace)
                             },
                         ))
                         .parse()
@@ -147,7 +144,7 @@ impl<'x> CompilerState<'x> {
                     }
                 },
                 State::Variable => match ch {
-                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'[' | b']' | b'*' | b'-' | b'(' | b')' => {
+                    b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'[' | b']' | b'*' | b'-' => {
                         var_is_number = false;
                     }
                     b'.' => {
@@ -341,7 +338,7 @@ impl<'x> CompilerState<'x> {
 
     pub fn parse_variable(
         &self,
-        mut var_name: &str,
+        var_name: &str,
         maybe_namespace: bool,
     ) -> Result<Option<VariableType>, ErrorType> {
         if !maybe_namespace {
@@ -353,19 +350,6 @@ impl<'x> CompilerState<'x> {
                 Ok(None)
             }
         } else {
-            let mut functions = vec![];
-            while let Some(fnc_name) = var_name.strip_suffix("()") {
-                if let Some((var_name_, fnc_id)) = fnc_name
-                    .rsplit_once('.')
-                    .and_then(|(v, f)| (v.trim(), self.compiler.functions.get(f.trim())?).into())
-                {
-                    var_name = var_name_;
-                    functions.push(*fnc_id);
-                } else {
-                    return Err(ErrorType::InvalidExpression(var_name.to_string()));
-                }
-            }
-
             let var = match var_name.to_lowercase().split_once('.') {
                 Some(("global", var_name)) if !var_name.is_empty() => {
                     VariableType::Global(var_name.to_string())
@@ -401,6 +385,12 @@ impl<'x> CompilerState<'x> {
                     "to_html" => VariableType::Part(MessagePart::HtmlBody(true)),
                     _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
                 },
+                Some(("part", var_name)) if !var_name.is_empty() => match var_name {
+                    "text" => VariableType::Part(MessagePart::Contents),
+                    "raw" => VariableType::Part(MessagePart::Raw),
+                    "name" => VariableType::Part(MessagePart::Name),
+                    _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
+                },
                 None => {
                     if self.is_var_global(var_name) {
                         VariableType::Global(var_name.to_string())
@@ -413,15 +403,7 @@ impl<'x> CompilerState<'x> {
                 _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
             };
 
-            if !functions.is_empty() {
-                functions.reverse();
-                Ok(Some(VariableType::Transform(Transform {
-                    variable: Box::new(var),
-                    functions,
-                })))
-            } else {
-                Ok(Some(var))
-            }
+            Ok(Some(var))
         }
     }
 
@@ -608,6 +590,27 @@ impl<'x> CompilerState<'x> {
         }
     }
 
+    pub fn parse_expr_fnc_or_var(
+        &self,
+        var_name: &str,
+        maybe_namespace: bool,
+    ) -> Result<expr::Token, String> {
+        match self.parse_variable(var_name, maybe_namespace) {
+            Ok(Some(var)) => Ok(expr::Token::Variable(var)),
+            _ => {
+                if let Some((id, num_args)) = self.compiler.functions.get(var_name) {
+                    Ok(expr::Token::Function {
+                        name: var_name.to_string(),
+                        id: *id,
+                        num_args: *num_args,
+                    })
+                } else {
+                    Err(format!("Invalid variable or function name {var_name:?}"))
+                }
+            }
+        }
+    }
+
     #[inline(always)]
     fn add_value(
         &mut self,
@@ -723,17 +726,19 @@ impl Display for VariableType {
             VariableType::Part(part) => {
                 write!(
                     f,
-                    "${{body.{}",
+                    "${{{}",
                     match part {
-                        MessagePart::TextBody(true) => "to_text",
-                        MessagePart::TextBody(false) => "text",
-                        MessagePart::HtmlBody(true) => "to_html",
-                        MessagePart::HtmlBody(false) => "html",
+                        MessagePart::TextBody(true) => "body.to_text",
+                        MessagePart::TextBody(false) => "body.text",
+                        MessagePart::HtmlBody(true) => "body.to_html",
+                        MessagePart::HtmlBody(false) => "body.html",
+                        MessagePart::Contents => "part.text",
+                        MessagePart::Raw => "part.raw",
+                        MessagePart::Name => "part.name",
                     }
                 )?;
                 f.write_str("}")
             }
-            VariableType::Transform(t) => t.variable.fmt(f),
         }
     }
 }

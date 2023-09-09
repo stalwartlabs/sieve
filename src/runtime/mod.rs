@@ -45,7 +45,7 @@ pub mod serialize;
 pub mod tests;
 pub mod variables;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Variable<'x> {
     String(String),
     StringRef(&'x str),
@@ -53,8 +53,6 @@ pub enum Variable<'x> {
     Float(f64),
     Array(Vec<Variable<'x>>),
 }
-
-impl Eq for Variable<'_> {}
 
 #[derive(Debug)]
 pub enum RuntimeError {
@@ -677,7 +675,20 @@ impl FunctionMap {
     }
 
     pub fn with_function(mut self, name: impl Into<String>, fnc: Function) -> Self {
-        self.map.insert(name.into(), self.functions.len());
+        self.map
+            .insert(name.into(), (self.functions.len() as u32, 1));
+        self.functions.push(fnc);
+        self
+    }
+
+    pub fn with_function_args(
+        mut self,
+        name: impl Into<String>,
+        fnc: Function,
+        num_args: u32,
+    ) -> Self {
+        self.map
+            .insert(name.into(), (self.functions.len() as u32, num_args));
         self.functions.push(fnc);
         self
     }

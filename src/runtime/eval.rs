@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Header, HeaderName, HeaderValue, Host, PartType,
+    Addr, Header, HeaderName, HeaderValue, Host, MimeHeaders, PartType,
 };
 
 use crate::{
@@ -81,14 +81,29 @@ impl<'x> Context<'x> {
                         _ => None,
                     }
                 }
-            },
-            VariableType::Transform(transform) => {
-                let mut var = self.variable(&transform.variable)?;
-                for fnc_id in &transform.functions {
-                    var = (self.runtime.functions.get(*fnc_id)?)(var);
+                MessagePart::Contents => match &self.message.parts.get(self.part)?.body {
+                    PartType::Text(text) | PartType::Html(text) => {
+                        Variable::from(text.as_ref()).into()
+                    }
+                    PartType::Binary(bin) | PartType::InlineBinary(bin) => {
+                        Variable::from(String::from_utf8_lossy(bin.as_ref())).into()
+                    }
+                    _ => None,
+                },
+                MessagePart::Raw => {
+                    let part = self.message.parts.get(self.part)?;
+                    self.message
+                        .raw_message()
+                        .get(part.raw_body_offset()..part.raw_end_offset())
+                        .map(|v| Variable::from(String::from_utf8_lossy(v)))
                 }
-                Some(var)
-            }
+                MessagePart::Name => self
+                    .message
+                    .parts
+                    .get(self.part)?
+                    .attachment_name()
+                    .map(Variable::from),
+            },
         }
     }
 

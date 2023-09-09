@@ -308,14 +308,14 @@ pub struct Compiler {
 
     // Plugins
     pub(crate) plugins: AHashMap<String, PluginSchema>,
-    pub(crate) functions: AHashMap<String, usize>,
+    pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function = fn(Variable<'_>) -> Variable<'static>;
+pub type Function = fn(Vec<Variable<'_>>) -> Variable<'static>;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap {
-    pub(crate) map: AHashMap<String, usize>,
+    pub(crate) map: AHashMap<String, (u32, u32)>,
     pub(crate) functions: Vec<Function>,
 }
 
@@ -643,23 +643,38 @@ mod tests {
 
     fn run_test(script_path: &Path) {
         let mut fnc_map = FunctionMap::new()
-            .with_function("trim", |v| v.to_cow().trim().to_string().into())
-            .with_function("len", |v| v.to_cow().len().into())
+            .with_function("trim", |v| v[0].to_cow().trim().to_string().into())
+            .with_function("len", |v| v[0].to_cow().len().into())
             .with_function("to_lowercase", |v| {
-                v.to_cow().to_lowercase().to_string().into()
+                v[0].to_cow().to_lowercase().to_string().into()
             })
             .with_function("to_uppercase", |v| {
-                v.to_cow().to_uppercase().to_string().into()
+                v[0].to_cow().to_uppercase().to_string().into()
             })
             .with_function("is_uppercase", |v| {
-                v.to_cow()
+                v[0].to_cow()
                     .as_ref()
                     .chars()
                     .filter(|c| c.is_alphabetic())
                     .all(|c| c.is_uppercase())
                     .into()
             })
-            .with_function("char_count", |v| v.to_cow().as_ref().chars().count().into());
+            .with_function("is_ascii", |v| {
+                v[0].to_cow().as_ref().chars().all(|c| c.is_ascii()).into()
+            })
+            .with_function("char_count", |v| {
+                v[0].to_cow().as_ref().chars().count().into()
+            })
+            .with_function_args(
+                "contains",
+                |v| v[0].to_string().contains(&v[1].to_string()).into(),
+                2,
+            )
+            .with_function_args(
+                "concat_three",
+                |v| format!("{}-{}-{}", v[0], v[1], v[2]).into(),
+                3,
+            );
         let mut compiler = Compiler::new()
             .with_max_string_size(10240)
             .register_functions(&mut fnc_map);

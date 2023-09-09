@@ -28,24 +28,62 @@ Joe.
 
 
 test "Functions" {
-    if not string :is "${header.subject.len()}" "16" {
-        test_fail "header.subject.len() is ${header.subject.len()}";
+    if not string :is "%{len(header.subject)}" "16" {
+        test_fail "len(header.subject) is %{len(header.subject)}";
     }
 
-    if not eval "header.subject.len() == 16" {
-        test_fail "eval header.subject.len() is %{header.subject.len() == 16}";
+    if not eval "len(header.subject) == 16" {
+        test_fail "eval len(header.subject) is %{len(header.subject) == 16}";
     }
 
-    if not eval "header.to[*].name[*].trim().char_count() > 20" {
-        test_fail "eval header.to[*].name[*].trim().char_count() (${header.to[*].name[*].trim().char_count()}) is %{header.to[*].name[*].trim().char_count() > 20}";
+    if not eval "char_count(trim(header.to[*].name[*])) > 20" {
+        test_fail "eval char_count(trim(header.to[*].name[*])) (${char_count(trim(header.to[*].name[*]))}) is %{char_count(trim(header.to[*].name[*])) > 20}";
     }
 
     set "my_untrimmed_text" "  hello world   ";
-    if string :is "${my_untrimmed_text.trim()}" "${my_untrimmed_text}" {
+    if string :is "${trim(my_untrimmed_text)}" "${my_untrimmed_text}" {
         test_fail "trim() failed";
     }
 
-    if string :is "${my_untrimmed_text.trim().len()}" "${my_untrimmed_text.len()}" {
-        test_fail "chained functions failed ${my_untrimmed_text.trim().len()} != ${my_untrimmed_text.len()}";
+    if string :is "%{len(trim(my_untrimmed_text))}" "%{len(my_untrimmed_text)}" {
+        test_fail "chained functions failed %{len(trim(my_untrimmed_text))} != %{len(my_untrimmed_text)}";
     }
+
+    if eval "len(trim(my_untrimmed_text)) == len(my_untrimmed_text)" {
+        test_fail "chained functions failed %{len(trim(my_untrimmed_text))} != %{len(my_untrimmed_text)}";
+    }
+
+    if not eval "contains(my_untrimmed_text, 'hello')" {
+        test_fail "contains() failed ${my_untrimmed_text}";
+    }
+
+    if eval "concat_three(trim(my_untrimmed_text), 'test', len(trim(header.subject)) * 2 / 6 + 38) != 'hello world-test-43.333333333333336'" {
+        test_fail "concat_three() failed %{concat_three(trim(my_untrimmed_text), 'test', len(trim(header.subject)) * 2 / 6 + 38)}";
+    }
+
+    if eval "'hello' + 'world' + 123 != 'helloworld123'" {
+        test_fail "'hello' + 'world' + 123 != 'helloworld123' (%{'hello' + 'world' + 123})";
+    }
+
+    if eval "'2' != 2" {
+        test_fail "'2' != 2";
+    }
+
+    if not eval "'2' == 2" {
+        test_fail "'2' == 2";
+    }
+
+    if not eval "'3' > 2 && '2' < 3" {
+        test_fail "'3' > 2 && '2' < 3";
+    }
+
+    if eval "'hello' != trim(' hello ')" {
+        test_fail "'hello' != trim(' hello ')";
+    }
+
+    set "eval_concat" "%{trim(my_untrimmed_text) + '!!!'}";
+    if eval "eval_concat != 'hello world!!!'" {
+        test_fail "eval_concat != 'hello world!!!' (%{eval_concat})";
+    }
+
 }

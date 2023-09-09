@@ -1,0 +1,150 @@
+require "vnd.stalwart.testsuite";
+require "vnd.stalwart.plugins";
+require "vnd.stalwart.foreveryline";
+require "vnd.stalwart.eval";
+require "relational";
+require "body";
+require "foreverypart";
+require "variables";
+require "extracttext";
+
+test_set "message" text:
+From: john@example.org
+To: jane@example.org
+Subject: RFC 8621 Section 4.1.4 test
+Content-Type: multipart/mixed; boundary="1"
+
+--1
+Content-Type: text/plain
+Content-Disposition: inline
+
+A
+--1  
+Content-Type: multipart/mixed; boundary="2"
+
+--2
+Content-Type: multipart/alternative; boundary="3"
+
+--3
+Content-Type: multipart/mixed; boundary="4"
+
+--4
+Content-Type: text/html
+Content-Disposition: inline
+
+<b>B</b>
+--4  
+Content-Type: image/jpeg
+Content-Disposition: inline
+
+C
+--4  
+Content-Type: text/plain
+Content-Disposition: inline
+
+D
+--4--
+
+--3 
+Content-Type: multipart/related; boundary="5"
+
+--5
+Content-Type: text/html
+
+<html>E</html>
+--5  
+Content-Type: image/jpeg
+
+F
+--5--  
+
+--3-- 
+
+--2   
+Content-Type: image/jpeg
+Content-Disposition: attachment
+
+G
+--2  
+Content-Type: application/x-excel
+
+H
+--2  
+Content-Type: message/rfc822
+
+Subject: J
+
+J
+--2--
+
+--1  
+Content-Type: text/plain
+Content-Disposition: inline
+
+K
+--1--
+.
+;
+
+
+test "MIME parts" {
+	set "count" "0";
+    set "mime_text_html_count" "0";
+    set "mime_text_plain_count" "0";
+    set "ma_non_text" "0";
+    set "ma_invalid_ascii" "0";
+
+	foreverypart {
+        set "ct" "%{to_lowercase(header.content-type)}";
+
+        if eval "ct == 'text/plain'" {
+            set "mime_text_plain_count" "%{mime_text_plain_count + 1}";
+        } elsif eval "ct == 'text/html'" {
+            set "mime_text_html_count" "%{mime_text_html_count + 1}";
+        } elsif eval "ct == 'multipart/alternative'" {
+            foreverypart {
+                set "ma_ct" "%{to_lowercase(header.content-type)}";
+
+                if eval "ma_ct == 'text/plain'" {
+                    set "mime_text_plain_count" "%{mime_text_plain_count + 1}";
+                } elsif eval "ma_ct == 'text/html'" {
+                    set "mime_text_html_count" "%{mime_text_html_count + 1}";
+                }
+
+                if eval "!(ma_ct == 'multipart/related' || ma_ct == 'application/rtf' || header.content-type.type == 'text')" {
+                    set "ma_non_text" "1";
+                }
+            }
+        }
+
+        if eval "header.content-type.type == 'text' && (header.content-transfer-encoding == '' || header.content-transfer-encoding == '7bit') && !is_ascii(part.raw)" {
+            set "ma_invalid_ascii" "1";
+        }
+
+        if eval "count == 2" {
+    		test_fail "${header.content-type} ${header.content-type.attr.boundary} ${body.text}";
+        }
+
+		set "count" "%{count + 1}";
+	}
+}
+
+/*
+
+    "check_mime_multipart_ratio",
+    "check_msg_parse_flags",
+    "check_abundant_unicode_ratio",
+    "check_for_faraway_charset",
+    "check_base64_length",
+    "check_for_uppercase",
+    "multipart_alternative_difference",
+    "multipart_alternative_difference_count",
+    "tvd_vertical_words",
+
+
+    "check_for_mime",
+    "check_for_mime_html",
+    "check_for_ascii_text_illegal",
+    "check_ma_non_text",
+
+*/

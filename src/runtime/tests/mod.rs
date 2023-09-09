@@ -64,6 +64,7 @@ impl Test {
             Test::String(test) => test.exec(ctx, false),
             Test::EvalExpression(expr) => TestResult::Bool(
                 ctx.eval_expression(&expr.expr)
+                    .and_then(|v| v.to_number_checked())
                     .unwrap_or_default()
                     .is_non_zero()
                     ^ expr.is_not,
