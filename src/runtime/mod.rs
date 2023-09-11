@@ -21,11 +21,18 @@
  * for more details.
 */
 
+pub mod actions;
+pub mod context;
+pub mod eval;
+pub mod expression;
+pub mod serialize;
+pub mod tests;
+pub mod variables;
+
 use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
 use mail_parser::{Encoding, HeaderName, Message, MessageParser, MessagePart, PartType};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
@@ -38,20 +45,14 @@ use crate::{
 
 use self::eval::ToString;
 
-pub mod actions;
-pub mod context;
-pub mod eval;
-pub mod serialize;
-pub mod tests;
-pub mod variables;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum Variable<'x> {
     String(String),
     StringRef(&'x str),
     Integer(i64),
     Float(f64),
     Array(Vec<Variable<'x>>),
+    ArrayRef(&'x Vec<Variable<'x>>),
 }
 
 #[derive(Debug)]
@@ -78,6 +79,7 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
             Variable::Array(l) => Cow::Owned(l.to_string()),
+            Variable::ArrayRef(l) => Cow::Owned(l.to_string()),
         }
     }
 
@@ -88,6 +90,7 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
             Variable::Array(l) => Cow::Owned(l.to_string()),
+            Variable::ArrayRef(l) => Cow::Owned(l.to_string()),
         }
     }
 
@@ -98,6 +101,7 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => n.to_string(),
             Variable::Float(n) => n.to_string(),
             Variable::Array(l) => l.to_string(),
+            Variable::ArrayRef(l) => l.to_string(),
         }
     }
 
@@ -128,6 +132,7 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => s.len(),
             Variable::Integer(_) | Variable::Float(_) => 2,
             Variable::Array(l) => l.iter().map(|v| v.len() + 2).sum(),
+            Variable::ArrayRef(l) => l.iter().map(|v| v.len() + 2).sum(),
         }
     }
 
@@ -136,6 +141,17 @@ impl<'x> Variable<'x> {
             Variable::String(s) => s.is_empty(),
             Variable::StringRef(s) => s.is_empty(),
             _ => false,
+        }
+    }
+
+    pub fn to_owned(&self) -> Variable<'static> {
+        match self {
+            Variable::String(s) => Variable::String(s.to_string()),
+            Variable::StringRef(s) => Variable::String(s.to_string()),
+            Variable::Integer(n) => Variable::Integer(*n),
+            Variable::Float(n) => Variable::Float(*n),
+            Variable::Array(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
+            Variable::ArrayRef(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
         }
     }
 
@@ -148,6 +164,7 @@ impl<'x> Variable<'x> {
             Variable::Array(l) => {
                 Variable::Array(l.into_iter().map(Variable::into_owned).collect())
             }
+            Variable::ArrayRef(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
         }
     }
 
@@ -157,7 +174,8 @@ impl<'x> Variable<'x> {
             Variable::StringRef(s) => Variable::StringRef(s),
             Variable::Integer(n) => Variable::Integer(*n),
             Variable::Float(n) => Variable::Float(*n),
-            Variable::Array(l) => Variable::Array(l.iter().map(Variable::as_ref).collect()),
+            Variable::Array(l) => Variable::ArrayRef(l),
+            Variable::ArrayRef(l) => Variable::ArrayRef(l),
         }
     }
 }
@@ -271,7 +289,7 @@ impl<'x> self::eval::ToString for Vec<Variable<'x>> {
                 Variable::StringRef(v) => result.push_str(v),
                 Variable::Integer(v) => result.push_str(&v.to_string()),
                 Variable::Float(v) => result.push_str(&v.to_string()),
-                Variable::Array(_) => {}
+                Variable::Array(_) | Variable::ArrayRef(_) => {}
             }
         }
         result

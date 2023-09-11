@@ -47,6 +47,7 @@ pub(crate) enum Token {
     Identifier(Word),
     Tag(Word),
     Unknown(String),
+    Colon,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,6 +92,7 @@ impl Display for Token {
             Token::ParenthesisClose => f.write_str(")"),
             Token::Comma => f.write_str(","),
             Token::Semicolon => f.write_str(";"),
+            Token::Colon => f.write_str(":"),
             Token::Number(n) => write!(f, "{n}"),
             Token::Identifier(w) => w.fmt(f),
             Token::Tag(t) => write!(f, ":{t}"),

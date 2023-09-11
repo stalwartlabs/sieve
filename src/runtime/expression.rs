@@ -25,7 +25,7 @@ use std::{cmp::Ordering, fmt::Display};
 
 use crate::{compiler::Number, runtime::Variable, Context};
 
-use super::{BinaryOperator, Expression, UnaryOperator};
+use crate::compiler::grammar::expr::{BinaryOperator, Expression, UnaryOperator};
 
 impl<'x> Context<'x> {
     pub(crate) fn eval_expression<'y: 'x, 'z>(
@@ -91,14 +91,36 @@ impl<'x> Variable<'x> {
             (Variable::Float(a), Variable::Float(b)) => Variable::Float(a + b),
             (Variable::Integer(i), Variable::Float(f))
             | (Variable::Float(f), Variable::Integer(i)) => Variable::Float(i as f64 + f),
+            (Variable::Array(mut a), Variable::Array(b)) => {
+                a.extend(b);
+                Variable::Array(a)
+            }
+            (Variable::ArrayRef(a), Variable::ArrayRef(b)) => {
+                Variable::Array(a.iter().chain(b).map(|v| v.as_ref()).collect())
+            }
+            (Variable::Array(mut a), Variable::ArrayRef(b)) => {
+                a.extend(b.iter().map(|v| v.as_ref()));
+                Variable::Array(a)
+            }
+            (Variable::ArrayRef(a), Variable::Array(b)) => {
+                Variable::Array(a.iter().map(|v| v.as_ref()).chain(b).collect())
+            }
             (Variable::Array(mut a), b) => {
                 a.push(b);
                 Variable::Array(a)
+            }
+            (Variable::ArrayRef(a), b) => {
+                Variable::Array(a.iter().map(|v| v.as_ref()).chain([b]).collect())
             }
             (a, Variable::Array(mut b)) => {
                 b.insert(0, a);
                 Variable::Array(b)
             }
+            (a, Variable::ArrayRef(b)) => Variable::Array(
+                [a].into_iter()
+                    .chain(b.iter().map(|v| v.as_ref()))
+                    .collect(),
+            ),
             (Variable::String(a), b) => Variable::String(format!("{}{}", a, b)),
             (a, Variable::String(b)) => Variable::String(format!("{}{}", a, b)),
             (Variable::StringRef(a), b) => Variable::String(format!("{}{}", a, b)),
@@ -230,6 +252,7 @@ impl<'x> Variable<'x> {
             Variable::String(s) => !s.is_empty(),
             Variable::StringRef(s) => !s.is_empty(),
             Variable::Array(a) => !a.is_empty(),
+            Variable::ArrayRef(a) => !a.is_empty(),
         }
     }
 }
@@ -252,6 +275,8 @@ impl<'x> PartialEq for Variable<'x> {
                 self == &other.parse_number()
             }
             (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::ArrayRef(a), Self::ArrayRef(b)) => a == b,
+            (Self::Array(a), Self::ArrayRef(b)) | (Self::ArrayRef(b), Self::Array(a)) => a == *b,
             _ => false,
         }
     }
@@ -277,8 +302,13 @@ impl<'x> PartialOrd for Variable<'x> {
                 self.partial_cmp(&other.parse_number())
             }
             (Self::Array(a), Self::Array(b)) => a.partial_cmp(b),
-            (Self::Array(_) | Self::String(_) | Self::StringRef(_), _) => Ordering::Greater.into(),
-            (_, Self::Array(_)) => Ordering::Less.into(),
+            (Self::ArrayRef(a), Self::ArrayRef(b)) => a.partial_cmp(b),
+            (Self::Array(a), Self::ArrayRef(b)) => a.partial_cmp(b),
+            (Self::ArrayRef(a), Self::Array(b)) => a.partial_cmp(&b),
+            (Self::Array(_) | Self::ArrayRef(_) | Self::String(_) | Self::StringRef(_), _) => {
+                Ordering::Greater.into()
+            }
+            (_, Self::Array(_) | Self::ArrayRef(_)) => Ordering::Less.into(),
         }
     }
 }
@@ -297,6 +327,15 @@ impl Display for Variable<'_> {
             Variable::Integer(v) => v.fmt(f),
             Variable::Float(v) => v.fmt(f),
             Variable::Array(v) => {
+                for (i, v) in v.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str("\n")?;
+                    }
+                    v.fmt(f)?;
+                }
+                Ok(())
+            }
+            Variable::ArrayRef(v) => {
                 for (i, v) in v.iter().enumerate() {
                     if i > 0 {
                         f.write_str("\n")?;

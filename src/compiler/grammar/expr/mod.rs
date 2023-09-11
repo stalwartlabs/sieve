@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::compiler::{Number, VariableType};
 
-pub mod eval;
 pub mod parser;
 pub mod tokenizer;
 
