@@ -103,6 +103,12 @@ impl<'x> Context<'x> {
                     .get(self.part)?
                     .attachment_name()
                     .map(Variable::from),
+                MessagePart::IsEncodingProblem => {
+                    Variable::from(self.message.parts.get(self.part)?.is_encoding_problem).into()
+                }
+                MessagePart::IsAttachment => {
+                    Variable::from(self.message.attachments.contains(&self.part)).into()
+                }
             },
         }
     }
@@ -140,10 +146,7 @@ impl<'x> Context<'x> {
                 data.into()
             }
             Value::Number(n) => Variable::from(*n),
-            Value::Expression(expr) => self
-                .eval_expression(expr)
-                .map(Variable::from)
-                .unwrap_or(Variable::default()),
+            Value::Expression(expr) => self.eval_expression(expr).unwrap_or(Variable::default()),
             Value::Regex(r) => Variable::StringRef(&r.expr),
         }
     }

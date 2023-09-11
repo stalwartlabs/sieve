@@ -144,6 +144,8 @@ pub enum MessagePart {
     Contents,
     Raw,
     Name,
+    IsEncodingProblem,
+    IsAttachment,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

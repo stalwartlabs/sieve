@@ -360,7 +360,9 @@ impl<'x> Iterator for Tokenizer<'x> {
                         self.push_byte(ch.to_ascii_lowercase());
                     }
                     b':' => {
-                        if self.is_token_start() {
+                        if self.is_token_start()
+                            && matches!(self.peek_byte(), Some(b) if b.is_ascii_alphabetic())
+                        {
                             self.token_is_tag();
                         } else if self.token_bytes().eq_ignore_ascii_case(b"text") {
                             self.state = State::MultiLine(StringType::default());
@@ -373,7 +375,8 @@ impl<'x> Iterator for Tokenizer<'x> {
                                 }
                             }
                         } else {
-                            return Some(Err(self.invalid_character()));
+                            return Some(Ok(self.get_token(Token::Colon)));
+                            //return Some(Err(self.invalid_character()));
                         }
                     }
                     b'"' => {

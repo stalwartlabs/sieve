@@ -389,6 +389,8 @@ impl<'x> CompilerState<'x> {
                     "text" => VariableType::Part(MessagePart::Contents),
                     "raw" => VariableType::Part(MessagePart::Raw),
                     "name" => VariableType::Part(MessagePart::Name),
+                    "is_encoding_problem" => VariableType::Part(MessagePart::IsEncodingProblem),
+                    "is_attachment" => VariableType::Part(MessagePart::IsAttachment),
                     _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
                 },
                 None => {
@@ -735,6 +737,8 @@ impl Display for VariableType {
                         MessagePart::Contents => "part.text",
                         MessagePart::Raw => "part.raw",
                         MessagePart::Name => "part.name",
+                        MessagePart::IsEncodingProblem => "part.is_encoding_problem",
+                        MessagePart::IsAttachment => "part.is_attachment",
                     }
                 )?;
                 f.write_str("}")

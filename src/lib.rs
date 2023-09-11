@@ -311,7 +311,7 @@ pub struct Compiler {
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function = fn(Vec<Variable<'_>>) -> Variable<'static>;
+pub type Function = for<'x> fn(Vec<Variable<'x>>) -> Variable<'x>;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap {
@@ -643,7 +643,11 @@ mod tests {
 
     fn run_test(script_path: &Path) {
         let mut fnc_map = FunctionMap::new()
-            .with_function("trim", |v| v[0].to_cow().trim().to_string().into())
+            .with_function("trim", |v| match v.into_iter().next().unwrap() {
+                crate::runtime::Variable::String(s) => s.trim().to_string().into(),
+                crate::runtime::Variable::StringRef(s) => s.trim().into(),
+                v => v.to_string().into(),
+            })
             .with_function("len", |v| v[0].to_cow().len().into())
             .with_function("to_lowercase", |v| {
                 v[0].to_cow().to_lowercase().to_string().into()
@@ -660,7 +664,7 @@ mod tests {
                     .into()
             })
             .with_function("is_ascii", |v| {
-                v[0].to_cow().as_ref().chars().all(|c| c.is_ascii()).into()
+                v[0].to_cow().as_ref().chars().any(|c| !c.is_ascii()).into()
             })
             .with_function("char_count", |v| {
                 v[0].to_cow().as_ref().chars().count().into()
@@ -668,6 +672,16 @@ mod tests {
             .with_function_args(
                 "contains",
                 |v| v[0].to_string().contains(&v[1].to_string()).into(),
+                2,
+            )
+            .with_function_args(
+                "eq_lowercase",
+                |v| {
+                    v[0].to_cow()
+                        .as_ref()
+                        .eq_ignore_ascii_case(v[1].to_cow().as_ref())
+                        .into()
+                },
                 2,
             )
             .with_function_args(
