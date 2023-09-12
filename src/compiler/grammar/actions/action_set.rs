@@ -150,7 +150,7 @@ impl<'x> CompilerState<'x> {
         let name = name.to_lowercase();
         if let Some((namespace, part)) = name.split_once('.') {
             match namespace {
-                "global" => Ok(VariableType::Global(part.to_string())),
+                "global" | "t" => Ok(VariableType::Global(part.to_string())),
                 "envelope" => Envelope::try_from(part)
                     .map(VariableType::Envelope)
                     .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string())),

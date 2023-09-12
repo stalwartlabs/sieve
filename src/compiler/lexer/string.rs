@@ -351,7 +351,7 @@ impl<'x> CompilerState<'x> {
             }
         } else {
             let var = match var_name.to_lowercase().split_once('.') {
-                Some(("global", var_name)) if !var_name.is_empty() => {
+                Some(("global" | "t", var_name)) if !var_name.is_empty() => {
                     VariableType::Global(var_name.to_string())
                 }
                 Some(("env", var_name)) if !var_name.is_empty() => {
@@ -388,9 +388,6 @@ impl<'x> CompilerState<'x> {
                 Some(("part", var_name)) if !var_name.is_empty() => match var_name {
                     "text" => VariableType::Part(MessagePart::Contents),
                     "raw" => VariableType::Part(MessagePart::Raw),
-                    "name" => VariableType::Part(MessagePart::Name),
-                    "is_encoding_problem" => VariableType::Part(MessagePart::IsEncodingProblem),
-                    "is_attachment" => VariableType::Part(MessagePart::IsAttachment),
                     _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
                 },
                 None => {
@@ -736,9 +733,6 @@ impl Display for VariableType {
                         MessagePart::HtmlBody(false) => "body.html",
                         MessagePart::Contents => "part.text",
                         MessagePart::Raw => "part.raw",
-                        MessagePart::Name => "part.name",
-                        MessagePart::IsEncodingProblem => "part.is_encoding_problem",
-                        MessagePart::IsAttachment => "part.is_attachment",
                     }
                 )?;
                 f.write_str("}")

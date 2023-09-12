@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Header, HeaderName, HeaderValue, Host, MimeHeaders, PartType,
+    Addr, Header, HeaderName, HeaderValue, Host, PartType,
 };
 
 use crate::{
@@ -96,18 +96,6 @@ impl<'x> Context<'x> {
                         .raw_message()
                         .get(part.raw_body_offset()..part.raw_end_offset())
                         .map(|v| Variable::from(String::from_utf8_lossy(v)))
-                }
-                MessagePart::Name => self
-                    .message
-                    .parts
-                    .get(self.part)?
-                    .attachment_name()
-                    .map(Variable::from),
-                MessagePart::IsEncodingProblem => {
-                    Variable::from(self.message.parts.get(self.part)?.is_encoding_problem).into()
-                }
-                MessagePart::IsAttachment => {
-                    Variable::from(self.message.attachments.contains(&self.part)).into()
                 }
             },
         }

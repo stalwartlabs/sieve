@@ -311,7 +311,7 @@ pub struct Compiler {
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function = for<'x> fn(Vec<Variable<'x>>) -> Variable<'x>;
+pub type Function = for<'x> fn(&'x Context<'x>, Vec<Variable<'x>>) -> Variable<'x>;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap {
