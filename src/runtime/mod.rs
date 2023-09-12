@@ -207,6 +207,12 @@ impl<'x> From<Cow<'x, str>> for Variable<'x> {
     }
 }
 
+impl<'x> From<Vec<Variable<'x>>> for Variable<'x> {
+    fn from(l: Vec<Variable<'x>>) -> Self {
+        Variable::Array(l)
+    }
+}
+
 impl From<Number> for Variable<'_> {
     fn from(n: Number) -> Self {
         match n {
@@ -692,11 +698,12 @@ impl FunctionMap {
         Self::default()
     }
 
-    pub fn with_function(mut self, name: impl Into<String>, fnc: Function) -> Self {
-        self.map
-            .insert(name.into(), (self.functions.len() as u32, 1));
-        self.functions.push(fnc);
-        self
+    pub fn with_function(self, name: impl Into<String>, fnc: Function) -> Self {
+        self.with_function_args(name, fnc, 1)
+    }
+
+    pub fn with_function_no_args(self, name: impl Into<String>, fnc: Function) -> Self {
+        self.with_function_args(name, fnc, 0)
     }
 
     pub fn with_function_args(

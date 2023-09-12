@@ -589,6 +589,23 @@ impl<'x> Context<'x> {
         self
     }
 
+    pub fn set_global_variable(
+        &mut self,
+        name: impl Into<Cow<'static, str>>,
+        value: impl Into<Variable<'x>>,
+    ) {
+        self.vars_env.insert(name.into(), value.into());
+    }
+
+    pub fn with_global_variable(
+        mut self,
+        name: impl Into<Cow<'static, str>>,
+        value: impl Into<Variable<'x>>,
+    ) -> Self {
+        self.set_global_variable(name, value);
+        self
+    }
+
     pub fn set_medatata(
         &mut self,
         name: impl Into<Metadata<String>>,
@@ -638,6 +655,14 @@ impl<'x> Context<'x> {
         } else {
             self.user_address.to_string()
         }
+    }
+
+    pub fn global_variable_names(&self) -> impl Iterator<Item = &str> {
+        self.vars_global.keys().map(|k| k.as_ref())
+    }
+
+    pub fn global_variable(&self, name: &str) -> Option<&Variable<'x>> {
+        self.vars_global.get(name)
     }
 
     pub fn message(&self) -> &Message<'x> {

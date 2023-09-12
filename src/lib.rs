@@ -311,7 +311,7 @@ pub struct Compiler {
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function = for<'x> fn(Vec<Variable<'x>>) -> Variable<'x>;
+pub type Function = for<'x> fn(&'x Context<'x>, Vec<Variable<'x>>) -> Variable<'x>;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap {
@@ -643,19 +643,19 @@ mod tests {
 
     fn run_test(script_path: &Path) {
         let mut fnc_map = FunctionMap::new()
-            .with_function("trim", |v| match v.into_iter().next().unwrap() {
+            .with_function("trim", |_, v| match v.into_iter().next().unwrap() {
                 crate::runtime::Variable::String(s) => s.trim().to_string().into(),
                 crate::runtime::Variable::StringRef(s) => s.trim().into(),
                 v => v.to_string().into(),
             })
-            .with_function("len", |v| v[0].to_cow().len().into())
-            .with_function("to_lowercase", |v| {
+            .with_function("len", |_, v| v[0].to_cow().len().into())
+            .with_function("to_lowercase", |_, v| {
                 v[0].to_cow().to_lowercase().to_string().into()
             })
-            .with_function("to_uppercase", |v| {
+            .with_function("to_uppercase", |_, v| {
                 v[0].to_cow().to_uppercase().to_string().into()
             })
-            .with_function("is_uppercase", |v| {
+            .with_function("is_uppercase", |_, v| {
                 v[0].to_cow()
                     .as_ref()
                     .chars()
@@ -663,20 +663,20 @@ mod tests {
                     .all(|c| c.is_uppercase())
                     .into()
             })
-            .with_function("is_ascii", |v| {
+            .with_function("is_ascii", |_, v| {
                 v[0].to_cow().as_ref().chars().any(|c| !c.is_ascii()).into()
             })
-            .with_function("char_count", |v| {
+            .with_function("char_count", |_, v| {
                 v[0].to_cow().as_ref().chars().count().into()
             })
             .with_function_args(
                 "contains",
-                |v| v[0].to_string().contains(&v[1].to_string()).into(),
+                |_, v| v[0].to_string().contains(&v[1].to_string()).into(),
                 2,
             )
             .with_function_args(
                 "eq_lowercase",
-                |v| {
+                |_, v| {
                     v[0].to_cow()
                         .as_ref()
                         .eq_ignore_ascii_case(v[1].to_cow().as_ref())
@@ -686,7 +686,7 @@ mod tests {
             )
             .with_function_args(
                 "concat_three",
-                |v| format!("{}-{}-{}", v[0], v[1], v[2]).into(),
+                |_, v| format!("{}-{}-{}", v[0], v[1], v[2]).into(),
                 3,
             );
         let mut compiler = Compiler::new()

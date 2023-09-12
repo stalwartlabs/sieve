@@ -76,7 +76,7 @@ impl<'x> Context<'x> {
                     for arg_num in 0..num_args {
                         args[num_args - arg_num - 1] = stack.pop()?;
                     }
-                    stack.push((self.runtime.functions.get(*id as usize)?)(args));
+                    stack.push((self.runtime.functions.get(*id as usize)?)(self, args));
                 }
             }
         }
