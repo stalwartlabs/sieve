@@ -108,7 +108,7 @@ where
                 b']' if self.buf.contains(&b'[') => {
                     self.buf.push(b']');
                 }
-                b'*' if self.buf.last().map_or(false, |&c| c == b'[') => {
+                b'*' if self.buf.last().map_or(false, |&c| c == b'[' || c == b'.') => {
                     self.buf.push(ch);
                 }
                 _ => {
@@ -187,7 +187,7 @@ where
                             }
                             Token::Comma
                         }
-                        b' ' => {
+                        b' ' | b'\r' | b'\n' => {
                             if prev_token.is_some() {
                                 return Ok(prev_token);
                             } else {
@@ -260,11 +260,22 @@ where
                     .map_err(|_| format!("Invalid integer value {}", buf,))
             }
         } else {
-            let result = (self.token_map)(&buf, self.has_dot);
+            let has_dot = self.has_dot;
+            let has_number = self.has_number;
+
             self.has_alpha = false;
             self.has_number = false;
             self.has_dot = false;
-            result
+
+            if !has_number && !has_dot && [4, 5].contains(&buf.len()) {
+                if buf == "true" {
+                    return Ok(Token::Number(Number::Integer(1)));
+                } else if buf == "false" {
+                    return Ok(Token::Number(Number::Integer(0)));
+                }
+            }
+
+            (self.token_map)(&buf, has_dot)
         }
     }
 }

@@ -1,6 +1,7 @@
 require "vnd.stalwart.testsuite";
 require "vnd.stalwart.plugins";
 require "vnd.stalwart.eval";
+require "vnd.stalwart.foreveryline";
 require "relational";
 require "body";
 require "include";
@@ -174,6 +175,16 @@ test "Header Variables - Content-Type" {
 
     if not string :is "${header.content-type}" "image/gif" {
 		test_fail "failed to match header.content-type: ${header.content-type}";
+	}
+
+	if not eval "header.content-type.type == 'image'" {
+		test_fail "failed to match header.content-type.type == 'image': ${header.content-type.type}";
+	}
+
+	foreveryline "%{header.content-type.type}" {
+		if eval "line_num != 1 || line != 'image'" {
+			test_fail "failed to match line: %{header.content-type.type} %{line} %{line_num}";
+		}
 	}
 
     if not string :is "${header.content-type.type}" "image" {

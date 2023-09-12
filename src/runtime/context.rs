@@ -288,15 +288,21 @@ impl<'x> Context<'x> {
                                 .collect::<Vec<_>>()
                                 .into_iter()
                                 .enumerate(),
+                            Variable::ArrayRef(arr) if !arr.is_empty() => arr
+                                .iter()
+                                .map(|v| v.to_owned())
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .enumerate(),
                             Variable::String(s) => s
-                                .split('\n')
-                                .map(|line| Variable::String(line.trim().to_string()))
+                                .lines()
+                                .map(|line| Variable::String(line.to_string()))
                                 .collect::<Vec<_>>()
                                 .into_iter()
                                 .enumerate(),
                             Variable::StringRef(s) => s
-                                .split('\n')
-                                .map(|line| Variable::String(line.trim().to_string()))
+                                .lines()
+                                .map(|line| Variable::String(line.to_string()))
                                 .collect::<Vec<_>>()
                                 .into_iter()
                                 .enumerate(),

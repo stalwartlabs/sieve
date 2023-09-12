@@ -498,63 +498,8 @@ impl<'x> CompilerState<'x> {
         if !name.is_empty() || has_wildcard {
             Ok(VariableType::Header(HeaderVariable {
                 name,
-                part: match part.as_str() {
-                    "" | "text" => HeaderPart::Text,
-                    // Addresses
-                    "name" | "addr.name" => HeaderPart::Address(AddressPart::Name),
-                    "addr" | "addr.all" => HeaderPart::Address(AddressPart::All),
-                    "addr.domain" => HeaderPart::Address(AddressPart::Domain),
-                    "addr.local" => HeaderPart::Address(AddressPart::LocalPart),
-                    "addr.user" => HeaderPart::Address(AddressPart::User),
-                    "addr.detail" => HeaderPart::Address(AddressPart::Detail),
-
-                    // Content-type
-                    "type" => HeaderPart::ContentType(ContentTypePart::Type),
-                    "subtype" => HeaderPart::ContentType(ContentTypePart::Subtype),
-
-                    // Received
-                    "rcvd" => HeaderPart::Text,
-                    "rcvd.from" => HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Any)),
-                    "rcvd.from.name" => {
-                        HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Name))
-                    }
-                    "rcvd.from.ip" => {
-                        HeaderPart::Received(ReceivedPart::From(ReceivedHostname::Ip))
-                    }
-                    "rcvd.ip" => HeaderPart::Received(ReceivedPart::FromIp),
-                    "rcvd.iprev" => HeaderPart::Received(ReceivedPart::FromIpRev),
-                    "rcvd.by" => HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Any)),
-                    "rcvd.by.name" => {
-                        HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Name))
-                    }
-                    "rcvd.by.ip" => HeaderPart::Received(ReceivedPart::By(ReceivedHostname::Ip)),
-                    "rcvd.for" => HeaderPart::Received(ReceivedPart::For),
-                    "rcvd.with" => HeaderPart::Received(ReceivedPart::With),
-                    "rcvd.tls" => HeaderPart::Received(ReceivedPart::TlsVersion),
-                    "rcvd.cipher" => HeaderPart::Received(ReceivedPart::TlsCipher),
-                    "rcvd.id" => HeaderPart::Received(ReceivedPart::Id),
-                    "rcvd.ident" => HeaderPart::Received(ReceivedPart::Ident),
-                    "rcvd.date" => HeaderPart::Received(ReceivedPart::Date),
-                    "rcvd.date.raw" => HeaderPart::Received(ReceivedPart::DateRaw),
-
-                    // Id
-                    "id" => HeaderPart::Id,
-
-                    // Raw
-                    "raw" => HeaderPart::Raw,
-
-                    // Date
-                    "date" => HeaderPart::Date,
-
-                    // Content-type attributes
-                    _ => {
-                        if let Some(attr) = part.strip_prefix("attr.") {
-                            HeaderPart::ContentType(ContentTypePart::Attribute(attr.to_string()))
-                        } else {
-                            return Err(ErrorType::InvalidExpression(var_name.to_string()));
-                        }
-                    }
-                },
+                part: HeaderPart::try_from(part.as_str())
+                    .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
                 index_hdr: match hdr_index.as_str() {
                     "" => {
                         if !has_wildcard {
@@ -649,6 +594,99 @@ impl<'x> CompilerState<'x> {
         }
 
         Ok(())
+    }
+}
+
+impl TryFrom<&str> for HeaderPart {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let (value, subvalue) = value.split_once('.').unwrap_or((value, ""));
+        Ok(match value {
+            "" | "text" => HeaderPart::Text,
+            // Addresses
+            "name" => HeaderPart::Address(AddressPart::Name),
+            "addr" => {
+                if !subvalue.is_empty() {
+                    HeaderPart::Address(AddressPart::try_from(subvalue)?)
+                } else {
+                    HeaderPart::Address(AddressPart::All)
+                }
+            }
+
+            // Content-type
+            "type" => HeaderPart::ContentType(ContentTypePart::Type),
+            "subtype" => HeaderPart::ContentType(ContentTypePart::Subtype),
+            "attr" if !subvalue.is_empty() => {
+                HeaderPart::ContentType(ContentTypePart::Attribute(subvalue.to_string()))
+            }
+
+            // Received
+            "rcvd" => {
+                if !subvalue.is_empty() {
+                    HeaderPart::Received(ReceivedPart::try_from(subvalue)?)
+                } else {
+                    HeaderPart::Text
+                }
+            }
+
+            // Id
+            "id" => HeaderPart::Id,
+
+            // Raw
+            "raw" => HeaderPart::Raw,
+
+            // Date
+            "date" => HeaderPart::Date,
+
+            // Content-type attributes
+            _ => {
+                return Err(());
+            }
+        })
+    }
+}
+
+impl TryFrom<&str> for ReceivedPart {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            // Received
+            "from" => ReceivedPart::From(ReceivedHostname::Any),
+            "from.name" => ReceivedPart::From(ReceivedHostname::Name),
+            "from.ip" => ReceivedPart::From(ReceivedHostname::Ip),
+            "ip" => ReceivedPart::FromIp,
+            "iprev" => ReceivedPart::FromIpRev,
+            "by" => ReceivedPart::By(ReceivedHostname::Any),
+            "by.name" => ReceivedPart::By(ReceivedHostname::Name),
+            "by.ip" => ReceivedPart::By(ReceivedHostname::Ip),
+            "for" => ReceivedPart::For,
+            "with" => ReceivedPart::With,
+            "tls" => ReceivedPart::TlsVersion,
+            "cipher" => ReceivedPart::TlsCipher,
+            "id" => ReceivedPart::Id,
+            "ident" => ReceivedPart::Ident,
+            "date" => ReceivedPart::Date,
+            "date.raw" => ReceivedPart::DateRaw,
+            _ => return Err(()),
+        })
+    }
+}
+
+impl TryFrom<&str> for AddressPart {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            "name" => AddressPart::Name,
+            "addr" | "all" => AddressPart::All,
+            "addr.domain" => AddressPart::Domain,
+            "addr.local" => AddressPart::LocalPart,
+            "addr.user" => AddressPart::User,
+            "addr.detail" => AddressPart::Detail,
+            _ => return Err(()),
+        })
     }
 }
 

@@ -46,11 +46,11 @@ test "ForEveryLine - body" {
             }
         } elsif eval "line_num == 2" {
             if not string :is "${line}" "" {
-                test_fail "${line_num} = '${line}'";
+                test_fail "${line_num} = '${line}' ('')";
             }
         } elsif eval "line_num == 3" {
-            if not string :is "${line}" "We lost the game." {
-                test_fail "${line_num} = '${line}'";
+            if not string :is "${line}" "We lost the game. " {
+                test_fail "${line_num} = '${line}' ('We lost the game. ')";
             }
         } elsif eval "line_num == 4" {
             set "did_iterate" "1";
@@ -78,7 +78,7 @@ test "ForEveryLine - body" {
                     test_fail "${line_num} = '${line}'";
                 }
             } elsif eval "line_num == 3" {
-                if not string :is "${line}" "We lost the game." {
+                if not string :is "${line}" "We lost the game. " {
                     test_fail "${line_num} = '${line}'";
                 }
             } elsif eval "line_num == 4" {
@@ -157,7 +157,7 @@ test "ForEveryLine - body variable" {
 
     foreveryline "${body.text}" {
         set "body_lines" "%{body_lines + 1}";
-        if string :is "${line}" "" {
+        if string :is "%{trim(line)}" "" {
             set "body_empty_lines" "%{body_empty_lines + 1}";
         }
     }
@@ -166,7 +166,7 @@ test "ForEveryLine - body variable" {
         test_fail "bad ratio";
     }
 
-    if eval "body_lines != 7 || body_empty_lines != 3" {
+    if eval "body_lines != 6 || body_empty_lines != 2" {
         test_fail "got ${body_lines} and ${body_empty_lines}";
     }
 }
