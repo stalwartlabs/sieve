@@ -36,7 +36,7 @@ impl<'x> Context<'x> {
         for expr in expr {
             match expr {
                 Expression::Variable(v) => {
-                    stack.push(self.variable(v)?);
+                    stack.push(self.variable(v).unwrap_or_default());
                 }
                 Expression::Number(val) => {
                     stack.push(Variable::from(*val));
@@ -121,10 +121,34 @@ impl<'x> Variable<'x> {
                     .chain(b.iter().map(|v| v.as_ref()))
                     .collect(),
             ),
-            (Variable::String(a), b) => Variable::String(format!("{}{}", a, b)),
-            (a, Variable::String(b)) => Variable::String(format!("{}{}", a, b)),
-            (Variable::StringRef(a), b) => Variable::String(format!("{}{}", a, b)),
-            (a, Variable::StringRef(b)) => Variable::String(format!("{}{}", a, b)),
+            (Variable::String(a), b) => {
+                if !a.is_empty() {
+                    Variable::String(format!("{}{}", a, b))
+                } else {
+                    b
+                }
+            }
+            (a, Variable::String(b)) => {
+                if !b.is_empty() {
+                    Variable::String(format!("{}{}", a, b))
+                } else {
+                    a
+                }
+            }
+            (Variable::StringRef(a), b) => {
+                if !a.is_empty() {
+                    Variable::String(format!("{}{}", a, b))
+                } else {
+                    b
+                }
+            }
+            (a, Variable::StringRef(b)) => {
+                if !b.is_empty() {
+                    Variable::String(format!("{}{}", a, b))
+                } else {
+                    a
+                }
+            }
         }
     }
 
@@ -245,7 +269,7 @@ impl<'x> Variable<'x> {
         }
     }
 
-    fn to_bool(&self) -> bool {
+    pub fn to_bool(&self) -> bool {
         match self {
             Variable::Float(f) => *f != 0.0,
             Variable::Integer(n) => *n != 0,

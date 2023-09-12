@@ -126,6 +126,16 @@ impl<'x> Variable<'x> {
         }
     }
 
+    pub fn to_integer(&self) -> i64 {
+        match self {
+            Variable::Integer(n) => *n,
+            Variable::Float(n) => *n as i64,
+            Variable::String(s) if !s.is_empty() => s.parse::<i64>().unwrap_or(0),
+            Variable::StringRef(s) if !s.is_empty() => s.parse::<i64>().unwrap_or(0),
+            _ => 0,
+        }
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Variable::String(s) => s.len(),

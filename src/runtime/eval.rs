@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use mail_parser::{
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Header, HeaderName, HeaderValue, Host, PartType,
+    Addr, Header, HeaderName, HeaderValue, Host, PartType, Received,
 };
 
 use crate::{
@@ -196,10 +196,10 @@ impl<'x> Context<'x> {
             }
         }
 
-        if !result.is_empty() {
-            Some(Variable::Array(result))
-        } else {
-            None
+        match result.len() {
+            1 => result.pop(),
+            0 => None,
+            _ => Some(Variable::Array(result)),
         }
     }
 
@@ -394,38 +394,40 @@ impl HeaderVariable {
                         })
                     }),
                 },
-                (HeaderValue::Received(rcvd), HeaderPart::Received(part)) => match part {
-                    ReceivedPart::From(from) => rcvd
-                        .from()
-                        .or_else(|| rcvd.helo())
-                        .and_then(|v| from.to_variable(v)),
-                    ReceivedPart::FromIp => rcvd.from_ip().map(|ip| Variable::from(ip.to_string())),
-                    ReceivedPart::FromIpRev => rcvd.from_iprev().map(Variable::from),
-                    ReceivedPart::By(by) => rcvd.by().and_then(|v: &Host<'_>| by.to_variable(v)),
-                    ReceivedPart::For => rcvd.for_().map(Variable::from),
-                    ReceivedPart::With => rcvd.with().map(|v| Variable::from(v.as_str())),
-                    ReceivedPart::TlsVersion => {
-                        rcvd.tls_version().map(|v| Variable::from(v.as_str()))
-                    }
-                    ReceivedPart::TlsCipher => rcvd.tls_cipher().map(Variable::from),
-                    ReceivedPart::Id => rcvd.id().map(Variable::from),
-                    ReceivedPart::Ident => rcvd.ident().map(Variable::from),
-                    ReceivedPart::Via => rcvd.via().map(Variable::from),
-                    ReceivedPart::Date => rcvd.date().map(|d| Variable::from(d.to_timestamp())),
-                    ReceivedPart::DateRaw => rcvd.date().map(|d| Variable::from(d.to_rfc822())),
-                },
+                (HeaderValue::Received(rcvd), HeaderPart::Received(part)) => part.eval(rcvd),
                 _ => None,
             },
         };
 
-        if let Some(var) = var {
-            result.push(var);
-        }
+        result.push(var.unwrap_or_default());
     }
 
     #[inline(always)]
     fn include_single_part(&self) -> bool {
         [-1, 0, 1].contains(&self.index_part)
+    }
+}
+
+impl ReceivedPart {
+    pub fn eval<'x>(&self, rcvd: &'x Received<'x>) -> Option<Variable<'x>> {
+        match self {
+            ReceivedPart::From(from) => rcvd
+                .from()
+                .or_else(|| rcvd.helo())
+                .and_then(|v| from.to_variable(v)),
+            ReceivedPart::FromIp => rcvd.from_ip().map(|ip| Variable::from(ip.to_string())),
+            ReceivedPart::FromIpRev => rcvd.from_iprev().map(Variable::from),
+            ReceivedPart::By(by) => rcvd.by().and_then(|v: &Host<'_>| by.to_variable(v)),
+            ReceivedPart::For => rcvd.for_().map(Variable::from),
+            ReceivedPart::With => rcvd.with().map(|v| Variable::from(v.as_str())),
+            ReceivedPart::TlsVersion => rcvd.tls_version().map(|v| Variable::from(v.as_str())),
+            ReceivedPart::TlsCipher => rcvd.tls_cipher().map(Variable::from),
+            ReceivedPart::Id => rcvd.id().map(Variable::from),
+            ReceivedPart::Ident => rcvd.ident().map(Variable::from),
+            ReceivedPart::Via => rcvd.via().map(Variable::from),
+            ReceivedPart::Date => rcvd.date().map(|d| Variable::from(d.to_timestamp())),
+            ReceivedPart::DateRaw => rcvd.date().map(|d| Variable::from(d.to_rfc822())),
+        }
     }
 }
 
