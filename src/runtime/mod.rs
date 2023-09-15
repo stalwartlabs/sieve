@@ -136,6 +136,16 @@ impl<'x> Variable<'x> {
         }
     }
 
+    pub fn to_usize(&self) -> usize {
+        match self {
+            Variable::Integer(n) => *n as usize,
+            Variable::Float(n) => *n as usize,
+            Variable::String(s) if !s.is_empty() => s.parse::<usize>().unwrap_or(0),
+            Variable::StringRef(s) if !s.is_empty() => s.parse::<usize>().unwrap_or(0),
+            _ => 0,
+        }
+    }
+
     pub fn len(&self) -> usize {
         match self {
             Variable::String(s) => s.len(),
@@ -186,6 +196,22 @@ impl<'x> Variable<'x> {
             Variable::Float(n) => Variable::Float(*n),
             Variable::Array(l) => Variable::ArrayRef(l),
             Variable::ArrayRef(l) => Variable::ArrayRef(l),
+        }
+    }
+
+    pub fn as_array<'y: 'x>(&'y self) -> Option<&[Variable<'x>]> {
+        match self {
+            Variable::Array(l) => Some(l),
+            Variable::ArrayRef(l) => Some(l),
+            _ => None,
+        }
+    }
+
+    pub fn into_array(self) -> Vec<Variable<'x>> {
+        match self {
+            Variable::Array(l) => l,
+            Variable::ArrayRef(l) => l.iter().map(Variable::as_ref).collect(),
+            v => vec![v],
         }
     }
 }
@@ -258,6 +284,12 @@ impl From<f64> for Variable<'_> {
 
 impl From<i32> for Variable<'_> {
     fn from(n: i32) -> Self {
+        Variable::Integer(n as i64)
+    }
+}
+
+impl From<u32> for Variable<'_> {
+    fn from(n: u32) -> Self {
         Variable::Integer(n as i64)
     }
 }
