@@ -50,7 +50,7 @@ use super::{
     },
     expr::Expression,
     tests::test_plugin::Plugin,
-    Capability, Clear, ForEveryLine, Invalid,
+    Capability, Clear, Invalid, While,
 };
 
 use super::tests::test_ihave::Error;
@@ -111,8 +111,7 @@ pub(crate) enum Instruction {
     Plugin(Plugin),
 
     // For every line extension
-    ForEveryLineInit(Value),
-    ForEveryLine(ForEveryLine),
+    While(While),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -313,17 +312,12 @@ impl Compiler {
                                 }
                             } else {
                                 let mut block_found = None;
-                                if matches!(
-                                    &state.block.btype,
-                                    Word::ForEveryPart | Word::ForEveryLine
-                                ) {
+                                if matches!(&state.block.btype, Word::ForEveryPart | Word::While) {
                                     block_found = Some(&mut state.block);
                                 } else {
                                     for block in state.block_stack.iter_mut().rev() {
-                                        if matches!(
-                                            &block.btype,
-                                            Word::ForEveryPart | Word::ForEveryLine
-                                        ) {
+                                        if matches!(&block.btype, Word::ForEveryPart | Word::While)
+                                        {
                                             block_found = Some(block);
                                             break;
                                         }
@@ -549,50 +543,43 @@ impl Compiler {
                             }
                         }
 
-                        // ForEveryLine extension
-                        Word::ForEveryLine => {
+                        // While extension
+                        Word::While => {
                             state.validate_argument(
                                 0,
-                                Capability::ForEveryLine.into(),
+                                Capability::While.into(),
                                 token_info.line_num,
                                 token_info.line_pos,
                             )?;
 
-                            if state
-                                .block_stack
-                                .iter()
-                                .any(|b| matches!(&b.btype, Word::ForEveryLine))
-                            {
-                                return Err(token_info.custom(ErrorType::TooManyNestedBlocks));
-                            }
+                            is_new_block = Block::new(Word::While).into();
 
-                            let var_idx = state.vars_num;
-                            is_new_block = Block::new(Word::ForEveryLine)
-                                .with_local_var("line", state.vars_num)
-                                .with_local_var("line_num", state.vars_num + 1)
-                                .into();
-                            state.vars_num += 2;
-
-                            let source = state.parse_string()?;
-                            state
-                                .instructions
-                                .push(Instruction::ForEveryLineInit(source));
-                            state
-                                .instructions
-                                .push(Instruction::ForEveryLine(ForEveryLine {
-                                    var_idx,
-                                    jz_pos: usize::MAX,
-                                }));
+                            let expr = state.parse_expr()?;
+                            state.instructions.push(Instruction::While(While {
+                                expr,
+                                jz_pos: usize::MAX,
+                            }));
                         }
 
                         _ => {
-                            state.ignore_instruction()?;
-                            state.instructions.push(Instruction::Invalid(Invalid {
-                                name: instruction.to_string(),
-                                line_num: token_info.line_num,
-                                line_pos: token_info.line_pos,
-                            }));
-                            continue;
+                            if state.has_capability(&Capability::Ihave) {
+                                state.ignore_instruction()?;
+                                state.instructions.push(Instruction::Invalid(Invalid {
+                                    name: instruction.to_string(),
+                                    line_num: token_info.line_num,
+                                    line_pos: token_info.line_pos,
+                                }));
+                                continue;
+                            } else {
+                                return Err(CompileError {
+                                    line_num: state.block.line_num,
+                                    line_pos: state.block.line_pos,
+                                    error_type: ErrorType::UnexpectedToken {
+                                        expected: "command".into(),
+                                        found: instruction.to_string(),
+                                    },
+                                });
+                            }
                         }
                     }
 
@@ -683,12 +670,12 @@ impl Compiler {
                             }
                             state.last_block_type = Word::Else;
                         }
-                        Word::ForEveryLine => {
+                        Word::While => {
                             state
                                 .instructions
                                 .push(Instruction::Jmp(prev_block.last_block_start));
                             let cur_pos = state.instructions.len();
-                            if let Instruction::ForEveryLine(fep) =
+                            if let Instruction::While(fep) =
                                 &mut state.instructions[prev_block.last_block_start]
                             {
                                 fep.jz_pos = cur_pos;
@@ -771,13 +758,22 @@ impl Compiler {
                             token_info.line_pos,
                         )?;
                         state.parse_plugin(schema)?;
-                    } else {
+                    } else if state.has_capability(&Capability::Ihave) {
                         state.ignore_instruction()?;
                         state.instructions.push(Instruction::Invalid(Invalid {
                             name: instruction,
                             line_num: token_info.line_num,
                             line_pos: token_info.line_pos,
                         }));
+                    } else {
+                        return Err(CompileError {
+                            line_num: state.block.line_num,
+                            line_pos: state.block.line_pos,
+                            error_type: ErrorType::UnexpectedToken {
+                                expected: "command".into(),
+                                found: instruction,
+                            },
+                        });
                     }
                 }
                 _ => {
@@ -1193,11 +1189,6 @@ impl Block {
 
     pub fn with_label(mut self, label: String) -> Self {
         self.label = label.into();
-        self
-    }
-
-    pub fn with_local_var(mut self, name: impl Into<String>, id: usize) -> Self {
-        self.vars_local.insert(name.into(), id);
         self
     }
 }

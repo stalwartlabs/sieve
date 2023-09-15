@@ -31,11 +31,43 @@ pub mod tokenizer;
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub(crate) enum Expression {
     Variable(VariableType),
-    Number(Number),
-    String(String),
+    Constant(Constant),
     BinaryOperator(BinaryOperator),
     UnaryOperator(UnaryOperator),
+    JmpIf { val: bool, pos: u32 },
     Function { id: u32, num_args: u32 },
+    ArrayAccess,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub(crate) enum Constant {
+    Integer(i64),
+    Float(f64),
+    String(String),
+    Array(Vec<Constant>),
+}
+
+impl Eq for Constant {}
+
+impl From<Number> for Constant {
+    fn from(value: Number) -> Self {
+        match value {
+            Number::Integer(i) => Constant::Integer(i),
+            Number::Float(f) => Constant::Float(f),
+        }
+    }
+}
+
+impl From<String> for Constant {
+    fn from(value: String) -> Self {
+        Constant::String(value)
+    }
+}
+
+impl From<Vec<Constant>> for Constant {
+    fn from(value: Vec<Constant>) -> Self {
+        Constant::Array(value)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -77,5 +109,7 @@ pub(crate) enum Token {
     UnaryOperator(UnaryOperator),
     OpenParen,
     CloseParen,
+    OpenBracket,
+    CloseBracket,
     Comma,
 }

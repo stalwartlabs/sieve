@@ -1,6 +1,6 @@
 require "vnd.stalwart.testsuite";
 require "vnd.stalwart.plugins";
-require "vnd.stalwart.foreveryline";
+require "vnd.stalwart.while";
 require "vnd.stalwart.eval";
 require "relational";
 require "body";
@@ -30,7 +30,7 @@ Joe.
 ;
 
 
-test "ForEveryLine - body" {
+test "While - body" {
     set "body" "";
     set "did_iterate" "0";
 
@@ -39,7 +39,13 @@ test "ForEveryLine - body" {
         break;
     }
 
-    foreveryline "${body}" {
+    set "line_num" "0";
+    set "body_lines" "%{lines(body)}";
+
+    while "line_num < count(body_lines)" {
+        set "line" "%{body_lines[line_num]}";
+        set "line_num" "%{line_num + 1}";
+
         if eval "line_num == 1" {
             if not string :is "${line}" "Hi." {
                 test_fail "${line_num} = '${line}'";
@@ -68,7 +74,13 @@ test "ForEveryLine - body" {
 
     foreverypart :name "main" {
         extracttext "sub_body";
-        foreveryline "${sub_body}" {
+
+        set "line_num" "0";
+        set "body_lines" "%{lines(sub_body)}";
+        while "line_num < count(body_lines)" {
+            set "line" "%{body_lines[line_num]}";
+            set "line_num" "%{line_num + 1}";
+
             if eval "line_num == 1" {
                 if not string :is "${line}" "Hi." {
                     test_fail "${line_num} = '${line}'";
@@ -95,11 +107,16 @@ test "ForEveryLine - body" {
     }
 }
 
-test "ForEveryLine - headers" {
+test "While - headers" {
 
     set "did_iterate" "0";
 
-    foreveryline "${header.to[*].addr[*]}" {
+    set "line_num" "0";
+    set "header_lines" "%{header.to[*].addr[*]}";
+    while "line_num < count(header_lines)" {
+        set "line" "%{header_lines[line_num]}";
+        set "line_num" "%{line_num + 1}";
+
         if eval "line_num == 1" {
             if not string :is "${line}" "james@vandelay.com" {
                 test_fail "${line_num} = '${line}'";
@@ -124,10 +141,15 @@ test "ForEveryLine - headers" {
 
 }
 
-test "ForEveryLine - all headers" {
+test "While - all headers" {
 
     set "did_iterate" "0";
-    foreveryline "${header.*.raw}" {
+
+    set "line_num" "0";
+    set "header_lines" "%{header.*.raw}";
+    while "line_num < count(header_lines)" {
+        set "line" "%{header_lines[line_num]}";
+        set "line_num" "%{line_num + 1}";
         if allof(eval "line_num == 6", not string :is "${line}" "X-Test: this is a test with plenty of whitespace") {
             test_fail "${line} ${line_num}";
             set "did_iterate" "1";
@@ -139,7 +161,11 @@ test "ForEveryLine - all headers" {
     }
 
     set "did_iterate" "0";
-    foreveryline "${header.*.text}" {
+    set "line_num" "0";
+    set "header_lines" "%{header.*.text}";
+    while "line_num < count(header_lines)" {
+        set "line" "%{header_lines[line_num]}";
+        set "line_num" "%{line_num + 1}";
         if allof(eval "line_num == 4", not string :is "${line}" "To: \"Colleagues\": \"James Smythe\" <james@vandelay.com>; Friends: jane@example.com, John Smîth <john@example.com>;") {
             test_fail "${line} ${line_num}";
         }
@@ -150,23 +176,50 @@ test "ForEveryLine - all headers" {
     }
 }
 
+test "While - nested with array access" {
+    set "result" "";
+    set "x" "%{['a', 'b', 'c']}";
+    set "y" "%{['0', '1', '2']}";
 
-test "ForEveryLine - body variable" {
-    set "body_lines" "0";
+    set "i" "0";
+    while "i < 3" {
+        set "j" "0";
+        while "j < 3" {
+            if eval "len(result) > 0" {
+                set "result" "%{result + ','}";
+            }
+            set "result" "%{result + x[i] + y[j]}";
+            set "j" "%{j + 1}";
+        }
+        set "i" "%{i + 1}";
+    }
+
+    if eval "result != 'a0,a1,a2,b0,b1,b2,c0,c1,c2'" {
+        test_fail "Nested iteration failed: ${result}";
+    }
+}
+
+
+test "While - body variable" {
     set "body_empty_lines" "0";
 
-    foreveryline "${body.text}" {
-        set "body_lines" "%{body_lines + 1}";
+    set "line_num" "0";
+    set "body_lines" "%{lines(body.text)}";
+    while "line_num < count(body_lines)" {
+        set "line" "%{body_lines[line_num]}";
+        set "line_num" "%{line_num + 1}";
+
         if string :is "%{trim(line)}" "" {
             set "body_empty_lines" "%{body_empty_lines + 1}";
         }
     }
 
-    if eval "body_lines > 4 && body_empty_lines / body_lines >= 0.8 && body_empty_lines / body_lines <= 0.9" {
+    if eval "line_num > 4 && body_empty_lines / line_num >= 0.8 && body_empty_lines / line_num <= 0.9" {
         test_fail "bad ratio";
     }
 
-    if eval "body_lines != 6 || body_empty_lines != 2" {
-        test_fail "got ${body_lines} and ${body_empty_lines}";
+    if eval "line_num != 6 || body_empty_lines != 2" {
+        test_fail "got ${line_num} and ${body_empty_lines}";
     }
 }
+

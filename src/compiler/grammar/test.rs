@@ -497,35 +497,10 @@ impl<'x> CompilerState<'x> {
                         token_info.line_pos,
                     )?;
 
-                    let mut next_token = self.tokens.unwrap_next()?;
-                    let expr = match next_token.token {
-                        Token::StringConstant(s) => s.into_string().into_bytes(),
-                        Token::StringVariable(s) => s,
-                        _ => return Err(next_token.expected("string")),
-                    };
-
-                    match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
-                        expr.iter().enumerate().peekable(),
-                        |var_name, maybe_namespace| {
-                            self.parse_expr_fnc_or_var(var_name, maybe_namespace)
-                        },
-                    ))
-                    .parse()
-                    {
-                        Ok(parser) => Test::EvalExpression(EvalExpression {
-                            expr: parser.output,
-                            is_not: false,
-                        }),
-                        Err(err) => {
-                            let err = ErrorType::InvalidExpression(format!(
-                                "{}: {}",
-                                std::str::from_utf8(&expr).unwrap_or_default(),
-                                err
-                            ));
-                            next_token.token = Token::StringVariable(expr);
-                            return Err(next_token.custom(err));
-                        }
-                    }
+                    Test::EvalExpression(EvalExpression {
+                        expr: self.parse_expr()?,
+                        is_not: false,
+                    })
                 }
 
                 Token::Identifier(word) => {
@@ -613,6 +588,33 @@ impl<'x> CompilerState<'x> {
 
         self.instructions.push(Instruction::Jz(usize::MAX));
         Ok(())
+    }
+
+    pub(crate) fn parse_expr(&mut self) -> Result<Vec<Expression>, CompileError> {
+        let mut next_token = self.tokens.unwrap_next()?;
+        let expr = match next_token.token {
+            Token::StringConstant(s) => s.into_string().into_bytes(),
+            Token::StringVariable(s) => s,
+            _ => return Err(next_token.expected("string")),
+        };
+
+        match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
+            expr.iter().enumerate().peekable(),
+            |var_name, maybe_namespace| self.parse_expr_fnc_or_var(var_name, maybe_namespace),
+        ))
+        .parse()
+        {
+            Ok(parser) => Ok(parser.output),
+            Err(err) => {
+                let err = ErrorType::InvalidExpression(format!(
+                    "{}: {}",
+                    std::str::from_utf8(&expr).unwrap_or_default(),
+                    err
+                ));
+                next_token.token = Token::StringVariable(expr);
+                Err(next_token.custom(err))
+            }
+        }
     }
 }
 

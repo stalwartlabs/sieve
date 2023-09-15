@@ -26,7 +26,7 @@ use std::fmt::Display;
 use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
-use self::instruction::CompilerState;
+use self::{expr::Expression, instruction::CompilerState};
 
 use super::{
     lexer::{tokenizer::TokenInfo, word::Word, Token},
@@ -90,7 +90,7 @@ pub enum Capability {
     // Extensions
     Eval,
     Plugins,
-    ForEveryLine,
+    While,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -148,8 +148,8 @@ pub struct Invalid {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct ForEveryLine {
-    pub var_idx: usize,
+pub(crate) struct While {
+    pub expr: Vec<Expression>,
     pub jz_pos: usize,
 }
 
@@ -625,7 +625,7 @@ impl Display for Capability {
             Capability::SpamTestPlus => f.write_str("spamtestplus"),
             Capability::VirusTest => f.write_str("virustest"),
             Capability::Plugins => f.write_str("vnd.stalwart.plugins"),
-            Capability::ForEveryLine => f.write_str("vnd.stalwart.foreveryline"),
+            Capability::While => f.write_str("vnd.stalwart.while"),
             Capability::Eval => f.write_str("vnd.stalwart.eval"),
             Capability::Other(capability) => f.write_str(capability),
         }
@@ -683,6 +683,6 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
 
     // Extensions
     "vnd.stalwart.plugins" => Capability::Plugins,
-    "vnd.stalwart.foreveryline" => Capability::ForEveryLine,
+    "vnd.stalwart.while" => Capability::While,
     "vnd.stalwart.eval" => Capability::Eval,
 };

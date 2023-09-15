@@ -29,7 +29,8 @@ where
 {
     pub(crate) tokenizer: Tokenizer<'x, F>,
     pub(crate) output: Vec<Expression>,
-    operator_stack: Vec<Token>,
+    operator_stack: Vec<(Token, Option<usize>)>,
+    arg_count: Vec<i32>,
 }
 
 impl<'x, F> ExpressionParser<'x, F>
@@ -41,76 +42,94 @@ where
             tokenizer,
             output: Vec::new(),
             operator_stack: Vec::new(),
+            arg_count: Vec::new(),
         }
     }
 
     pub fn parse(mut self) -> Result<Self, String> {
-        let mut arg_count: Vec<i32> = vec![];
+        let mut last_is_var_or_fnc = false;
 
         while let Some(token) = self.tokenizer.next()? {
+            let mut is_var_or_fnc = false;
             match token {
                 Token::Variable(v) => {
-                    if let Some(x) = arg_count.last_mut() {
-                        *x = x.saturating_add(1);
-                    }
+                    self.inc_arg_count();
+                    is_var_or_fnc = true;
                     self.output.push(Expression::Variable(v))
                 }
                 Token::Number(n) => {
-                    if let Some(x) = arg_count.last_mut() {
-                        *x = x.saturating_add(1);
-                    }
-                    self.output.push(Expression::Number(n))
+                    self.inc_arg_count();
+                    self.output.push(Expression::Constant(n.into()))
                 }
                 Token::String(s) => {
-                    if let Some(x) = arg_count.last_mut() {
-                        *x = x.saturating_add(1);
-                    }
-                    self.output.push(Expression::String(s))
+                    self.inc_arg_count();
+                    self.output.push(Expression::Constant(s.into()))
                 }
-                Token::UnaryOperator(uop) => self.operator_stack.push(Token::UnaryOperator(uop)),
-                Token::OpenParen => self.operator_stack.push(token),
-                Token::CloseParen => {
+                Token::UnaryOperator(uop) => {
+                    self.operator_stack.push((Token::UnaryOperator(uop), None))
+                }
+                Token::OpenParen => self.operator_stack.push((token, None)),
+                Token::CloseParen | Token::CloseBracket => {
+                    let expect_token = if matches!(token, Token::CloseParen) {
+                        Token::OpenParen
+                    } else {
+                        Token::OpenBracket
+                    };
                     loop {
                         match self.operator_stack.pop() {
-                            Some(Token::OpenParen) => {
+                            Some((t, _)) if t == expect_token => {
                                 break;
                             }
-                            Some(Token::BinaryOperator(bop)) => {
+                            Some((Token::BinaryOperator(bop), jmp_pos)) => {
+                                self.update_jmp_pos(jmp_pos);
                                 self.output.push(Expression::BinaryOperator(bop))
                             }
-                            Some(Token::UnaryOperator(uop)) => {
+                            Some((Token::UnaryOperator(uop), _)) => {
                                 self.output.push(Expression::UnaryOperator(uop))
                             }
                             _ => return Err("Mismatched parentheses".to_string()),
                         }
                     }
 
-                    if let Some(Token::Function { id, num_args, name }) = self.operator_stack.last()
+                    if let Some((Token::Function { id, num_args, name }, _)) =
+                        self.operator_stack.last()
                     {
-                        let got_args = arg_count.pop().unwrap();
+                        let got_args = self.arg_count.pop().unwrap();
                         if got_args != *num_args as i32 {
-                            return Err(format!(
-                                "Expression function {:?} expected {} arguments, got {}",
-                                name, num_args, got_args
-                            ));
+                            return Err(if *id != u32::MAX {
+                                format!(
+                                    "Expression function {:?} expected {} arguments, got {}",
+                                    name, num_args, got_args
+                                )
+                            } else {
+                                "Missing array index".to_string()
+                            });
                         }
-                        let expr = Expression::Function {
-                            id: *id,
-                            num_args: *num_args,
+
+                        let expr = if *id != u32::MAX {
+                            Expression::Function {
+                                id: *id,
+                                num_args: *num_args,
+                            }
+                        } else {
+                            Expression::ArrayAccess
                         };
+
                         self.operator_stack.pop();
                         self.output.push(expr);
                     }
+
+                    is_var_or_fnc = true;
                 }
                 Token::BinaryOperator(bop) => {
-                    if let Some(x) = arg_count.last_mut() {
-                        *x = x.saturating_sub(1);
-                    }
-                    while let Some(top_token) = self.operator_stack.last() {
+                    self.dec_arg_count();
+                    while let Some((top_token, prev_jmp_pos)) = self.operator_stack.last() {
                         match top_token {
                             Token::BinaryOperator(top_bop) => {
                                 if bop.precedence() <= top_bop.precedence() {
                                     let top_bop = *top_bop;
+                                    let jmp_pos = *prev_jmp_pos;
+                                    self.update_jmp_pos(jmp_pos);
                                     self.operator_stack.pop();
                                     self.output.push(Expression::BinaryOperator(top_bop));
                                 } else {
@@ -125,22 +144,84 @@ where
                             _ => break,
                         }
                     }
-                    self.operator_stack.push(Token::BinaryOperator(bop));
+
+                    // Add jump instruction for short-circuiting
+                    let jmp_pos = match bop {
+                        BinaryOperator::And => {
+                            self.output.push(Expression::JmpIf { val: false, pos: 0 });
+                            Some(self.output.len() - 1)
+                        }
+                        BinaryOperator::Or => {
+                            self.output.push(Expression::JmpIf { val: true, pos: 0 });
+                            Some(self.output.len() - 1)
+                        }
+                        _ => None,
+                    };
+
+                    self.operator_stack
+                        .push((Token::BinaryOperator(bop), jmp_pos));
                 }
                 Token::Function { id, name, num_args } => {
-                    if let Some(x) = arg_count.last_mut() {
-                        *x = x.saturating_add(1);
-                    }
-                    arg_count.push(0);
+                    self.inc_arg_count();
+                    self.arg_count.push(0);
                     self.operator_stack
-                        .push(Token::Function { id, name, num_args })
+                        .push((Token::Function { id, name, num_args }, None))
+                }
+                Token::OpenBracket => {
+                    if last_is_var_or_fnc {
+                        // Array access
+                        self.arg_count.push(1);
+                        self.operator_stack.push((
+                            Token::Function {
+                                id: u32::MAX,
+                                name: "[".to_string(),
+                                num_args: 2,
+                            },
+                            None,
+                        ));
+                        self.operator_stack.push((token, None))
+                    } else {
+                        // Array literal
+                        let mut array = Vec::new();
+
+                        loop {
+                            match self.tokenizer.next()? {
+                                Some(Token::Number(n)) => array.push(n.into()),
+                                Some(Token::String(s)) => array.push(s.into()),
+                                Some(Token::CloseBracket) => break,
+                                _ => {
+                                    return Err(format!(
+                                        "Invalid token {:?} in array literal",
+                                        token
+                                    ))
+                                }
+                            }
+
+                            match self.tokenizer.next()? {
+                                Some(Token::Comma) => {}
+                                Some(Token::CloseBracket) => break,
+                                _ => {
+                                    return Err(format!(
+                                        "Invalid token {:?} in array literal",
+                                        token
+                                    ))
+                                }
+                            }
+                        }
+
+                        self.inc_arg_count();
+                        self.output.push(Expression::Constant(array.into()))
+                    }
                 }
                 Token::Comma => {
-                    while let Some(token) = self.operator_stack.last() {
+                    while let Some((token, jmp_pos)) = self.operator_stack.last() {
                         match token {
                             Token::OpenParen => break,
                             Token::BinaryOperator(bop) => {
-                                self.output.push(Expression::BinaryOperator(*bop));
+                                let bop = *bop;
+                                let jmp_pos = *jmp_pos;
+                                self.update_jmp_pos(jmp_pos);
+                                self.output.push(Expression::BinaryOperator(bop));
                                 self.operator_stack.pop();
                             }
                             Token::UnaryOperator(uop) => {
@@ -152,17 +233,45 @@ where
                     }
                 }
             }
+            last_is_var_or_fnc = is_var_or_fnc;
         }
 
-        while let Some(token) = self.operator_stack.pop() {
+        while let Some((token, jmp_pos)) = self.operator_stack.pop() {
             match token {
-                Token::BinaryOperator(bop) => self.output.push(Expression::BinaryOperator(bop)),
+                Token::BinaryOperator(bop) => {
+                    self.update_jmp_pos(jmp_pos);
+                    self.output.push(Expression::BinaryOperator(bop))
+                }
                 Token::UnaryOperator(uop) => self.output.push(Expression::UnaryOperator(uop)),
                 _ => return Err("Invalid token on the operator stack".to_string()),
             }
         }
 
         Ok(self)
+    }
+
+    fn inc_arg_count(&mut self) {
+        if let Some(x) = self.arg_count.last_mut() {
+            *x = x.saturating_add(1);
+        }
+    }
+
+    fn dec_arg_count(&mut self) {
+        if let Some(x) = self.arg_count.last_mut() {
+            *x = x.saturating_sub(1);
+        }
+    }
+
+    fn update_jmp_pos(&mut self, jmp_pos: Option<usize>) {
+        if let Some(jmp_pos) = jmp_pos {
+            let cur_pos = self.output.len();
+            if let Expression::JmpIf { pos, .. } = &mut self.output[jmp_pos] {
+                *pos = (cur_pos - jmp_pos) as u32;
+            } else {
+                #[cfg(test)]
+                panic!("Invalid jump position");
+            }
+        }
     }
 }
 

@@ -265,7 +265,7 @@
 //! Copyright (C) 2020-2023, Stalwart Labs Ltd.
 //!
 
-use std::{borrow::Cow, iter::Enumerate, sync::Arc, vec::IntoIter};
+use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::{
@@ -365,8 +365,6 @@ pub struct Context<'x> {
     pub(crate) part: usize,
     pub(crate) part_iter: IntoIter<usize>,
     pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
-
-    pub(crate) line_iter: Enumerate<IntoIter<Variable<'static>>>,
 
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,
@@ -597,7 +595,8 @@ mod tests {
     };
 
     use crate::{
-        compiler::grammar::Capability, runtime::actions::action_mime::reset_test_boundary,
+        compiler::grammar::Capability,
+        runtime::{actions::action_mime::reset_test_boundary, Variable},
         Compiler, Envelope, Event, FunctionMap, Input, Mailbox, PluginArgument, Recipient, Runtime,
         SpamStatus, VirusStatus,
     };
@@ -649,6 +648,9 @@ mod tests {
                 v => v.to_string().into(),
             })
             .with_function("len", |_, v| v[0].to_cow().len().into())
+            .with_function("count", |_, v| {
+                v[0].as_array().map_or(0, |arr| arr.len()).into()
+            })
             .with_function("to_lowercase", |_, v| {
                 v[0].to_cow().to_lowercase().to_string().into()
             })
@@ -669,6 +671,13 @@ mod tests {
             .with_function("char_count", |_, v| {
                 v[0].to_cow().as_ref().chars().count().into()
             })
+            .with_function("lines", |_, v| {
+                v[0].to_cow()
+                    .lines()
+                    .map(|line| Variable::from(line.to_string()))
+                    .collect::<Vec<_>>()
+                    .into()
+            })
             .with_function_args(
                 "contains",
                 |_, v| v[0].to_string().contains(&v[1].to_string()).into(),
@@ -688,6 +697,15 @@ mod tests {
                 "concat_three",
                 |_, v| format!("{}-{}-{}", v[0], v[1], v[2]).into(),
                 3,
+            )
+            .with_function_args(
+                "in_array",
+                |_, v| {
+                    v[0].as_array()
+                        .map_or(false, |arr| arr.contains(&v[1]))
+                        .into()
+                },
+                2,
             );
         let mut compiler = Compiler::new()
             .with_max_string_size(10240)
@@ -724,7 +742,7 @@ mod tests {
                 .with_valid_notification_uri("mailto")
                 .with_max_out_messages(100)
                 .with_capability(Capability::Plugins)
-                .with_capability(Capability::ForEveryLine)
+                .with_capability(Capability::While)
                 .with_capability(Capability::Eval)
                 .with_functions(&mut fnc_map.clone());
             let mut instance = runtime.filter(b"");

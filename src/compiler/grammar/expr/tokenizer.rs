@@ -97,7 +97,9 @@ where
                     self.is_eof = true;
                     break;
                 }
-                b'[' if self.buf.last().map_or(false, |c| c.is_ascii_alphanumeric()) => {
+                b'[' if self.buf.contains(&b'.')
+                    && self.buf.get(0.."global.".len()) != Some(b"global.") =>
+                {
                     self.buf.push(ch);
                 }
                 b'-' if self.buf.last().map_or(false, |c| *c == b'[')
@@ -181,12 +183,9 @@ where
                             }
                             _ => Token::BinaryOperator(BinaryOperator::Lt),
                         },
-                        b',' => {
-                            if self.depth == 0 {
-                                return Err("Comma outside of function call".to_string());
-                            }
-                            Token::Comma
-                        }
+                        b',' => Token::Comma,
+                        b'[' => Token::OpenBracket,
+                        b']' => Token::CloseBracket,
                         b' ' | b'\r' | b'\n' => {
                             if prev_token.is_some() {
                                 return Ok(prev_token);

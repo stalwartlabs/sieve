@@ -789,10 +789,16 @@
   [
     52,
     {
-      "Invalid": {
-        "name": "remove",
-        "line_num": 86,
-        "line_pos": 9
+      "EditFlags": {
+        "action": "Remove",
+        "name": {
+          "Local": 2
+        },
+        "flags": [
+          {
+            "Text": "\\Flagged"
+          }
+        ]
       }
     }
   ],

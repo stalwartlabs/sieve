@@ -111,3 +111,42 @@ test "Expressions" {
 
 }
 
+test "Expressions - Arrays" {
+    set "expr" "%{['a', 'b', 'c']}";
+    set "expr2" "%{expr + ['d', 'e', 'f']}";
+
+    if not eval "in_array(expr, 'c')" {
+        test_fail "in_array(expr, 'd') is false";
+    }
+
+    if eval "in_array(expr, 'w')" {
+        test_fail "in_array(expr, 'w') is true";
+    }
+
+    if not eval "in_array(['x', 'y', 'z'], 'y')" {
+        test_fail "in_array(['x', 'y', 'z'], 'y') is false";
+    }
+
+    if eval "in_array(['x', 'y', 'z'], 'p')" {
+        test_fail "in_array(['x', 'y', 'z'], 'p') is true";
+    }
+
+    if eval "expr[0] != 'a'" {
+        test_fail "expr[0] != 'a'";
+    }
+
+    set "index" "1";
+
+    if eval "expr[index] != 'b'" {
+        test_fail "expr[index] != 'b'";
+    }
+
+    if eval "expr[index + 1] != 'c'" {
+        test_fail "expr[index + 1] != 'c'";
+    }
+
+    if eval "expr2[count(expr2) - 1] != 'f'" {
+        test_fail "expr2[count(expr2) - 1] != 'f'";
+    }
+
+}

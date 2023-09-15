@@ -57,7 +57,6 @@ impl<'x> Context<'x> {
             part: 0,
             part_iter: Vec::new().into_iter(),
             part_iter_stack: Vec::new(),
-            line_iter: Vec::new().into_iter().enumerate(),
             pos: usize::MAX,
             test_result: false,
             script_cache: AHashMap::new(),
@@ -280,58 +279,13 @@ impl<'x> Context<'x> {
                             }
                         }
                     }
-                    Instruction::ForEveryLineInit(source) => {
-                        self.line_iter = match self.eval_value(source) {
-                            Variable::Array(arr) if !arr.is_empty() => arr
-                                .into_iter()
-                                .map(|v| v.into_owned())
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .enumerate(),
-                            Variable::ArrayRef(arr) if !arr.is_empty() => arr
-                                .iter()
-                                .map(|v| v.to_owned())
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .enumerate(),
-                            Variable::String(s) => s
-                                .lines()
-                                .map(|line| Variable::String(line.to_string()))
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .enumerate(),
-                            Variable::StringRef(s) => s
-                                .lines()
-                                .map(|line| Variable::String(line.to_string()))
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .enumerate(),
-                            Variable::Integer(n) => {
-                                vec![Variable::Integer(n)].into_iter().enumerate()
-                            }
-                            Variable::Float(n) => vec![Variable::Float(n)].into_iter().enumerate(),
-                            _ => Vec::new().into_iter().enumerate(),
-                        };
-                    }
-                    Instruction::ForEveryLine(fep) => {
-                        if let Some((line_num, line)) = self.line_iter.next() {
-                            if let Some(var) = self.vars_local.get_mut(fep.var_idx) {
-                                *var = line;
-                            } else {
-                                debug_assert!(false, "Non-existent local variable {}", fep.var_idx);
-                            }
-                            if let Some(var) = self.vars_local.get_mut(fep.var_idx + 1) {
-                                *var = Variable::Integer((line_num + 1) as i64);
-                            } else {
-                                debug_assert!(
-                                    false,
-                                    "Non-existent local variable {}",
-                                    fep.var_idx + 1
-                                );
-                            }
-                        } else {
-                            debug_assert!(fep.jz_pos > self.pos - 1);
-                            self.pos = fep.jz_pos;
+                    Instruction::While(while_) => {
+                        if !self
+                            .eval_expression(&while_.expr)
+                            .map_or(false, |v| v.to_bool())
+                        {
+                            debug_assert!(while_.jz_pos > self.pos - 1);
+                            self.pos = while_.jz_pos;
                             iter = current_script.instructions.get(self.pos..)?.iter();
                             continue;
                         }

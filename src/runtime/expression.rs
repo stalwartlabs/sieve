@@ -25,24 +25,22 @@ use std::{cmp::Ordering, fmt::Display};
 
 use crate::{compiler::Number, runtime::Variable, Context};
 
-use crate::compiler::grammar::expr::{BinaryOperator, Expression, UnaryOperator};
+use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
 impl<'x> Context<'x> {
-    pub(crate) fn eval_expression<'y: 'x, 'z>(
+    pub(crate) fn eval_expression<'y: 'x>(
         &'y self,
-        expr: &'z [Expression],
+        expr: &'x [Expression],
     ) -> Option<Variable<'x>> {
         let mut stack = Vec::with_capacity(expr.len());
-        for expr in expr {
+        let mut exprs = expr.iter();
+        while let Some(expr) = exprs.next() {
             match expr {
                 Expression::Variable(v) => {
                     stack.push(self.variable(v).unwrap_or_default());
                 }
-                Expression::Number(val) => {
-                    stack.push(Variable::from(*val));
-                }
-                Expression::String(val) => {
-                    stack.push(Variable::from(val.to_string()));
+                Expression::Constant(val) => {
+                    stack.push(Variable::from(val));
                 }
                 Expression::UnaryOperator(op) => {
                     let value = stack.pop()?;
@@ -77,6 +75,22 @@ impl<'x> Context<'x> {
                         args[num_args - arg_num - 1] = stack.pop()?;
                     }
                     stack.push((self.runtime.functions.get(*id as usize)?)(self, args));
+                }
+                Expression::JmpIf { val, pos } => {
+                    if stack.last()?.to_bool() == *val {
+                        for _ in 0..*pos {
+                            exprs.next();
+                        }
+                    }
+                }
+                Expression::ArrayAccess => {
+                    let index = stack.pop()?.to_usize();
+                    let mut array = stack.pop()?.into_array();
+                    stack.push(if index < array.len() {
+                        array.remove(index)
+                    } else {
+                        Variable::default()
+                    });
                 }
             }
         }
@@ -433,6 +447,17 @@ impl From<i32> for Number {
     }
 }
 
+impl<'x> From<&'x Constant> for Variable<'x> {
+    fn from(value: &'x Constant) -> Self {
+        match value {
+            Constant::Integer(i) => Variable::Integer(*i),
+            Constant::Float(f) => Variable::Float(*f),
+            Constant::String(s) => Variable::StringRef(s.as_str()),
+            Constant::Array(a) => Variable::Array(a.iter().map(|v| v.into()).collect()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use ahash::{HashMap, HashMapExt};
@@ -457,16 +482,15 @@ mod test {
     impl EvalExpression for Vec<Expression> {
         fn eval(&self, variables: &HashMap<String, Variable>) -> Option<Variable> {
             let mut stack = Vec::with_capacity(self.len());
-            for expr in self.iter() {
+            let mut exprs = self.iter();
+
+            while let Some(expr) = exprs.next() {
                 match expr {
                     Expression::Variable(VariableType::Global(v)) => {
                         stack.push(variables.get(v)?.as_ref().into_owned());
                     }
-                    Expression::Number(val) => {
-                        stack.push(Variable::from(*val));
-                    }
-                    Expression::String(val) => {
-                        stack.push(Variable::from(val.to_string()));
+                    Expression::Constant(val) => {
+                        stack.push(Variable::from(val));
                     }
                     Expression::UnaryOperator(op) => {
                         let value = stack.pop()?;
@@ -493,6 +517,13 @@ mod test {
                             BinaryOperator::Gt => left.op_gt(right),
                             BinaryOperator::Ge => left.op_ge(right),
                         });
+                    }
+                    Expression::JmpIf { val, pos } => {
+                        if stack.last()?.to_bool() == *val {
+                            for _ in 0..*pos {
+                                exprs.next();
+                            }
+                        }
                     }
                     _ => unreachable!("Invalid expression"),
                 }
@@ -576,6 +607,7 @@ mod test {
             "!(A * B != C) && !(D >= E + F / G) || !(H < I)",
             "-A - B - (- C - D) - E - (-F)",
         ] {
+            println!("Testing {}", expr);
             for (pos, v) in variables.values_mut().enumerate() {
                 *v = Variable::Integer(pos as i64 + 1);
             }

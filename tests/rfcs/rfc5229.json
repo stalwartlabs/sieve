@@ -119,7 +119,7 @@
             }
           ],
           "match_type": {
-            "Matches": 4
+            "Matches": 6
           },
           "comparator": "AsciiCaseMap",
           "index": null,
@@ -180,7 +180,7 @@
             }
           ],
           "match_type": {
-            "Matches": 4
+            "Matches": 6
           },
           "comparator": "AsciiCaseMap",
           "index": null,
@@ -200,10 +200,24 @@
   [
     12,
     {
-      "Invalid": {
-        "name": "fileinfo",
-        "line_num": 20,
-        "line_pos": 5
+      "FileInto": {
+        "copy": false,
+        "create": false,
+        "folder": {
+          "List": [
+            {
+              "Text": "INBOX.lists."
+            },
+            {
+              "Variable": {
+                "Match": 1
+              }
+            }
+          ]
+        },
+        "flags": [],
+        "mailbox_id": null,
+        "special_use": null
       }
     }
   ],

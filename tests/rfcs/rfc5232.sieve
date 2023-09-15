@@ -83,7 +83,7 @@ elsif anyof (not address :all :contains
             header :matches "subject"
                 ["*make*money*fast*", "*university*dipl*mas*"])
             {
-        remove "MyFlags" "\\Flagged";
+        removeflag "MyFlags" "\\Flagged";
         fileinto :flags "${MyFlags}" "spam";
         }
 else

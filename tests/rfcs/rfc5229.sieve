@@ -17,7 +17,7 @@ if header :matches "List-ID" "*<*@*" {
 if header :matches "Subject" "[*] *" {
     # ${1} will hold "acme-users",
     # ${2} will hold "[fwd] version 1.0 is out"
-    fileinfo "INBOX.lists.${1}"; stop;
+    fileinto "INBOX.lists.${1}"; stop;
 }
 
 # Imagine the header
