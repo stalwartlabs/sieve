@@ -391,6 +391,7 @@ impl<'x> CompilerState<'x> {
             .into_iter()
             .chain(self.block_stack.iter())
             .any(|b| b.capabilities.contains(capability))
+            || self.compiler.no_capability_check
     }
 
     #[inline(always)]
