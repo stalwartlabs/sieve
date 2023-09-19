@@ -238,6 +238,7 @@ impl Compiler {
             max_includes: 6,
             plugins: AHashMap::new(),
             functions: AHashMap::new(),
+            no_capability_check: false,
         }
     }
 
@@ -345,6 +346,15 @@ impl Compiler {
     pub fn register_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
         self.functions = std::mem::take(&mut fnc_map.map);
         self
+    }
+
+    pub fn with_no_capability_check(mut self, value: bool) -> Self {
+        self.no_capability_check = value;
+        self
+    }
+
+    pub fn set_no_capability_check(&mut self, value: bool) {
+        self.no_capability_check = value;
     }
 }
 

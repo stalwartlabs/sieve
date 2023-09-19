@@ -305,6 +305,7 @@ pub struct Compiler {
     pub(crate) max_local_variables: usize,
     pub(crate) max_header_size: usize,
     pub(crate) max_includes: usize,
+    pub(crate) no_capability_check: bool,
 
     // Plugins
     pub(crate) plugins: AHashMap<String, PluginSchema>,
