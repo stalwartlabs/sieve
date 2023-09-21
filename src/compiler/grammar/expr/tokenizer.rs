@@ -103,6 +103,9 @@ where
                 {
                     self.buf.push(ch);
                 }
+                b':' if self.buf.contains(&b'.') => {
+                    self.buf.push(ch);
+                }
                 b']' if self.buf.contains(&b'[') => {
                     self.buf.push(b']');
                 }
