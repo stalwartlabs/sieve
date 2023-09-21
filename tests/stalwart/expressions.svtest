@@ -1,5 +1,4 @@
-#require ["variables", "relational", "vnd.stalwart.plugins", "vnd.stalwart.eval"];
-
+require ["variables", "relational", "vnd.stalwart.plugins", "vnd.stalwart.eval"];
 
 test "Expressions" {
     set "A" "1";

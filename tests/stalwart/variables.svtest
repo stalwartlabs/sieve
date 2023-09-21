@@ -169,6 +169,9 @@ test@x-orig" {
 		test_fail "failed to match header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]: ${header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]}";
 	}
 
+	if not eval "header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*] == ['test@id', 'test@resent', 'test@x-id', 'test@x-orig']" {
+		test_fail "failed to match header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]: ${header.message-id:resent-message-id:x-message-id:x-original-message-id[*].id[*]}";
+	}
 }
 
 test "Header Variables - Content-Type" {
