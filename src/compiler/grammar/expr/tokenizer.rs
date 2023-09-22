@@ -97,9 +97,7 @@ where
                     self.is_eof = true;
                     break;
                 }
-                b'[' if self.buf.contains(&b'.')
-                    && self.buf.get(0.."global.".len()) != Some(b"global.") =>
-                {
+                b'[' if matches!(self.buf.get(0..7), Some(b"header.")) => {
                     self.buf.push(ch);
                 }
                 b'-' if self.buf.last().map_or(false, |c| *c == b'[')
