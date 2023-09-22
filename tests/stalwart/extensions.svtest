@@ -119,6 +119,7 @@ test "Variable scopes" {
 test_set "message" text:
 From: Giovanni
 To: bill.doe@example.net
+X-Confirm-Reading-To: <bill@example.net>
 Subject: Pranzo d'acqua fa volti sghembi
 
 V kožuščku hudobnega fanta stopiclja mizar
@@ -133,5 +134,9 @@ test "Header addresses" {
 
 	if not eval "header.to.addr == 'bill.doe@example.net' && header.to.name == ''" {
 		test_fail "header.to.addr == 'bill.doe@example.net' && header.to.name == ''";
+	}
+
+	if not eval "header.X-Confirm-Reading-To.addr == 'bill@example.net'" {
+		test_fail "header.X-Confirm-Reading-To.addr != 'bill@example.net'";
 	}
 }

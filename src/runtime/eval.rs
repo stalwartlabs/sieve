@@ -307,27 +307,59 @@ impl HeaderVariable {
                     .map(Variable::from),
                 _ => None,
             },
-            HeaderPart::Address(addr) => match &header.value {
-                HeaderValue::Address(list) => {
-                    let mut list = list.iter();
+            HeaderPart::Address(part) => match &header.value {
+                HeaderValue::Address(addr) => {
+                    let mut list = addr.iter();
                     match self.index_part.cmp(&0) {
                         Ordering::Greater => list
                             .nth((self.index_part - 1) as usize)
-                            .and_then(|a| addr.eval_strict(a))
+                            .and_then(|a| part.eval_strict(a))
                             .map(Variable::from),
                         Ordering::Less => list
                             .rev()
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
-                            .and_then(|a| addr.eval_strict(a))
+                            .and_then(|a| part.eval_strict(a))
                             .map(Variable::from),
                         Ordering::Equal => {
                             for item in list {
-                                if let Some(part) = addr.eval_strict(item) {
+                                if let Some(part) = part.eval_strict(item) {
                                     result.push(Variable::from(part));
                                 }
                             }
                             return;
                         }
+                    }
+                }
+                HeaderValue::Text(_) => {
+                    let addr = raw
+                        .get(header.offset_start..header.offset_end)
+                        .and_then(|bytes| match MessageStream::new(bytes).parse_address() {
+                            HeaderValue::Address(addr) => addr.into(),
+                            _ => None,
+                        });
+                    if let Some(addr) = addr {
+                        let mut list = addr.iter();
+                        match self.index_part.cmp(&0) {
+                            Ordering::Greater => list
+                                .nth((self.index_part - 1) as usize)
+                                .and_then(|a| part.eval_strict(a))
+                                .map(|s| Variable::String(s.to_string())),
+                            Ordering::Less => list
+                                .rev()
+                                .nth((self.index_part.unsigned_abs() - 1) as usize)
+                                .and_then(|a| part.eval_strict(a))
+                                .map(|s| Variable::String(s.to_string())),
+                            Ordering::Equal => {
+                                for item in list {
+                                    if let Some(part) = part.eval_strict(item) {
+                                        result.push(Variable::String(part.to_string()));
+                                    }
+                                }
+                                return;
+                            }
+                        }
+                    } else {
+                        None
                     }
                 }
                 _ => None,
