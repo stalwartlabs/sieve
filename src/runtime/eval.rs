@@ -313,16 +313,16 @@ impl HeaderVariable {
                     match self.index_part.cmp(&0) {
                         Ordering::Greater => list
                             .nth((self.index_part - 1) as usize)
-                            .and_then(|a| addr.eval(a))
+                            .and_then(|a| addr.eval_strict(a))
                             .map(Variable::from),
                         Ordering::Less => list
                             .rev()
                             .nth((self.index_part.unsigned_abs() - 1) as usize)
-                            .and_then(|a| addr.eval(a))
+                            .and_then(|a| addr.eval_strict(a))
                             .map(Variable::from),
                         Ordering::Equal => {
                             for item in list {
-                                if let Some(part) = addr.eval(item) {
+                                if let Some(part) = addr.eval_strict(item) {
                                     result.push(Variable::from(part));
                                 }
                             }
