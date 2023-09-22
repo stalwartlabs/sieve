@@ -283,6 +283,22 @@ impl AddressPart {
         }
     }
 
+    pub(crate) fn eval_strict<'x>(&self, addr: &'x Addr<'x>) -> Option<&'x str> {
+        match (self, addr.address.as_deref()) {
+            (AddressPart::All, Some(email)) => Some(email),
+            (AddressPart::LocalPart, Some(email)) if !email.is_empty() => {
+                parse_address_local_part(email)
+            }
+            (AddressPart::Domain, Some(email)) if !email.is_empty() => parse_address_domain(email),
+            (AddressPart::User, Some(email)) if !email.is_empty() => parse_address_user_part(email),
+            (AddressPart::Detail, Some(email)) if !email.is_empty() => {
+                parse_address_detail_part(email)
+            }
+            (AddressPart::Name, _) => addr.name.as_deref(),
+            (_, email) => email,
+        }
+    }
+
     pub(crate) fn eval_string<'x>(&self, addr: &'x str) -> Option<&'x str> {
         if !addr.is_empty() {
             match self {

@@ -115,3 +115,23 @@ test "Variable scopes" {
 	}
 
 }
+
+test_set "message" text:
+From: Giovanni
+To: bill.doe@example.net
+Subject: Pranzo d'acqua fa volti sghembi
+
+V kožuščku hudobnega fanta stopiclja mizar
+
+.
+;
+
+test "Header addresses" {
+	if not eval "header.from.addr == '' && header.from.name == 'Giovanni'" {
+		test_fail "failed header.from.addr == '' && header.from.name == 'Giovanni'";
+	}
+
+	if not eval "header.to.addr == 'bill.doe@example.net' && header.to.name == ''" {
+		test_fail "header.to.addr == 'bill.doe@example.net' && header.to.name == ''";
+	}
+}
