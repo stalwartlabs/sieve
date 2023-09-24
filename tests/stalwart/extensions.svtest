@@ -119,6 +119,9 @@ test "Variable scopes" {
 test_set "message" text:
 From: Giovanni
 To: bill.doe@example.net
+Cc: User <user@domain.org>, invalid, User2 <user2@domain.org>
+Bcc: Test <test@test.org>, Test 1 <test1@test1.org>
+Bcc: Test 2 <test2@test2.org>, Test 3 <test3@test3.org>
 X-Confirm-Reading-To: <bill@example.net>
 Subject: Pranzo d'acqua fa volti sghembi
 
@@ -138,5 +141,9 @@ test "Header addresses" {
 
 	if not eval "header.X-Confirm-Reading-To.addr == 'bill@example.net'" {
 		test_fail "header.X-Confirm-Reading-To.addr != 'bill@example.net'";
+	}
+
+	if not eval "header.from:to:cc:bcc:X-Confirm-Reading-To[*].addr[*] == ['', 'bill.doe@example.net', 'user@domain.org', '', 'user2@domain.org', 'test@test.org', 'test1@test1.org', 'test2@test2.org', 'test3@test3.org', 'bill@example.net']" {
+		test_fail "header.from:to:cc:bcc:X-Confirm-Reading-To[*].addr[*] = [%{header.from:to:cc:bcc:X-Confirm-Reading-To[*].addr[*]}]";
 	}
 }
