@@ -197,7 +197,7 @@ impl<'x> Context<'x> {
         }
 
         match result.len() {
-            1 => result.pop(),
+            1 if header.index_hdr != 0 && header.index_part != 0 => result.pop(),
             0 => None,
             _ => Some(Variable::Array(result)),
         }
