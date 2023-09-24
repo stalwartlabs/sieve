@@ -322,9 +322,11 @@ impl HeaderVariable {
                             .map(Variable::from),
                         Ordering::Equal => {
                             for item in list {
-                                if let Some(part) = part.eval_strict(item) {
-                                    result.push(Variable::from(part));
-                                }
+                                result.push(
+                                    part.eval_strict(item)
+                                        .map(Variable::from)
+                                        .unwrap_or_default(),
+                                );
                             }
                             return;
                         }
@@ -351,9 +353,11 @@ impl HeaderVariable {
                                 .map(|s| Variable::String(s.to_string())),
                             Ordering::Equal => {
                                 for item in list {
-                                    if let Some(part) = part.eval_strict(item) {
-                                        result.push(Variable::String(part.to_string()));
-                                    }
+                                    result.push(
+                                        part.eval_strict(item)
+                                            .map(|s| Variable::String(s.to_string()))
+                                            .unwrap_or_default(),
+                                    );
                                 }
                                 return;
                             }
