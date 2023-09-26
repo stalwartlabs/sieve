@@ -46,8 +46,8 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<Variable<'static>>,
 }
 
-impl<'x> Context<'x> {
-    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
+impl<'x, C: Clone> Context<'x, C> {
+    pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
         Context {
             #[cfg(test)]
             runtime: runtime.clone(),
@@ -90,7 +90,9 @@ impl<'x> Context<'x> {
             spam_status: SpamStatus::Unknown,
         }
     }
+}
 
+impl<'x, C> Context<'x, C> {
     #[allow(clippy::while_let_on_iterator)]
     pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
         match input {
@@ -631,5 +633,9 @@ impl<'x> Context<'x> {
 
     pub fn part(&self) -> usize {
         self.part
+    }
+
+    pub fn context(&self) -> &C {
+        &self.runtime.context
     }
 }

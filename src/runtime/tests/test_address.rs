@@ -44,7 +44,7 @@ use crate::{
 use super::TestResult;
 
 impl TestAddress {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let key_list = ctx.eval_values(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
 
@@ -189,7 +189,7 @@ impl TestAddress {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     #[allow(unused_assignments)]
     pub(crate) fn find_addresses(
         &self,

@@ -426,8 +426,47 @@ impl PluginArgument<String, Number> {
     }
 }
 
-impl Runtime {
-    pub fn new() -> Self {
+impl<C: Clone> Runtime<C> {
+    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x, C> {
+        Context::new(
+            self,
+            MessageParser::new()
+                .parse(raw_message)
+                .unwrap_or_else(|| Message {
+                    parts: vec![MessagePart {
+                        headers: vec![],
+                        is_encoding_problem: false,
+                        body: PartType::Text("".into()),
+                        encoding: Encoding::None,
+                        offset_header: 0,
+                        offset_body: 0,
+                        offset_end: 0,
+                    }],
+                    raw_message: b""[..].into(),
+                    ..Default::default()
+                }),
+        )
+    }
+
+    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x, C> {
+        Context::new(self, message)
+    }
+}
+
+impl Runtime<()> {
+    pub fn new() -> Runtime<()> {
+        Self::new_with_context(())
+    }
+}
+
+impl Default for Runtime<()> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<C> Runtime<C> {
+    pub fn new_with_context(context: C) -> Self {
         #[allow(unused_mut)]
         let mut allowed_capabilities = AHashSet::from_iter(Capability::all().iter().cloned());
 
@@ -462,6 +501,7 @@ impl Runtime {
             default_duplicate_expiry: 7 * 86400,
             local_hostname: "localhost".into(),
             functions: Vec::new(),
+            context,
         }
     }
 
@@ -700,70 +740,42 @@ impl Runtime {
         self
     }
 
-    pub fn with_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
+    pub fn with_functions(mut self, fnc_map: &mut FunctionMap<C>) -> Self {
         self.functions = std::mem::take(&mut fnc_map.functions);
         self
     }
 
-    pub fn set_functions(&mut self, fnc_map: &mut FunctionMap) {
+    pub fn set_functions(&mut self, fnc_map: &mut FunctionMap<C>) {
         self.functions = std::mem::take(&mut fnc_map.functions);
-    }
-
-    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
-        Context::new(
-            self,
-            MessageParser::new()
-                .parse(raw_message)
-                .unwrap_or_else(|| Message {
-                    parts: vec![MessagePart {
-                        headers: vec![],
-                        is_encoding_problem: false,
-                        body: PartType::Text("".into()),
-                        encoding: Encoding::None,
-                        offset_header: 0,
-                        offset_body: 0,
-                        offset_end: 0,
-                    }],
-                    raw_message: b""[..].into(),
-                    ..Default::default()
-                }),
-        )
-    }
-
-    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x> {
-        Context::new(self, message)
     }
 }
 
-impl FunctionMap {
+impl<C> FunctionMap<C> {
     pub fn new() -> Self {
-        Self::default()
+        FunctionMap {
+            map: Default::default(),
+            functions: Default::default(),
+        }
     }
 
-    pub fn with_function(self, name: impl Into<String>, fnc: Function) -> Self {
+    pub fn with_function(self, name: impl Into<String>, fnc: Function<C>) -> Self {
         self.with_function_args(name, fnc, 1)
     }
 
-    pub fn with_function_no_args(self, name: impl Into<String>, fnc: Function) -> Self {
+    pub fn with_function_no_args(self, name: impl Into<String>, fnc: Function<C>) -> Self {
         self.with_function_args(name, fnc, 0)
     }
 
     pub fn with_function_args(
         mut self,
         name: impl Into<String>,
-        fnc: Function,
+        fnc: Function<C>,
         num_args: u32,
     ) -> Self {
         self.map
             .insert(name.into(), (self.functions.len() as u32, num_args));
         self.functions.push(fnc);
         self
-    }
-}
-
-impl Default for Runtime {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

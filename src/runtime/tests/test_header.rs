@@ -35,7 +35,7 @@ use crate::{
 use super::{mime::SubpartIterator, TestResult};
 
 impl TestHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let key_list = ctx.eval_values(&self.key_list);
         let header_list = ctx.parse_header_names(&self.header_list);
         let mime_opts = match &self.mime_opts {
@@ -206,7 +206,7 @@ impl TestHeader {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn parse_header_names<'z: 'y, 'y>(
         &'z self,
         header_names: &'y [Value],

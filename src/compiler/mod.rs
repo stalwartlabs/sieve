@@ -343,7 +343,7 @@ impl Compiler {
             })
     }
 
-    pub fn register_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
+    pub fn register_functions<C>(mut self, fnc_map: &mut FunctionMap<C>) -> Self {
         self.functions = std::mem::take(&mut fnc_map.map);
         self
     }

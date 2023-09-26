@@ -41,7 +41,7 @@ use super::action_editheader::RemoveCrLf;
 use mail_builder::headers::message_id::generate_message_id_header;
 
 impl Replace {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         // Delete children parts
         let mut part_ids = ctx.find_nested_parts_ids(false);
         part_ids.sort_unstable_by_key(|a| Reverse(*a));
@@ -182,7 +182,7 @@ impl Replace {
 }
 
 impl Enclose {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         let body = ctx.eval_value(&self.value).into_string();
         let subject = self
             .subject
@@ -341,7 +341,7 @@ impl Enclose {
 }
 
 impl ExtractText {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         let mut value = String::new();
 
         if !ctx.part_iter_stack.is_empty() {
@@ -400,7 +400,7 @@ enum StackItem<'x> {
     None,
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn build_message_id(&mut self) -> Option<Event> {
         if self.has_changes {
             self.last_message_id += 1;

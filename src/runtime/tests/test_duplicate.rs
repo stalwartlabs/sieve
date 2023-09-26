@@ -31,7 +31,7 @@ use crate::{
 use super::TestResult;
 
 impl TestDuplicate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let id = match &self.dup_match {
             DupMatch::Header(header_name) => {
                 let mut value = String::new();

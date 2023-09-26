@@ -25,7 +25,7 @@ use crate::Context;
 
 use super::Variable;
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn set_match_variables(&mut self, set_vars: Vec<(usize, String)>) {
         for (var_num, value) in set_vars {
             if let Some(var) = self.vars_match.get_mut(var_num) {
