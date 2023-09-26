@@ -35,7 +35,7 @@ use crate::{
 use super::TestResult;
 
 impl TestEnvelope {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let key_list = ctx.eval_values(&self.key_list);
 
         let result = match &self.match_type {
@@ -153,7 +153,7 @@ impl TestEnvelope {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     fn find_envelopes(
         &self,
         test_envelope: &TestEnvelope,

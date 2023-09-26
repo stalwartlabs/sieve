@@ -27,7 +27,7 @@ use crate::{compiler::Number, runtime::Variable, Context};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn eval_expression<'y: 'x>(
         &'y self,
         expr: &'x [Expression],

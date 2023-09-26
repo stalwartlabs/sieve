@@ -38,7 +38,7 @@ use crate::{
 };
 
 impl AddHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         let header_name_ = ctx.eval_value(&self.field_name).into_cow();
         let mut header_name = String::with_capacity(header_name_.len());
 
@@ -68,7 +68,7 @@ impl AddHeader {
 }
 
 impl DeleteHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         let header_name = if let Some(header_name) =
             HeaderName::parse(ctx.eval_value(&self.field_name).into_cow())
         {
@@ -175,7 +175,7 @@ impl RemoveCrLf for &str {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn insert_header(
         &mut self,
         part_id: usize,

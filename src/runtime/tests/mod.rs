@@ -53,7 +53,7 @@ pub(crate) enum TestResult {
 }
 
 impl Test {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         match &self {
             Test::Header(test) => test.exec(ctx),
             Test::Address(test) => test.exec(ctx),

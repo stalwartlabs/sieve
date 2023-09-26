@@ -32,7 +32,7 @@ use crate::{
     MatchAs,
 };
 
-use super::glob::{glob_match, glob_match_capture};
+use super::glob::GlobPattern;
 
 impl Comparator {
     pub(crate) fn is(&self, a: &Variable<'_>, b: &Variable<'_>) -> bool {
@@ -71,15 +71,12 @@ impl Comparator {
         capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
     ) -> bool {
+        let pattern = GlobPattern::compile(pattern, matches!(self, Comparator::AsciiCaseMap));
         match self {
-            Comparator::AsciiCaseMap if capture_positions == 0 => {
-                glob_match(&value.to_lowercase(), pattern, true)
-            }
-            Comparator::AsciiCaseMap => {
-                glob_match_capture(value, pattern, true, capture_positions, captured_values)
-            }
-            _ if capture_positions == 0 => glob_match(value, pattern, false),
-            _ => glob_match_capture(value, pattern, false, capture_positions, captured_values),
+            Comparator::AsciiCaseMap if capture_positions == 0 => pattern.matches(value),
+            Comparator::AsciiCaseMap => pattern.capture(value, capture_positions, captured_values),
+            _ if capture_positions == 0 => pattern.matches(value),
+            _ => pattern.capture(value, capture_positions, captured_values),
         }
     }
 

@@ -33,7 +33,7 @@ use crate::{
 use super::TestResult;
 
 impl TestHasFlag {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let mut variable_list_ = None;
         let variable_list = if !self.variable_list.is_empty() {
             &self.variable_list

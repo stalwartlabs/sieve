@@ -26,7 +26,7 @@ use crate::{compiler::grammar::tests::test_exists::TestExists, Context};
 use super::{mime::SubpartIterator, TestResult};
 
 impl TestExists {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let header_names = ctx.parse_header_names(&self.header_names);
         let mut header_exists = vec![false; header_names.len()];
         let parts = [ctx.part];

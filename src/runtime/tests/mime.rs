@@ -33,15 +33,15 @@ pub(crate) enum ContentTypeFilter {
     TypeSubtype((String, String)),
 }
 
-pub(crate) struct SubpartIterator<'x> {
-    ctx: &'x Context<'x>,
+pub(crate) struct SubpartIterator<'x, C> {
+    ctx: &'x Context<'x, C>,
     iter: Iter<'x, usize>,
     iter_stack: Vec<Iter<'x, usize>>,
     anychild: bool,
 }
 
-impl<'x> SubpartIterator<'x> {
-    pub(crate) fn new(ctx: &'x Context<'x>, parts: &'x [usize], anychild: bool) -> Self {
+impl<'x, C> SubpartIterator<'x, C> {
+    pub(crate) fn new(ctx: &'x Context<'x, C>, parts: &'x [usize], anychild: bool) -> Self {
         SubpartIterator {
             ctx,
             iter: parts.iter(),
@@ -73,7 +73,7 @@ impl<'x> SubpartIterator<'x> {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn find_nested_parts<'z: 'x>(
         &'z self,
         mut message: &'x Message<'x>,

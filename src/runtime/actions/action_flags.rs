@@ -30,7 +30,7 @@ use crate::{
 };
 
 impl EditFlags {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
         let mut var_name_ = None;
         let var_name = self.name.as_ref().unwrap_or_else(|| {
             var_name_.get_or_insert_with(|| VariableType::Global("__flags".to_string()))
@@ -103,7 +103,7 @@ impl EditFlags {
     }
 }
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn tokenize_flags(
         &self,
         strings: &[Value],

@@ -38,7 +38,7 @@ use crate::{
 use super::{mime::ContentTypeFilter, TestResult};
 
 impl TestBody {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         // Check Subject (not a Sieve standard)
         let key_list = ctx.eval_values(&self.key_list);
         if self.include_subject {

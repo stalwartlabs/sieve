@@ -39,7 +39,7 @@ use crate::{
 
 use super::Variable;
 
-impl<'x> Context<'x> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn variable<'y: 'x>(&'y self, var: &VariableType) -> Option<Variable<'x>> {
         match var {
             VariableType::Local(var_num) => self.vars_local.get(*var_num).map(|v| v.as_ref()),
