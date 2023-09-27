@@ -37,6 +37,7 @@ pub(crate) enum Expression {
     JmpIf { val: bool, pos: u32 },
     Function { id: u32, num_args: u32 },
     ArrayAccess,
+    ArrayBuild(u32),
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -44,7 +45,6 @@ pub(crate) enum Constant {
     Integer(i64),
     Float(f64),
     String(String),
-    Array(Vec<Constant>),
 }
 
 impl Eq for Constant {}
@@ -61,12 +61,6 @@ impl From<Number> for Constant {
 impl From<String> for Constant {
     fn from(value: String) -> Self {
         Constant::String(value)
-    }
-}
-
-impl From<Vec<Constant>> for Constant {
-    fn from(value: Vec<Constant>) -> Self {
-        Constant::Array(value)
     }
 }
 

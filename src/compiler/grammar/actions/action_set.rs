@@ -25,7 +25,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
-        grammar::instruction::{CompilerState, Instruction},
+        grammar::{
+            expr::Expression,
+            instruction::{CompilerState, Instruction},
+        },
         lexer::{tokenizer::TokenInfo, word::Word, Token},
         CompileError, ErrorType, Value, VariableType,
     },
@@ -66,6 +69,12 @@ pub(crate) struct Set {
     pub modifiers: Vec<Modifier>,
     pub name: VariableType,
     pub value: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct Let {
+    pub name: VariableType,
+    pub expr: Vec<Expression>,
 }
 
 impl<'x> CompilerState<'x> {
@@ -122,6 +131,15 @@ impl<'x> CompilerState<'x> {
             name: name.unwrap(),
             value,
         }));
+        Ok(())
+    }
+
+    pub(crate) fn parse_let(&mut self) -> Result<(), CompileError> {
+        let name = self.tokens.unwrap_next()?;
+        let name = self.parse_variable_name(name, false)?;
+        let expr = self.parse_expr()?;
+
+        self.instructions.push(Instruction::Let(Let { name, expr }));
         Ok(())
     }
 

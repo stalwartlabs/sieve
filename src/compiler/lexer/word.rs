@@ -155,6 +155,7 @@ pub(crate) enum Word {
     Eval,
     Local,
     While,
+    Let,
 }
 
 pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
@@ -284,6 +285,7 @@ pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
     "eval" => Word::Eval,
     "local" => Word::Local,
     "while" => Word::While,
+    "let" => Word::Let,
 };
 
 impl Display for Word {
@@ -415,6 +417,7 @@ impl Display for Word {
             Word::Eval => f.write_str("eval"),
             Word::Local => f.write_str("local"),
             Word::While => f.write_str("while"),
+            Word::Let => f.write_str("let"),
         }
     }
 }

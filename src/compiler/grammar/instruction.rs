@@ -45,11 +45,10 @@ use super::{
         action_notify::Notify,
         action_redirect::Redirect,
         action_reject::Reject,
-        action_set::Set,
+        action_set::{Let, Set},
         action_vacation::Vacation,
     },
     expr::Expression,
-    tests::test_plugin::Plugin,
     Capability, Clear, Invalid, While,
 };
 
@@ -107,11 +106,14 @@ pub(crate) enum Instruction {
     Include(Include),
     Return,
 
-    // Plugin extension
-    Plugin(Plugin),
-
     // For every line extension
     While(While),
+
+    // Expression extension
+    Eval(Vec<Expression>),
+    Let(Let),
+
+    // Test only
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -543,6 +545,17 @@ impl Compiler {
                             }
                         }
 
+                        // Expressions extension
+                        Word::Let => {
+                            state.validate_argument(
+                                0,
+                                Capability::Expressions.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            state.parse_let()?;
+                        }
+
                         // While extension
                         Word::While => {
                             state.validate_argument(
@@ -700,15 +713,7 @@ impl Compiler {
                 }
 
                 Token::Unknown(instruction) => {
-                    if let Some(schema) = self.plugins.get(&instruction) {
-                        state.validate_argument(
-                            0,
-                            Capability::Plugins.into(),
-                            token_info.line_num,
-                            token_info.line_pos,
-                        )?;
-                        state.parse_plugin(schema)?;
-                    } else if state.has_capability(&Capability::Ihave) {
+                    if state.has_capability(&Capability::Ihave) {
                         state.ignore_instruction()?;
                         state.instructions.push(Instruction::Invalid(Invalid {
                             name: instruction,
@@ -933,6 +938,16 @@ impl<'x> CompilerState<'x> {
                     v.name.map_local_vars(last_id);
                     v.value.map_local_vars(last_id);
                 }
+                Instruction::Let(v) => {
+                    v.name.map_local_vars(last_id);
+                    v.expr.map_local_vars(last_id);
+                }
+                Instruction::While(v) => {
+                    v.expr.map_local_vars(last_id);
+                }
+                Instruction::Eval(v) => {
+                    v.map_local_vars(last_id);
+                }
                 Instruction::Notify(v) => {
                     v.from.map_local_vars(last_id);
                     v.importance.map_local_vars(last_id);
@@ -959,9 +974,6 @@ impl<'x> CompilerState<'x> {
                 }
                 Instruction::Include(v) => {
                     v.value.map_local_vars(last_id);
-                }
-                Instruction::Plugin(v) => {
-                    v.arguments.map_local_vars(last_id);
                 }
                 _ => {}
             }
@@ -1062,12 +1074,6 @@ impl MapLocalVars for Test {
                 v.handle.map_local_vars(last_id);
                 v.reason.map_local_vars(last_id);
             }
-            Test::EvalExpression(v) => {
-                v.expr.map_local_vars(last_id);
-            }
-            Test::Plugin(v) => {
-                v.arguments.map_local_vars(last_id);
-            }
             _ => (),
         }
     }
@@ -1088,7 +1094,6 @@ impl MapLocalVars for Value {
     fn map_local_vars(&mut self, last_id: usize) {
         match self {
             Value::Variable(var) => var.map_local_vars(last_id),
-            Value::Expression(expr) => expr.map_local_vars(last_id),
             Value::List(items) => items.map_local_vars(last_id),
             _ => (),
         }

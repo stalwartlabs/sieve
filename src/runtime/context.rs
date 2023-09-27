@@ -62,6 +62,7 @@ impl<'x, C: Clone> Context<'x, C> {
             vars_env: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
+            expr_stack: None,
             envelope: Vec::new(),
             metadata: Vec::new(),
             message_size: usize::MAX,
@@ -95,6 +96,11 @@ impl<'x, C> Context<'x, C> {
         match input {
             Input::True => self.test_result ^= true,
             Input::False => self.test_result ^= false,
+            Input::FncResult(result) => {
+                if let Some(expr_stack) = &mut self.expr_stack {
+                    expr_stack.push_result(result);
+                }
+            }
             Input::Script { name, script } => {
                 let num_vars = script.num_vars;
                 let num_match_vars = script.num_match_vars;
@@ -120,12 +126,6 @@ impl<'x, C> Context<'x, C> {
                     self.pos = 0;
                     self.test_result = false;
                 }
-            }
-            Input::Variables { list } => {
-                for item in list {
-                    self.set_variable(&item.name, item.value);
-                }
-                self.test_result ^= true;
             }
         }
 
@@ -182,6 +182,18 @@ impl<'x, C> Context<'x, C> {
                             return Some(Err(err));
                         }
                     },
+                    Instruction::Eval(expr) => {
+                        match self.expr_stack.take().unwrap_or_default().eval(self, expr) {
+                            Ok(result) => {
+                                self.test_result = result.to_bool();
+                            }
+                            Err((stack, event)) => {
+                                self.pos -= 1;
+                                self.expr_stack = stack.into();
+                                return Some(Ok(event));
+                            }
+                        }
+                    }
                     Instruction::Clear(clear) => {
                         if clear.local_vars_num > 0 {
                             if let Some(local_vars) = self.vars_local.get_mut(
@@ -277,14 +289,42 @@ impl<'x, C> Context<'x, C> {
                         }
                     }
                     Instruction::While(while_) => {
-                        if !self
-                            .eval_expression(&while_.expr)
-                            .map_or(false, |v| v.to_bool())
+                        match self
+                            .expr_stack
+                            .take()
+                            .unwrap_or_default()
+                            .eval(self, &while_.expr)
                         {
-                            debug_assert!(while_.jz_pos > self.pos - 1);
-                            self.pos = while_.jz_pos;
-                            iter = current_script.instructions.get(self.pos..)?.iter();
-                            continue;
+                            Ok(result) => {
+                                if !result.to_bool() {
+                                    debug_assert!(while_.jz_pos > self.pos - 1);
+                                    self.pos = while_.jz_pos;
+                                    iter = current_script.instructions.get(self.pos..)?.iter();
+                                    continue;
+                                }
+                            }
+                            Err((stack, event)) => {
+                                self.pos -= 1;
+                                self.expr_stack = stack.into();
+                                return Some(Ok(event));
+                            }
+                        }
+                    }
+                    Instruction::Let(let_) => {
+                        match self
+                            .expr_stack
+                            .take()
+                            .unwrap_or_default()
+                            .eval(self, &let_.expr)
+                        {
+                            Ok(result) => {
+                                self.set_variable(&let_.name, result.into_owned());
+                            }
+                            Err((stack, event)) => {
+                                self.pos -= 1;
+                                self.expr_stack = stack.into();
+                                return Some(Ok(event));
+                            }
                         }
                     }
 
@@ -370,9 +410,6 @@ impl<'x, C> Context<'x, C> {
                         return Some(Err(RuntimeError::ScriptErrorMessage(
                             self.eval_value(&err.message).into_string(),
                         )));
-                    }
-                    Instruction::Plugin(plugin) => {
-                        return Some(Ok(self.eval_plugin_arguments(plugin)));
                     }
                     Instruction::Invalid(invalid) => {
                         self.finish_loop();

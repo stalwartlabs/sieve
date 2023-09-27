@@ -28,7 +28,7 @@ use mail_parser::HeaderName;
 use crate::{
     compiler::{
         grammar::{
-            expr::{self, parser::ExpressionParser, tokenizer::Tokenizer},
+            expr::{self},
             instruction::CompilerState,
             AddressPart,
         },
@@ -67,9 +67,8 @@ impl<'x> CompilerState<'x> {
 
         let mut hex_start = usize::MAX;
         let mut decode_buf = Vec::with_capacity(bytes.len());
-        let mut iter = bytes.iter().enumerate().peekable();
 
-        while let Some((mut pos, &ch)) = iter.next() {
+        for (pos, &ch) in bytes.iter().enumerate() {
             let mut is_var_error = false;
 
             match state {
@@ -80,52 +79,6 @@ impl<'x> CompilerState<'x> {
                         var_is_number = true;
                         var_has_namespace = false;
                         state = State::Variable;
-                    }
-                    b'{' if last_ch == b'%' => {
-                        decode_buf.pop();
-                        var_start_pos = pos + 1;
-
-                        // Add any text before the variable
-                        if !decode_buf.is_empty() {
-                            self.add_value(
-                                &mut items,
-                                &decode_buf,
-                                parse_decoded,
-                                text_has_digits,
-                                text_has_dots,
-                            )?;
-                            decode_buf.clear();
-                            text_has_digits = true;
-                            text_has_dots = false;
-                        }
-
-                        match ExpressionParser::from_tokenizer(Tokenizer::from_iter(
-                            iter,
-                            |var_name, maybe_namespace| {
-                                self.parse_expr_fnc_or_var(var_name, maybe_namespace)
-                            },
-                        ))
-                        .parse()
-                        {
-                            Ok(parser) => {
-                                iter = parser.tokenizer.iter;
-                                state = State::None;
-
-                                if !parser.output.is_empty() {
-                                    items.push(Value::Expression(parser.output));
-                                } else {
-                                    is_var_error = true;
-                                    pos = iter.peek().map(|(p, _)| *p).unwrap_or(bytes.len()) - 1;
-                                }
-                            }
-                            Err(err) => {
-                                return Err(ErrorType::InvalidExpression(format!(
-                                    "{}: {}",
-                                    std::str::from_utf8(bytes).unwrap_or_default(),
-                                    err
-                                )))
-                            }
-                        }
                     }
                     b'.' => {
                         if text_has_dots {
@@ -702,7 +655,6 @@ impl Display for Value {
             }
             Value::Number(n) => n.fmt(f),
             Value::Variable(v) => v.fmt(f),
-            Value::Expression(_) => f.write_str("%{}"),
             Value::Regex(r) => f.write_str(&r.expr),
         }
     }

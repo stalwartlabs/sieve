@@ -23,36 +23,54 @@
 
 use std::{cmp::Ordering, fmt::Display};
 
+use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
+use crate::Event;
 use crate::{compiler::Number, runtime::Variable, Context};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
-impl<'x, C> Context<'x, C> {
-    pub(crate) fn eval_expression<'y: 'x>(
-        &'y self,
+#[derive(Clone, Debug)]
+pub struct ExpressionStack<'x> {
+    stack: Vec<Variable<'x>>,
+    pos: usize,
+}
+
+impl<'x> Default for ExpressionStack<'x> {
+    fn default() -> Self {
+        Self {
+            stack: Vec::with_capacity(16),
+            pos: 0,
+        }
+    }
+}
+
+impl<'x> ExpressionStack<'x> {
+    pub(crate) fn eval<'y: 'x, C>(
+        mut self,
+        ctx: &'x Context<'x, C>,
         expr: &'x [Expression],
-    ) -> Option<Variable<'x>> {
-        let mut stack = Vec::with_capacity(expr.len());
-        let mut exprs = expr.iter();
+    ) -> Result<Variable<'x>, (ExpressionStack<'static>, Event)> {
+        let mut exprs = expr.iter().skip(self.pos);
         while let Some(expr) = exprs.next() {
+            self.pos += 1;
             match expr {
                 Expression::Variable(v) => {
-                    stack.push(self.variable(v).unwrap_or_default());
+                    self.stack.push(ctx.variable(v).unwrap_or_default());
                 }
                 Expression::Constant(val) => {
-                    stack.push(Variable::from(val));
+                    self.stack.push(Variable::from(val));
                 }
                 Expression::UnaryOperator(op) => {
-                    let value = stack.pop()?;
-                    stack.push(match op {
+                    let value = self.stack.pop().unwrap_or_default();
+                    self.stack.push(match op {
                         UnaryOperator::Not => value.op_not(),
                         UnaryOperator::Minus => value.op_minus(),
                     });
                 }
                 Expression::BinaryOperator(op) => {
-                    let right = stack.pop()?;
-                    let left = stack.pop()?;
-                    stack.push(match op {
+                    let right = self.stack.pop().unwrap_or_default();
+                    let left = self.stack.pop().unwrap_or_default();
+                    self.stack.push(match op {
                         BinaryOperator::Add => left.op_add(right),
                         BinaryOperator::Subtract => left.op_subtract(right),
                         BinaryOperator::Multiply => left.op_multiply(right),
@@ -70,36 +88,74 @@ impl<'x, C> Context<'x, C> {
                 }
                 Expression::Function { id, num_args } => {
                     let num_args = *num_args as usize;
-                    let mut args = vec![Variable::Integer(0); num_args];
-                    for arg_num in 0..num_args {
-                        args[num_args - arg_num - 1] = stack.pop()?;
+
+                    if let Some(fnc) = ctx.runtime.functions.get(*id as usize) {
+                        let mut arguments = vec![Variable::Integer(0); num_args];
+                        for arg_num in 0..num_args {
+                            arguments[num_args - arg_num - 1] =
+                                self.stack.pop().unwrap_or_default();
+                        }
+                        self.stack.push((fnc)(ctx, arguments));
+                    } else {
+                        let mut arguments = vec![Variable::Integer(0); num_args];
+                        for arg_num in 0..num_args {
+                            arguments[num_args - arg_num - 1] =
+                                self.stack.pop().unwrap_or_default().into_owned();
+                        }
+                        return Err((
+                            self.into_owned(),
+                            Event::Function {
+                                id: ID_EXTERNAL - *id,
+                                arguments,
+                            },
+                        ));
                     }
-                    stack.push((self.runtime.functions.get(*id as usize)?)(self, args));
                 }
                 Expression::JmpIf { val, pos } => {
-                    if stack.last()?.to_bool() == *val {
+                    if self.stack.last().map_or(false, |v| v.to_bool()) == *val {
+                        self.pos += *pos as usize;
                         for _ in 0..*pos {
                             exprs.next();
                         }
                     }
                 }
                 Expression::ArrayAccess => {
-                    let index = stack.pop()?.to_usize();
-                    let mut array = stack.pop()?.into_array();
-                    stack.push(if index < array.len() {
+                    let index = self.stack.pop().unwrap_or_default().to_usize();
+                    let mut array = self.stack.pop().unwrap_or_default().into_array();
+                    self.stack.push(if index < array.len() {
                         array.remove(index)
                     } else {
                         Variable::default()
                     });
                 }
+                Expression::ArrayBuild(num_items) => {
+                    let num_items = *num_items as usize;
+                    let mut items = vec![Variable::Integer(0); num_items];
+                    for arg_num in 0..num_items {
+                        items[num_items - arg_num - 1] = self.stack.pop().unwrap_or_default();
+                    }
+                    self.stack.push(Variable::Array(items));
+                }
             }
         }
-        stack.pop()
+
+        Ok(self.stack.pop().unwrap_or_default())
+    }
+
+    pub fn push_result(&mut self, result: Variable<'x>) {
+        self.stack.push(result);
+    }
+
+    pub fn into_owned(self) -> ExpressionStack<'static> {
+        ExpressionStack {
+            stack: self.stack.into_iter().map(|v| v.into_owned()).collect(),
+            pos: self.pos,
+        }
     }
 }
 
 impl<'x> Variable<'x> {
-    fn op_add(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_add(self, other: Variable<'x>) -> Variable<'x> {
         match (self, other) {
             (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_add(b)),
             (Variable::Float(a), Variable::Float(b)) => Variable::Float(a + b),
@@ -166,7 +222,7 @@ impl<'x> Variable<'x> {
         }
     }
 
-    fn op_subtract(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_subtract(self, other: Variable<'x>) -> Variable<'x> {
         match (self, other) {
             (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_sub(b)),
             (Variable::Float(a), Variable::Float(b)) => Variable::Float(a - b),
@@ -180,7 +236,7 @@ impl<'x> Variable<'x> {
         }
     }
 
-    fn op_multiply(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_multiply(self, other: Variable<'x>) -> Variable<'x> {
         match (self, other) {
             (Variable::Integer(a), Variable::Integer(b)) => Variable::Integer(a.saturating_mul(b)),
             (Variable::Float(a), Variable::Float(b)) => Variable::Float(a * b),
@@ -190,7 +246,7 @@ impl<'x> Variable<'x> {
         }
     }
 
-    fn op_divide(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_divide(self, other: Variable<'x>) -> Variable<'x> {
         match (self, other) {
             (Variable::Integer(a), Variable::Integer(b)) => {
                 Variable::Float(if b != 0 { a as f64 / b as f64 } else { 0.0 })
@@ -208,47 +264,47 @@ impl<'x> Variable<'x> {
         }
     }
 
-    fn op_and(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_and(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self.to_bool() & other.to_bool()))
     }
 
-    fn op_or(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_or(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self.to_bool() | other.to_bool()))
     }
 
-    fn op_xor(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_xor(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self.to_bool() ^ other.to_bool()))
     }
 
-    fn op_eq(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_eq(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self == other))
     }
 
-    fn op_ne(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_ne(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self != other))
     }
 
-    fn op_lt(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_lt(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self < other))
     }
 
-    fn op_le(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_le(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self <= other))
     }
 
-    fn op_gt(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_gt(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self > other))
     }
 
-    fn op_ge(self, other: Variable<'x>) -> Variable<'x> {
+    pub fn op_ge(self, other: Variable<'x>) -> Variable<'x> {
         Variable::Integer(i64::from(self >= other))
     }
 
-    fn op_not(self) -> Variable<'x> {
+    pub fn op_not(self) -> Variable<'x> {
         Variable::Integer(i64::from(!self.to_bool()))
     }
 
-    fn op_minus(self) -> Variable<'x> {
+    pub fn op_minus(self) -> Variable<'x> {
         match self {
             Variable::Integer(n) => Variable::Integer(-n),
             Variable::Float(n) => Variable::Float(-n),
@@ -453,7 +509,6 @@ impl<'x> From<&'x Constant> for Variable<'x> {
             Constant::Integer(i) => Variable::Integer(*i),
             Constant::Float(f) => Variable::Float(*f),
             Constant::String(s) => Variable::StringRef(s.as_str()),
-            Constant::Array(a) => Variable::Array(a.iter().map(|v| v.into()).collect()),
         }
     }
 }

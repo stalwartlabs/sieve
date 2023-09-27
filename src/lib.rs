@@ -94,11 +94,6 @@
 //!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
-//!                 Event::Plugin { id, arguments } => {
-//!                     println!("Script executed plugin {id} with parameters {arguments:?}");
-//!                     // Set to true if the script succeeded
-//!                     input = false.into();
-//!                 }
 //!                 Event::SetEnvelope { envelope, value } => {
 //!                     println!("Set envelope {envelope:?} to {value:?}");
 //!                     input = true.into();
@@ -168,9 +163,13 @@
 //!                     messages.push(String::from_utf8(message).unwrap());
 //!                     input = true.into();
 //!                 }
-//!
-//!                 #[cfg(test)]
-//!                 _ => unreachable!(),
+//!                 Event::Function { id, arguments } => {
+//!                    println!(
+//!                        "Script executed external function {id} with parameters {arguments:?}"
+//!                    );
+//!                    // Return variable result back to interpreter
+//!                    input = Input::result("hello world".into());
+//!                }
 //!             },
 //!             Err(error) => {
 //!                 match error {
@@ -268,16 +267,13 @@
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::{
-    grammar::{
-        actions::action_redirect::{ByTime, Notify, Ret},
-        instruction::Instruction,
-        Capability,
-    },
-    Number, Regex, VariableType,
+use compiler::grammar::{
+    actions::action_redirect::{ByTime, Notify, Ret},
+    instruction::Instruction,
+    Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::{context::ScriptStack, Variable};
+use runtime::{context::ScriptStack, expression::ExpressionStack, Variable};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -307,8 +303,7 @@ pub struct Compiler {
     pub(crate) max_includes: usize,
     pub(crate) no_capability_check: bool,
 
-    // Plugins
-    pub(crate) plugins: AHashMap<String, PluginSchema>,
+    // Functions
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
@@ -377,6 +372,7 @@ pub struct Context<'x, C> {
     pub(crate) vars_env: AHashMap<Cow<'static, str>, Variable<'x>>,
     pub(crate) vars_local: Vec<Variable<'static>>,
     pub(crate) vars_match: Vec<Variable<'static>>,
+    pub(crate) expr_stack: Option<ExpressionStack<'static>>,
 
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
@@ -393,25 +389,6 @@ pub struct Context<'x, C> {
 pub enum Script {
     Personal(String),
     Global(String),
-}
-
-pub struct PluginSchema {
-    pub id: ExternalId,
-    pub tags: AHashMap<String, PluginSchemaTag>,
-    pub arguments: Vec<PluginSchemaArgument>,
-}
-
-pub enum PluginSchemaArgument {
-    Text,
-    Number,
-    Regex,
-    Variable,
-    Array(Box<PluginSchemaArgument>),
-}
-
-pub struct PluginSchemaTag {
-    pub id: ExternalId,
-    pub argument: Option<PluginSchemaArgument>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -454,13 +431,13 @@ pub enum Event {
         expiry: u64,
         last: bool,
     },
-    Plugin {
-        id: ExternalId,
-        arguments: Vec<PluginArgument<String, Number>>,
-    },
     SetEnvelope {
         envelope: Envelope,
         value: String,
+    },
+    Function {
+        id: ExternalId,
+        arguments: Vec<Variable<'static>>,
     },
 
     // Actions
@@ -503,16 +480,6 @@ pub enum Event {
 
 pub type ExternalId = u32;
 
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub enum PluginArgument<T, N> {
-    Tag(ExternalId),
-    Text(T),
-    Number(N),
-    Regex(Regex),
-    Variable(VariableType),
-    Array(Vec<PluginArgument<T, N>>),
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
@@ -547,14 +514,8 @@ pub enum Recipient {
 pub enum Input {
     True,
     False,
+    FncResult(Variable<'static>),
     Script { name: Script, script: Arc<Sieve> },
-    Variables { list: Vec<SetVariable> },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SetVariable {
-    pub name: VariableType,
-    pub value: Variable<'static>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
