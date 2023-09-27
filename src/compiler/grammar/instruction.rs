@@ -557,6 +557,16 @@ impl Compiler {
                             )?;
                             state.parse_let()?;
                         }
+                        Word::Eval => {
+                            state.validate_argument(
+                                0,
+                                Capability::Expressions.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            let expr = state.parse_expr()?;
+                            state.instructions.push(Instruction::Eval(expr));
+                        }
 
                         // While extension
                         Word::While => {

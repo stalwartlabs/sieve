@@ -152,8 +152,9 @@ test "Expressions - Arrays" {
         test_fail "expr2[count(expr2) - 1] != 'f'";
     }
 
+    eval "2 + 2";
+
     if eval "[2 + 2, 'a' + 'b', 5 / 2, ext_zero()] != [4, 'ab', 2.5, 'my_value']" {
         test_fail "[2 + 2, 'a' + 'b', 5 / 2] != [4, 'ab', 2.5]";
     }
-
 }
