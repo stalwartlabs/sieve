@@ -1,7 +1,6 @@
 require "vnd.stalwart.testsuite";
-require "vnd.stalwart.plugins";
 require "vnd.stalwart.while";
-require "vnd.stalwart.eval";
+require "vnd.stalwart.expressions";
 require "relational";
 require "body";
 require "foreverypart";
@@ -39,12 +38,12 @@ test "While - body" {
         break;
     }
 
-    set "line_num" "0";
-    set "body_lines" "%{lines(body)}";
+    let "line_num" "0";
+    let "body_lines" "lines(body)";
 
     while "line_num < count(body_lines)" {
-        set "line" "%{body_lines[line_num]}";
-        set "line_num" "%{line_num + 1}";
+        let "line" "body_lines[line_num]";
+        let "line_num" "line_num + 1";
 
         if eval "line_num == 1" {
             if not string :is "${line}" "Hi." {
@@ -59,7 +58,7 @@ test "While - body" {
                 test_fail "${line_num} = '${line}' ('We lost the game. ')";
             }
         } elsif eval "line_num == 4" {
-            set "did_iterate" "1";
+            let "did_iterate" "1";
             break;
         } else {
             test_fail "break failed ${line_num} = '${line}'";
@@ -70,16 +69,16 @@ test "While - body" {
         test_fail "test #1 did not iterate";
     }
 
-    set "did_iterate" "0";
+    let "did_iterate" "0";
 
     foreverypart :name "main" {
         extracttext "sub_body";
 
-        set "line_num" "0";
-        set "body_lines" "%{lines(sub_body)}";
+        let "line_num" "0";
+        let "body_lines" "lines(sub_body)";
         while "line_num < count(body_lines)" {
-            set "line" "%{body_lines[line_num]}";
-            set "line_num" "%{line_num + 1}";
+            let "line" "body_lines[line_num]";
+            let "line_num" "line_num + 1";
 
             if eval "line_num == 1" {
                 if not string :is "${line}" "Hi." {
@@ -94,7 +93,7 @@ test "While - body" {
                     test_fail "${line_num} = '${line}'";
                 }
             } elsif eval "line_num == 4" {
-                set "did_iterate" "1";
+                let "did_iterate" "1";
                 break :name "main";
             } else {
                 test_fail "break failed ${line_num} = '${line}'";
@@ -109,13 +108,13 @@ test "While - body" {
 
 test "While - headers" {
 
-    set "did_iterate" "0";
+    let "did_iterate" "0";
 
-    set "line_num" "0";
-    set "header_lines" "%{header.to[*].addr[*]}";
+    let "line_num" "0";
+    let "header_lines" "header.to[*].addr[*]";
     while "line_num < count(header_lines)" {
-        set "line" "%{header_lines[line_num]}";
-        set "line_num" "%{line_num + 1}";
+        let "line" "header_lines[line_num]";
+        let "line_num" "line_num + 1";
 
         if eval "line_num == 1" {
             if not string :is "${line}" "james@vandelay.com" {
@@ -126,7 +125,7 @@ test "While - headers" {
                 test_fail "${line_num} = '${line}'";
             }
         } elsif eval "line_num == 3" {
-            set "did_iterate" "1";
+            let "did_iterate" "1";
             if not string :is "${line}" "john@example.com" {
                 test_fail "${line_num} = '${line}'";
             }
@@ -143,33 +142,33 @@ test "While - headers" {
 
 test "While - all headers" {
 
-    set "did_iterate" "0";
+    let "did_iterate" "0";
 
-    set "line_num" "0";
-    set "header_lines" "%{header.*.raw}";
+    let "line_num" "0";
+    let "header_lines" "header.*.raw";
     while "line_num < count(header_lines)" {
-        set "line" "%{header_lines[line_num]}";
-        set "line_num" "%{line_num + 1}";
+        let "line" "header_lines[line_num]";
+        let "line_num" "line_num + 1";
         if allof(eval "line_num == 6", not string :is "${line}" "X-Test: this is a test with plenty of whitespace") {
             test_fail "${line} ${line_num}";
-            set "did_iterate" "1";
+            let "did_iterate" "1";
         }
-        set "did_iterate" "${line_num}";
+        let "did_iterate" "line_num";
     }
     if eval "did_iterate != 7" {
         test_fail "test did not iterate ${did_iterate}";
     }
 
-    set "did_iterate" "0";
-    set "line_num" "0";
-    set "header_lines" "%{header.*.text}";
+    let "did_iterate" "0";
+    let "line_num" "0";
+    let "header_lines" "header.*.text";
     while "line_num < count(header_lines)" {
-        set "line" "%{header_lines[line_num]}";
-        set "line_num" "%{line_num + 1}";
+        let "line" "header_lines[line_num]";
+        let "line_num" "line_num + 1";
         if allof(eval "line_num == 4", not string :is "${line}" "To: \"Colleagues\": \"James Smythe\" <james@vandelay.com>; Friends: jane@example.com, John Smîth <john@example.com>;") {
             test_fail "${line} ${line_num}";
         }
-        set "did_iterate" "${line_num}";
+        let "did_iterate" "line_num";
     }
     if eval "did_iterate != 7" {
         test_fail "test did not iterate ${did_iterate}";
@@ -177,21 +176,21 @@ test "While - all headers" {
 }
 
 test "While - nested with array access" {
-    set "result" "";
-    set "x" "%{['a', 'b', 'c']}";
-    set "y" "%{['0', '1', '2']}";
+    let "result" "";
+    let "x" "['a', 'b', 'c']";
+    let "y" "['0', '1', '2']";
 
-    set "i" "0";
+    let "i" "0";
     while "i < 3" {
-        set "j" "0";
+        let "j" "0";
         while "j < 3" {
             if eval "len(result) > 0" {
-                set "result" "%{result + ','}";
+                let "result" "result + ','";
             }
-            set "result" "%{result + x[i] + y[j]}";
-            set "j" "%{j + 1}";
+            let "result" "result + x[i] + y[j]";
+            let "j" "j + 1";
         }
-        set "i" "%{i + 1}";
+        let "i" "i + 1";
     }
 
     if eval "result != 'a0,a1,a2,b0,b1,b2,c0,c1,c2'" {
@@ -201,16 +200,16 @@ test "While - nested with array access" {
 
 
 test "While - body variable" {
-    set "body_empty_lines" "0";
+    let "body_empty_lines" "0";
 
-    set "line_num" "0";
-    set "body_lines" "%{lines(body.text)}";
+    let "line_num" "0";
+    let "body_lines" "lines(body.text)";
     while "line_num < count(body_lines)" {
-        set "line" "%{body_lines[line_num]}";
-        set "line_num" "%{line_num + 1}";
+        let "line" "body_lines[line_num]";
+        let "line_num" "line_num + 1";
 
-        if string :is "%{trim(line)}" "" {
-            set "body_empty_lines" "%{body_empty_lines + 1}";
+        if eval "trim(line) == ''" {
+            let "body_empty_lines" "body_empty_lines + 1";
         }
     }
 

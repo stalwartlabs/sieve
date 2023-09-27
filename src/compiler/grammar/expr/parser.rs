@@ -33,6 +33,10 @@ where
     arg_count: Vec<i32>,
 }
 
+pub(crate) const ID_ARRAY_ACCESS: u32 = u32::MAX;
+pub(crate) const ID_ARRAY_BUILD: u32 = u32::MAX - 1;
+pub(crate) const ID_EXTERNAL: u32 = u32::MAX - 2;
+
 impl<'x, F> ExpressionParser<'x, F>
 where
     F: Fn(&str, bool) -> Result<Token, String>,
@@ -106,13 +110,13 @@ where
                             });
                         }
 
-                        let expr = if *id != u32::MAX {
-                            Expression::Function {
-                                id: *id,
+                        let expr = match *id {
+                            ID_ARRAY_ACCESS => Expression::ArrayAccess,
+                            ID_ARRAY_BUILD => Expression::ArrayBuild(*num_args),
+                            id => Expression::Function {
+                                id,
                                 num_args: *num_args,
-                            }
-                        } else {
-                            Expression::ArrayAccess
+                            },
                         };
 
                         self.operator_stack.pop();
@@ -168,50 +172,23 @@ where
                         .push((Token::Function { id, name, num_args }, None))
                 }
                 Token::OpenBracket => {
-                    if last_is_var_or_fnc {
-                        // Array access
-                        self.arg_count.push(1);
-                        self.operator_stack.push((
-                            Token::Function {
-                                id: u32::MAX,
-                                name: "[".to_string(),
-                                num_args: 2,
-                            },
-                            None,
-                        ));
-                        self.operator_stack.push((token, None))
+                    // Array functions
+                    let (id, num_args, arg_count) = if last_is_var_or_fnc {
+                        (ID_ARRAY_ACCESS, 2, 1)
                     } else {
-                        // Array literal
-                        let mut array = Vec::new();
-
-                        loop {
-                            match self.tokenizer.next()? {
-                                Some(Token::Number(n)) => array.push(n.into()),
-                                Some(Token::String(s)) => array.push(s.into()),
-                                Some(Token::CloseBracket) => break,
-                                _ => {
-                                    return Err(format!(
-                                        "Invalid token {:?} in array literal",
-                                        token
-                                    ))
-                                }
-                            }
-
-                            match self.tokenizer.next()? {
-                                Some(Token::Comma) => {}
-                                Some(Token::CloseBracket) => break,
-                                _ => {
-                                    return Err(format!(
-                                        "Invalid token {:?} in array literal",
-                                        token
-                                    ))
-                                }
-                            }
-                        }
-
                         self.inc_arg_count();
-                        self.output.push(Expression::Constant(array.into()))
-                    }
+                        (ID_ARRAY_BUILD, 0, 0)
+                    };
+                    self.arg_count.push(arg_count);
+                    self.operator_stack.push((
+                        Token::Function {
+                            id,
+                            name: String::from("array"),
+                            num_args,
+                        },
+                        None,
+                    ));
+                    self.operator_stack.push((token, None));
                 }
                 Token::Comma => {
                     while let Some((token, jmp_pos)) = self.operator_stack.last() {
@@ -253,6 +230,13 @@ where
     fn inc_arg_count(&mut self) {
         if let Some(x) = self.arg_count.last_mut() {
             *x = x.saturating_add(1);
+            let op_pos = self.operator_stack.len() - 2;
+            match self.operator_stack.get_mut(op_pos) {
+                Some((Token::Function { num_args, id, .. }, _)) if *id == ID_ARRAY_BUILD => {
+                    *num_args += 1;
+                }
+                _ => {}
+            }
         }
     }
 

@@ -31,10 +31,10 @@ use mail_parser::{
 
 use crate::{
     compiler::{
-        grammar::tests::test_plugin::Plugin, ContentTypePart, HeaderPart, HeaderVariable,
-        MessagePart, ReceivedHostname, ReceivedPart, Value, VariableType,
+        ContentTypePart, HeaderPart, HeaderVariable, MessagePart, ReceivedHostname, ReceivedPart,
+        Value, VariableType,
     },
-    Context, Event, PluginArgument,
+    Context,
 };
 
 use super::Variable;
@@ -123,18 +123,12 @@ impl<'x, C> Context<'x, C> {
                         Value::Number(n) => {
                             data.push_str(&n.to_string());
                         }
-                        Value::Expression(expr) => {
-                            if let Some(value) = self.eval_expression(expr) {
-                                data.push_str(&value.to_string());
-                            }
-                        }
                         Value::Regex(_) => (),
                     }
                 }
                 data.into()
             }
             Value::Number(n) => Variable::from(*n),
-            Value::Expression(expr) => self.eval_expression(expr).unwrap_or(Variable::default()),
             Value::Regex(r) => Variable::StringRef(&r.expr),
         }
     }
@@ -214,42 +208,6 @@ impl<'x, C> Context<'x, C> {
             .iter()
             .map(|s| self.eval_value(s).into_cow().into_owned())
             .collect()
-    }
-
-    pub(crate) fn eval_plugin_arguments(&self, plugin: &Plugin) -> Event {
-        let mut arguments = Vec::with_capacity(plugin.arguments.len());
-        for argument in &plugin.arguments {
-            arguments.push(match argument {
-                PluginArgument::Tag(tag) => PluginArgument::Tag(*tag),
-                PluginArgument::Text(t) => PluginArgument::Text(self.eval_value(t).into_string()),
-                PluginArgument::Number(n) => PluginArgument::Number(self.eval_value(n).to_number()),
-                PluginArgument::Regex(r) => PluginArgument::Regex(r.clone()),
-                PluginArgument::Array(a) => {
-                    let mut arr = Vec::with_capacity(a.len());
-                    for item in a {
-                        arr.push(match item {
-                            PluginArgument::Tag(tag) => PluginArgument::Tag(*tag),
-                            PluginArgument::Text(t) => {
-                                PluginArgument::Text(self.eval_value(t).into_string())
-                            }
-                            PluginArgument::Number(n) => {
-                                PluginArgument::Number(self.eval_value(n).to_number())
-                            }
-                            PluginArgument::Regex(r) => PluginArgument::Regex(r.clone()),
-                            PluginArgument::Variable(var) => PluginArgument::Variable(var.clone()),
-                            PluginArgument::Array(_) => continue,
-                        });
-                    }
-                    PluginArgument::Array(arr)
-                }
-                PluginArgument::Variable(var) => PluginArgument::Variable(var.clone()),
-            });
-        }
-
-        Event::Plugin {
-            id: plugin.id,
-            arguments,
-        }
     }
 }
 

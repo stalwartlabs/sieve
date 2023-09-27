@@ -94,11 +94,6 @@
 //!                     // Set to true if the ID is duplicate
 //!                     input = false.into();
 //!                 }
-//!                 Event::Plugin { id, arguments } => {
-//!                     println!("Script executed plugin {id} with parameters {arguments:?}");
-//!                     // Set to true if the script succeeded
-//!                     input = false.into();
-//!                 }
 //!                 Event::SetEnvelope { envelope, value } => {
 //!                     println!("Set envelope {envelope:?} to {value:?}");
 //!                     input = true.into();
@@ -168,9 +163,13 @@
 //!                     messages.push(String::from_utf8(message).unwrap());
 //!                     input = true.into();
 //!                 }
-//!
-//!                 #[cfg(test)]
-//!                 _ => unreachable!(),
+//!                 Event::Function { id, arguments } => {
+//!                    println!(
+//!                        "Script executed external function {id} with parameters {arguments:?}"
+//!                    );
+//!                    // Return variable result back to interpreter
+//!                    input = Input::result("hello world".into());
+//!                }
 //!             },
 //!             Err(error) => {
 //!                 match error {
@@ -268,16 +267,13 @@
 use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
-use compiler::{
-    grammar::{
-        actions::action_redirect::{ByTime, Notify, Ret},
-        instruction::Instruction,
-        Capability,
-    },
-    Number, Regex, VariableType,
+use compiler::grammar::{
+    actions::action_redirect::{ByTime, Notify, Ret},
+    instruction::Instruction,
+    Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::{context::ScriptStack, Variable};
+use runtime::{context::ScriptStack, expression::ExpressionStack, Variable};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -307,8 +303,7 @@ pub struct Compiler {
     pub(crate) max_includes: usize,
     pub(crate) no_capability_check: bool,
 
-    // Plugins
-    pub(crate) plugins: AHashMap<String, PluginSchema>,
+    // Functions
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
@@ -380,6 +375,7 @@ pub struct Context<'x, C> {
     pub(crate) vars_env: AHashMap<Cow<'static, str>, Variable<'x>>,
     pub(crate) vars_local: Vec<Variable<'static>>,
     pub(crate) vars_match: Vec<Variable<'static>>,
+    pub(crate) expr_stack: Option<ExpressionStack<'static>>,
 
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
@@ -396,25 +392,6 @@ pub struct Context<'x, C> {
 pub enum Script {
     Personal(String),
     Global(String),
-}
-
-pub struct PluginSchema {
-    pub id: ExternalId,
-    pub tags: AHashMap<String, PluginSchemaTag>,
-    pub arguments: Vec<PluginSchemaArgument>,
-}
-
-pub enum PluginSchemaArgument {
-    Text,
-    Number,
-    Regex,
-    Variable,
-    Array(Box<PluginSchemaArgument>),
-}
-
-pub struct PluginSchemaTag {
-    pub id: ExternalId,
-    pub argument: Option<PluginSchemaArgument>,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -457,13 +434,13 @@ pub enum Event {
         expiry: u64,
         last: bool,
     },
-    Plugin {
-        id: ExternalId,
-        arguments: Vec<PluginArgument<String, Number>>,
-    },
     SetEnvelope {
         envelope: Envelope,
         value: String,
+    },
+    Function {
+        id: ExternalId,
+        arguments: Vec<Variable<'static>>,
     },
 
     // Actions
@@ -506,16 +483,6 @@ pub enum Event {
 
 pub type ExternalId = u32;
 
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-pub enum PluginArgument<T, N> {
-    Tag(ExternalId),
-    Text(T),
-    Number(N),
-    Regex(Regex),
-    Variable(VariableType),
-    Array(Vec<PluginArgument<T, N>>),
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
@@ -550,14 +517,8 @@ pub enum Recipient {
 pub enum Input {
     True,
     False,
+    FncResult(Variable<'static>),
     Script { name: Script, script: Arc<Sieve> },
-    Variables { list: Vec<SetVariable> },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SetVariable {
-    pub name: VariableType,
-    pub value: Variable<'static>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -600,9 +561,15 @@ mod tests {
     use crate::{
         compiler::grammar::Capability,
         runtime::{actions::action_mime::reset_test_boundary, Variable},
-        Compiler, Envelope, Event, FunctionMap, Input, Mailbox, PluginArgument, Recipient, Runtime,
-        SpamStatus, VirusStatus,
+        Compiler, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime, SpamStatus,
+        VirusStatus,
     };
+
+    impl Variable<'_> {
+        pub fn unwrap_string(self) -> String {
+            self.into_cow().into_owned()
+        }
+    }
 
     #[test]
     fn test_suite() {
@@ -709,18 +676,16 @@ mod tests {
                         .into()
                 },
                 2,
-            );
+            )
+            .with_external_function("ext_zero", 0, 0)
+            .with_external_function("ext_one", 1, 1)
+            .with_external_function("ext_two", 2, 2)
+            .with_external_function("ext_three", 3, 3)
+            .with_external_function("ext_true", 4, 0)
+            .with_external_function("ext_false", 5, 0);
         let mut compiler = Compiler::new()
             .with_max_string_size(10240)
             .register_functions(&mut fnc_map);
-
-        // Register extensions
-        compiler
-            .register_plugin("execute")
-            .with_tag("query")
-            .with_tag("binary")
-            .with_string_argument()
-            .with_string_array_argument();
 
         let mut ancestors = script_path.ancestors();
         ancestors.next();
@@ -744,9 +709,8 @@ mod tests {
                 .with_protected_header("Received")
                 .with_valid_notification_uri("mailto")
                 .with_max_out_messages(100)
-                .with_capability(Capability::Plugins)
                 .with_capability(Capability::While)
-                .with_capability(Capability::Eval)
+                .with_capability(Capability::Expressions)
                 .with_functions(&mut fnc_map.clone());
             let mut instance = runtime.filter(b"");
             let raw_message = raw_message_.take().unwrap_or_default();
@@ -862,15 +826,14 @@ mod tests {
                     Event::DuplicateId { id, .. } => {
                         input = duplicated_ids.contains(&id).into();
                     }
-                    Event::Plugin { id, arguments } => {
+                    Event::Function { id, arguments } => {
                         if id == u32::MAX {
                             // Test functions
                             input = Input::True;
                             let mut arguments = arguments.into_iter();
-                            let command = arguments.next().unwrap().unwrap_string().unwrap();
-                            let mut params = arguments
-                                .map(|arg| arg.unwrap_string().unwrap())
-                                .collect::<Vec<_>>();
+                            let command = arguments.next().unwrap().unwrap_string();
+                            let mut params =
+                                arguments.map(|arg| arg.unwrap_string()).collect::<Vec<_>>();
 
                             match command.as_str() {
                                 "test" => {
@@ -1178,22 +1141,28 @@ mod tests {
                                 _ => panic!("Test command {command} not implemented."),
                             }
                         } else {
-                            let mut arguments = arguments
-                                .into_iter()
-                                .filter(|a| !matches!(a, PluginArgument::Tag(_)));
-                            let command = arguments.next().unwrap().unwrap_string().unwrap();
-                            let arguments =
-                                arguments.next().unwrap().unwrap_string_array().unwrap();
+                            let result = match id {
+                                0 => Variable::from("my_value"),
+                                1 => Variable::from(arguments[0].to_cow().to_uppercase()),
+                                2 => Variable::from(format!(
+                                    "{}-{}",
+                                    arguments[0].to_cow(),
+                                    arguments[1].to_cow()
+                                )),
+                                3 => Variable::from(format!(
+                                    "{}-{}-{}",
+                                    arguments[0].to_cow(),
+                                    arguments[1].to_cow(),
+                                    arguments[2].to_cow()
+                                )),
+                                4 => true.into(),
+                                5 => false.into(),
+                                _ => {
+                                    panic!("Unknown external function {id}");
+                                }
+                            };
 
-                            assert_eq!(arguments, ["param1", "param2"]);
-                            input = (if command.eq_ignore_ascii_case("always_succeed") {
-                                true
-                            } else if command.eq_ignore_ascii_case("always_fail") {
-                                false
-                            } else {
-                                panic!("Unknown command {command}");
-                            })
-                            .into();
+                            input = result.into();
                         }
                     }
 

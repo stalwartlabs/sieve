@@ -1,4 +1,4 @@
-require ["variables", "relational", "vnd.stalwart.plugins", "vnd.stalwart.eval"];
+require ["variables", "relational", "vnd.stalwart.expressions"];
 
 test "Expressions" {
     set "A" "1";
@@ -11,49 +11,53 @@ test "Expressions" {
     set "global.b" "2";
     set "global.c" "3";
 
-    if not string :is "The result of 2 + 2 is %{2 + 2}!" "The result of 2 + 2 is 4!"
+    let "result" "2 + 2";
+    if not string :is "The result of 2 + 2 is ${result}!" "The result of 2 + 2 is 4!"
     {
-        test_fail "%{2 + 2} is not 4";
+        test_fail "${result} is not 4";
     }
 
-    if not string :comparator "i;ascii-numeric" :value "gt" "%{2 * 3}" "5"
+    if not eval "2 * 3 > 5"
     {
-        test_fail "%{2 * 3} is not greater than 5";
+        test_fail "{2 * 3} is not greater than 5";
     }
 
-    if not string :comparator "i;ascii-numeric" :value "lt" "%{9 / 2}" "101.6"
+    if not eval "9 / 2 < 101.6"
     {
-        test_fail "%{9 / 2} is not lower than 101.6";
+        test_fail "{9 / 2} is not lower than 101.6";
     }
 
-    if not string :comparator "i;ascii-numeric" :value "eq" "%{(8 * 4 + 20 - 10) / 2}" "%{20 + 6 * 3 - 4 * 2 - 9}"
+    if not eval "(8 * 4 + 20 - 10) / 2 == 20 + 6 * 3 - 4 * 2 - 9"
     {
-        test_fail "%{(8 * 4 + 20 - 10) / 2} is not equal to %{20 + 6 * 3 - 4 * 2 - 9}";
+        let "a" "(8 * 4 + 20 - 10) / 2";
+        let "b" "20 + 6 * 3 - 4 * 2 - 9";
+        test_fail "(8 * 4 + 20 - 10) / 2 [${a}] is not equal to 20 + 6 * 3 - 4 * 2 - 9 [${b}]";
     }
 
-    if not string :comparator "i;ascii-numeric" :is "%{(A + B) / (C + D) * E}" "-2.375"
+    if not eval "(A + B) / (C + D) * E == -2.375"
     {
-        test_fail "(A + B) / (C + D) * E (%{(A + B) / (C + D) * E}) is not equal to -2.375";
+        let "result" "(A + B) / (C + D) * E";
+        test_fail "(A + B) / (C + D) * E (${result}) is not equal to -2.375";
     }
 
-    if not string :is "%{global.a < global.b && global.c > global.a}" "1"
+    if not eval "global.a < global.b && global.c > global.a == 1"
     {
-        test_fail "global.a < global.b && global.c > global.a (%{global.a < global.b && global.c > global.a}) is not equal to 1";
+        test_fail "global.a < global.b && global.c > global.a ({global.a < global.b && global.c > global.a}) is not equal to 1";
     }
 
-    if not string :is "%{global.a > global.b || global.c < global.a}" "0"
+    if not eval "global.a > global.b || global.c < global.a == 0"
     {
-        test_fail "global.a > global.b || global.c < global.a (%{global.a > global.b || global.c < global.a}) is not equal to 0";
+        test_fail "global.a > global.b || global.c < global.a ({global.a > global.b || global.c < global.a}) is not equal to 0";
     }
 
-    if not string :is "%{global.a > global.b || !(global.c < global.a)}" "1"
+    if not eval "global.a > global.b || !(global.c < global.a) == 1"
     {
-        test_fail "global.a > global.b || !(global.c < global.a) (%{global.a > global.b || !(global.c < global.a)}) is not equal to 1";
+        test_fail "global.a > global.b || !(global.c < global.a) ({global.a > global.b || !(global.c < global.a)}) is not equal to 1";
     }
 
     if not eval "global.a < global.b && global.c > global.a"
     {
-        test_fail "global.a < global.b && global.c > global.a (%{global.a < global.b && global.c > global.a}) is not equal to 1";
+        test_fail "global.a < global.b && global.c > global.a ({global.a < global.b && global.c > global.a}) is not equal to 1";
     }
 
     if not eval "1" {
@@ -94,14 +98,14 @@ test "Expressions" {
         test_fail "set + unset != 1 in expression";
     }
 
-    set "result" "%{is_set + is_set + is_unset + is_unset}";
+    let "result" "is_set + is_set + is_unset + is_unset";
 
     if not string :is "${result}" "2" {
         test_fail "set + set + unset + unset => '${result}' != 2 in expression";
     }
 
 	if not eval "!global.DOES_NOT_EXIST != global.DOES_NOT_EXIST" {
-		test_fail "global.DOES_NOT_EXIST = '%{global.DOES_NOT_EXIST}'";
+		test_fail "global.DOES_NOT_EXIST = '${global.DOES_NOT_EXIST}'";
 	}
 
     if not eval "true != false" {
@@ -111,8 +115,8 @@ test "Expressions" {
 }
 
 test "Expressions - Arrays" {
-    set "expr" "%{['a', 'b', 'c']}";
-    set "expr2" "%{expr + ['d', 'e', 'f']}";
+    let "expr" "['a', 'b', 'c']";
+    let "expr2" "expr + ['d', 'e', 'f']";
 
     if not eval "in_array(expr, 'c')" {
         test_fail "in_array(expr, 'd') is false";
@@ -146,6 +150,10 @@ test "Expressions - Arrays" {
 
     if eval "expr2[count(expr2) - 1] != 'f'" {
         test_fail "expr2[count(expr2) - 1] != 'f'";
+    }
+
+    if eval "[2 + 2, 'a' + 'b', 5 / 2, ext_zero()] != [4, 'ab', 2.5, 'my_value']" {
+        test_fail "[2 + 2, 'a' + 'b', 5 / 2] != [4, 'ab', 2.5]";
     }
 
 }

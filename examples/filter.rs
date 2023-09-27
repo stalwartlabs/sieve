@@ -83,11 +83,6 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                     // Set to true if the ID is duplicate
                     input = false.into();
                 }
-                Event::Plugin { id, arguments } => {
-                    println!("Script executed plugin {id} with parameters {arguments:?}");
-                    // Set to true if the script succeeded
-                    input = false.into();
-                }
                 Event::SetEnvelope { envelope, value } => {
                     println!("Set envelope {envelope:?} to {value:?}");
                     input = true.into();
@@ -156,6 +151,13 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
                 Event::CreatedMessage { message, .. } => {
                     messages.push(String::from_utf8(message).unwrap());
                     input = true.into();
+                }
+                Event::Function { id, arguments } => {
+                    println!(
+                        "Script executed external function {id} with parameters {arguments:?}"
+                    );
+                    // Return variable result back to interpreter
+                    input = Input::result("hello world".into());
                 }
 
                 #[cfg(test)]

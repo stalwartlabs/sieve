@@ -97,53 +97,7 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "Expression": [
-                {
-                  "Variable": {
-                    "Local": 0
-                  }
-                },
-                {
-                  "Variable": {
-                    "Local": 1
-                  }
-                },
-                {
-                  "Variable": {
-                    "Local": 2
-                  }
-                },
-                {
-                  "BinaryOperator": "Divide"
-                },
-                {
-                  "BinaryOperator": "Multiply"
-                },
-                {
-                  "Variable": {
-                    "Local": 3
-                  }
-                },
-                {
-                  "BinaryOperator": "Subtract"
-                },
-                {
-                  "Variable": {
-                    "Local": 4
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                },
-                {
-                  "Variable": {
-                    "Global": "test"
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                }
-              ]
+              "Text": "%{A * (B / C) - D + E + global.test}"
             }
           ],
           "key_list": [
@@ -181,28 +135,7 @@
           "Local": 5
         },
         "value": {
-          "List": [
-            {
-              "Text": "The result of 2 + 3 is "
-            },
-            {
-              "Expression": [
-                {
-                  "Constant": {
-                    "Integer": 2
-                  }
-                },
-                {
-                  "Constant": {
-                    "Integer": 3
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                }
-              ]
-            }
-          ]
+          "Text": "The result of 2 + 3 is %{2 + 3}"
         }
       }
     }
@@ -216,48 +149,7 @@
           "Local": 6
         },
         "value": {
-          "List": [
-            {
-              "Text": "The result of 2 + 3 is "
-            },
-            {
-              "Expression": [
-                {
-                  "Constant": {
-                    "Integer": 2
-                  }
-                },
-                {
-                  "Constant": {
-                    "Integer": 3
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                }
-              ]
-            },
-            {
-              "Text": " and 3 + 4 is "
-            },
-            {
-              "Expression": [
-                {
-                  "Constant": {
-                    "Integer": 3
-                  }
-                },
-                {
-                  "Constant": {
-                    "Integer": 4
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                }
-              ]
-            }
-          ]
+          "Text": "The result of 2 + 3 is %{2 + 3} and 3 + 4 is %{3 + 4}"
         }
       }
     }
@@ -281,27 +173,7 @@
               }
             },
             {
-              "Text": " and 2 + 2 is "
-            },
-            {
-              "Expression": [
-                {
-                  "Constant": {
-                    "Integer": 2
-                  }
-                },
-                {
-                  "Constant": {
-                    "Integer": 2
-                  }
-                },
-                {
-                  "BinaryOperator": "Add"
-                }
-              ]
-            },
-            {
-              "Text": "!"
+              "Text": " and 2 + 2 is %{2 + 2}!"
             }
           ]
         }
@@ -331,21 +203,7 @@
           "Local": 9
         },
         "value": {
-          "Expression": [
-            {
-              "Constant": {
-                "Integer": 2
-              }
-            },
-            {
-              "Constant": {
-                "Integer": 3
-              }
-            },
-            {
-              "BinaryOperator": "Add"
-            }
-          ]
+          "Text": "%{2 + 3"
         }
       }
     }

@@ -1,0 +1,36 @@
+require "vnd.stalwart.expressions";
+
+test "External Functions" {
+    if eval "ext_false()" {
+        test_fail "ext_false returns true";
+    }
+
+    if eval "!ext_true()" {
+        test_fail "ext_true returns false";
+    }
+
+    if eval "ext_true() && ext_false()" {
+        test_fail "ext_true() && ext_false() returns true";
+    }
+
+    if eval "ext_zero() != 'my_value'" {
+        test_fail "ext_zero() != 'my_value'";
+    }
+
+    if eval "ext_one(ext_zero()) != 'MY_VALUE'" {
+        test_fail "ext_one(ext_zero()) != 'MY_VALUE'";
+    }
+
+    if eval "ext_two(ext_one(ext_zero()), ext_zero()) != 'MY_VALUE-my_value'" {
+        test_fail "ext_two(ext_one(ext_zero()), ext_zero()) != 'MY_VALUE-my_value'";
+    }
+
+    if eval "ext_three(['a','b','c'], 1, true) != 'a
+b
+c-1-1'" {
+        let "result" "ext_three(['a','b','c'], 1, true)";
+        test_fail "${result} != 'abc'";
+    }
+
+}
+

@@ -36,11 +36,10 @@ use mail_parser::{Encoding, HeaderName, Message, MessageParser, MessagePart, Par
 
 use crate::{
     compiler::{
-        grammar::{Capability, Invalid},
-        Number, Regex, VariableType,
+        grammar::{expr::parser::ID_EXTERNAL, Capability, Invalid},
+        Number,
     },
-    Context, Function, FunctionMap, Input, Metadata, PluginArgument, Runtime, Script, SetVariable,
-    Sieve,
+    Context, ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
 };
 
 use self::eval::ToString;
@@ -214,6 +213,14 @@ impl<'x> Variable<'x> {
             v => vec![v],
         }
     }
+
+    pub fn into_string_array(self) -> Vec<String> {
+        match self {
+            Variable::Array(l) => l.into_iter().map(|i| i.into_string()).collect(),
+            Variable::ArrayRef(l) => l.iter().map(|i| i.to_cow().into_owned()).collect(),
+            v => vec![v.into_string()],
+        }
+    }
 }
 
 impl<'x> From<&'x str> for Variable<'x> {
@@ -341,88 +348,6 @@ impl<'x> self::eval::ToString for Vec<Variable<'x>> {
             }
         }
         result
-    }
-}
-
-impl PluginArgument<String, Number> {
-    pub fn unwrap_string(self) -> Option<String> {
-        match self {
-            PluginArgument::Text(s) => s.into(),
-            PluginArgument::Number(n) => n.to_string().into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_number(self) -> Option<Number> {
-        match self {
-            PluginArgument::Number(n) => n.into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_regex(self) -> Option<Regex> {
-        match self {
-            PluginArgument::Regex(r) => r.into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_array(self) -> Option<Vec<Self>> {
-        match self {
-            PluginArgument::Array(a) => a.into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_variable(self) -> Option<VariableType> {
-        match self {
-            PluginArgument::Variable(v) => v.into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_string_array(self) -> Option<Vec<String>> {
-        match self {
-            PluginArgument::Array(a) => a
-                .into_iter()
-                .filter_map(Self::unwrap_string)
-                .collect::<Vec<_>>()
-                .into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_number_array(self) -> Option<Vec<Number>> {
-        match self {
-            PluginArgument::Array(a) => a
-                .into_iter()
-                .filter_map(Self::unwrap_number)
-                .collect::<Vec<_>>()
-                .into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_regex_array(self) -> Option<Vec<Regex>> {
-        match self {
-            PluginArgument::Array(a) => a
-                .into_iter()
-                .filter_map(Self::unwrap_regex)
-                .collect::<Vec<_>>()
-                .into(),
-            _ => None,
-        }
-    }
-
-    pub fn unwrap_variable_array(self) -> Option<Vec<VariableType>> {
-        match self {
-            PluginArgument::Array(a) => a
-                .into_iter()
-                .filter_map(Self::unwrap_variable)
-                .collect::<Vec<_>>()
-                .into(),
-            _ => None,
-        }
     }
 }
 
@@ -777,6 +702,25 @@ impl<C> FunctionMap<C> {
         self.functions.push(fnc);
         self
     }
+
+    pub fn with_external_function(
+        mut self,
+        name: impl Into<String>,
+        id: ExternalId,
+        num_args: u32,
+    ) -> Self {
+        self.set_external_function(name, id, num_args);
+        self
+    }
+
+    pub fn set_external_function(
+        &mut self,
+        name: impl Into<String>,
+        id: ExternalId,
+        num_args: u32,
+    ) {
+        self.map.insert(name.into(), (ID_EXTERNAL - id, num_args));
+    }
 }
 
 impl Input {
@@ -795,8 +739,8 @@ impl Input {
         Input::False
     }
 
-    pub fn variables(list: Vec<SetVariable>) -> Self {
-        Input::Variables { list }
+    pub fn result(result: Variable<'static>) -> Self {
+        Input::FncResult(result)
     }
 }
 
@@ -807,6 +751,12 @@ impl From<bool> for Input {
         } else {
             Input::False
         }
+    }
+}
+
+impl From<Variable<'static>> for Input {
+    fn from(value: Variable<'static>) -> Self {
+        Input::FncResult(value)
     }
 }
 

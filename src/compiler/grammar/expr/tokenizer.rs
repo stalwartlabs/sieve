@@ -223,7 +223,10 @@ where
                             return Err(format!("Invalid character {:?}", char::from(ch),));
                         }
                     };
-                    self.is_start = ch == b'(';
+                    self.is_start = matches!(
+                        token,
+                        Token::OpenParen | Token::Comma | Token::BinaryOperator(_)
+                    );
 
                     return if prev_token.is_some() {
                         self.next_token.push(token);

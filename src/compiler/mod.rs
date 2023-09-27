@@ -27,13 +27,10 @@ use ahash::AHashMap;
 use mail_parser::HeaderName;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{
-    runtime::RuntimeError, Compiler, Envelope, ExternalId, FunctionMap, PluginSchema,
-    PluginSchemaArgument, PluginSchemaTag,
-};
+use crate::{runtime::RuntimeError, Compiler, Envelope, FunctionMap};
 
 use self::{
-    grammar::{expr::Expression, AddressPart, Capability},
+    grammar::{AddressPart, Capability},
     lexer::tokenizer::TokenInfo,
 };
 
@@ -101,7 +98,6 @@ pub(crate) enum Value {
     Text(String),
     Number(Number),
     Variable(VariableType),
-    Expression(Vec<Expression>),
     Regex(Regex),
     List(Vec<Value>),
 }
@@ -236,7 +232,6 @@ impl Compiler {
             max_local_variables: 128,
             max_header_size: 1024,
             max_includes: 6,
-            plugins: AHashMap::new(),
             functions: AHashMap::new(),
             no_capability_check: false,
         }
@@ -332,17 +327,6 @@ impl Compiler {
         self
     }
 
-    pub fn register_plugin(&mut self, name: impl Into<String>) -> &mut PluginSchema {
-        let id = self.plugins.len() as ExternalId;
-        self.plugins
-            .entry(name.into())
-            .or_insert_with(|| PluginSchema {
-                id,
-                tags: AHashMap::new(),
-                arguments: Vec::new(),
-            })
-    }
-
     pub fn register_functions<C>(mut self, fnc_map: &mut FunctionMap<C>) -> Self {
         self.functions = std::mem::take(&mut fnc_map.map);
         self
@@ -355,133 +339,6 @@ impl Compiler {
 
     pub fn set_no_capability_check(&mut self, value: bool) {
         self.no_capability_check = value;
-    }
-}
-
-impl PluginSchema {
-    pub fn with_id(&mut self, id: ExternalId) -> &mut Self {
-        self.id = id;
-        self
-    }
-
-    pub fn with_string_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Text);
-        self
-    }
-
-    pub fn with_number_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Number);
-        self
-    }
-
-    pub fn with_regex_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Regex);
-        self
-    }
-
-    pub fn with_variable_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Variable);
-        self
-    }
-
-    pub fn with_string_array_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Array(Box::new(
-            PluginSchemaArgument::Text,
-        )));
-        self
-    }
-
-    pub fn with_number_array_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Array(Box::new(
-            PluginSchemaArgument::Number,
-        )));
-        self
-    }
-
-    pub fn with_regex_array_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Array(Box::new(
-            PluginSchemaArgument::Regex,
-        )));
-        self
-    }
-
-    pub fn with_variable_array_argument(&mut self) -> &mut Self {
-        self.arguments.push(PluginSchemaArgument::Array(Box::new(
-            PluginSchemaArgument::Variable,
-        )));
-        self
-    }
-
-    pub fn with_argument(&mut self, argument: PluginSchemaArgument) -> &mut Self {
-        self.arguments.push(argument);
-        self
-    }
-
-    pub fn with_tagged_argument(
-        &mut self,
-        tag: impl Into<String>,
-        argument: PluginSchemaArgument,
-    ) -> &mut Self {
-        let id = self.tags.len() as ExternalId;
-        self.tags.insert(
-            tag.into(),
-            PluginSchemaTag {
-                id,
-                argument: argument.into(),
-            },
-        );
-        self
-    }
-
-    pub fn with_tagged_string_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(tag, PluginSchemaArgument::Text)
-    }
-
-    pub fn with_tagged_number_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(tag, PluginSchemaArgument::Number)
-    }
-
-    pub fn with_tagged_regex_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(tag, PluginSchemaArgument::Regex)
-    }
-
-    pub fn with_tagged_variable_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(tag, PluginSchemaArgument::Variable)
-    }
-
-    pub fn with_tagged_string_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(
-            tag,
-            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Text)),
-        )
-    }
-
-    pub fn with_tagged_number_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(
-            tag,
-            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Number)),
-        )
-    }
-
-    pub fn with_tagged_regex_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(
-            tag,
-            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Regex)),
-        )
-    }
-
-    pub fn with_tagged_variable_array_argument(&mut self, tag: impl Into<String>) -> &mut Self {
-        self.with_tagged_argument(
-            tag,
-            PluginSchemaArgument::Array(Box::new(PluginSchemaArgument::Variable)),
-        )
-    }
-
-    pub fn with_tag(&mut self, tag: impl Into<String>) -> &mut Self {
-        let id = self.tags.len() as ExternalId;
-        self.tags
-            .insert(tag.into(), PluginSchemaTag { id, argument: None });
-        self
     }
 }
 
@@ -665,20 +522,7 @@ mod tests {
         test_dir.push("rfcs");
         let mut tests_run = 0;
 
-        let mut compiler = Compiler::new().with_max_nested_foreverypart(10);
-
-        compiler
-            .register_plugin("plugin1")
-            .with_tag("tag1")
-            .with_tag("tag2")
-            .with_tagged_string_argument("string_arg")
-            .with_number_argument()
-            .with_string_array_argument();
-
-        compiler
-            .register_plugin("plugin2")
-            .with_tagged_number_array_argument("array_arg")
-            .with_regex_array_argument();
+        let compiler = Compiler::new().with_max_nested_foreverypart(10);
 
         for file_name in fs::read_dir(&test_dir).unwrap() {
             let mut file_name = file_name.unwrap().path();

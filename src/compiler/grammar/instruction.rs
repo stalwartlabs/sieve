@@ -45,11 +45,10 @@ use super::{
         action_notify::Notify,
         action_redirect::Redirect,
         action_reject::Reject,
-        action_set::Set,
+        action_set::{Let, Set},
         action_vacation::Vacation,
     },
     expr::Expression,
-    tests::test_plugin::Plugin,
     Capability, Clear, Invalid, While,
 };
 
@@ -107,11 +106,16 @@ pub(crate) enum Instruction {
     Include(Include),
     Return,
 
-    // Plugin extension
-    Plugin(Plugin),
-
     // For every line extension
     While(While),
+
+    // Expression extension
+    Eval(Vec<Expression>),
+    Let(Let),
+
+    // Test only
+    #[cfg(test)]
+    TestCmd(Vec<Value>),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -543,6 +547,17 @@ impl Compiler {
                             }
                         }
 
+                        // Expressions extension
+                        Word::Let => {
+                            state.validate_argument(
+                                0,
+                                Capability::Expressions.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            state.parse_let()?;
+                        }
+
                         // While extension
                         Word::While => {
                             state.validate_argument(
@@ -701,20 +716,12 @@ impl Compiler {
 
                 #[cfg(test)]
                 Token::Unknown(instruction) if instruction.contains("test") => {
-                    use crate::PluginArgument;
-
                     let has_arguments = instruction != "test";
-                    let mut plugin = Plugin {
-                        id: u32::MAX,
-                        arguments: vec![PluginArgument::Text(Value::Text(instruction))],
-                        is_not: false,
-                    };
+                    let mut arguments = vec![Value::Text(instruction)];
 
                     if !has_arguments {
-                        plugin
-                            .arguments
-                            .push(PluginArgument::Text(state.parse_string()?));
-                        state.instructions.push(Instruction::Plugin(plugin));
+                        arguments.push(state.parse_string()?);
+                        state.instructions.push(Instruction::TestCmd(arguments));
                         let mut new_block = Block::new(Word::Else);
                         new_block.line_num = state.tokens.line_num;
                         new_block.line_pos = state.tokens.pos - state.tokens.line_start;
@@ -724,41 +731,31 @@ impl Compiler {
                         state.block = new_block;
                     } else {
                         loop {
-                            plugin.arguments.push(PluginArgument::Text(
-                                match state.tokens.unwrap_next()?.token {
-                                    Token::StringConstant(s) => Value::from(s),
-                                    Token::StringVariable(s) => state
-                                        .tokenize_string(&s, true)
-                                        .map_err(|error_type| CompileError {
-                                            line_num: 0,
-                                            line_pos: 0,
-                                            error_type,
-                                        })?,
-                                    Token::Number(n) => {
-                                        Value::Number(crate::compiler::Number::Integer(n as i64))
-                                    }
-                                    Token::Identifier(s) => Value::Text(s.to_string()),
-                                    Token::Tag(s) => Value::Text(format!(":{s}")),
-                                    Token::Unknown(s) => Value::Text(s),
-                                    Token::Semicolon => break,
-                                    other => panic!("Invalid test param {other:?}"),
-                                },
-                            ));
+                            arguments.push(match state.tokens.unwrap_next()?.token {
+                                Token::StringConstant(s) => Value::from(s),
+                                Token::StringVariable(s) => state
+                                    .tokenize_string(&s, true)
+                                    .map_err(|error_type| CompileError {
+                                        line_num: 0,
+                                        line_pos: 0,
+                                        error_type,
+                                    })?,
+                                Token::Number(n) => {
+                                    Value::Number(crate::compiler::Number::Integer(n as i64))
+                                }
+                                Token::Identifier(s) => Value::Text(s.to_string()),
+                                Token::Tag(s) => Value::Text(format!(":{s}")),
+                                Token::Unknown(s) => Value::Text(s),
+                                Token::Semicolon => break,
+                                other => panic!("Invalid test param {other:?}"),
+                            });
                         }
-                        state.instructions.push(Instruction::Plugin(plugin));
+                        state.instructions.push(Instruction::TestCmd(arguments));
                     }
                 }
 
                 Token::Unknown(instruction) => {
-                    if let Some(schema) = self.plugins.get(&instruction) {
-                        state.validate_argument(
-                            0,
-                            Capability::Plugins.into(),
-                            token_info.line_num,
-                            token_info.line_pos,
-                        )?;
-                        state.parse_plugin(schema)?;
-                    } else if state.has_capability(&Capability::Ihave) {
+                    if state.has_capability(&Capability::Ihave) {
                         state.ignore_instruction()?;
                         state.instructions.push(Instruction::Invalid(Invalid {
                             name: instruction,
@@ -983,6 +980,16 @@ impl<'x> CompilerState<'x> {
                     v.name.map_local_vars(last_id);
                     v.value.map_local_vars(last_id);
                 }
+                Instruction::Let(v) => {
+                    v.name.map_local_vars(last_id);
+                    v.expr.map_local_vars(last_id);
+                }
+                Instruction::While(v) => {
+                    v.expr.map_local_vars(last_id);
+                }
+                Instruction::Eval(v) => {
+                    v.map_local_vars(last_id);
+                }
                 Instruction::Notify(v) => {
                     v.from.map_local_vars(last_id);
                     v.importance.map_local_vars(last_id);
@@ -1009,9 +1016,6 @@ impl<'x> CompilerState<'x> {
                 }
                 Instruction::Include(v) => {
                     v.value.map_local_vars(last_id);
-                }
-                Instruction::Plugin(v) => {
-                    v.arguments.map_local_vars(last_id);
                 }
                 _ => {}
             }
@@ -1112,11 +1116,9 @@ impl MapLocalVars for Test {
                 v.handle.map_local_vars(last_id);
                 v.reason.map_local_vars(last_id);
             }
-            Test::EvalExpression(v) => {
-                v.expr.map_local_vars(last_id);
-            }
-            Test::Plugin(v) => {
-                v.arguments.map_local_vars(last_id);
+            #[cfg(test)]
+            Test::TestCmd { arguments, .. } => {
+                arguments.map_local_vars(last_id);
             }
             _ => (),
         }
@@ -1138,7 +1140,6 @@ impl MapLocalVars for Value {
     fn map_local_vars(&mut self, last_id: usize) {
         match self {
             Value::Variable(var) => var.map_local_vars(last_id),
-            Value::Expression(expr) => expr.map_local_vars(last_id),
             Value::List(items) => items.map_local_vars(last_id),
             _ => (),
         }

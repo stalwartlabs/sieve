@@ -35,7 +35,6 @@ pub mod test_ihave;
 pub mod test_mailbox;
 pub mod test_mailboxid;
 pub mod test_notify;
-pub mod test_plugin;
 pub mod test_size;
 pub mod test_spamtest;
 pub mod test_specialuse;

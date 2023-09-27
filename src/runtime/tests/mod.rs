@@ -62,13 +62,6 @@ impl Test {
             Test::Size(test) => test.exec(ctx),
             Test::Body(test) => test.exec(ctx),
             Test::String(test) => test.exec(ctx, false),
-            Test::EvalExpression(expr) => TestResult::Bool(
-                ctx.eval_expression(&expr.expr)
-                    .and_then(|v| v.to_number_checked())
-                    .unwrap_or_default()
-                    .is_non_zero()
-                    ^ expr.is_not,
-            ),
             Test::HasFlag(test) => test.exec(ctx),
             Test::Date(test) => test.exec(ctx),
             Test::CurrentDate(test) => test.exec(ctx),
@@ -122,15 +115,22 @@ impl Test {
                 is_not: test.is_not,
             },
             Test::Convert(test) => test.exec(ctx),
-            Test::Plugin(test) => TestResult::Event {
-                event: ctx.eval_plugin_arguments(test),
-                is_not: test.is_not,
-            },
             Test::True => TestResult::Bool(true),
             Test::False => TestResult::Bool(false),
             Test::Invalid(invalid) => {
                 TestResult::Error(RuntimeError::InvalidInstruction(invalid.clone()))
             }
+            #[cfg(test)]
+            Test::TestCmd { arguments, is_not } => TestResult::Event {
+                event: Event::Function {
+                    id: u32::MAX,
+                    arguments: arguments
+                        .iter()
+                        .map(|s| ctx.eval_value(s).to_owned())
+                        .collect(),
+                },
+                is_not: *is_not,
+            },
         }
     }
 }

@@ -88,8 +88,7 @@ pub enum Capability {
     VirusTest,
 
     // Extensions
-    Eval,
-    Plugins,
+    Expressions,
     While,
 }
 
@@ -625,9 +624,8 @@ impl Display for Capability {
             Capability::SpamTest => f.write_str("spamtest"),
             Capability::SpamTestPlus => f.write_str("spamtestplus"),
             Capability::VirusTest => f.write_str("virustest"),
-            Capability::Plugins => f.write_str("vnd.stalwart.plugins"),
             Capability::While => f.write_str("vnd.stalwart.while"),
-            Capability::Eval => f.write_str("vnd.stalwart.eval"),
+            Capability::Expressions => f.write_str("vnd.stalwart.expressions"),
             Capability::Other(capability) => f.write_str(capability),
         }
     }
@@ -683,7 +681,6 @@ static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
     "virustest" => Capability::VirusTest,
 
     // Extensions
-    "vnd.stalwart.plugins" => Capability::Plugins,
     "vnd.stalwart.while" => Capability::While,
-    "vnd.stalwart.eval" => Capability::Eval,
+    "vnd.stalwart.expressions" => Capability::Expressions,
 };

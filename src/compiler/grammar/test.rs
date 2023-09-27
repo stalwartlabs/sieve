@@ -30,7 +30,7 @@ use crate::compiler::{
 
 use super::{
     actions::{action_convert::Convert, action_vacation::TestVacation},
-    expr::{parser::ExpressionParser, tokenizer::Tokenizer, Expression},
+    expr::{parser::ExpressionParser, tokenizer::Tokenizer, Expression, UnaryOperator},
     instruction::{CompilerState, Instruction},
     tests::{
         test_address::TestAddress,
@@ -46,7 +46,6 @@ use super::{
         test_mailbox::{TestMailboxExists, TestMetadata, TestMetadataExists},
         test_mailboxid::TestMailboxIdExists,
         test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
-        test_plugin::Plugin,
         test_size::TestSize,
         test_spamtest::{TestSpamTest, TestVirusTest},
         test_specialuse::TestSpecialUseExists,
@@ -114,9 +113,12 @@ pub(crate) enum Test {
     // RFC 5230
     Vacation(TestVacation),
 
-    // Stalwart proprietary
-    EvalExpression(EvalExpression),
-    Plugin(Plugin),
+    // Only test
+    #[cfg(test)]
+    TestCmd {
+        arguments: Vec<crate::compiler::Value>,
+        is_not: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -147,384 +149,384 @@ impl<'x> CompilerState<'x> {
         loop {
             let token_info = self.tokens.unwrap_next()?;
             self.reset_param_check();
-            let test = match token_info.token {
-                Token::Comma
-                    if !block_stack.is_empty()
-                        && matches!(self.instructions.last(), Some(Instruction::Test(_)))
-                        && matches!(
+            let test: Instruction =
+                match token_info.token {
+                    Token::Comma
+                        if !block_stack.is_empty()
+                            && matches!(
+                                self.instructions.last(),
+                                Some(Instruction::Test(_) | Instruction::Eval(_))
+                            )
+                            && matches!(
+                                self.tokens.peek(),
+                                Some(Ok(TokenInfo {
+                                    token: Token::Identifier(_) | Token::Unknown(_),
+                                    ..
+                                }))
+                            ) =>
+                    {
+                        is_not = block.is_not;
+                        block.jmps.push(self.instructions.len());
+                        self.instructions.push(if block.is_all {
+                            Instruction::Jz(usize::MAX)
+                        } else {
+                            Instruction::Jnz(usize::MAX)
+                        });
+                        continue;
+                    }
+                    Token::ParenthesisOpen => {
+                        block.p_count += 1;
+                        continue;
+                    }
+                    Token::ParenthesisClose => {
+                        if block.p_count > 0 {
+                            block.p_count -= 1;
+                            continue;
+                        } else if let Some(prev_block) = block_stack.pop() {
+                            let cur_pos = self.instructions.len();
+                            for jmp_pos in block.jmps {
+                                if let Instruction::Jnz(jmp_pos) | Instruction::Jz(jmp_pos) =
+                                    &mut self.instructions[jmp_pos]
+                                {
+                                    *jmp_pos = cur_pos;
+                                } else {
+                                    debug_assert!(false, "This should not have happened")
+                                }
+                            }
+
+                            block = prev_block;
+                            is_not = block.is_not;
+                            if block_stack.is_empty() {
+                                break;
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            return Err(token_info.expected("test name"));
+                        }
+                    }
+                    Token::Identifier(Word::Not) => {
+                        if !matches!(
                             self.tokens.peek(),
                             Some(Ok(TokenInfo {
                                 token: Token::Identifier(_) | Token::Unknown(_),
                                 ..
                             }))
-                        ) =>
-                {
-                    is_not = block.is_not;
-                    block.jmps.push(self.instructions.len());
-                    self.instructions.push(if block.is_all {
-                        Instruction::Jz(usize::MAX)
-                    } else {
-                        Instruction::Jnz(usize::MAX)
-                    });
-                    continue;
-                }
-                Token::ParenthesisOpen => {
-                    block.p_count += 1;
-                    continue;
-                }
-                Token::ParenthesisClose => {
-                    if block.p_count > 0 {
-                        block.p_count -= 1;
-                        continue;
-                    } else if let Some(prev_block) = block_stack.pop() {
-                        let cur_pos = self.instructions.len();
-                        for jmp_pos in block.jmps {
-                            if let Instruction::Jnz(jmp_pos) | Instruction::Jz(jmp_pos) =
-                                &mut self.instructions[jmp_pos]
-                            {
-                                *jmp_pos = cur_pos;
-                            } else {
-                                debug_assert!(false, "This should not have happened")
-                            }
+                        ) {
+                            return Err(token_info.expected("test name"));
                         }
-
-                        block = prev_block;
-                        is_not = block.is_not;
-                        if block_stack.is_empty() {
-                            break;
-                        } else {
+                        is_not = !is_not;
+                        continue;
+                    }
+                    Token::Identifier(word @ (Word::AnyOf | Word::AllOf)) => {
+                        if block_stack.len() < self.tokens.compiler.max_nested_tests {
+                            self.tokens.expect_token(Token::ParenthesisOpen)?;
+                            block_stack.push(block);
+                            let (is_all, block_is_not) = if word == Word::AllOf {
+                                if !is_not {
+                                    (true, false)
+                                } else {
+                                    (false, true)
+                                }
+                            } else if !is_not {
+                                (false, false)
+                            } else {
+                                (true, true)
+                            };
+                            block = Block {
+                                is_all,
+                                is_not: block_is_not,
+                                p_count: 0,
+                                jmps: Vec::new(),
+                            };
+                            is_not = block_is_not;
                             continue;
-                        }
-                    } else {
-                        return Err(token_info.expected("test name"));
-                    }
-                }
-                Token::Identifier(Word::Not) => {
-                    if !matches!(
-                        self.tokens.peek(),
-                        Some(Ok(TokenInfo {
-                            token: Token::Identifier(_) | Token::Unknown(_),
-                            ..
-                        }))
-                    ) {
-                        return Err(token_info.expected("test name"));
-                    }
-                    is_not = !is_not;
-                    continue;
-                }
-                Token::Identifier(word @ (Word::AnyOf | Word::AllOf)) => {
-                    if block_stack.len() < self.tokens.compiler.max_nested_tests {
-                        self.tokens.expect_token(Token::ParenthesisOpen)?;
-                        block_stack.push(block);
-                        let (is_all, block_is_not) = if word == Word::AllOf {
-                            if !is_not {
-                                (true, false)
-                            } else {
-                                (false, true)
-                            }
-                        } else if !is_not {
-                            (false, false)
                         } else {
-                            (true, true)
-                        };
-                        block = Block {
-                            is_all,
-                            is_not: block_is_not,
-                            p_count: 0,
-                            jmps: Vec::new(),
-                        };
-                        is_not = block_is_not;
-                        continue;
+                            return Err(CompileError {
+                                line_num: token_info.line_num,
+                                line_pos: token_info.line_pos,
+                                error_type: ErrorType::TooManyNestedTests,
+                            });
+                        }
+                    }
+                    Token::Identifier(Word::True) => if !is_not {
+                        Test::True
                     } else {
-                        return Err(CompileError {
+                        is_not = false;
+                        Test::False
+                    }
+                    .into(),
+                    Token::Identifier(Word::False) => if !is_not {
+                        Test::False
+                    } else {
+                        is_not = false;
+                        Test::True
+                    }
+                    .into(),
+                    Token::Identifier(Word::Address) => self.parse_test_address()?.into(),
+                    Token::Identifier(Word::Envelope) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Envelope.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_envelope()?.into()
+                    }
+                    Token::Identifier(Word::Header) => self.parse_test_header()?.into(),
+                    Token::Identifier(Word::Size) => self.parse_test_size()?.into(),
+                    Token::Identifier(Word::Exists) => self.parse_test_exists()?.into(),
+
+                    // RFC 5173
+                    Token::Identifier(Word::Body) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Body.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_body()?.into()
+                    }
+
+                    // RFC 6558
+                    Token::Identifier(Word::Convert) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Convert.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_convert()?.into()
+                    }
+
+                    // RFC 5260
+                    Token::Identifier(Word::Date) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Date.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_date()?.into()
+                    }
+                    Token::Identifier(Word::CurrentDate) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Date.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_currentdate()?.into()
+                    }
+
+                    // RFC 7352
+                    Token::Identifier(Word::Duplicate) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Duplicate.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_duplicate()?.into()
+                    }
+
+                    // RFC 5229
+                    Token::Identifier(Word::String) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Variables.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_string()?.into()
+                    }
+
+                    // RFC 5435
+                    Token::Identifier(Word::NotifyMethodCapability) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Enotify.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_notify_method_capability()?.into()
+                    }
+                    Token::Identifier(Word::ValidNotifyMethod) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Enotify.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_valid_notify_method()?.into()
+                    }
+
+                    // RFC 5183
+                    Token::Identifier(Word::Environment) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Environment.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_environment()?.into()
+                    }
+
+                    // RFC 6134
+                    Token::Identifier(Word::ValidExtList) => {
+                        self.validate_argument(
+                            0,
+                            Capability::ExtLists.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_valid_ext_list()?.into()
+                    }
+
+                    // RFC 5463
+                    Token::Identifier(Word::Ihave) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Ihave.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_ihave()?.into()
+                    }
+
+                    // RFC 5232
+                    Token::Identifier(Word::HasFlag) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Imap4Flags.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_hasflag()?.into()
+                    }
+
+                    // RFC 5490
+                    Token::Identifier(Word::MailboxExists) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Mailbox.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_mailboxexists()?.into()
+                    }
+                    Token::Identifier(Word::Metadata) => {
+                        self.validate_argument(
+                            0,
+                            Capability::MboxMetadata.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_metadata()?.into()
+                    }
+                    Token::Identifier(Word::MetadataExists) => {
+                        self.validate_argument(
+                            0,
+                            Capability::MboxMetadata.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_metadataexists()?.into()
+                    }
+                    Token::Identifier(Word::ServerMetadata) => {
+                        self.validate_argument(
+                            0,
+                            Capability::ServerMetadata.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_servermetadata()?.into()
+                    }
+                    Token::Identifier(Word::ServerMetadataExists) => {
+                        self.validate_argument(
+                            0,
+                            Capability::ServerMetadata.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_servermetadataexists()?.into()
+                    }
+
+                    // RFC 9042
+                    Token::Identifier(Word::MailboxIdExists) => {
+                        self.validate_argument(
+                            0,
+                            Capability::MailboxId.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_mailboxidexists()?.into()
+                    }
+
+                    // RFC 5235
+                    Token::Identifier(Word::SpamTest) => {
+                        self.validate_argument(
+                            0,
+                            Capability::SpamTest.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_spamtest()?.into()
+                    }
+                    Token::Identifier(Word::VirusTest) => {
+                        self.validate_argument(
+                            0,
+                            Capability::VirusTest.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_virustest()?.into()
+                    }
+
+                    // RFC 8579
+                    Token::Identifier(Word::SpecialUseExists) => {
+                        self.validate_argument(
+                            0,
+                            Capability::SpecialUse.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+                        self.parse_test_specialuseexists()?.into()
+                    }
+
+                    // Expressions extension
+                    Token::Identifier(Word::Eval) => {
+                        self.validate_argument(
+                            0,
+                            Capability::Expressions.into(),
+                            token_info.line_num,
+                            token_info.line_pos,
+                        )?;
+
+                        Instruction::Eval(self.parse_expr()?)
+                    }
+                    Token::Identifier(word) => {
+                        self.ignore_test()?;
+                        Test::Invalid(Invalid {
+                            name: word.to_string(),
                             line_num: token_info.line_num,
                             line_pos: token_info.line_pos,
-                            error_type: ErrorType::TooManyNestedTests,
-                        });
+                        })
+                        .into()
                     }
-                }
-                Token::Identifier(Word::True) => {
-                    if !is_not {
-                        Test::True
-                    } else {
-                        is_not = false;
-                        Test::False
-                    }
-                }
-                Token::Identifier(Word::False) => {
-                    if !is_not {
-                        Test::False
-                    } else {
-                        is_not = false;
-                        Test::True
-                    }
-                }
-                Token::Identifier(Word::Address) => self.parse_test_address()?,
-                Token::Identifier(Word::Envelope) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Envelope.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_envelope()?
-                }
-                Token::Identifier(Word::Header) => self.parse_test_header()?,
-                Token::Identifier(Word::Size) => self.parse_test_size()?,
-                Token::Identifier(Word::Exists) => self.parse_test_exists()?,
+                    #[cfg(test)]
+                    Token::Unknown(name) if name.contains("test") => {
+                        use crate::compiler::Value;
 
-                // RFC 5173
-                Token::Identifier(Word::Body) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Body.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_body()?
-                }
-
-                // RFC 6558
-                Token::Identifier(Word::Convert) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Convert.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_convert()?
-                }
-
-                // RFC 5260
-                Token::Identifier(Word::Date) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Date.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_date()?
-                }
-                Token::Identifier(Word::CurrentDate) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Date.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_currentdate()?
-                }
-
-                // RFC 7352
-                Token::Identifier(Word::Duplicate) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Duplicate.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_duplicate()?
-                }
-
-                // RFC 5229
-                Token::Identifier(Word::String) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Variables.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_string()?
-                }
-
-                // RFC 5435
-                Token::Identifier(Word::NotifyMethodCapability) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Enotify.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_notify_method_capability()?
-                }
-                Token::Identifier(Word::ValidNotifyMethod) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Enotify.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_valid_notify_method()?
-                }
-
-                // RFC 5183
-                Token::Identifier(Word::Environment) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Environment.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_environment()?
-                }
-
-                // RFC 6134
-                Token::Identifier(Word::ValidExtList) => {
-                    self.validate_argument(
-                        0,
-                        Capability::ExtLists.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_valid_ext_list()?
-                }
-
-                // RFC 5463
-                Token::Identifier(Word::Ihave) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Ihave.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_ihave()?
-                }
-
-                // RFC 5232
-                Token::Identifier(Word::HasFlag) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Imap4Flags.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_hasflag()?
-                }
-
-                // RFC 5490
-                Token::Identifier(Word::MailboxExists) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Mailbox.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_mailboxexists()?
-                }
-                Token::Identifier(Word::Metadata) => {
-                    self.validate_argument(
-                        0,
-                        Capability::MboxMetadata.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_metadata()?
-                }
-                Token::Identifier(Word::MetadataExists) => {
-                    self.validate_argument(
-                        0,
-                        Capability::MboxMetadata.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_metadataexists()?
-                }
-                Token::Identifier(Word::ServerMetadata) => {
-                    self.validate_argument(
-                        0,
-                        Capability::ServerMetadata.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_servermetadata()?
-                }
-                Token::Identifier(Word::ServerMetadataExists) => {
-                    self.validate_argument(
-                        0,
-                        Capability::ServerMetadata.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_servermetadataexists()?
-                }
-
-                // RFC 9042
-                Token::Identifier(Word::MailboxIdExists) => {
-                    self.validate_argument(
-                        0,
-                        Capability::MailboxId.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_mailboxidexists()?
-                }
-
-                // RFC 5235
-                Token::Identifier(Word::SpamTest) => {
-                    self.validate_argument(
-                        0,
-                        Capability::SpamTest.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_spamtest()?
-                }
-                Token::Identifier(Word::VirusTest) => {
-                    self.validate_argument(
-                        0,
-                        Capability::VirusTest.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_virustest()?
-                }
-
-                // RFC 8579
-                Token::Identifier(Word::SpecialUseExists) => {
-                    self.validate_argument(
-                        0,
-                        Capability::SpecialUse.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-                    self.parse_test_specialuseexists()?
-                }
-                Token::Identifier(Word::Eval) => {
-                    self.validate_argument(
-                        0,
-                        Capability::Eval.into(),
-                        token_info.line_num,
-                        token_info.line_pos,
-                    )?;
-
-                    Test::EvalExpression(EvalExpression {
-                        expr: self.parse_expr()?,
-                        is_not: false,
-                    })
-                }
-
-                Token::Identifier(word) => {
-                    self.ignore_test()?;
-                    Test::Invalid(Invalid {
-                        name: word.to_string(),
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                    })
-                }
-                #[cfg(test)]
-                Token::Unknown(name) if name.contains("test") => {
-                    use crate::compiler::Value;
-
-                    let mut arguments = Vec::new();
-                    arguments.push(crate::PluginArgument::Text(Value::Text(name)));
-                    while !matches!(
-                        self.tokens.peek().map(|r| r.map(|t| &t.token)),
-                        Some(Ok(Token::Comma
-                            | Token::ParenthesisClose
-                            | Token::CurlyOpen))
-                    ) {
-                        arguments.push(crate::PluginArgument::Text(
-                            match self.tokens.unwrap_next()?.token {
+                        let mut arguments = Vec::new();
+                        arguments.push(Value::Text(name));
+                        while !matches!(
+                            self.tokens.peek().map(|r| r.map(|t| &t.token)),
+                            Some(Ok(Token::Comma
+                                | Token::ParenthesisClose
+                                | Token::CurlyOpen))
+                        ) {
+                            arguments.push(match self.tokens.unwrap_next()?.token {
                                 Token::StringConstant(s) => Value::from(s),
                                 Token::StringVariable(s) => self
                                     .tokenize_string(&s, true)
@@ -540,46 +542,33 @@ impl<'x> CompilerState<'x> {
                                 Token::Tag(s) => Value::Text(format!(":{s}")),
                                 Token::Unknown(s) => Value::Text(s),
                                 other => panic!("Invalid test param {other:?}"),
-                            },
-                        ));
+                            });
+                        }
+                        Test::TestCmd {
+                            arguments,
+                            is_not: false,
+                        }
+                        .into()
                     }
-                    Test::Plugin(Plugin {
-                        id: u32::MAX,
-                        arguments,
-                        is_not: false,
-                    })
-                }
-                Token::Unknown(name) => {
-                    if let Some(schema) = self.compiler.plugins.get(&name) {
-                        self.validate_argument(
-                            0,
-                            Capability::Plugins.into(),
-                            token_info.line_num,
-                            token_info.line_pos,
-                        )?;
-                        self.parse_test_plugin(schema)?
-                    } else {
+                    Token::Unknown(name) => {
                         self.ignore_test()?;
                         Test::Invalid(Invalid {
                             name,
                             line_num: token_info.line_num,
                             line_pos: token_info.line_pos,
                         })
+                        .into()
                     }
-                }
-                _ => return Err(token_info.expected("test name")),
-            };
+                    _ => return Err(token_info.expected("test name")),
+                };
 
             while block.p_count > 0 {
                 self.tokens.expect_token(Token::ParenthesisClose)?;
                 block.p_count -= 1;
             }
 
-            self.instructions.push(Instruction::Test(if !is_not {
-                test
-            } else {
-                test.set_not()
-            }));
+            self.instructions
+                .push(if !is_not { test } else { test.set_not() });
 
             if block_stack.is_empty() {
                 break;
@@ -618,87 +607,95 @@ impl<'x> CompilerState<'x> {
     }
 }
 
-impl Test {
+impl From<Test> for Instruction {
+    fn from(test: Test) -> Self {
+        Instruction::Test(test)
+    }
+}
+
+impl Instruction {
     pub fn set_not(mut self) -> Self {
         match &mut self {
-            Test::True => return Test::False,
-            Test::False => return Test::True,
-            Test::Address(op) => {
-                op.is_not = true;
-            }
-            Test::Envelope(op) => {
-                op.is_not = true;
-            }
-            Test::Exists(op) => {
-                op.is_not = true;
-            }
-            Test::Header(op) => {
-                op.is_not = true;
-            }
-            Test::Size(op) => {
-                op.is_not = true;
-            }
-            Test::Body(op) => {
-                op.is_not = true;
-            }
-            Test::Convert(op) => {
-                op.is_not = true;
-            }
-            Test::Date(op) => {
-                op.is_not = true;
-            }
-            Test::CurrentDate(op) => {
-                op.is_not = true;
-            }
-            Test::Duplicate(op) => {
-                op.is_not = true;
-            }
-            Test::String(op) | Test::Environment(op) => {
-                op.is_not = true;
-            }
-            Test::NotifyMethodCapability(op) => {
-                op.is_not = true;
-            }
-            Test::ValidNotifyMethod(op) => {
-                op.is_not = true;
-            }
-            Test::ValidExtList(op) => {
-                op.is_not = true;
-            }
-            Test::Ihave(op) => {
-                op.is_not = true;
-            }
-            Test::HasFlag(op) => {
-                op.is_not = true;
-            }
-            Test::MailboxExists(op) => {
-                op.is_not = true;
-            }
-            Test::Metadata(op) => {
-                op.is_not = true;
-            }
-            Test::MetadataExists(op) => {
-                op.is_not = true;
-            }
-            Test::MailboxIdExists(op) => {
-                op.is_not = true;
-            }
-            Test::SpamTest(op) => {
-                op.is_not = true;
-            }
-            Test::VirusTest(op) => {
-                op.is_not = true;
-            }
-            Test::SpecialUseExists(op) => {
-                op.is_not = true;
-            }
-            Test::Plugin(op) => {
-                op.is_not = true;
-            }
-            Test::EvalExpression(op) => {
-                op.is_not = true;
-            }
-            Test::Vacation(_) | Test::Invalid(_) => {}
+            Instruction::Test(test) => match test {
+                Test::True => return Instruction::Test(Test::False),
+                Test::False => return Instruction::Test(Test::True),
+                Test::Address(op) => {
+                    op.is_not = true;
+                }
+                Test::Envelope(op) => {
+                    op.is_not = true;
+                }
+                Test::Exists(op) => {
+                    op.is_not = true;
+                }
+                Test::Header(op) => {
+                    op.is_not = true;
+                }
+                Test::Size(op) => {
+                    op.is_not = true;
+                }
+                Test::Body(op) => {
+                    op.is_not = true;
+                }
+                Test::Convert(op) => {
+                    op.is_not = true;
+                }
+                Test::Date(op) => {
+                    op.is_not = true;
+                }
+                Test::CurrentDate(op) => {
+                    op.is_not = true;
+                }
+                Test::Duplicate(op) => {
+                    op.is_not = true;
+                }
+                Test::String(op) | Test::Environment(op) => {
+                    op.is_not = true;
+                }
+                Test::NotifyMethodCapability(op) => {
+                    op.is_not = true;
+                }
+                Test::ValidNotifyMethod(op) => {
+                    op.is_not = true;
+                }
+                Test::ValidExtList(op) => {
+                    op.is_not = true;
+                }
+                Test::Ihave(op) => {
+                    op.is_not = true;
+                }
+                Test::HasFlag(op) => {
+                    op.is_not = true;
+                }
+                Test::MailboxExists(op) => {
+                    op.is_not = true;
+                }
+                Test::Metadata(op) => {
+                    op.is_not = true;
+                }
+                Test::MetadataExists(op) => {
+                    op.is_not = true;
+                }
+                Test::MailboxIdExists(op) => {
+                    op.is_not = true;
+                }
+                Test::SpamTest(op) => {
+                    op.is_not = true;
+                }
+                Test::VirusTest(op) => {
+                    op.is_not = true;
+                }
+                Test::SpecialUseExists(op) => {
+                    op.is_not = true;
+                }
+                #[cfg(test)]
+                Test::TestCmd { is_not, .. } => {
+                    *is_not = true;
+                }
+                Test::Vacation(_) | Test::Invalid(_) => {}
+            },
+            Instruction::Eval(expr) => expr.push(Expression::UnaryOperator(UnaryOperator::Not)),
+            _ => (),
         }
         self
     }
