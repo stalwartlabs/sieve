@@ -20,10 +20,10 @@ Resent-Message-ID: test@resent
 X-Message-ID: <test@x-id>
 X-Original-Message-ID: test@x-orig
 Subject: Why not both importing AND exporting? =?utf-8?b?4pi6?=
-Received: from out-25.smtp.host.com (other.smtp.host.com [192.30.252.208]) (using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+ReCeived: from out-25.smtp.host.com (other.smtp.host.com [192.30.252.208]) (using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
 	by mail.stalw.art (Stalwart SMTP) with ESMTPS id 41A2C80D73C;
 	Tue, 29 Aug 2023 16:20:12 +0000
-Received: from ietfa.amsl.com (localhost [IPv6:::1]) by ietfa.amsl.com (Postfix) with ESMTP 
+ReceiveD: from ietfa.amsl.com (localhost [IPv6:::1]) by ietfa.amsl.com (Postfix) with ESMTP 
 	id 6296FC13AE3E for <hello@domain.comt>; Mon, 28 Aug 2023 02:21:37 -0700 (PDT)
 Content-Type: image/gif; name*1="about "; name*0="Book ";
 	name*2*=utf-8''%e2%98%95 tables.gif
@@ -80,6 +80,17 @@ test "Header Variables - Received" {
 		test_fail "header.received[-1].rcvd.date <= header.received[1].rcvd.date: ${header.received[-1].rcvd.date} <= ${header.received[1].rcvd.date}";
 	}
 
+	if eval "!header.received.exists" {
+		test_fail "header.received.exists failed";
+	}
+
+	if eval "count(header.received[*].exists) != 2" {
+		test_fail "count(header.received[*].exists) != 2";
+	}
+
+	if eval "header.received[*].raw_name != ['ReCeived', 'ReceiveD']" {
+		test_fail "header.received[*].raw_name failed";
+	}
 }
 
 test "Header Variables - Addresses" {
@@ -95,7 +106,7 @@ test "Header Variables - Addresses" {
 		test_fail "failed to match header.from.addr: ${header.from.addr}";
 	}
 
-    if not string :is "${header.from.raw}" "Art Vandelay <art@vandelay.com> (Vandelay Industries)" {
+    if not string :is "${header.from.raw}" " Art Vandelay <art@vandelay.com> (Vandelay Industries)" {
 		test_fail "failed to match header.from.raw: ${header.from.raw}";
 	}
 

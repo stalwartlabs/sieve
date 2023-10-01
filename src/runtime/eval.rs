@@ -372,6 +372,11 @@ impl HeaderVariable {
                 .get(header.offset_start..header.offset_end)
                 .map(sanitize_raw_header)
                 .map(Variable::from),
+            HeaderPart::RawName => raw
+                .get(header.offset_field..header.offset_start - 1)
+                .map(|bytes| std::str::from_utf8(bytes).unwrap_or_default())
+                .map(Variable::from),
+            HeaderPart::Exists => Variable::from(true).into(),
             _ => match (&header.value, &self.part) {
                 (HeaderValue::ContentType(ct), HeaderPart::ContentType(part)) => match part {
                     ContentTypePart::Type => Variable::from(ct.c_type.as_ref()).into(),
@@ -480,9 +485,7 @@ fn sanitize_raw_header(bytes: &[u8]) -> String {
             last_is_space = true;
         } else {
             if last_is_space {
-                if !result.is_empty() {
-                    result.push(b' ');
-                }
+                result.push(b' ');
                 last_is_space = false;
             }
             result.push(ch);

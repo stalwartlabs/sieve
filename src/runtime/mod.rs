@@ -210,7 +210,8 @@ impl<'x> Variable<'x> {
         match self {
             Variable::Array(l) => l,
             Variable::ArrayRef(l) => l.iter().map(Variable::as_ref).collect(),
-            v => vec![v],
+            v if !v.is_empty() => vec![v],
+            _ => vec![],
         }
     }
 
@@ -218,7 +219,17 @@ impl<'x> Variable<'x> {
         match self {
             Variable::Array(l) => l.into_iter().map(|i| i.into_string()).collect(),
             Variable::ArrayRef(l) => l.iter().map(|i| i.to_cow().into_owned()).collect(),
-            v => vec![v.into_string()],
+            v if !v.is_empty() => vec![v.into_string()],
+            _ => vec![],
+        }
+    }
+
+    pub fn to_string_array<'y: 'x>(&'y self) -> Vec<Cow<'x, str>> {
+        match self {
+            Variable::Array(l) => l.into_iter().map(|i| i.to_cow()).collect(),
+            Variable::ArrayRef(l) => l.iter().map(|i| i.to_cow()).collect(),
+            v if !v.is_empty() => vec![v.to_cow()],
+            _ => vec![],
         }
     }
 }
