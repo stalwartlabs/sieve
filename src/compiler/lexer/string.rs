@@ -588,11 +588,14 @@ impl TryFrom<&str> for HeaderPart {
 
             // Raw
             "raw" => HeaderPart::Raw,
+            "raw_name" => HeaderPart::RawName,
 
             // Date
             "date" => HeaderPart::Date,
 
-            // Content-type attributes
+            // Exists
+            "exists" => HeaderPart::Exists,
+
             _ => {
                 return Err(());
             }

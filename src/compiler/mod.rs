@@ -150,6 +150,8 @@ pub enum HeaderPart {
     ContentType(ContentTypePart),
     Received(ReceivedPart),
     Raw,
+    RawName,
+    Exists,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
