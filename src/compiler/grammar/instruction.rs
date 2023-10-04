@@ -585,6 +585,24 @@ impl Compiler {
                                 jz_pos: usize::MAX,
                             }));
                         }
+                        Word::Continue => {
+                            state.validate_argument(
+                                0,
+                                Capability::While.into(),
+                                token_info.line_num,
+                                token_info.line_pos,
+                            )?;
+                            match (&state.block.btype, state.block_stack.last()) {
+                                (Word::While, Some(prev_block)) => {
+                                    state
+                                        .instructions
+                                        .push(Instruction::Jmp(prev_block.last_block_start));
+                                }
+                                _ => {
+                                    return Err(token_info.custom(ErrorType::ContinueOutsideLoop));
+                                }
+                            }
+                        }
 
                         _ => {
                             if state.has_capability(&Capability::Ihave) {

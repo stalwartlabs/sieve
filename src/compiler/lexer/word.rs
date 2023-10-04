@@ -156,6 +156,7 @@ pub(crate) enum Word {
     Local,
     While,
     Let,
+    Continue,
 }
 
 pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
@@ -286,6 +287,7 @@ pub(crate) static WORDS: phf::Map<&'static str, Word> = phf_map! {
     "local" => Word::Local,
     "while" => Word::While,
     "let" => Word::Let,
+    "continue" => Word::Continue,
 };
 
 impl Display for Word {
@@ -418,6 +420,7 @@ impl Display for Word {
             Word::Local => f.write_str("local"),
             Word::While => f.write_str("while"),
             Word::Let => f.write_str("let"),
+            Word::Continue => f.write_str("continue"),
         }
     }
 }

@@ -81,6 +81,7 @@ pub enum ErrorType {
     LabelAlreadyDefined(String),
     LabelUndefined(String),
     BreakOutsideLoop,
+    ContinueOutsideLoop,
     UnsupportedComparator(String),
     DuplicatedParameter,
     UndeclaredCapability(Capability),
@@ -464,6 +465,7 @@ impl Display for CompileError {
             ErrorType::LabelAlreadyDefined(value) => write!(f, "Label {value:?} already defined"),
             ErrorType::LabelUndefined(value) => write!(f, "Label {value:?} does not exist"),
             ErrorType::BreakOutsideLoop => write!(f, "Break used outside of foreverypart loop"),
+            ErrorType::ContinueOutsideLoop => write!(f, "Continue used outside of while loop"),
             ErrorType::UnsupportedComparator(value) => {
                 write!(f, "Comparator {value:?} is not supported")
             }
