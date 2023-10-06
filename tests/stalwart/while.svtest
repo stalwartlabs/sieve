@@ -249,5 +249,20 @@ test "While - continue" {
         test_fail "while continue failed";
     }
 
+        let "i" "0";
+    let "j" "0";
+
+    while "i < 5" {
+        let "i" "i+1";
+        if eval "true" {
+            continue;
+        }
+        let "j" "j+1";
+    }
+
+    if eval "j != 0 || i == 0" {
+        test_fail "while continue failed";
+    }
+
 }
 

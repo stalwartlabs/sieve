@@ -592,15 +592,23 @@ impl Compiler {
                                 token_info.line_num,
                                 token_info.line_pos,
                             )?;
-                            match (&state.block.btype, state.block_stack.last()) {
-                                (Word::While, Some(prev_block)) => {
+                            let mut found_while = 0;
+                            for block in [&state.block]
+                                .into_iter()
+                                .chain(state.block_stack.iter().rev())
+                            {
+                                if let Word::While = &block.btype {
+                                    found_while += 1;
+                                } else if found_while == 1 {
                                     state
                                         .instructions
-                                        .push(Instruction::Jmp(prev_block.last_block_start));
+                                        .push(Instruction::Jmp(block.last_block_start));
+                                    found_while += 1;
+                                    break;
                                 }
-                                _ => {
-                                    return Err(token_info.custom(ErrorType::ContinueOutsideLoop));
-                                }
+                            }
+                            if found_while != 2 {
+                                return Err(token_info.custom(ErrorType::ContinueOutsideLoop));
                             }
                         }
 
