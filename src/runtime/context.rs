@@ -46,7 +46,8 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<Variable<'static>>,
 }
 
-impl<'x, C: Clone> Context<'x, C> {
+impl<'x, C> Context<'x, C> {
+    #[cfg(not(test))]
     pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
         Context {
             #[cfg(test)]
@@ -91,9 +92,7 @@ impl<'x, C: Clone> Context<'x, C> {
             spam_status: SpamStatus::Unknown,
         }
     }
-}
 
-impl<'x, C> Context<'x, C> {
     #[allow(clippy::while_let_on_iterator)]
     pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
         match input {
@@ -684,5 +683,50 @@ impl<'x, C> Context<'x, C> {
 
     pub fn context(&self) -> &C {
         &self.runtime.context
+    }
+}
+
+#[cfg(test)]
+impl<'x, C: Clone> Context<'x, C> {
+    pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
+        Context {
+            runtime: runtime.clone(),
+            message,
+            part: 0,
+            part_iter: Vec::new().into_iter(),
+            part_iter_stack: Vec::new(),
+            pos: usize::MAX,
+            test_result: false,
+            script_cache: AHashMap::new(),
+            script_stack: Vec::with_capacity(0),
+            vars_global: AHashMap::new(),
+            vars_env: AHashMap::new(),
+            vars_local: Vec::with_capacity(0),
+            vars_match: Vec::with_capacity(0),
+            expr_stack: None,
+            envelope: Vec::new(),
+            metadata: Vec::new(),
+            message_size: usize::MAX,
+            final_event: Event::Keep {
+                flags: Vec::with_capacity(0),
+                message_id: 0,
+            }
+            .into(),
+            queued_events: vec![].into_iter(),
+            has_changes: false,
+            user_address: "".into(),
+            user_full_name: "".into(),
+            current_time: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0) as i64,
+            num_redirects: 0,
+            num_instructions: 0,
+            num_out_messages: 0,
+            last_message_id: 0,
+            main_message_id: 0,
+            virus_status: VirusStatus::Unknown,
+            spam_status: SpamStatus::Unknown,
+        }
     }
 }
