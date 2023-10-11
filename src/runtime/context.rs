@@ -46,7 +46,7 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<Variable<'static>>,
 }
 
-impl<'x, C: Clone> Context<'x, C> {
+impl<'x, C> Context<'x, C> {
     pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
         Context {
             runtime,
@@ -88,9 +88,7 @@ impl<'x, C: Clone> Context<'x, C> {
             spam_status: SpamStatus::Unknown,
         }
     }
-}
 
-impl<'x, C> Context<'x, C> {
     #[allow(clippy::while_let_on_iterator)]
     pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
         match input {
