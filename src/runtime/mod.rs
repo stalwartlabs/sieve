@@ -691,6 +691,10 @@ impl<C> Runtime<C> {
     pub fn set_functions(&mut self, fnc_map: &mut FunctionMap<C>) {
         self.functions = std::mem::take(&mut fnc_map.functions);
     }
+
+    pub fn context(&self) -> &C {
+        &self.context
+    }
 }
 
 impl<C> FunctionMap<C> {
