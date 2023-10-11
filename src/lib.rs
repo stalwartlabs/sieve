@@ -561,8 +561,8 @@ mod tests {
     use crate::{
         compiler::grammar::Capability,
         runtime::{actions::action_mime::reset_test_boundary, Variable},
-        Compiler, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime, SpamStatus,
-        VirusStatus,
+        Compiler, Context, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime,
+        SpamStatus, VirusStatus,
     };
 
     impl Variable<'_> {
@@ -712,7 +712,22 @@ mod tests {
                 .with_capability(Capability::While)
                 .with_capability(Capability::Expressions)
                 .with_functions(&mut fnc_map.clone());
-            let mut instance = runtime.filter(b"");
+            let mut instance = Context::new(
+                &runtime,
+                Message {
+                    parts: vec![MessagePart {
+                        headers: vec![],
+                        is_encoding_problem: false,
+                        body: PartType::Text("".into()),
+                        encoding: Encoding::None,
+                        offset_header: 0,
+                        offset_body: 0,
+                        offset_end: 0,
+                    }],
+                    raw_message: b""[..].into(),
+                    ..Default::default()
+                },
+            );
             let raw_message = raw_message_.take().unwrap_or_default();
             instance.message =
                 MessageParser::new()

@@ -32,14 +32,20 @@ pub mod variables;
 use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
-use mail_parser::{Encoding, HeaderName, Message, MessageParser, MessagePart, PartType};
+#[cfg(not(test))]
+use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
+
+use mail_parser::HeaderName;
+
+#[cfg(not(test))]
+use crate::Context;
 
 use crate::{
     compiler::{
         grammar::{expr::parser::ID_EXTERNAL, Capability, Invalid},
         Number,
     },
-    Context, ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
+    ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
 };
 
 use self::eval::ToString;
@@ -362,7 +368,8 @@ impl<'x> self::eval::ToString for Vec<Variable<'x>> {
     }
 }
 
-impl<C: Clone> Runtime<C> {
+#[cfg(not(test))]
+impl<C> Runtime<C> {
     pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x, C> {
         Context::new(
             self,
