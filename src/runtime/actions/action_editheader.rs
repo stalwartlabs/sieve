@@ -33,13 +33,13 @@ use crate::{
         },
         MatchType,
     },
-    runtime::Variable,
     Context,
 };
 
 impl AddHeader {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
-        let header_name_ = ctx.eval_value(&self.field_name).into_cow();
+        let header_name__ = ctx.eval_value(&self.field_name);
+        let header_name_ = header_name__.to_string();
         let mut header_name = String::with_capacity(header_name_.len());
 
         for ch in header_name_.chars() {
@@ -56,7 +56,7 @@ impl AddHeader {
                         ctx.part,
                         header_name,
                         ctx.eval_value(&self.value)
-                            .into_cow()
+                            .to_string()
                             .as_ref()
                             .remove_crlf(ctx.runtime.max_header_size),
                         self.last,
@@ -69,9 +69,9 @@ impl AddHeader {
 
 impl DeleteHeader {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
-        let header_name = if let Some(header_name) =
-            HeaderName::parse(ctx.eval_value(&self.field_name).into_cow())
-        {
+        let header_name__ = ctx.eval_value(&self.field_name);
+        let header_name_ = header_name__.to_string();
+        let header_name = if let Some(header_name) = HeaderName::parse(header_name_.as_ref()) {
             header_name
         } else {
             return;
@@ -95,20 +95,16 @@ impl DeleteHeader {
                             value_patterns.iter().zip(self.value_patterns.iter())
                         {
                             if match &self.match_type {
-                                MatchType::Is => {
-                                    self.comparator.is(&Variable::from(value), pattern_expr)
-                                }
+                                MatchType::Is => self.comparator.is(&value, pattern_expr),
                                 MatchType::Contains => self
                                     .comparator
-                                    .contains(value, pattern_expr.to_cow().as_ref()),
-                                MatchType::Value(rel_match) => self.comparator.relational(
-                                    rel_match,
-                                    &Variable::from(value),
-                                    pattern_expr,
-                                ),
+                                    .contains(value, pattern_expr.to_string().as_ref()),
+                                MatchType::Value(rel_match) => {
+                                    self.comparator.relational(rel_match, &value, pattern_expr)
+                                }
                                 MatchType::Matches(_) => self.comparator.matches(
                                     value,
-                                    pattern_expr.to_cow().as_ref(),
+                                    pattern_expr.to_string().as_ref(),
                                     0,
                                     &mut Vec::new(),
                                 ),

@@ -37,7 +37,6 @@ use crate::{
         grammar::{tests::test_address::TestAddress, AddressPart, MatchType},
         Number,
     },
-    runtime::Variable,
     Context, Event,
 };
 
@@ -59,10 +58,11 @@ impl TestAddress {
                         ctx.find_addresses(header, &self.address_part, |value| {
                             for key in &key_list {
                                 if is_is {
-                                    if self.comparator.is(&Variable::from(value), key) {
+                                    if self.comparator.is(&value, key) {
                                         return true;
                                     }
-                                } else if self.comparator.contains(value, key.to_cow().as_ref()) {
+                                } else if self.comparator.contains(value, key.to_string().as_ref())
+                                {
                                     return true;
                                 }
                             }
@@ -78,10 +78,7 @@ impl TestAddress {
                 |header, _, _| {
                     ctx.find_addresses(header, &self.address_part, |value| {
                         for key in &key_list {
-                            if self
-                                .comparator
-                                .relational(rel_match, &Variable::from(value), key)
-                            {
+                            if self.comparator.relational(rel_match, &value, key) {
                                 return true;
                             }
                         }
@@ -103,7 +100,7 @@ impl TestAddress {
                                 if is_matches {
                                     if self.comparator.matches(
                                         value,
-                                        pattern_expr.to_cow().as_ref(),
+                                        pattern_expr.to_string().as_ref(),
                                         *capture_positions,
                                         &mut captured_positions,
                                     ) {

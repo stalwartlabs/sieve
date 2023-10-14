@@ -29,7 +29,7 @@ pub mod serialize;
 pub mod tests;
 pub mod variables;
 
-use std::{borrow::Cow, fmt::Display, ops::Deref, sync::Arc};
+use std::{borrow::Cow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
 
 use ahash::{AHashMap, AHashSet};
 #[cfg(not(test))]
@@ -51,13 +51,11 @@ use crate::{
 use self::eval::ToString;
 
 #[derive(Debug, Clone)]
-pub enum Variable<'x> {
-    String(String),
-    StringRef(&'x str),
+pub enum Variable {
+    String(Arc<String>),
     Integer(i64),
     Float(f64),
-    Array(Vec<Variable<'x>>),
-    ArrayRef(&'x Vec<Variable<'x>>),
+    Array(Arc<Vec<Variable>>),
 }
 
 #[derive(Debug)]
@@ -70,43 +68,19 @@ pub enum RuntimeError {
     CPULimitReached,
 }
 
-impl<'x> Default for Variable<'x> {
+impl Default for Variable {
     fn default() -> Self {
-        Variable::StringRef("")
+        Variable::String(Arc::new(String::new())).clone()
     }
 }
 
-impl<'x> Variable<'x> {
-    pub fn into_cow(self) -> Cow<'x, str> {
-        match self {
-            Variable::String(s) => Cow::Owned(s),
-            Variable::StringRef(s) => Cow::Borrowed(s),
-            Variable::Integer(n) => Cow::Owned(n.to_string()),
-            Variable::Float(n) => Cow::Owned(n.to_string()),
-            Variable::Array(l) => Cow::Owned(l.to_string()),
-            Variable::ArrayRef(l) => Cow::Owned(l.to_string()),
-        }
-    }
-
-    pub fn to_cow<'y: 'x>(&'y self) -> Cow<'x, str> {
+impl Variable {
+    pub fn to_string(&self) -> Cow<'_, str> {
         match self {
             Variable::String(s) => Cow::Borrowed(s.as_str()),
-            Variable::StringRef(s) => Cow::Borrowed(*s),
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
             Variable::Array(l) => Cow::Owned(l.to_string()),
-            Variable::ArrayRef(l) => Cow::Owned(l.to_string()),
-        }
-    }
-
-    pub fn into_string(self) -> String {
-        match self {
-            Variable::String(s) => s,
-            Variable::StringRef(s) => s.to_string(),
-            Variable::Integer(n) => n.to_string(),
-            Variable::Float(n) => n.to_string(),
-            Variable::Array(l) => l.to_string(),
-            Variable::ArrayRef(l) => l.to_string(),
         }
     }
 
@@ -120,7 +94,6 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => return Number::Integer(*n).into(),
             Variable::Float(n) => return Number::Float(*n).into(),
             Variable::String(s) if !s.is_empty() => s.as_str(),
-            Variable::StringRef(s) if !s.is_empty() => *s,
             _ => return None,
         };
 
@@ -136,7 +109,6 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => *n,
             Variable::Float(n) => *n as i64,
             Variable::String(s) if !s.is_empty() => s.parse::<i64>().unwrap_or(0),
-            Variable::StringRef(s) if !s.is_empty() => s.parse::<i64>().unwrap_or(0),
             _ => 0,
         }
     }
@@ -146,7 +118,6 @@ impl<'x> Variable<'x> {
             Variable::Integer(n) => *n as usize,
             Variable::Float(n) => *n as usize,
             Variable::String(s) if !s.is_empty() => s.parse::<usize>().unwrap_or(0),
-            Variable::StringRef(s) if !s.is_empty() => s.parse::<usize>().unwrap_or(0),
             _ => 0,
         }
     }
@@ -154,126 +125,92 @@ impl<'x> Variable<'x> {
     pub fn len(&self) -> usize {
         match self {
             Variable::String(s) => s.len(),
-            Variable::StringRef(s) => s.len(),
             Variable::Integer(_) | Variable::Float(_) => 2,
             Variable::Array(l) => l.iter().map(|v| v.len() + 2).sum(),
-            Variable::ArrayRef(l) => l.iter().map(|v| v.len() + 2).sum(),
         }
     }
 
     pub fn is_empty(&self) -> bool {
         match self {
             Variable::String(s) => s.is_empty(),
-            Variable::StringRef(s) => s.is_empty(),
             _ => false,
         }
     }
 
-    pub fn to_owned(&self) -> Variable<'static> {
-        match self {
-            Variable::String(s) => Variable::String(s.to_string()),
-            Variable::StringRef(s) => Variable::String(s.to_string()),
-            Variable::Integer(n) => Variable::Integer(*n),
-            Variable::Float(n) => Variable::Float(*n),
-            Variable::Array(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
-            Variable::ArrayRef(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
-        }
-    }
-
-    pub fn into_owned(self) -> Variable<'static> {
-        match self {
-            Variable::String(s) => Variable::String(s),
-            Variable::StringRef(s) => Variable::String(s.to_string()),
-            Variable::Integer(n) => Variable::Integer(n),
-            Variable::Float(n) => Variable::Float(n),
-            Variable::Array(l) => {
-                Variable::Array(l.into_iter().map(Variable::into_owned).collect())
-            }
-            Variable::ArrayRef(l) => Variable::Array(l.iter().map(Variable::to_owned).collect()),
-        }
-    }
-
-    pub fn as_ref<'y: 'x>(&'y self) -> Variable<'x> {
-        match self {
-            Variable::String(s) => Variable::StringRef(s.as_str()),
-            Variable::StringRef(s) => Variable::StringRef(s),
-            Variable::Integer(n) => Variable::Integer(*n),
-            Variable::Float(n) => Variable::Float(*n),
-            Variable::Array(l) => Variable::ArrayRef(l),
-            Variable::ArrayRef(l) => Variable::ArrayRef(l),
-        }
-    }
-
-    pub fn as_array<'y: 'x>(&'y self) -> Option<&[Variable<'x>]> {
+    pub fn as_array(&self) -> Option<&[Variable]> {
         match self {
             Variable::Array(l) => Some(l),
-            Variable::ArrayRef(l) => Some(l),
             _ => None,
         }
     }
 
-    pub fn into_array(self) -> Vec<Variable<'x>> {
+    pub fn into_array(self) -> Arc<Vec<Variable>> {
         match self {
             Variable::Array(l) => l,
-            Variable::ArrayRef(l) => l.iter().map(Variable::as_ref).collect(),
-            v if !v.is_empty() => vec![v],
-            _ => vec![],
+            v if !v.is_empty() => vec![v].into(),
+            _ => vec![].into(),
+        }
+    }
+
+    pub fn to_array(&self) -> Arc<Vec<Variable>> {
+        match self {
+            Variable::Array(l) => l.clone(),
+            v if !v.is_empty() => vec![v.clone()].into(),
+            _ => vec![].into(),
         }
     }
 
     pub fn into_string_array(self) -> Vec<String> {
         match self {
-            Variable::Array(l) => l.into_iter().map(|i| i.into_string()).collect(),
-            Variable::ArrayRef(l) => l.iter().map(|i| i.to_cow().into_owned()).collect(),
-            v if !v.is_empty() => vec![v.into_string()],
+            Variable::Array(l) => l.iter().map(|i| i.to_string().into_owned()).collect(),
+            v if !v.is_empty() => vec![v.to_string().into_owned()],
             _ => vec![],
         }
     }
 
-    pub fn to_string_array<'y: 'x>(&'y self) -> Vec<Cow<'x, str>> {
+    pub fn to_string_array(&self) -> Vec<Cow<'_, str>> {
         match self {
-            Variable::Array(l) => l.iter().map(|i| i.to_cow()).collect(),
-            Variable::ArrayRef(l) => l.iter().map(|i| i.to_cow()).collect(),
-            v if !v.is_empty() => vec![v.to_cow()],
+            Variable::Array(l) => l.iter().map(|i| i.to_string()).collect(),
+            v if !v.is_empty() => vec![v.to_string()],
             _ => vec![],
         }
     }
 }
 
-impl<'x> From<&'x str> for Variable<'x> {
-    fn from(s: &'x str) -> Self {
-        Variable::StringRef(s)
-    }
-}
-
-impl From<String> for Variable<'_> {
+impl From<String> for Variable {
     fn from(s: String) -> Self {
-        Variable::String(s)
+        Variable::String(s.into())
     }
 }
 
-impl<'x> From<&'x String> for Variable<'x> {
+impl<'x> From<&'x String> for Variable {
     fn from(s: &'x String) -> Self {
-        Variable::StringRef(s.as_str())
+        Variable::String(s.as_str().to_string().into())
     }
 }
 
-impl<'x> From<Cow<'x, str>> for Variable<'x> {
+impl<'x> From<&'x str> for Variable {
+    fn from(s: &'x str) -> Self {
+        Variable::String(s.to_string().into())
+    }
+}
+
+impl<'x> From<Cow<'x, str>> for Variable {
     fn from(s: Cow<'x, str>) -> Self {
         match s {
-            Cow::Borrowed(s) => Variable::StringRef(s),
-            Cow::Owned(s) => Variable::String(s),
+            Cow::Borrowed(s) => Variable::String(s.to_string().into()),
+            Cow::Owned(s) => Variable::String(s.into()),
         }
     }
 }
 
-impl<'x> From<Vec<Variable<'x>>> for Variable<'x> {
-    fn from(l: Vec<Variable<'x>>) -> Self {
-        Variable::Array(l)
+impl From<Vec<Variable>> for Variable {
+    fn from(l: Vec<Variable>) -> Self {
+        Variable::Array(l.into())
     }
 }
 
-impl From<Number> for Variable<'_> {
+impl From<Number> for Variable {
     fn from(n: Number) -> Self {
         match n {
             Number::Integer(n) => Variable::Integer(n),
@@ -282,43 +219,43 @@ impl From<Number> for Variable<'_> {
     }
 }
 
-impl From<usize> for Variable<'_> {
+impl From<usize> for Variable {
     fn from(n: usize) -> Self {
         Variable::Integer(n as i64)
     }
 }
 
-impl From<i64> for Variable<'_> {
+impl From<i64> for Variable {
     fn from(n: i64) -> Self {
         Variable::Integer(n)
     }
 }
 
-impl From<u64> for Variable<'_> {
+impl From<u64> for Variable {
     fn from(n: u64) -> Self {
         Variable::Integer(n as i64)
     }
 }
 
-impl From<f64> for Variable<'_> {
+impl From<f64> for Variable {
     fn from(n: f64) -> Self {
         Variable::Float(n)
     }
 }
 
-impl From<i32> for Variable<'_> {
+impl From<i32> for Variable {
     fn from(n: i32) -> Self {
         Variable::Integer(n as i64)
     }
 }
 
-impl From<u32> for Variable<'_> {
+impl From<u32> for Variable {
     fn from(n: u32) -> Self {
         Variable::Integer(n as i64)
     }
 }
 
-impl From<bool> for Variable<'_> {
+impl From<bool> for Variable {
     fn from(b: bool) -> Self {
         Variable::Integer(i64::from(b))
     }
@@ -349,7 +286,7 @@ impl PartialOrd for Number {
     }
 }
 
-impl<'x> self::eval::ToString for Vec<Variable<'x>> {
+impl self::eval::ToString for Vec<Variable> {
     fn to_string(&self) -> String {
         let mut result = String::with_capacity(self.len() * 10);
         for item in self {
@@ -358,13 +295,23 @@ impl<'x> self::eval::ToString for Vec<Variable<'x>> {
             }
             match item {
                 Variable::String(v) => result.push_str(v),
-                Variable::StringRef(v) => result.push_str(v),
                 Variable::Integer(v) => result.push_str(&v.to_string()),
                 Variable::Float(v) => result.push_str(&v.to_string()),
-                Variable::Array(_) | Variable::ArrayRef(_) => {}
+                Variable::Array(_) => {}
             }
         }
         result
+    }
+}
+
+impl Hash for Variable {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Variable::String(s) => s.hash(state),
+            Variable::Integer(n) => n.hash(state),
+            Variable::Float(n) => n.to_bits().hash(state),
+            Variable::Array(l) => l.hash(state),
+        }
     }
 }
 
@@ -582,7 +529,7 @@ impl<C> Runtime<C> {
     pub fn set_env_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable<'static>>,
+        value: impl Into<Variable>,
     ) {
         self.environment.insert(name.into(), value.into());
     }
@@ -761,7 +708,7 @@ impl Input {
         Input::False
     }
 
-    pub fn result(result: Variable<'static>) -> Self {
+    pub fn result(result: Variable) -> Self {
         Input::FncResult(result)
     }
 }
@@ -776,8 +723,8 @@ impl From<bool> for Input {
     }
 }
 
-impl From<Variable<'static>> for Input {
-    fn from(value: Variable<'static>) -> Self {
+impl From<Variable> for Input {
+    fn from(value: Variable) -> Self {
         Input::FncResult(value)
     }
 }

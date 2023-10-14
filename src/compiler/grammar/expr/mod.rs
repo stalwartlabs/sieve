@@ -21,6 +21,8 @@
  * for more details.
 */
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{Number, VariableType};
@@ -44,7 +46,7 @@ pub(crate) enum Expression {
 pub(crate) enum Constant {
     Integer(i64),
     Float(f64),
-    String(String),
+    String(Arc<String>),
 }
 
 impl Eq for Constant {}
@@ -60,7 +62,7 @@ impl From<Number> for Constant {
 
 impl From<String> for Constant {
     fn from(value: String) -> Self {
-        Constant::String(value)
+        Constant::String(value.into())
     }
 }
 

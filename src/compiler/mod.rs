@@ -21,7 +21,7 @@
  * for more details.
 */
 
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, fmt::Display, sync::Arc};
 
 use ahash::AHashMap;
 use mail_parser::HeaderName;
@@ -96,7 +96,7 @@ impl Default for Compiler {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Value {
-    Text(String),
+    Text(Arc<String>),
     Number(Number),
     Variable(VariableType),
     Regex(Regex),

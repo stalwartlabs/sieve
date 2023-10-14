@@ -273,7 +273,7 @@ use compiler::grammar::{
     Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::{context::ScriptStack, expression::ExpressionStack, Variable};
+use runtime::{context::ScriptStack, Variable};
 use serde::{Deserialize, Serialize};
 
 pub mod compiler;
@@ -307,7 +307,7 @@ pub struct Compiler {
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function<C> = for<'x> fn(&'x Context<'x, C>, Vec<Variable<'x>>) -> Variable<'x>;
+pub type Function<C> = for<'x> fn(&'x Context<'x, C>, Vec<Variable>) -> Variable;
 
 #[derive(Default, Clone)]
 pub struct FunctionMap<C> {
@@ -321,7 +321,7 @@ pub struct Runtime<C> {
     pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
     pub(crate) protected_headers: Vec<HeaderName<'static>>,
-    pub(crate) environment: AHashMap<Cow<'static, str>, Variable<'static>>,
+    pub(crate) environment: AHashMap<Cow<'static, str>, Variable>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
@@ -357,7 +357,7 @@ pub struct Context<'x, C> {
 
     pub(crate) message: Message<'x>,
     pub(crate) message_size: usize,
-    pub(crate) envelope: Vec<(Envelope, Variable<'x>)>,
+    pub(crate) envelope: Vec<(Envelope, Variable)>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
     pub(crate) part: usize,
@@ -371,11 +371,12 @@ pub struct Context<'x, C> {
     pub(crate) test_result: bool,
     pub(crate) script_cache: AHashMap<Script, Arc<Sieve>>,
     pub(crate) script_stack: Vec<ScriptStack>,
-    pub(crate) vars_global: AHashMap<Cow<'static, str>, Variable<'static>>,
-    pub(crate) vars_env: AHashMap<Cow<'static, str>, Variable<'x>>,
-    pub(crate) vars_local: Vec<Variable<'static>>,
-    pub(crate) vars_match: Vec<Variable<'static>>,
-    pub(crate) expr_stack: Option<ExpressionStack<'static>>,
+    pub(crate) vars_global: AHashMap<Cow<'static, str>, Variable>,
+    pub(crate) vars_env: AHashMap<Cow<'static, str>, Variable>,
+    pub(crate) vars_local: Vec<Variable>,
+    pub(crate) vars_match: Vec<Variable>,
+    pub(crate) expr_stack: Vec<Variable>,
+    pub(crate) expr_pos: usize,
 
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
@@ -440,7 +441,7 @@ pub enum Event {
     },
     Function {
         id: ExternalId,
-        arguments: Vec<Variable<'static>>,
+        arguments: Vec<Variable>,
     },
 
     // Actions
@@ -517,7 +518,7 @@ pub enum Recipient {
 pub enum Input {
     True,
     False,
-    FncResult(Variable<'static>),
+    FncResult(Variable),
     Script { name: Script, script: Arc<Sieve> },
 }
 
@@ -565,9 +566,9 @@ mod tests {
         SpamStatus, VirusStatus,
     };
 
-    impl Variable<'_> {
+    impl Variable {
         pub fn unwrap_string(self) -> String {
-            self.into_cow().into_owned()
+            self.to_string().into_owned()
         }
     }
 
@@ -614,21 +615,20 @@ mod tests {
         let mut fnc_map = FunctionMap::new()
             .with_function("trim", |_, v| match v.into_iter().next().unwrap() {
                 crate::runtime::Variable::String(s) => s.trim().to_string().into(),
-                crate::runtime::Variable::StringRef(s) => s.trim().into(),
                 v => v.to_string().into(),
             })
-            .with_function("len", |_, v| v[0].to_cow().len().into())
+            .with_function("len", |_, v| v[0].to_string().len().into())
             .with_function("count", |_, v| {
                 v[0].as_array().map_or(0, |arr| arr.len()).into()
             })
             .with_function("to_lowercase", |_, v| {
-                v[0].to_cow().to_lowercase().to_string().into()
+                v[0].to_string().to_lowercase().to_string().into()
             })
             .with_function("to_uppercase", |_, v| {
-                v[0].to_cow().to_uppercase().to_string().into()
+                v[0].to_string().to_uppercase().to_string().into()
             })
             .with_function("is_uppercase", |_, v| {
-                v[0].to_cow()
+                v[0].to_string()
                     .as_ref()
                     .chars()
                     .filter(|c| c.is_alphabetic())
@@ -636,13 +636,17 @@ mod tests {
                     .into()
             })
             .with_function("is_ascii", |_, v| {
-                v[0].to_cow().as_ref().chars().any(|c| !c.is_ascii()).into()
+                v[0].to_string()
+                    .as_ref()
+                    .chars()
+                    .any(|c| !c.is_ascii())
+                    .into()
             })
             .with_function("char_count", |_, v| {
-                v[0].to_cow().as_ref().chars().count().into()
+                v[0].to_string().as_ref().chars().count().into()
             })
             .with_function("lines", |_, v| {
-                v[0].to_cow()
+                v[0].to_string()
                     .lines()
                     .map(|line| Variable::from(line.to_string()))
                     .collect::<Vec<_>>()
@@ -650,15 +654,15 @@ mod tests {
             })
             .with_function_args(
                 "contains",
-                |_, v| v[0].to_string().contains(&v[1].to_string()).into(),
+                |_, v| v[0].to_string().contains(v[1].to_string().as_ref()).into(),
                 2,
             )
             .with_function_args(
                 "eq_lowercase",
                 |_, v| {
-                    v[0].to_cow()
+                    v[0].to_string()
                         .as_ref()
-                        .eq_ignore_ascii_case(v[1].to_cow().as_ref())
+                        .eq_ignore_ascii_case(v[1].to_string().as_ref())
                         .into()
                 },
                 2,
@@ -1158,17 +1162,17 @@ mod tests {
                         } else {
                             let result = match id {
                                 0 => Variable::from("my_value"),
-                                1 => Variable::from(arguments[0].to_cow().to_uppercase()),
+                                1 => Variable::from(arguments[0].to_string().to_uppercase()),
                                 2 => Variable::from(format!(
                                     "{}-{}",
-                                    arguments[0].to_cow(),
-                                    arguments[1].to_cow()
+                                    arguments[0].to_string(),
+                                    arguments[1].to_string()
                                 )),
                                 3 => Variable::from(format!(
                                     "{}-{}-{}",
-                                    arguments[0].to_cow(),
-                                    arguments[1].to_cow(),
-                                    arguments[2].to_cow()
+                                    arguments[0].to_string(),
+                                    arguments[1].to_string(),
+                                    arguments[2].to_string()
                                 )),
                                 4 => true.into(),
                                 5 => false.into(),

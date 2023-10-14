@@ -265,7 +265,7 @@ impl<'x> CompilerState<'x> {
 
         Ok(match items.len() {
             1 => items.pop().unwrap(),
-            0 => Value::Text(String::new()),
+            0 => Value::Text(String::new().into()),
             _ => Value::List(items),
         })
     }
@@ -525,7 +525,7 @@ impl<'x> CompilerState<'x> {
                         .and_then(|v| (v, v.parse::<f64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Float(n)),
-                        _ => Value::Text(buf.to_vec().into_string()),
+                        _ => Value::Text(buf.to_vec().into_string().into()),
                     }
                 } else {
                     match std::str::from_utf8(buf)
@@ -533,11 +533,11 @@ impl<'x> CompilerState<'x> {
                         .and_then(|v| (v, v.parse::<i64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Integer(n)),
-                        _ => Value::Text(buf.to_vec().into_string()),
+                        _ => Value::Text(buf.to_vec().into_string().into()),
                     }
                 }
             } else {
-                Value::Text(buf.to_vec().into_string())
+                Value::Text(buf.to_vec().into_string().into())
             });
         } else {
             match self.tokenize_string(buf, false)? {
@@ -777,27 +777,33 @@ mod tests {
         };
 
         for (input, expected_result) in [
-            ("$${hex:24 24}", Value::Text("$$$".to_string())),
-            ("$${hex:40}", Value::Text("$@".to_string())),
-            ("${hex: 40 }", Value::Text("@".to_string())),
-            ("${HEX: 40}", Value::Text("@".to_string())),
-            ("${hex:40", Value::Text("${hex:40".to_string())),
-            ("${hex:400}", Value::Text("${hex:400}".to_string())),
-            ("${hex:4${hex:30}}", Value::Text("${hex:40}".to_string())),
-            ("${unicode:40}", Value::Text("@".to_string())),
-            ("${ unicode:40}", Value::Text("${ unicode:40}".to_string())),
-            ("${UNICODE:40}", Value::Text("@".to_string())),
-            ("${UnICoDE:0000040}", Value::Text("@".to_string())),
-            ("${Unicode:40}", Value::Text("@".to_string())),
+            ("$${hex:24 24}", Value::Text("$$$".to_string().into())),
+            ("$${hex:40}", Value::Text("$@".to_string().into())),
+            ("${hex: 40 }", Value::Text("@".to_string().into())),
+            ("${HEX: 40}", Value::Text("@".to_string().into())),
+            ("${hex:40", Value::Text("${hex:40".to_string().into())),
+            ("${hex:400}", Value::Text("${hex:400}".to_string().into())),
+            (
+                "${hex:4${hex:30}}",
+                Value::Text("${hex:40}".to_string().into()),
+            ),
+            ("${unicode:40}", Value::Text("@".to_string().into())),
+            (
+                "${ unicode:40}",
+                Value::Text("${ unicode:40}".to_string().into()),
+            ),
+            ("${UNICODE:40}", Value::Text("@".to_string().into())),
+            ("${UnICoDE:0000040}", Value::Text("@".to_string().into())),
+            ("${Unicode:40}", Value::Text("@".to_string().into())),
             (
                 "${Unicode:40 40 ",
-                Value::Text("${Unicode:40 40 ".to_string()),
+                Value::Text("${Unicode:40 40 ".to_string().into()),
             ),
             (
                 "${Unicode:Cool}",
-                Value::Text("${Unicode:Cool}".to_string()),
+                Value::Text("${Unicode:Cool}".to_string().into()),
             ),
-            ("", Value::Text("".to_string())),
+            ("", Value::Text("".to_string().into())),
             (
                 "${global.full}",
                 Value::Variable(VariableType::Global("full".to_string())),
@@ -805,52 +811,52 @@ mod tests {
             (
                 "${BAD${global.Company}",
                 Value::List(vec![
-                    Value::Text("${BAD".to_string()),
+                    Value::Text("${BAD".to_string().into()),
                     Value::Variable(VariableType::Global("company".to_string())),
                 ]),
             ),
             (
                 "${President, ${global.Company} Inc.}",
                 Value::List(vec![
-                    Value::Text("${President, ".to_string()),
+                    Value::Text("${President, ".to_string().into()),
                     Value::Variable(VariableType::Global("company".to_string())),
-                    Value::Text(" Inc.}".to_string()),
+                    Value::Text(" Inc.}".to_string().into()),
                 ]),
             ),
             (
                 "dear${hex:20 24 7b}global.Name}",
                 Value::List(vec![
-                    Value::Text("dear ".to_string()),
+                    Value::Text("dear ".to_string().into()),
                     Value::Variable(VariableType::Global("name".to_string())),
                 ]),
             ),
             (
                 "INBOX.lists.${2}",
                 Value::List(vec![
-                    Value::Text("INBOX.lists.".to_string()),
+                    Value::Text("INBOX.lists.".to_string().into()),
                     Value::Variable(VariableType::Match(2)),
                 ]),
             ),
             (
                 "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test",
-                Value::Text("Ein unerhört großer Test".to_string()),
+                Value::Text("Ein unerhört großer Test".to_string().into()),
             ),
-            ("&%${}!", Value::Text("&%${}!".to_string())),
-            ("${doh!}", Value::Text("${doh!}".to_string())),
+            ("&%${}!", Value::Text("&%${}!".to_string().into())),
+            ("${doh!}", Value::Text("${doh!}".to_string().into())),
             (
                 "${hex: 20 }${global.hi}${hex: 20 }",
                 Value::List(vec![
-                    Value::Text(" ".to_string()),
+                    Value::Text(" ".to_string().into()),
                     Value::Variable(VariableType::Global("hi".to_string())),
-                    Value::Text(" ".to_string()),
+                    Value::Text(" ".to_string().into()),
                 ]),
             ),
             (
                 "${hex:20 24 7b z}${global.hi}${unicode:}${unicode: }${hex:20}",
                 Value::List(vec![
-                    Value::Text("${hex:20 24 7b z}".to_string()),
+                    Value::Text("${hex:20 24 7b z}".to_string().into()),
                     Value::Variable(VariableType::Global("hi".to_string())),
-                    Value::Text("${unicode:}${unicode: } ".to_string()),
+                    Value::Text("${unicode:}${unicode: } ".to_string().into()),
                 ]),
             ),
             (

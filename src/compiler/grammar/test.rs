@@ -519,7 +519,7 @@ impl<'x> CompilerState<'x> {
                         use crate::compiler::Value;
 
                         let mut arguments = Vec::new();
-                        arguments.push(Value::Text(name));
+                        arguments.push(Value::Text(name.into()));
                         while !matches!(
                             self.tokens.peek().map(|r| r.map(|t| &t.token)),
                             Some(Ok(Token::Comma
@@ -538,9 +538,9 @@ impl<'x> CompilerState<'x> {
                                 Token::Number(n) => {
                                     Value::Number(crate::compiler::Number::Integer(n as i64))
                                 }
-                                Token::Identifier(s) => Value::Text(s.to_string()),
-                                Token::Tag(s) => Value::Text(format!(":{s}")),
-                                Token::Unknown(s) => Value::Text(s),
+                                Token::Identifier(s) => Value::Text(s.to_string().into()),
+                                Token::Tag(s) => Value::Text(format!(":{s}").into()),
+                                Token::Unknown(s) => Value::Text(s.into()),
                                 other => panic!("Invalid test param {other:?}"),
                             });
                         }

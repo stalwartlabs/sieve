@@ -33,9 +33,9 @@ use std::fmt::Write;
 
 impl Set {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
-        let mut value = ctx.eval_value(&self.value).into_owned();
+        let mut value = ctx.eval_value(&self.value);
         for modifier in &self.modifiers {
-            value = modifier.apply(value.into_cow().as_ref(), ctx).into();
+            value = modifier.apply(value.to_string().as_ref(), ctx).into();
         }
 
         ctx.set_variable(&self.name, value);
@@ -43,10 +43,10 @@ impl Set {
 }
 
 impl<'x, C> Context<'x, C> {
-    pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable<'x>) {
+    pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable) {
         if variable.len() > self.runtime.max_variable_size {
             let mut new_variable = String::with_capacity(self.runtime.max_variable_size);
-            for ch in variable.into_cow().chars() {
+            for ch in variable.to_string().chars() {
                 if ch.len_utf8() + new_variable.len() <= self.runtime.max_variable_size {
                     new_variable.push(ch);
                 } else {
@@ -59,19 +59,19 @@ impl<'x, C> Context<'x, C> {
         match var_name {
             VariableType::Local(var_id) => {
                 if let Some(var) = self.vars_local.get_mut(*var_id) {
-                    *var = variable.into_owned();
+                    *var = variable.clone();
                 } else {
                     debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
             VariableType::Global(var_name) => {
                 self.vars_global
-                    .insert(var_name.to_string().into(), variable.into_owned());
+                    .insert(var_name.to_string().into(), variable.clone());
             }
             VariableType::Envelope(env) => {
                 self.queued_events = vec![Event::SetEnvelope {
                     envelope: *env,
-                    value: variable.into_string(),
+                    value: variable.to_string().into_owned(),
                 }]
                 .into_iter();
             }
@@ -79,7 +79,7 @@ impl<'x, C> Context<'x, C> {
         }
     }
 
-    pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable<'x>> {
+    pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable> {
         match var_name {
             VariableType::Local(var_id) => self.vars_local.get(*var_id),
             VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
@@ -203,8 +203,8 @@ impl Modifier {
                 result
             }
             Modifier::Replace { find, replace } => input.replace(
-                ctx.eval_value(find).into_cow().as_ref(),
-                ctx.eval_value(replace).into_cow().as_ref(),
+                ctx.eval_value(find).to_string().as_ref(),
+                ctx.eval_value(replace).to_string().as_ref(),
             ),
         }
     }

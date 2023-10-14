@@ -57,10 +57,11 @@ impl TestHeader {
                         ctx.find_header_values(header, &mime_opts, |value| {
                             for key in &key_list {
                                 if is_is {
-                                    if self.comparator.is(&Variable::from(value), key) {
+                                    if self.comparator.is(&value, key) {
                                         return true;
                                     }
-                                } else if self.comparator.contains(value, key.to_cow().as_ref()) {
+                                } else if self.comparator.contains(value, key.to_string().as_ref())
+                                {
                                     return true;
                                 }
                             }
@@ -76,10 +77,7 @@ impl TestHeader {
                 |header, _, _| {
                     ctx.find_header_values(header, &mime_opts, |value| {
                         for key in &key_list {
-                            if self
-                                .comparator
-                                .relational(rel_match, &Variable::from(value), key)
-                            {
+                            if self.comparator.relational(rel_match, &value, key) {
                                 return true;
                             }
                         }
@@ -101,7 +99,7 @@ impl TestHeader {
                                 if is_matches {
                                     if self.comparator.matches(
                                         value,
-                                        pattern_expr.to_cow().as_ref(),
+                                        pattern_expr.to_string().as_ref(),
                                         *capture_positions,
                                         &mut captured_values,
                                     ) {
@@ -146,10 +144,9 @@ impl TestHeader {
                                 if let HeaderValue::ContentType(ct) = &header.value {
                                     if let Some(attributes) = &ct.attributes {
                                         for (attr_name, _) in attributes {
-                                            if params
-                                                .iter()
-                                                .any(|p| p.to_cow().eq_ignore_ascii_case(attr_name))
-                                            {
+                                            if params.iter().any(|p| {
+                                                p.to_string().eq_ignore_ascii_case(attr_name)
+                                            }) {
                                                 count += 1;
                                             }
                                         }
@@ -221,11 +218,15 @@ impl<'x, C> Context<'x, C> {
     }
 
     #[inline(always)]
-    pub(crate) fn parse_header_name<'z: 'y, 'y>(
-        &'z self,
-        header_name: &'y Value,
-    ) -> Option<HeaderName<'y>> {
-        HeaderName::parse(self.eval_value(header_name).into_cow())
+    pub(crate) fn parse_header_name(&self, header_name: &Value) -> Option<HeaderName<'static>> {
+        let h_ = self.eval_value(header_name);
+        let h = h_.to_string();
+
+        match HeaderName::parse(h.as_ref())? {
+            HeaderName::Other(_) => HeaderName::Other(h.into_owned().into()),
+            hn => hn.into_owned(),
+        }
+        .into()
     }
 
     pub(crate) fn find_headers(
@@ -363,7 +364,7 @@ impl<'x, C> Context<'x, C> {
                 if let Some(attributes) = &ct.attributes {
                     for param in params {
                         for (attr_name, attr_value) in attributes {
-                            if param.to_cow().eq_ignore_ascii_case(attr_name)
+                            if param.to_string().eq_ignore_ascii_case(attr_name)
                                 && visitor_fnc(attr_value.as_ref())
                             {
                                 return true;

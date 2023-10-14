@@ -56,7 +56,7 @@ impl EditFlags {
             Action::Add => {
                 let mut new_flags = ctx
                     .get_variable(var_name)
-                    .map(|v| v.to_cow())
+                    .map(|v| v.to_string())
                     .unwrap_or_default()
                     .into_owned();
                 let mut current_flags = new_flags
@@ -82,7 +82,7 @@ impl EditFlags {
                 let mut current_flags_lc = Vec::new();
                 let flags = ctx
                     .get_variable(var_name)
-                    .map(|v| v.to_cow().into_owned())
+                    .map(|v| v.to_string().into_owned())
                     .unwrap_or_default();
 
                 for flag in flags.split(' ') {
@@ -110,7 +110,8 @@ impl<'x, C> Context<'x, C> {
         mut cb: impl FnMut(&str) -> bool,
     ) -> bool {
         for (pos, string) in strings.iter().enumerate() {
-            let flag = self.eval_value(string).into_cow();
+            let flag_ = self.eval_value(string);
+            let flag = flag_.to_string();
             if !flag.is_empty() {
                 if pos == 0 && strings.len() == 1 {
                     for flag in flag.split_ascii_whitespace() {
@@ -138,7 +139,7 @@ impl<'x, C> Context<'x, C> {
     pub(crate) fn get_global_flags(&self) -> Vec<String> {
         match self.vars_global.get("__flags") {
             Some(flags) if !flags.is_empty() => flags
-                .to_cow()
+                .to_string()
                 .split(' ')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),

@@ -108,13 +108,12 @@ impl<'x> CompilerState<'x> {
                         match variable {
                             Value::Text(var_name) => {
                                 variable_list.push(
-                                    self.register_variable(var_name, is_local).map_err(
-                                        |error_type| CompileError {
+                                    self.register_variable(var_name.to_string(), is_local)
+                                        .map_err(|error_type| CompileError {
                                             line_num,
                                             line_pos,
                                             error_type,
-                                        },
-                                    )?,
+                                        })?,
                                 );
                             }
                             _ => {

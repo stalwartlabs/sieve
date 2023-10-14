@@ -33,7 +33,7 @@ impl TestValidExtList {
             if ctx
                 .runtime
                 .valid_ext_lists
-                .contains(&ctx.eval_value(list).into_cow())
+                .contains(&ctx.eval_value(list).to_string())
             {
                 num_valid += 1;
             }

@@ -21,6 +21,8 @@
  * for more details.
 */
 
+use std::borrow::Cow;
+
 use mail_parser::{parsers::MessageStream, HeaderValue};
 
 use crate::{
@@ -32,7 +34,7 @@ use super::TestResult;
 
 impl TestDuplicate {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
-        let id = match &self.dup_match {
+        let id: Cow<str> = match &self.dup_match {
             DupMatch::Header(header_name) => {
                 let mut value = String::new();
                 if let Some(header_name) = ctx.parse_header_name(header_name) {
@@ -66,7 +68,7 @@ impl TestDuplicate {
                 }
                 value.into()
             }
-            DupMatch::UniqueId(s) => ctx.eval_value(s).into_cow(),
+            DupMatch::UniqueId(s) => ctx.eval_value(s).to_string().into_owned().into(),
             DupMatch::Default => ctx.message.message_id().unwrap_or("").into(),
         };
 
@@ -75,7 +77,7 @@ impl TestDuplicate {
                 id: if id.is_empty() {
                     return TestResult::Bool(false ^ self.is_not);
                 } else if let Some(handle) = &self.handle {
-                    format!("{}{}", ctx.eval_value(handle).into_cow(), id)
+                    format!("{}{}", ctx.eval_value(handle).to_string(), id)
                 } else {
                     id.into_owned()
                 },

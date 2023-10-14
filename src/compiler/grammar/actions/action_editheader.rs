@@ -76,7 +76,7 @@ impl<'x> CompilerState<'x> {
                     let string = self.parse_string_token(token_info)?;
                     if field_name.is_none() {
                         if let Value::Text(header_name) = &string {
-                            if HeaderName::parse(header_name).is_none() {
+                            if HeaderName::parse(header_name.as_ref()).is_none() {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
@@ -175,7 +175,7 @@ impl<'x> CompilerState<'x> {
                 _ => {
                     field_name = self.parse_string_token(token_info)?;
                     if let Value::Text(header_name) = &field_name {
-                        if HeaderName::parse(header_name).is_none() {
+                        if HeaderName::parse(header_name.as_ref()).is_none() {
                             return Err(self
                                 .tokens
                                 .unwrap_next()?

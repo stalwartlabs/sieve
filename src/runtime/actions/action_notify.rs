@@ -48,7 +48,7 @@ impl Notify {
             }
         }
 
-        let uri = ctx.eval_value(&self.method).into_string();
+        let uri = ctx.eval_value(&self.method).to_string().into_owned();
         let (scheme, params) = if let Some(parts) = parse_uri(&uri) {
             parts
         } else {
@@ -77,19 +77,22 @@ impl Notify {
                 }
             };
             let from = if let Some(from) = &self.from {
-                let from = ctx.eval_value(from).into_cow();
+                let from = ctx.eval_value(from).to_string().into_owned();
                 if from
                     .to_ascii_lowercase()
                     .contains(&ctx.user_address.to_ascii_lowercase())
                 {
                     from
                 } else {
-                    ctx.user_from_field().into()
+                    ctx.user_from_field()
                 }
             } else {
-                ctx.user_from_field().into()
+                ctx.user_from_field()
             };
-            let notify_message = self.message.as_ref().map(|m| ctx.eval_value(m).into_cow());
+            let notify_message = self
+                .message
+                .as_ref()
+                .map(|m| ctx.eval_value(m).to_string().into_owned());
             let message_len = params
                 .to
                 .iter()
@@ -172,7 +175,7 @@ impl Notify {
                 self.importance
                     .as_ref()
                     .map_or(("Normal", "3 (Normal)"), |i| {
-                        match ctx.eval_value(i).into_cow().as_ref() {
+                        match ctx.eval_value(i).to_string().as_ref() {
                             "1" => ("High", "1 (High)"),
                             "3" => ("Low", "5 (Low)"),
                             _ => ("Normal", "3 (Normal)"),
@@ -259,9 +262,12 @@ impl Notify {
         if !is_mailto {
             events.push(Event::Notify {
                 method: uri,
-                from: self.from.as_ref().map(|f| ctx.eval_value(f).into_string()),
+                from: self
+                    .from
+                    .as_ref()
+                    .map(|f| ctx.eval_value(f).to_string().into_owned()),
                 importance: self.importance.as_ref().map_or(Importance::Normal, |i| {
-                    match ctx.eval_value(i).into_cow().as_ref() {
+                    match ctx.eval_value(i).to_string().as_ref() {
                         "1" => Importance::High,
                         "3" => Importance::Low,
                         _ => Importance::Normal,
@@ -271,7 +277,7 @@ impl Notify {
                 message: self
                     .message
                     .as_ref()
-                    .map(|m| ctx.eval_value(m).into_string())
+                    .map(|m| ctx.eval_value(m).to_string().into_owned())
                     .or_else(|| ctx.message.subject().map(|s| s.to_string()))
                     .unwrap_or_default(),
             });
@@ -281,16 +287,16 @@ impl Notify {
         if let Some(fcc) = &self.fcc {
             // File carbon copy
             events.push(Event::FileInto {
-                folder: ctx.eval_value(&fcc.mailbox).into_string(),
+                folder: ctx.eval_value(&fcc.mailbox).to_string().into_owned(),
                 flags: ctx.get_local_flags(&fcc.flags),
                 mailbox_id: fcc
                     .mailbox_id
                     .as_ref()
-                    .map(|m| ctx.eval_value(m).into_string()),
+                    .map(|m| ctx.eval_value(m).to_string().into_owned()),
                 special_use: fcc
                     .special_use
                     .as_ref()
-                    .map(|s| ctx.eval_value(s).into_string()),
+                    .map(|s| ctx.eval_value(s).to_string().into_owned()),
                 create: fcc.create,
                 message_id: ctx.last_message_id,
             });

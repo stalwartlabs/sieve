@@ -56,9 +56,9 @@ impl TestString {
             MatchType::List => {
                 let mut values = Vec::with_capacity(self.source.len());
                 for source in &self.source {
-                    let value = ctx.eval_value(source).into_cow();
-                    if !value.is_empty() && !values.iter().any(|v: &String| v.eq(value.as_ref())) {
-                        values.push(value.into_owned());
+                    let value = ctx.eval_value(source).to_string().into_owned();
+                    if !value.is_empty() && !values.iter().any(|v: &String| v.eq(&value)) {
+                        values.push(value);
                     }
                 }
                 if !values.is_empty() {
@@ -82,22 +82,23 @@ impl TestString {
                         if !empty_is_null || !source.is_empty() {
                             result = match &self.match_type {
                                 MatchType::Is => self.comparator.is(source, &key),
-                                MatchType::Contains => self
-                                    .comparator
-                                    .contains(source.to_cow().as_ref(), key.to_cow().as_ref()),
+                                MatchType::Contains => self.comparator.contains(
+                                    source.to_string().as_ref(),
+                                    key.to_string().as_ref(),
+                                ),
                                 MatchType::Value(relation) => {
                                     self.comparator.relational(relation, source, &key)
                                 }
                                 MatchType::Matches(capture_positions) => self.comparator.matches(
-                                    source.to_cow().as_ref(),
-                                    key.to_cow().as_ref(),
+                                    source.to_string().as_ref(),
+                                    key.to_string().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
                                 ),
                                 MatchType::Regex(capture_positions) => self.comparator.regex(
                                     pattern,
                                     &key,
-                                    source.to_cow().as_ref(),
+                                    source.to_string().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
                                 ),

@@ -42,8 +42,8 @@ use super::{
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
     pub(crate) prev_pos: usize,
-    pub(crate) prev_vars_local: Vec<Variable<'static>>,
-    pub(crate) prev_vars_match: Vec<Variable<'static>>,
+    pub(crate) prev_vars_local: Vec<Variable>,
+    pub(crate) prev_vars_match: Vec<Variable>,
 }
 
 impl<'x, C> Context<'x, C> {
@@ -66,7 +66,8 @@ impl<'x, C> Context<'x, C> {
             vars_env: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
-            expr_stack: None,
+            expr_stack: Vec::with_capacity(16),
+            expr_pos: 0,
             envelope: Vec::new(),
             metadata: Vec::new(),
             message_size: usize::MAX,
@@ -99,9 +100,7 @@ impl<'x, C> Context<'x, C> {
             Input::True => self.test_result ^= true,
             Input::False => self.test_result ^= false,
             Input::FncResult(result) => {
-                if let Some(expr_stack) = &mut self.expr_stack {
-                    expr_stack.push_result(result);
-                }
+                self.expr_stack.push(result);
             }
             Input::Script { name, script } => {
                 let num_vars = script.num_vars;
@@ -184,18 +183,14 @@ impl<'x, C> Context<'x, C> {
                             return Some(Err(err));
                         }
                     },
-                    Instruction::Eval(expr) => {
-                        match self.expr_stack.take().unwrap_or_default().eval(self, expr) {
-                            Ok(result) => {
-                                self.test_result = result.to_bool();
-                            }
-                            Err((stack, event)) => {
-                                self.pos -= 1;
-                                self.expr_stack = stack.into();
-                                return Some(Ok(event));
-                            }
+                    Instruction::Eval(expr) => match self.eval_expression(expr) {
+                        Ok(result) => {
+                            self.test_result = result.to_bool();
                         }
-                    }
+                        Err(event) => {
+                            return Some(Ok(event));
+                        }
+                    },
                     Instruction::Clear(clear) => {
                         if clear.local_vars_num > 0 {
                             if let Some(local_vars) = self.vars_local.get_mut(
@@ -249,7 +244,7 @@ impl<'x, C> Context<'x, C> {
                         self.final_event = None;
                         return Some(Ok(Event::Reject {
                             extended: reject.ereject,
-                            reason: self.eval_value(&reject.reason).into_string(),
+                            reason: self.eval_value(&reject.reason).to_string().into_owned(),
                         }));
                     }
                     Instruction::ForEveryPart(fep) => {
@@ -292,45 +287,27 @@ impl<'x, C> Context<'x, C> {
                             }
                         }
                     }
-                    Instruction::While(while_) => {
-                        match self
-                            .expr_stack
-                            .take()
-                            .unwrap_or_default()
-                            .eval(self, &while_.expr)
-                        {
-                            Ok(result) => {
-                                if !result.to_bool() {
-                                    debug_assert!(while_.jz_pos > self.pos - 1);
-                                    self.pos = while_.jz_pos;
-                                    iter = current_script.instructions.get(self.pos..)?.iter();
-                                    continue;
-                                }
-                            }
-                            Err((stack, event)) => {
-                                self.pos -= 1;
-                                self.expr_stack = stack.into();
-                                return Some(Ok(event));
+                    Instruction::While(while_) => match self.eval_expression(&while_.expr) {
+                        Ok(result) => {
+                            if !result.to_bool() {
+                                debug_assert!(while_.jz_pos > self.pos - 1);
+                                self.pos = while_.jz_pos;
+                                iter = current_script.instructions.get(self.pos..)?.iter();
+                                continue;
                             }
                         }
-                    }
-                    Instruction::Let(let_) => {
-                        match self
-                            .expr_stack
-                            .take()
-                            .unwrap_or_default()
-                            .eval(self, &let_.expr)
-                        {
-                            Ok(result) => {
-                                self.set_variable(&let_.name, result.into_owned());
-                            }
-                            Err((stack, event)) => {
-                                self.pos -= 1;
-                                self.expr_stack = stack.into();
-                                return Some(Ok(event));
-                            }
+                        Err(event) => {
+                            return Some(Ok(event));
                         }
-                    }
+                    },
+                    Instruction::Let(let_) => match self.eval_expression(&let_.expr) {
+                        Ok(result) => {
+                            self.set_variable(&let_.name, result);
+                        }
+                        Err(event) => {
+                            return Some(Ok(event));
+                        }
+                    },
 
                     Instruction::Replace(replace) => replace.exec(self),
                     Instruction::Enclose(enclose) => enclose.exec(self),
@@ -412,7 +389,7 @@ impl<'x, C> Context<'x, C> {
                     Instruction::Error(err) => {
                         self.finish_loop();
                         return Some(Err(RuntimeError::ScriptErrorMessage(
-                            self.eval_value(&err.message).into_string(),
+                            self.eval_value(&err.message).to_string().into_owned(),
                         )));
                     }
                     Instruction::Invalid(invalid) => {
@@ -532,12 +509,12 @@ impl<'x, C> Context<'x, C> {
         }
     }
 
-    pub fn with_vars_env(mut self, vars_env: AHashMap<Cow<'static, str>, Variable<'x>>) -> Self {
+    pub fn with_vars_env(mut self, vars_env: AHashMap<Cow<'static, str>, Variable>) -> Self {
         self.vars_env = vars_env;
         self
     }
 
-    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Variable<'x>)>) -> Self {
+    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Variable)>) -> Self {
         self.envelope = envelope;
         self
     }
@@ -583,7 +560,7 @@ impl<'x, C> Context<'x, C> {
     pub fn set_env_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable<'x>>,
+        value: impl Into<Variable>,
     ) {
         self.vars_env.insert(name.into(), value.into());
     }
@@ -591,7 +568,7 @@ impl<'x, C> Context<'x, C> {
     pub fn with_env_variable(
         mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable<'x>>,
+        value: impl Into<Variable>,
     ) -> Self {
         self.set_env_variable(name, value);
         self
@@ -600,7 +577,7 @@ impl<'x, C> Context<'x, C> {
     pub fn set_global_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable<'x>>,
+        value: impl Into<Variable>,
     ) {
         self.vars_env.insert(name.into(), value.into());
     }
@@ -608,7 +585,7 @@ impl<'x, C> Context<'x, C> {
     pub fn with_global_variable(
         mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable<'x>>,
+        value: impl Into<Variable>,
     ) -> Self {
         self.set_global_variable(name, value);
         self
@@ -669,7 +646,7 @@ impl<'x, C> Context<'x, C> {
         self.vars_global.keys().map(|k| k.as_ref())
     }
 
-    pub fn global_variable(&self, name: &str) -> Option<&Variable<'x>> {
+    pub fn global_variable(&self, name: &str) -> Option<&Variable> {
         self.vars_global.get(name)
     }
 
@@ -703,7 +680,8 @@ impl<'x, C: Clone> Context<'x, C> {
             vars_env: AHashMap::new(),
             vars_local: Vec::with_capacity(0),
             vars_match: Vec::with_capacity(0),
-            expr_stack: None,
+            expr_stack: Vec::with_capacity(16),
+            expr_pos: 0,
             envelope: Vec::new(),
             metadata: Vec::new(),
             message_size: usize::MAX,

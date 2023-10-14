@@ -51,7 +51,7 @@ impl Replace {
         ctx.has_changes = true;
 
         // Update part
-        let body = ctx.eval_value(&self.replacement).into_string();
+        let body = ctx.eval_value(&self.replacement).to_string().into_owned();
         let body_len = body.len();
 
         let part = &mut ctx.message.parts[ctx.part];
@@ -108,7 +108,7 @@ impl Replace {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("From".into()),
-                        from.into_cow()
+                        from.to_string()
                             .as_ref()
                             .remove_crlf(ctx.runtime.max_header_size),
                         true,
@@ -132,7 +132,7 @@ impl Replace {
                         0,
                         HeaderName::Other("Subject".into()),
                         subject
-                            .into_cow()
+                            .to_string()
                             .as_ref()
                             .remove_crlf(ctx.runtime.max_header_size),
                         true,
@@ -183,13 +183,13 @@ impl Replace {
 
 impl Enclose {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
-        let body = ctx.eval_value(&self.value).into_string();
+        let body = ctx.eval_value(&self.value).to_string().into_owned();
         let subject = self
             .subject
             .as_ref()
             .map(|s| {
                 ctx.eval_value(s)
-                    .into_cow()
+                    .to_string()
                     .as_ref()
                     .remove_crlf(ctx.runtime.max_header_size)
             })
@@ -268,7 +268,7 @@ impl Enclose {
         for header in &self.headers {
             let header = ctx.eval_value(header);
             if let Some((mut header_name, mut header_value)) =
-                header.into_cow().as_ref().split_once(':')
+                header.to_string().as_ref().split_once(':')
             {
                 header_name = header_name.trim();
                 header_value = header_value.trim();

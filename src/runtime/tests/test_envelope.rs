@@ -28,7 +28,6 @@ use crate::{
         grammar::{tests::test_envelope::TestEnvelope, MatchType},
         Number,
     },
-    runtime::Variable,
     Context, Envelope, Event,
 };
 
@@ -45,10 +44,10 @@ impl TestEnvelope {
                 ctx.find_envelopes(self, |value| {
                     for key in &key_list {
                         if is_is {
-                            if self.comparator.is(&Variable::from(value), key) {
+                            if self.comparator.is(&value, key) {
                                 return true;
                             }
-                        } else if self.comparator.contains(value, key.to_cow().as_ref()) {
+                        } else if self.comparator.contains(value, key.to_string().as_ref()) {
                             return true;
                         }
                     }
@@ -58,10 +57,7 @@ impl TestEnvelope {
             }
             MatchType::Value(rel_match) => ctx.find_envelopes(self, |value| {
                 for key in &key_list {
-                    if self
-                        .comparator
-                        .relational(rel_match, &Variable::from(value), key)
-                    {
+                    if self.comparator.relational(rel_match, &value, key) {
                         return true;
                     }
                 }
@@ -77,7 +73,7 @@ impl TestEnvelope {
                         if is_matches {
                             if self.comparator.matches(
                                 value,
-                                pattern_expr.to_cow().as_ref(),
+                                pattern_expr.to_string().as_ref(),
                                 *capture_positions,
                                 &mut captured_positions,
                             ) {
@@ -165,7 +161,7 @@ impl<'x, C> Context<'x, C> {
                     Envelope::From | Envelope::To | Envelope::Orcpt => {
                         if let Some(value) = test_envelope
                             .address_part
-                            .eval_string(value.to_cow().as_ref())
+                            .eval_string(value.to_string().as_ref())
                         {
                             cb(value)
                         } else {
@@ -173,13 +169,13 @@ impl<'x, C> Context<'x, C> {
                         }
                     }
                     Envelope::ByTimeAbsolute if test_envelope.zone.is_some() => {
-                        if let Some(dt) = DateTime::parse_rfc3339(value.to_cow().as_ref()) {
+                        if let Some(dt) = DateTime::parse_rfc3339(value.to_string().as_ref()) {
                             cb(&dt.to_timezone(test_envelope.zone.unwrap()).to_rfc3339())
                         } else {
                             cb("")
                         }
                     }
-                    _ => cb(value.to_cow().as_ref()),
+                    _ => cb(value.to_string().as_ref()),
                 }
             {
                 return true;

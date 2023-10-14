@@ -26,7 +26,6 @@ use crate::{
         grammar::{tests::test_hasflag::TestHasFlag, MatchType},
         Number, VariableType,
     },
-    runtime::Variable,
     Context,
 };
 
@@ -46,7 +45,7 @@ impl TestHasFlag {
             for variable in variable_list {
                 match ctx.get_variable(variable) {
                     Some(flags) if !flags.is_empty() => {
-                        flag_count += flags.to_cow().split(' ').count();
+                        flag_count += flags.to_string().split(' ').count();
                     }
                     _ => (),
                 }
@@ -69,19 +68,15 @@ impl TestHasFlag {
                 for variable in variable_list {
                     match ctx.get_variable(variable) {
                         Some(flags) if !flags.is_empty() => {
-                            for flag in flags.to_cow().split(' ') {
+                            for flag in flags.to_string().split(' ') {
                                 if match &self.match_type {
-                                    MatchType::Is => self
-                                        .comparator
-                                        .is(&Variable::from(flag), &Variable::from(check_flag)),
+                                    MatchType::Is => self.comparator.is(&flag, &check_flag),
                                     MatchType::Contains => {
                                         self.comparator.contains(flag, check_flag)
                                     }
-                                    MatchType::Value(rel_match) => self.comparator.relational(
-                                        rel_match,
-                                        &Variable::from(flag),
-                                        &Variable::from(check_flag),
-                                    ),
+                                    MatchType::Value(rel_match) => {
+                                        self.comparator.relational(rel_match, &flag, &check_flag)
+                                    }
                                     MatchType::Matches(capture_positions) => {
                                         self.comparator.matches(
                                             flag,

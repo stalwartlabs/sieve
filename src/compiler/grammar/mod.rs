@@ -447,7 +447,7 @@ impl<'x> CompilerState<'x> {
                         Ok(regex) => {
                             *key = Value::Regex(Regex {
                                 regex,
-                                expr: std::mem::take(expr),
+                                expr: expr.to_string(),
                             });
                         }
                         Err(err) => {

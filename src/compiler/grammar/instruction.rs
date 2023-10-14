@@ -753,7 +753,7 @@ impl Compiler {
                 #[cfg(test)]
                 Token::Unknown(instruction) if instruction.contains("test") => {
                     let has_arguments = instruction != "test";
-                    let mut arguments = vec![Value::Text(instruction)];
+                    let mut arguments = vec![Value::Text(instruction.into())];
 
                     if !has_arguments {
                         arguments.push(state.parse_string()?);
@@ -779,9 +779,9 @@ impl Compiler {
                                 Token::Number(n) => {
                                     Value::Number(crate::compiler::Number::Integer(n as i64))
                                 }
-                                Token::Identifier(s) => Value::Text(s.to_string()),
-                                Token::Tag(s) => Value::Text(format!(":{s}")),
-                                Token::Unknown(s) => Value::Text(s),
+                                Token::Identifier(s) => Value::Text(s.to_string().into()),
+                                Token::Tag(s) => Value::Text(format!(":{s}").into()),
+                                Token::Unknown(s) => Value::Text(s.into()),
                                 Token::Semicolon => break,
                                 other => panic!("Invalid test param {other:?}"),
                             });

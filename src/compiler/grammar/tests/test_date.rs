@@ -172,7 +172,7 @@ impl<'x> CompilerState<'x> {
                     if header_name.is_none() {
                         let header = self.parse_string_token(token_info)?;
                         if let Value::Text(header_name) = &header {
-                            if HeaderName::parse(header_name).is_none() {
+                            if HeaderName::parse(header_name.as_ref()).is_none() {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?

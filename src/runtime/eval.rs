@@ -40,25 +40,27 @@ use crate::{
 use super::Variable;
 
 impl<'x, C> Context<'x, C> {
-    pub(crate) fn variable<'y: 'x>(&'y self, var: &VariableType) -> Option<Variable<'x>> {
+    pub(crate) fn variable<'y: 'x>(&'y self, var: &VariableType) -> Option<Variable> {
         match var {
-            VariableType::Local(var_num) => self.vars_local.get(*var_num).map(|v| v.as_ref()),
-            VariableType::Match(var_num) => self.vars_match.get(*var_num).map(|v| v.as_ref()),
-            VariableType::Global(var_name) => {
-                self.vars_global.get(var_name.as_str()).map(|v| v.as_ref())
-            }
+            VariableType::Local(var_num) => self.vars_local.get(*var_num).cloned(),
+            VariableType::Match(var_num) => self.vars_match.get(*var_num).cloned(),
+            VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()).cloned(),
             VariableType::Environment(var_name) => self
                 .vars_env
                 .get(var_name.as_str())
                 .or_else(|| self.runtime.environment.get(var_name.as_str()))
-                .map(|v| v.as_ref()),
-            VariableType::Envelope(envelope) => self.envelope.iter().find_map(|(e, v)| {
-                if e == envelope {
-                    Some(v.as_ref())
-                } else {
-                    None
-                }
-            }),
+                .cloned(),
+            VariableType::Envelope(envelope) => {
+                self.envelope.iter().find_map(
+                    |(e, v)| {
+                        if e == envelope {
+                            Some(v.clone())
+                        } else {
+                            None
+                        }
+                    },
+                )
+            }
             VariableType::Header(header) => self.eval_header(header),
             VariableType::Part(part) => match part {
                 MessagePart::TextBody(convert) => {
@@ -101,9 +103,9 @@ impl<'x, C> Context<'x, C> {
         }
     }
 
-    pub(crate) fn eval_value<'z: 'y, 'y>(&'z self, string: &'y Value) -> Variable<'y> {
+    pub(crate) fn eval_value(&self, string: &Value) -> Variable {
         match string {
-            Value::Text(text) => Variable::String(text.into()),
+            Value::Text(text) => Variable::String(text.clone()),
             Value::Variable(var) => self.variable(var).unwrap_or_default(),
             Value::List(list) => {
                 let mut data = String::new();
@@ -114,7 +116,7 @@ impl<'x, C> Context<'x, C> {
                         }
                         Value::Variable(var) => {
                             if let Some(value) = self.variable(var) {
-                                data.push_str(&value.to_cow());
+                                data.push_str(&value.to_string());
                             }
                         }
                         Value::List(_) => {
@@ -129,11 +131,11 @@ impl<'x, C> Context<'x, C> {
                 data.into()
             }
             Value::Number(n) => Variable::from(*n),
-            Value::Regex(r) => Variable::StringRef(&r.expr),
+            Value::Regex(r) => Variable::String(r.expr.clone().into()),
         }
     }
 
-    fn eval_header<'z: 'x>(&'z self, header: &HeaderVariable) -> Option<Variable<'x>> {
+    fn eval_header<'z: 'x>(&'z self, header: &HeaderVariable) -> Option<Variable> {
         let mut result = Vec::new();
         let part = self.message.part(self.part)?;
         let raw = self.message.raw_message();
@@ -193,12 +195,12 @@ impl<'x, C> Context<'x, C> {
         match result.len() {
             1 if header.index_hdr != 0 && header.index_part != 0 => result.pop(),
             0 => None,
-            _ => Some(Variable::Array(result)),
+            _ => Some(Variable::Array(result.into())),
         }
     }
 
     #[inline(always)]
-    pub(crate) fn eval_values<'z: 'y, 'y>(&'z self, strings: &'y [Value]) -> Vec<Variable<'y>> {
+    pub(crate) fn eval_values<'z: 'y, 'y>(&'z self, strings: &'y [Value]) -> Vec<Variable> {
         strings.iter().map(|s| self.eval_value(s)).collect()
     }
 
@@ -206,13 +208,13 @@ impl<'x, C> Context<'x, C> {
     pub(crate) fn eval_values_owned(&self, strings: &[Value]) -> Vec<String> {
         strings
             .iter()
-            .map(|s| self.eval_value(s).into_cow().into_owned())
+            .map(|s| self.eval_value(s).to_string().into_owned())
             .collect()
     }
 }
 
 impl HeaderVariable {
-    fn eval_part<'x>(&self, header: &'x Header<'x>, raw: &'x [u8], result: &mut Vec<Variable<'x>>) {
+    fn eval_part<'x>(&self, header: &'x Header<'x>, raw: &'x [u8], result: &mut Vec<Variable>) {
         let var = match &self.part {
             HeaderPart::Text => match &header.value {
                 HeaderValue::Text(v) if self.include_single_part() => {
@@ -303,17 +305,17 @@ impl HeaderVariable {
                             Ordering::Greater => list
                                 .nth((self.index_part - 1) as usize)
                                 .and_then(|a| part.eval_strict(a))
-                                .map(|s| Variable::String(s.to_string())),
+                                .map(|s| Variable::String(s.to_string().into())),
                             Ordering::Less => list
                                 .rev()
                                 .nth((self.index_part.unsigned_abs() - 1) as usize)
                                 .and_then(|a| part.eval_strict(a))
-                                .map(|s| Variable::String(s.to_string())),
+                                .map(|s| Variable::String(s.to_string().into())),
                             Ordering::Equal => {
                                 for item in list {
                                     result.push(
                                         part.eval_strict(item)
-                                            .map(|s| Variable::String(s.to_string()))
+                                            .map(|s| Variable::String(s.to_string().into()))
                                             .unwrap_or_default(),
                                     );
                                 }
@@ -408,7 +410,7 @@ impl HeaderVariable {
 }
 
 impl ReceivedPart {
-    pub fn eval<'x>(&self, rcvd: &'x Received<'x>) -> Option<Variable<'x>> {
+    pub fn eval<'x>(&self, rcvd: &'x Received<'x>) -> Option<Variable> {
         match self {
             ReceivedPart::From(from) => rcvd
                 .from()
@@ -431,27 +433,27 @@ impl ReceivedPart {
 }
 
 trait AddrToText<'x> {
-    fn to_text<'z: 'x>(&'z self) -> Variable<'x>;
+    fn to_text<'z: 'x>(&'z self) -> Variable;
 }
 
 impl<'x> AddrToText<'x> for Addr<'x> {
-    fn to_text<'z: 'x>(&'z self) -> Variable<'x> {
+    fn to_text<'z: 'x>(&'z self) -> Variable {
         if let Some(name) = &self.name {
             if let Some(address) = &self.address {
-                Variable::String(format!("{name} <{address}>"))
+                Variable::String(format!("{name} <{address}>").into())
             } else {
-                Variable::StringRef(name.as_ref())
+                Variable::String(name.to_string().into())
             }
         } else if let Some(address) = &self.address {
-            Variable::String(format!("<{address}>"))
+            Variable::String(format!("<{address}>").into())
         } else {
-            Variable::StringRef("")
+            Variable::default()
         }
     }
 }
 
 impl ReceivedHostname {
-    fn to_variable<'x>(&self, host: &'x Host<'x>) -> Option<Variable<'x>> {
+    fn to_variable<'x>(&self, host: &'x Host<'x>) -> Option<Variable> {
         match (self, host) {
             (ReceivedHostname::Name, Host::Name(name)) => Variable::from(name.as_ref()).into(),
             (ReceivedHostname::Ip, Host::IpAddr(ip)) => Variable::from(ip.to_string()).into(),

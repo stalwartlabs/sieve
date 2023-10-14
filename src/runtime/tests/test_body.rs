@@ -31,7 +31,6 @@ use crate::{
         },
         Number,
     },
-    runtime::Variable,
     Context,
 };
 
@@ -50,16 +49,19 @@ impl TestBody {
 
             for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
                 let result = match &self.match_type {
-                    MatchType::Is => self.comparator.is(&Variable::from(subject), key),
-                    MatchType::Contains => self.comparator.contains(subject, key.to_cow().as_ref()),
+                    MatchType::Is => self.comparator.is(&subject, key),
+                    MatchType::Contains => {
+                        self.comparator.contains(subject, key.to_string().as_ref())
+                    }
                     MatchType::Value(rel_match) => {
-                        self.comparator
-                            .relational(rel_match, &Variable::from(subject), key)
+                        self.comparator.relational(rel_match, &subject, key)
                     }
-                    MatchType::Matches(_) => {
-                        self.comparator
-                            .matches(subject, key.to_cow().as_ref(), 0, &mut Vec::new())
-                    }
+                    MatchType::Matches(_) => self.comparator.matches(
+                        subject,
+                        key.to_string().as_ref(),
+                        0,
+                        &mut Vec::new(),
+                    ),
                     MatchType::Regex(_) => {
                         self.comparator
                             .regex(pattern, key, subject, 0, &mut Vec::new())
@@ -81,7 +83,7 @@ impl TestBody {
                     let ct = ctx.eval_value(ct);
                     if ct.is_empty() {
                         break;
-                    } else if let Some(ctf) = ContentTypeFilter::parse(ct.into_cow().as_ref()) {
+                    } else if let Some(ctf) = ContentTypeFilter::parse(ct.to_string().as_ref()) {
                         ct_filter.push(ctf);
                     } else {
                         return TestResult::Bool(false ^ self.is_not);
@@ -193,18 +195,16 @@ impl TestBody {
 
                 for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
                     result = match &self.match_type {
-                        MatchType::Is => self.comparator.is(&Variable::from(text.as_ref()), key),
+                        MatchType::Is => self.comparator.is(&text.as_ref(), key),
                         MatchType::Contains => self
                             .comparator
-                            .contains(text.as_ref(), key.to_cow().as_ref()),
-                        MatchType::Value(rel_match) => self.comparator.relational(
-                            rel_match,
-                            &Variable::from(text.as_ref()),
-                            key,
-                        ),
+                            .contains(text.as_ref(), key.to_string().as_ref()),
+                        MatchType::Value(rel_match) => {
+                            self.comparator.relational(rel_match, &text.as_ref(), key)
+                        }
                         MatchType::Matches(_) => self.comparator.matches(
                             text.as_ref(),
-                            key.to_cow().as_ref(),
+                            key.to_string().as_ref(),
                             0,
                             &mut Vec::new(),
                         ),

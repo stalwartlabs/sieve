@@ -31,7 +31,7 @@ use crate::{
         },
         Number,
     },
-    runtime::{actions::action_notify::validate_uri, Variable},
+    runtime::actions::action_notify::validate_uri,
     Context,
 };
 
@@ -42,7 +42,8 @@ impl TestValidNotifyMethod {
         let mut num_valid = 0;
 
         for uri in &self.notification_uris {
-            let uri = ctx.eval_value(uri).into_cow();
+            let uri_ = ctx.eval_value(uri);
+            let uri = uri_.to_string();
             if let Some(scheme) = validate_uri(uri.as_ref()) {
                 if ctx
                     .runtime
@@ -61,10 +62,11 @@ impl TestValidNotifyMethod {
 
 impl TestNotifyMethodCapability {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
-        let uri = ctx.eval_value(&self.notification_uri).into_cow();
+        let uri_ = ctx.eval_value(&self.notification_uri);
+        let uri = uri_.to_string();
         if !ctx
             .eval_value(&self.notification_capability)
-            .into_cow()
+            .to_string()
             .eq_ignore_ascii_case("online")
             || !validate_uri(uri.as_ref()).map_or(false, |scheme| {
                 ctx.runtime
@@ -86,17 +88,16 @@ impl TestNotifyMethodCapability {
             for pattern in &self.key_list {
                 let key = ctx.eval_value(pattern);
                 if match &self.match_type {
-                    MatchType::Is => self.comparator.is(&Variable::from("maybe"), &key),
+                    MatchType::Is => self.comparator.is(&"maybe", &key),
                     MatchType::Contains => {
-                        self.comparator.contains("maybe", key.into_cow().as_ref())
+                        self.comparator.contains("maybe", key.to_string().as_ref())
                     }
                     MatchType::Value(relation) => {
-                        self.comparator
-                            .relational(relation, &Variable::from("maybe"), &key)
+                        self.comparator.relational(relation, &"maybe", &key)
                     }
                     MatchType::Matches(_) => self.comparator.matches(
                         "maybe",
-                        key.into_cow().as_ref(),
+                        key.to_string().as_ref(),
                         0,
                         &mut Vec::new(),
                     ),
