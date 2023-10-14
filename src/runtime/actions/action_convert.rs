@@ -39,8 +39,11 @@ enum Conversion {
 
 impl Convert {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
-        let from_media_type = ctx.eval_value(&self.from_media_type).into_cow();
-        let to_media_type = ctx.eval_value(&self.to_media_type).into_cow();
+        let _from_media_type = ctx.eval_value(&self.from_media_type);
+        let _to_media_type = ctx.eval_value(&self.to_media_type);
+
+        let from_media_type = _from_media_type.to_string();
+        let to_media_type = _to_media_type.to_string();
 
         if from_media_type.eq_ignore_ascii_case(to_media_type.as_ref()) {
             return TestResult::Bool(false ^ self.is_not);

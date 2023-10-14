@@ -49,18 +49,18 @@ impl TestSpamTest {
             MatchType::Is => self.comparator.is(&status, &value),
             MatchType::Contains => self
                 .comparator
-                .contains(status.into_cow().as_ref(), value.into_cow().as_ref()),
+                .contains(status.to_string().as_ref(), value.to_string().as_ref()),
             MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.matches(
-                status.into_cow().as_ref(),
-                value.into_cow().as_ref(),
+                status.to_string().as_ref(),
+                value.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
                 &self.value,
                 &value,
-                status.into_cow().as_ref(),
+                status.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
@@ -93,18 +93,18 @@ impl TestVirusTest {
             MatchType::Is => self.comparator.is(&status, &value),
             MatchType::Contains => self
                 .comparator
-                .contains(status.into_cow().as_ref(), value.into_cow().as_ref()),
+                .contains(status.to_string().as_ref(), value.to_string().as_ref()),
             MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.matches(
-                status.into_cow().as_ref(),
-                value.into_cow().as_ref(),
+                status.to_string().as_ref(),
+                value.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
             MatchType::Regex(capture_positions) => self.comparator.regex(
                 &self.value,
                 &value,
-                status.into_cow().as_ref(),
+                status.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
@@ -137,7 +137,7 @@ impl SpamStatus {
         }
     }
 
-    pub(crate) fn as_number(&self) -> Variable<'static> {
+    pub(crate) fn as_number(&self) -> Variable {
         Variable::Integer(match self {
             SpamStatus::Unknown => 0,
             SpamStatus::Ham => 1,
@@ -155,7 +155,7 @@ impl SpamStatus {
         })
     }
 
-    pub(crate) fn as_percentage(&self) -> Variable<'static> {
+    pub(crate) fn as_percentage(&self) -> Variable {
         Variable::Integer(match self {
             SpamStatus::Unknown | SpamStatus::Ham => 0,
             SpamStatus::MaybeSpam(pct) => {
@@ -185,7 +185,7 @@ impl VirusStatus {
         }
     }
 
-    pub(crate) fn as_number(&self) -> Variable<'static> {
+    pub(crate) fn as_number(&self) -> Variable {
         Variable::Integer(match self {
             VirusStatus::Unknown => 0,
             VirusStatus::Clean => 1,

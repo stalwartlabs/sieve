@@ -75,7 +75,7 @@ impl StringConstant {
 impl From<StringConstant> for Value {
     fn from(value: StringConstant) -> Self {
         match value {
-            StringConstant::String(s) => Value::Text(s),
+            StringConstant::String(s) => Value::Text(s.into()),
             StringConstant::Number(n) => Value::Number(n),
         }
     }

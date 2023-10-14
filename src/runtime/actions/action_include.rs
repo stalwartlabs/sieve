@@ -41,9 +41,9 @@ impl Include {
         let script_name = ctx.eval_value(&self.value);
         if !script_name.is_empty() {
             let script_name = if self.location == Location::Global {
-                Script::Global(script_name.into_string())
+                Script::Global(script_name.to_string().into_owned())
             } else {
-                Script::Personal(script_name.into_string())
+                Script::Personal(script_name.to_string().into_owned())
             };
 
             let cached_script = ctx.script_cache.get(&script_name);

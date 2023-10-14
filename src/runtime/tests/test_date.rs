@@ -33,7 +33,6 @@ use crate::{
         },
         Number,
     },
-    runtime::Variable,
     Context, Event,
 };
 
@@ -114,28 +113,26 @@ impl TestDate {
                                 self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
                             for key in &key_list {
                                 if match &self.match_type {
-                                    MatchType::Is => {
-                                        self.comparator.is(&Variable::from(&date_part), key)
-                                    }
-                                    MatchType::Contains => {
-                                        self.comparator.contains(&date_part, key.to_cow().as_ref())
-                                    }
+                                    MatchType::Is => self.comparator.is(&date_part.as_str(), key),
+                                    MatchType::Contains => self
+                                        .comparator
+                                        .contains(&date_part, key.to_string().as_ref()),
                                     MatchType::Value(rel_match) => self.comparator.relational(
                                         rel_match,
-                                        &Variable::from(&date_part),
+                                        &date_part.as_str(),
                                         key,
                                     ),
                                     MatchType::Matches(capture_positions) => {
                                         self.comparator.matches(
                                             &date_part,
-                                            key.to_cow().as_ref(),
+                                            key.to_string().as_ref(),
                                             *capture_positions,
                                             &mut captured_values,
                                         )
                                     }
                                     MatchType::Regex(capture_positions) => self.comparator.matches(
                                         &date_part,
-                                        key.to_cow().as_ref(),
+                                        key.to_string().as_ref(),
                                         *capture_positions,
                                         &mut captured_values,
                                     ),
@@ -206,23 +203,23 @@ impl TestCurrentDate {
                     let key = ctx.eval_value(key);
 
                     if match &self.match_type {
-                        MatchType::Is => self.comparator.is(&Variable::from(&date_part), &key),
+                        MatchType::Is => self.comparator.is(&date_part.as_str(), &key),
                         MatchType::Contains => self
                             .comparator
-                            .contains(&date_part, key.into_cow().as_ref()),
+                            .contains(&date_part, key.to_string().as_ref()),
                         MatchType::Value(rel_match) => {
                             self.comparator
-                                .relational(rel_match, &Variable::from(&date_part), &key)
+                                .relational(rel_match, &date_part.as_str(), &key)
                         }
                         MatchType::Matches(capture_positions) => self.comparator.matches(
                             &date_part,
-                            key.into_cow().as_ref(),
+                            key.to_string().as_ref(),
                             *capture_positions,
                             &mut captured_values,
                         ),
                         MatchType::Regex(capture_positions) => self.comparator.matches(
                             &date_part,
-                            key.into_cow().as_ref(),
+                            key.to_string().as_ref(),
                             *capture_positions,
                             &mut captured_values,
                         ),

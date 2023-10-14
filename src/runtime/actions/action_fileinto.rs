@@ -25,7 +25,7 @@ use crate::{compiler::grammar::actions::action_fileinto::FileInto, Context, Even
 
 impl FileInto {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
-        let folder = ctx.eval_value(&self.folder).into_string();
+        let folder = ctx.eval_value(&self.folder).to_string().into_owned();
         let mut events = Vec::with_capacity(2);
         if let Some(event) = ctx.build_message_id() {
             events.push(event);
@@ -43,11 +43,11 @@ impl FileInto {
             mailbox_id: self
                 .mailbox_id
                 .as_ref()
-                .map(|mi| ctx.eval_value(mi).into_string()),
+                .map(|mi| ctx.eval_value(mi).to_string().into_owned()),
             special_use: self
                 .special_use
                 .as_ref()
-                .map(|su| ctx.eval_value(su).into_string()),
+                .map(|su| ctx.eval_value(su).to_string().into_owned()),
             create: self.create,
             message_id: ctx.main_message_id,
         });

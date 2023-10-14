@@ -26,7 +26,7 @@ use std::borrow::Cow;
 use crate::{
     compiler::{
         grammar::{Comparator, RelationalMatch},
-        Value,
+        Number, Value,
     },
     runtime::Variable,
     MatchAs,
@@ -34,12 +34,17 @@ use crate::{
 
 use super::glob::GlobPattern;
 
+pub(crate) trait Comparable {
+    fn to_str(&self) -> Cow<str>;
+    fn to_number(&self) -> Number;
+}
+
 impl Comparator {
-    pub(crate) fn is(&self, a: &Variable<'_>, b: &Variable<'_>) -> bool {
+    pub(crate) fn is(&self, a: &impl Comparable, b: &impl Comparable) -> bool {
         match self {
-            Comparator::Octet => a.to_cow() == b.to_cow(),
+            Comparator::Octet => a.to_str() == b.to_str(),
             Comparator::AsciiNumeric => RelationalMatch::Eq.cmp(&a.to_number(), &b.to_number()),
-            _ => a.to_cow().to_lowercase() == b.to_cow().to_lowercase(),
+            _ => a.to_str().to_lowercase() == b.to_str().to_lowercase(),
         }
     }
 
@@ -54,13 +59,13 @@ impl Comparator {
     pub(crate) fn relational(
         &self,
         relation: &RelationalMatch,
-        a: &Variable<'_>,
-        b: &Variable<'_>,
+        a: &impl Comparable,
+        b: &impl Comparable,
     ) -> bool {
         match self {
-            Comparator::Octet => relation.cmp(a.to_cow().as_ref(), b.to_cow().as_ref()),
+            Comparator::Octet => relation.cmp(a.to_str().as_ref(), b.to_str().as_ref()),
             Comparator::AsciiNumeric => relation.cmp(&a.to_number(), &b.to_number()),
-            _ => relation.cmp(&a.to_cow().to_lowercase(), &b.to_cow().to_lowercase()),
+            _ => relation.cmp(&a.to_str().to_lowercase(), &b.to_str().to_lowercase()),
         }
     }
 
@@ -83,7 +88,7 @@ impl Comparator {
     pub(crate) fn regex(
         &self,
         pattern: &Value,
-        pattern_expr: &Variable<'_>,
+        pattern_expr: &Variable,
         value: &str,
         mut capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
@@ -91,7 +96,7 @@ impl Comparator {
         let regex = if let Value::Regex(regex) = pattern {
             Cow::Borrowed(&regex.regex)
         } else {
-            match fancy_regex::Regex::new(pattern_expr.to_cow().as_ref()) {
+            match fancy_regex::Regex::new(pattern_expr.to_string().as_ref()) {
                 Ok(regex) => Cow::Owned(regex),
                 Err(err) => {
                     debug_assert!(false, "Failed to compile regex: {err:?}");
@@ -123,6 +128,28 @@ impl Comparator {
             Comparator::AsciiNumeric => MatchAs::Number,
             _ => MatchAs::Octet,
         }
+    }
+}
+
+impl Comparable for Variable {
+    fn to_str(&self) -> Cow<str> {
+        self.to_string()
+    }
+
+    fn to_number(&self) -> Number {
+        self.to_number()
+    }
+}
+
+impl Comparable for &str {
+    fn to_str(&self) -> Cow<str> {
+        (*self).into()
+    }
+
+    fn to_number(&self) -> Number {
+        self.parse::<f64>()
+            .map(Number::Float)
+            .unwrap_or(Number::Float(0.0))
     }
 }
 

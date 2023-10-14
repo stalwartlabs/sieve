@@ -53,16 +53,16 @@ impl TestVacation {
             if !value.is_empty() {
                 match name {
                     Envelope::From => {
-                        from = value.to_cow().to_ascii_lowercase();
+                        from = value.to_string().to_ascii_lowercase();
                     }
                     Envelope::To => {
                         if !ctx.runtime.vacation_use_orig_rcpt {
-                            user_addresses.push(value.to_cow());
+                            user_addresses.push(value.to_string());
                         }
                     }
                     Envelope::Orcpt => {
                         if ctx.runtime.vacation_use_orig_rcpt {
-                            user_addresses.push(value.to_cow());
+                            user_addresses.push(value.to_string());
                         }
                     }
                     _ => (),
@@ -72,9 +72,9 @@ impl TestVacation {
 
         // Add user specified addresses
         for address in &self.addresses {
-            let address = ctx.eval_value(address).into_cow();
+            let address = ctx.eval_value(address).to_string().into_owned();
             if !address.is_empty() {
-                user_addresses.push(address);
+                user_addresses.push(address.into());
             }
         }
         if !ctx.user_address.is_empty() {
@@ -157,9 +157,9 @@ impl TestVacation {
             TestResult::Event {
                 event: Event::DuplicateId {
                     id: if let Some(handle) = &self.handle {
-                        format!("_v{}{}", from, ctx.eval_value(handle).into_cow())
+                        format!("_v{}{}", from, ctx.eval_value(handle).to_string())
                     } else {
-                        format!("_v{}{}", from, ctx.eval_value(&self.reason).into_cow())
+                        format!("_v{}{}", from, ctx.eval_value(&self.reason).to_string())
                     },
                     expiry: match &self.period {
                         Period::Days(days) => days * 86400,
@@ -182,7 +182,7 @@ impl Vacation {
 
         for (name, value) in &ctx.envelope {
             if !value.is_empty() && name == &Envelope::From {
-                vacation_to = value.to_cow();
+                vacation_to = value.to_string();
                 break;
             }
         }
@@ -257,7 +257,7 @@ impl Vacation {
                 .iter()
                 .find_map(|(n, v)| if n == &Envelope::To { Some(v) } else { None })
         {
-            addr.to_cow().into()
+            addr.to_string().into()
         } else {
             "".into()
         };
@@ -276,7 +276,7 @@ impl Vacation {
             + 160;
 
         let mut message = Vec::with_capacity(message_len);
-        write_header(&mut message, "From: ", vacation_from.into_cow().as_ref());
+        write_header(&mut message, "From: ", vacation_from.to_string().as_ref());
         if let Some(vacation_to_full) = vacation_to_full {
             message.extend_from_slice(b"To:");
             message.extend_from_slice(vacation_to_full);
@@ -286,7 +286,7 @@ impl Vacation {
         write_header(
             &mut message,
             "Subject: ",
-            vacation_subject.into_cow().as_ref(),
+            vacation_subject.to_string().as_ref(),
         );
         if let Some(message_id) = message_id {
             message.extend_from_slice(b"In-Reply-To: <");
@@ -314,7 +314,7 @@ impl Vacation {
         if !self.mime {
             message.extend_from_slice(b"Content-type: text/plain; charset=utf-8\r\n\r\n");
         }
-        message.extend_from_slice(vacation_body.into_cow().as_bytes());
+        message.extend_from_slice(vacation_body.to_string().as_bytes());
 
         // Add action
         let mut events = Vec::with_capacity(3);
@@ -335,16 +335,16 @@ impl Vacation {
         // File carbon copy
         if let Some(fcc) = &self.fcc {
             events.push(Event::FileInto {
-                folder: ctx.eval_value(&fcc.mailbox).into_string(),
+                folder: ctx.eval_value(&fcc.mailbox).to_string().into_owned(),
                 flags: ctx.get_local_flags(&fcc.flags),
                 mailbox_id: fcc
                     .mailbox_id
                     .as_ref()
-                    .map(|m| ctx.eval_value(m).into_string()),
+                    .map(|m| ctx.eval_value(m).to_string().into_owned()),
                 special_use: fcc
                     .special_use
                     .as_ref()
-                    .map(|s| ctx.eval_value(s).into_string()),
+                    .map(|s| ctx.eval_value(s).to_string().into_owned()),
                 create: fcc.create,
                 message_id: ctx.last_message_id,
             });

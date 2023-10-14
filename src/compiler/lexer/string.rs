@@ -265,7 +265,7 @@ impl<'x> CompilerState<'x> {
 
         Ok(match items.len() {
             1 => items.pop().unwrap(),
-            0 => Value::Text(String::new()),
+            0 => Value::Text(String::new().into()),
             _ => Value::List(items),
         })
     }
@@ -525,7 +525,7 @@ impl<'x> CompilerState<'x> {
                         .and_then(|v| (v, v.parse::<f64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Float(n)),
-                        _ => Value::Text(buf.to_vec().into_string()),
+                        _ => Value::Text(buf.to_vec().into_string().into()),
                     }
                 } else {
                     match std::str::from_utf8(buf)
@@ -533,11 +533,11 @@ impl<'x> CompilerState<'x> {
                         .and_then(|v| (v, v.parse::<i64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Integer(n)),
-                        _ => Value::Text(buf.to_vec().into_string()),
+                        _ => Value::Text(buf.to_vec().into_string().into()),
                     }
                 }
             } else {
-                Value::Text(buf.to_vec().into_string())
+                Value::Text(buf.to_vec().into_string().into())
             });
         } else {
             match self.tokenize_string(buf, false)? {

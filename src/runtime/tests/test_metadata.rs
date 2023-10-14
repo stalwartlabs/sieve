@@ -29,7 +29,6 @@ use crate::{
         },
         Number,
     },
-    runtime::Variable,
     Context, Metadata,
 };
 
@@ -39,11 +38,11 @@ impl TestMetadata {
     pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
         let metadata = match &self.medatata {
             Metadata::Server { annotation } => Metadata::Server {
-                annotation: ctx.eval_value(annotation).into_cow(),
+                annotation: ctx.eval_value(annotation).to_string().into_owned(),
             },
             Metadata::Mailbox { name, annotation } => Metadata::Mailbox {
-                name: ctx.eval_value(name).into_cow(),
-                annotation: ctx.eval_value(annotation).into_cow(),
+                name: ctx.eval_value(name).to_string().into_owned(),
+                annotation: ctx.eval_value(annotation).to_string().into_owned(),
             },
         };
 
@@ -85,15 +84,16 @@ impl TestMetadata {
             for pattern in &self.key_list {
                 let key = ctx.eval_value(pattern);
                 result = match &self.match_type {
-                    MatchType::Is => self.comparator.is(&Variable::from(value), &key),
-                    MatchType::Contains => self.comparator.contains(value, key.into_cow().as_ref()),
+                    MatchType::Is => self.comparator.is(&value, &key),
+                    MatchType::Contains => {
+                        self.comparator.contains(value, key.to_string().as_ref())
+                    }
                     MatchType::Value(relation) => {
-                        self.comparator
-                            .relational(relation, &Variable::from(value), &key)
+                        self.comparator.relational(relation, &value, &key)
                     }
                     MatchType::Matches(capture_positions) => self.comparator.matches(
                         value,
-                        key.into_cow().as_ref(),
+                        key.to_string().as_ref(),
                         *capture_positions,
                         &mut captured_values,
                     ),
@@ -126,16 +126,16 @@ impl TestMetadataExists {
         let mailbox = self
             .mailbox
             .as_ref()
-            .map(|s| ctx.eval_value(s).into_string());
+            .map(|s| ctx.eval_value(s).to_string().into_owned());
         let mut annotations = ctx.eval_values(&self.annotation_names);
 
         for (metadata, _) in [&ctx.metadata, &ctx.runtime.metadata].into_iter().flatten() {
             match (metadata, mailbox.as_ref()) {
                 (Metadata::Server { annotation }, None) => {
-                    annotations.retain(|a| !a.to_cow().eq_ignore_ascii_case(annotation))
+                    annotations.retain(|a| !a.to_string().eq_ignore_ascii_case(annotation))
                 }
                 (Metadata::Mailbox { name, annotation }, Some(mailbox)) if name.eq(mailbox) => {
-                    annotations.retain(|a| !a.to_cow().eq_ignore_ascii_case(annotation));
+                    annotations.retain(|a| !a.to_string().eq_ignore_ascii_case(annotation));
                 }
                 _ => (),
             }

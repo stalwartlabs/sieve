@@ -81,7 +81,7 @@ impl Test {
                     mailboxes: test
                         .mailbox_names
                         .iter()
-                        .map(|m| Mailbox::Name(ctx.eval_value(m).into_string()))
+                        .map(|m| Mailbox::Name(ctx.eval_value(m).to_string().into_owned()))
                         .collect(),
                     special_use: Vec::new(),
                 },
@@ -95,7 +95,7 @@ impl Test {
                     mailboxes: test
                         .mailbox_ids
                         .iter()
-                        .map(|m| Mailbox::Id(ctx.eval_value(m).into_string()))
+                        .map(|m| Mailbox::Id(ctx.eval_value(m).to_string().into_owned()))
                         .collect(),
                     special_use: Vec::new(),
                 },
@@ -106,7 +106,9 @@ impl Test {
             Test::SpecialUseExists(test) => TestResult::Event {
                 event: Event::MailboxExists {
                     mailboxes: if let Some(mailbox) = &test.mailbox {
-                        vec![Mailbox::Name(ctx.eval_value(mailbox).into_string())]
+                        vec![Mailbox::Name(
+                            ctx.eval_value(mailbox).to_string().into_owned(),
+                        )]
                     } else {
                         Vec::new()
                     },
