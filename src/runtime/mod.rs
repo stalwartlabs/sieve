@@ -70,7 +70,7 @@ pub enum RuntimeError {
 
 impl Default for Variable {
     fn default() -> Self {
-        Variable::String(Arc::new(String::new())).clone()
+        Variable::String(Arc::new(String::new()))
     }
 }
 

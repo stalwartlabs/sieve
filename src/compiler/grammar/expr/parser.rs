@@ -230,7 +230,7 @@ where
     fn inc_arg_count(&mut self) {
         if let Some(x) = self.arg_count.last_mut() {
             *x = x.saturating_add(1);
-            let op_pos = self.operator_stack.len() - 2;
+            let op_pos = self.operator_stack.len().saturating_sub(2);
             match self.operator_stack.get_mut(op_pos) {
                 Some((Token::Function { num_args, id, .. }, _)) if *id == ID_ARRAY_BUILD => {
                     *num_args += 1;
