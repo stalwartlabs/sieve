@@ -496,6 +496,16 @@ impl<'x> Iterator for Tokenizer<'x> {
                         self.push_byte(ch);
                     }
                     _ => {
+                        let ch = if last_ch == b'\\' {
+                            match ch {
+                                b'n' => b'\n',
+                                b'r' => b'\r',
+                                b't' => b'\t',
+                                _ => ch,
+                            }
+                        } else {
+                            ch
+                        };
                         if !str_type.has_other && ch != b'-' {
                             str_type.has_other = true;
                             self.state = State::QuotedString(str_type);
