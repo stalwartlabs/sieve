@@ -201,12 +201,30 @@ where
                             let mut found_end = false;
 
                             for (_, &ch) in self.iter.by_ref() {
-                                if ch == stop_ch && last_ch != b'\\' {
-                                    found_end = true;
-                                    break;
-                                } else if ch != b'\\' || last_ch == b'\\' {
-                                    buf.push(ch);
+                                if last_ch != b'\\' {
+                                    if ch != stop_ch {
+                                        buf.push(ch);
+                                    } else {
+                                        found_end = true;
+                                        break;
+                                    }
+                                } else {
+                                    match ch {
+                                        b'n' => {
+                                            buf.push(b'\n');
+                                        }
+                                        b'r' => {
+                                            buf.push(b'\r');
+                                        }
+                                        b't' => {
+                                            buf.push(b'\t');
+                                        }
+                                        _ => {
+                                            buf.push(ch);
+                                        }
+                                    }
                                 }
+
                                 last_ch = ch;
                             }
 
