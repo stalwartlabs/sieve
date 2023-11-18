@@ -58,7 +58,7 @@ pub enum Variable {
     Array(Arc<Vec<Variable>>),
 }
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum RuntimeError {
     TooManyIncludes,
     InvalidInstruction(Invalid),

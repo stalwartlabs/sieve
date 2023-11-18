@@ -37,7 +37,7 @@ use self::{
 pub mod grammar;
 pub mod lexer;
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub struct CompileError {
     line_num: usize,
     line_pos: usize,
