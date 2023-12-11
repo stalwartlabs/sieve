@@ -35,6 +35,7 @@ use ahash::{AHashMap, AHashSet};
 use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
 
 use mail_parser::HeaderName;
+use serde::{Deserialize, Serialize};
 
 use crate::Context;
 
@@ -48,7 +49,7 @@ use crate::{
 
 use self::eval::ToString;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Variable {
     String(Arc<String>),
     Integer(i64),
