@@ -1,3 +1,7 @@
+sieve-rs 0.4.0
+================================
+- Support for expressions.
+
 sieve-rs 0.3.1
 ================================
 - Bump `mail-builder` dependency to 0.3.0.
