@@ -987,7 +987,7 @@ mod tests {
                                         "sieve_ext_list_item" => {
                                             lists
                                                 .entry(value)
-                                                .or_insert_with(AHashSet::new)
+                                                .or_default()
                                                 .insert(params.next().expect("list item value"));
                                         }
                                         "sieve_duplicated_id" => {
