@@ -54,6 +54,7 @@ use super::{
     Capability, Invalid,
 };
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Test {
     True,

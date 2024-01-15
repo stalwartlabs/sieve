@@ -114,7 +114,7 @@ impl TestBody {
             ctx.find_nested_parts(&ctx.message, &ct_filter, &mut |part, raw_message| {
                 let text = match (&self.body_transform, &part.body) {
                     (BodyTransform::Content(_), PartType::Message(message)) => {
-                        if let Some(part) = message.parts.get(0) {
+                        if let Some(part) = message.parts.first() {
                             String::from_utf8_lossy(
                                 raw_message
                                     .get(part.raw_header_offset()..part.raw_body_offset())
