@@ -29,7 +29,7 @@ use crate::{compiler::Number, runtime::Variable, Context};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
-impl<'x, C> Context<'x, C> {
+impl<'x> Context<'x> {
     pub(crate) fn eval_expression(&mut self, expr: &[Expression]) -> Result<Variable, Event> {
         let mut exprs = expr.iter().skip(self.expr_pos);
         while let Some(expr) = exprs.next() {

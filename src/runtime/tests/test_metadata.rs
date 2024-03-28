@@ -35,7 +35,7 @@ use crate::{
 use super::TestResult;
 
 impl TestMetadata {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let metadata = match &self.medatata {
             Metadata::Server { annotation } => Metadata::Server {
                 annotation: ctx.eval_value(annotation).to_string().into_owned(),
@@ -122,7 +122,7 @@ impl TestMetadata {
 }
 
 impl TestMetadataExists {
-    pub(crate) fn exec<C>(&self, ctx: &Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &Context) -> TestResult {
         let mailbox = self
             .mailbox
             .as_ref()

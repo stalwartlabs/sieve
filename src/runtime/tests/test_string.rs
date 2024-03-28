@@ -32,7 +32,7 @@ use crate::{
 use super::TestResult;
 
 impl TestString {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>, empty_is_null: bool) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context, empty_is_null: bool) -> TestResult {
         let mut result = false;
 
         match &self.match_type {

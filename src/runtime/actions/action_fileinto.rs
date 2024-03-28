@@ -24,7 +24,7 @@
 use crate::{compiler::grammar::actions::action_fileinto::FileInto, Context, Event};
 
 impl FileInto {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let folder = ctx.eval_value(&self.folder).to_string().into_owned();
         let mut events = Vec::with_capacity(2);
         if let Some(event) = ctx.build_message_id() {

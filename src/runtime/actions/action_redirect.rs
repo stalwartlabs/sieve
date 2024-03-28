@@ -29,7 +29,7 @@ use crate::{
 };
 
 impl Redirect {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         if let Some(address) = sanitize_address(ctx.eval_value(&self.address).to_string().as_ref())
         {
             if ctx.num_redirects < ctx.runtime.max_redirects

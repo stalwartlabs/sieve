@@ -38,7 +38,7 @@ enum Conversion {
 }
 
 impl Convert {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let _from_media_type = ctx.eval_value(&self.from_media_type);
         let _to_media_type = ctx.eval_value(&self.to_media_type);
 

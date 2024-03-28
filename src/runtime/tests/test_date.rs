@@ -39,7 +39,7 @@ use crate::{
 use super::TestResult;
 
 impl TestDate {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let header_name = if let Some(header_name) = ctx.parse_header_name(&self.header_name) {
             header_name
         } else {
@@ -158,7 +158,7 @@ impl TestDate {
 }
 
 impl TestCurrentDate {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut result = false;
 
         match &self.match_type {
@@ -240,7 +240,7 @@ impl TestCurrentDate {
     }
 }
 
-impl<'x, C> Context<'x, C> {
+impl<'x> Context<'x> {
     #[allow(unused_assignments)]
     pub(crate) fn find_dates(&self, header: &'x Header) -> Option<Cow<'x, DateTime>> {
         if let HeaderValue::DateTime(dt) = &header.value {

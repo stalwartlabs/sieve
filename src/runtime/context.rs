@@ -46,8 +46,8 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<Variable>,
 }
 
-impl<'x, C> Context<'x, C> {
-    pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
+impl<'x> Context<'x> {
+    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
         Context {
             runtime,
             message,
@@ -640,9 +640,5 @@ impl<'x, C> Context<'x, C> {
 
     pub fn part(&self) -> usize {
         self.part
-    }
-
-    pub fn context(&self) -> &C {
-        &self.runtime.context
     }
 }
