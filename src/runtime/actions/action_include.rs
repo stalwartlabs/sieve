@@ -37,7 +37,7 @@ pub(crate) enum IncludeResult {
 }
 
 impl Include {
-    pub(crate) fn exec<C>(&self, ctx: &Context<C>) -> IncludeResult {
+    pub(crate) fn exec(&self, ctx: &Context) -> IncludeResult {
         let script_name = ctx.eval_value(&self.value);
         if !script_name.is_empty() {
             let script_name = if self.location == Location::Global {

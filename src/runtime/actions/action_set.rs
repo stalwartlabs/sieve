@@ -32,7 +32,7 @@ use crate::{
 use std::fmt::Write;
 
 impl Set {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut value = ctx.eval_value(&self.value);
         for modifier in &self.modifiers {
             value = modifier.apply(value.to_string().as_ref(), ctx).into();
@@ -42,7 +42,7 @@ impl Set {
     }
 }
 
-impl<'x, C> Context<'x, C> {
+impl<'x> Context<'x> {
     pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable) {
         if variable.len() > self.runtime.max_variable_size {
             let mut new_variable = String::with_capacity(self.runtime.max_variable_size);
@@ -100,7 +100,7 @@ impl<'x, C> Context<'x, C> {
 }
 
 impl Modifier {
-    pub(crate) fn apply<C>(&self, input: &str, ctx: &Context<C>) -> String {
+    pub(crate) fn apply(&self, input: &str, ctx: &Context) -> String {
         let max_len = ctx.runtime.max_variable_size;
         match self {
             Modifier::Lower => input.to_lowercase(),

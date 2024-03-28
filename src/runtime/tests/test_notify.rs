@@ -38,7 +38,7 @@ use crate::{
 use super::TestResult;
 
 impl TestValidNotifyMethod {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut num_valid = 0;
 
         for uri in &self.notification_uris {
@@ -61,7 +61,7 @@ impl TestValidNotifyMethod {
 }
 
 impl TestNotifyMethodCapability {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let uri_ = ctx.eval_value(&self.notification_uri);
         let uri = uri_.to_string();
         if !ctx

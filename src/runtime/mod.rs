@@ -317,8 +317,8 @@ impl Hash for Variable {
 }
 
 #[cfg(not(test))]
-impl<C> Runtime<C> {
-    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x, C> {
+impl Runtime {
+    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
         Context::new(
             self,
             MessageParser::new()
@@ -339,25 +339,19 @@ impl<C> Runtime<C> {
         )
     }
 
-    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x, C> {
+    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x> {
         Context::new(self, message)
     }
 }
 
-impl Runtime<()> {
-    pub fn new() -> Runtime<()> {
-        Self::new_with_context(())
-    }
-}
-
-impl Default for Runtime<()> {
+impl Default for Runtime {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C> Runtime<C> {
-    pub fn new_with_context(context: C) -> Self {
+impl Runtime {
+    pub fn new() -> Self {
         #[allow(unused_mut)]
         let mut allowed_capabilities = AHashSet::from_iter(Capability::all().iter().cloned());
 
@@ -392,7 +386,6 @@ impl<C> Runtime<C> {
             default_duplicate_expiry: 7 * 86400,
             local_hostname: "localhost".into(),
             functions: Vec::new(),
-            context,
         }
     }
 
@@ -631,21 +624,17 @@ impl<C> Runtime<C> {
         self
     }
 
-    pub fn with_functions(mut self, fnc_map: &mut FunctionMap<C>) -> Self {
+    pub fn with_functions(mut self, fnc_map: &mut FunctionMap) -> Self {
         self.functions = std::mem::take(&mut fnc_map.functions);
         self
     }
 
-    pub fn set_functions(&mut self, fnc_map: &mut FunctionMap<C>) {
+    pub fn set_functions(&mut self, fnc_map: &mut FunctionMap) {
         self.functions = std::mem::take(&mut fnc_map.functions);
-    }
-
-    pub fn context(&self) -> &C {
-        &self.context
     }
 }
 
-impl<C> FunctionMap<C> {
+impl FunctionMap {
     pub fn new() -> Self {
         FunctionMap {
             map: Default::default(),
@@ -653,18 +642,18 @@ impl<C> FunctionMap<C> {
         }
     }
 
-    pub fn with_function(self, name: impl Into<String>, fnc: Function<C>) -> Self {
+    pub fn with_function(self, name: impl Into<String>, fnc: Function) -> Self {
         self.with_function_args(name, fnc, 1)
     }
 
-    pub fn with_function_no_args(self, name: impl Into<String>, fnc: Function<C>) -> Self {
+    pub fn with_function_no_args(self, name: impl Into<String>, fnc: Function) -> Self {
         self.with_function_args(name, fnc, 0)
     }
 
     pub fn with_function_args(
         mut self,
         name: impl Into<String>,
-        fnc: Function<C>,
+        fnc: Function,
         num_args: u32,
     ) -> Self {
         self.map

@@ -289,6 +289,7 @@ pub struct Sieve {
     num_match_vars: usize,
 }
 
+#[derive(Clone)]
 pub struct Compiler {
     // Settings
     pub(crate) max_script_size: usize,
@@ -307,16 +308,16 @@ pub struct Compiler {
     pub(crate) functions: AHashMap<String, (u32, u32)>,
 }
 
-pub type Function<C> = for<'x> fn(&'x Context<'x, C>, Vec<Variable>) -> Variable;
+pub type Function = for<'x> fn(&'x Context<'x>, Vec<Variable>) -> Variable;
 
 #[derive(Default, Clone)]
-pub struct FunctionMap<C> {
+pub struct FunctionMap {
     pub(crate) map: AHashMap<String, (u32, u32)>,
-    pub(crate) functions: Vec<Function<C>>,
+    pub(crate) functions: Vec<Function>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Runtime<C> {
+pub struct Runtime {
     pub(crate) allowed_capabilities: AHashSet<Capability>,
     pub(crate) valid_notification_uris: AHashSet<Cow<'static, str>>,
     pub(crate) valid_ext_lists: AHashSet<Cow<'static, str>>,
@@ -325,7 +326,7 @@ pub struct Runtime<C> {
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'static, str>)>,
     pub(crate) include_scripts: AHashMap<String, Arc<Sieve>>,
     pub(crate) local_hostname: Cow<'static, str>,
-    pub(crate) functions: Vec<Function<C>>,
+    pub(crate) functions: Vec<Function>,
 
     pub(crate) max_nested_includes: usize,
     pub(crate) cpu_limit: usize,
@@ -341,16 +342,14 @@ pub struct Runtime<C> {
     pub(crate) vacation_use_orig_rcpt: bool,
     pub(crate) vacation_default_subject: Cow<'static, str>,
     pub(crate) vacation_subject_prefix: Cow<'static, str>,
-
-    pub(crate) context: C,
 }
 
 #[derive(Clone, Debug)]
-pub struct Context<'x, C> {
+pub struct Context<'x> {
     #[cfg(test)]
-    pub(crate) runtime: Runtime<C>,
+    pub(crate) runtime: Runtime,
     #[cfg(not(test))]
-    pub(crate) runtime: &'x Runtime<C>,
+    pub(crate) runtime: &'x Runtime,
     pub(crate) user_address: Cow<'x, str>,
     pub(crate) user_full_name: Cow<'x, str>,
     pub(crate) current_time: i64,

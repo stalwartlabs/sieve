@@ -26,7 +26,7 @@ use crate::{compiler::grammar::tests::test_extlists::TestValidExtList, Context};
 use super::TestResult;
 
 impl TestValidExtList {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut num_valid = 0;
 
         for list in &self.list_names {

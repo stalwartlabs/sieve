@@ -41,7 +41,7 @@ use crate::{
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
 
 impl TestVacation {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let mut from = String::new();
         let mut user_addresses = Vec::new();
 
@@ -177,7 +177,7 @@ impl TestVacation {
 }
 
 impl Vacation {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) {
+    pub(crate) fn exec(&self, ctx: &mut Context) {
         let mut vacation_to = Cow::from("");
 
         for (name, value) in &ctx.envelope {

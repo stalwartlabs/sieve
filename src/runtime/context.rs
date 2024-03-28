@@ -46,9 +46,9 @@ pub(crate) struct ScriptStack {
     pub(crate) prev_vars_match: Vec<Variable>,
 }
 
-impl<'x, C> Context<'x, C> {
+impl<'x> Context<'x> {
     #[cfg(not(test))]
-    pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
+    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
         Context {
             #[cfg(test)]
             runtime: runtime.clone(),
@@ -657,15 +657,11 @@ impl<'x, C> Context<'x, C> {
     pub fn part(&self) -> usize {
         self.part
     }
-
-    pub fn context(&self) -> &C {
-        &self.runtime.context
-    }
 }
 
 #[cfg(test)]
-impl<'x, C: Clone> Context<'x, C> {
-    pub(crate) fn new(runtime: &'x Runtime<C>, message: Message<'x>) -> Self {
+impl<'x> Context<'x> {
+    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
         Context {
             runtime: runtime.clone(),
             message,

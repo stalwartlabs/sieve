@@ -36,7 +36,7 @@ use crate::{
 use super::TestResult;
 
 impl TestSpamTest {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let status = if self.percent {
             ctx.spam_status.as_percentage()
         } else {
@@ -84,7 +84,7 @@ impl TestSpamTest {
 }
 
 impl TestVirusTest {
-    pub(crate) fn exec<C>(&self, ctx: &mut Context<C>) -> TestResult {
+    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
         let status = ctx.virus_status.as_number();
         let value = ctx.eval_value(&self.value);
         let mut captured_values = Vec::new();
