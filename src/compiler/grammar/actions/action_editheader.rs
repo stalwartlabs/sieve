@@ -36,7 +36,7 @@ use crate::compiler::{
 use crate::compiler::grammar::MatchType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct AddHeader {
+pub struct AddHeader {
     pub last: bool,
     pub field_name: Value,
     pub value: Value,
@@ -50,7 +50,7 @@ pub(crate) struct AddHeader {
 
 */
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct DeleteHeader {
+pub struct DeleteHeader {
     pub index: Option<i32>,
     pub comparator: Comparator,
     pub match_type: MatchType,

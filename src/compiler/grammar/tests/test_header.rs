@@ -37,7 +37,7 @@ use crate::compiler::{
 use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestHeader {
+pub struct TestHeader {
     pub header_list: Vec<Value>,
     pub key_list: Vec<Value>,
     pub match_type: MatchType,

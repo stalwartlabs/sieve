@@ -37,7 +37,7 @@ pub(crate) struct TestIhave {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Error {
+pub struct Error {
     pub message: Value,
 }
 
