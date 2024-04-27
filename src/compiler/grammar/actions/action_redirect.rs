@@ -33,7 +33,7 @@ use crate::compiler::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Redirect {
+pub struct Redirect {
     pub copy: bool,
     pub address: Value,
     pub notify: Notify,

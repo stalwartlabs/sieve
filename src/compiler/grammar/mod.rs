@@ -103,7 +103,7 @@ pub enum AddressPart {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum MatchType {
+pub enum MatchType {
     Is,
     Contains,
     Matches(u64),
@@ -134,9 +134,9 @@ pub enum Comparator {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Clear {
-    pub(crate) local_vars_idx: u32,
-    pub(crate) local_vars_num: u32,
-    pub(crate) match_vars: u64,
+    pub local_vars_idx: u32,
+    pub local_vars_num: u32,
+    pub match_vars: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

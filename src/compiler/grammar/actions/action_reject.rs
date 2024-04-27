@@ -29,7 +29,7 @@ use crate::compiler::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Reject {
+pub struct Reject {
     pub ereject: bool,
     pub reason: Value,
 }

@@ -56,7 +56,7 @@ use super::{
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Test {
+pub enum Test {
     True,
     False,
     Address(TestAddress),
