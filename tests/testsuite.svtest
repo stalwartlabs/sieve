@@ -1,5 +1,7 @@
 require "vnd.stalwart.testsuite";
 require "envelope";
+require "regex";
+require "variables";
 
 /* Test message environment */
 
@@ -79,5 +81,14 @@ test "Envelope Environment" {
 	if not envelope :is "auth" "zilla" {
 		test_fail "envelope.auth data not reset properly (2).";
 	}*/
-}
 
+	test_set "envelope.to" "alias.bob@domain";
+	if envelope :regex "to" "alias\.([^.]+)@(.+)$" {
+		set "to" "${1}@${2}";
+		if not string :is "${to}" "bob@domain" {
+			test_fail "exact match fails '${to}' '${2}'";
+		}
+	} else {
+		test_fail "envelope.to regex failed.";
+	}
+}
