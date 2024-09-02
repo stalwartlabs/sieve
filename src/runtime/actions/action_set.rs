@@ -27,7 +27,7 @@ use crate::{
         VariableType,
     },
     runtime::Variable,
-    Context, Event,
+    Context, Envelope, Event,
 };
 use std::fmt::Write;
 
@@ -69,14 +69,26 @@ impl<'x> Context<'x> {
                     .insert(var_name.to_string().into(), variable.clone());
             }
             VariableType::Envelope(env) => {
-                self.queued_events = vec![Event::SetEnvelope {
-                    envelope: *env,
-                    value: variable.to_string().into_owned(),
-                }]
-                .into_iter();
+                self.add_set_envelope_event(*env, variable.to_string().into_owned());
             }
             _ => (),
         }
+    }
+
+    pub(crate) fn add_set_envelope_event(&mut self, envelope: Envelope, value: String) {
+        let mut did_find = false;
+        for (name, val) in self.envelope.iter_mut() {
+            if *name == envelope {
+                *val = Variable::String(value.clone().into());
+                did_find = true;
+                break;
+            }
+        }
+        if !did_find {
+            self.envelope
+                .push((envelope, Variable::String(value.clone().into())));
+        }
+        self.queued_events = vec![Event::SetEnvelope { envelope, value }].into_iter();
     }
 
     pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable> {
