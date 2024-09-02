@@ -116,22 +116,26 @@ impl<'x> CompilerState<'x> {
                         let line_pos = token_info.line_pos;
 
                         match token_info.token {
-                            Token::StringConstant(s) => match Envelope::try_from(s.into_string()) {
-                                Ok(envelope) => {
-                                    envelopes.push(envelope);
+                            Token::StringConstant(s) => {
+                                match Envelope::try_from(s.into_string().to_ascii_lowercase()) {
+                                    Ok(envelope) => {
+                                        envelopes.push(envelope);
+                                    }
+                                    Err(invalid) => {
+                                        token_info.token = Token::Comma;
+                                        return Err(
+                                            token_info.custom(ErrorType::InvalidEnvelope(invalid))
+                                        );
+                                    }
                                 }
-                                Err(invalid) => {
-                                    token_info.token = Token::Comma;
-                                    return Err(
-                                        token_info.custom(ErrorType::InvalidEnvelope(invalid))
-                                    );
-                                }
-                            },
+                            }
                             Token::BracketOpen => loop {
                                 let mut token_info = self.tokens.unwrap_next()?;
                                 match token_info.token {
                                     Token::StringConstant(s) => {
-                                        match Envelope::try_from(s.into_string()) {
+                                        match Envelope::try_from(
+                                            s.into_string().to_ascii_lowercase(),
+                                        ) {
                                             Ok(envelope) => {
                                                 if !envelopes.contains(&envelope) {
                                                     envelopes.push(envelope);

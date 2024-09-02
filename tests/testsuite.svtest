@@ -42,10 +42,18 @@ test "Envelope Environment" {
 		test_fail "envelope.from data not set properly (1).";
 	}
 
+	if not envelope :is "From" "stephan@hutsefluts.example.net" {
+		test_fail "envelope.from is case sensitive.";
+	}
+
 	test_set "envelope.to" "news@example.org";
 
 	if not envelope :is "to" "news@example.org" {
 		test_fail "envelope.to data not set properly (1).";
+	}
+
+	if not envelope :is "To" "news@example.org" {
+		test_fail "envelope.to is case sensitive (1).";
 	}
 
 	/*test_set "envelope.auth" "sirius";
