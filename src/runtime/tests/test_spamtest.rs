@@ -141,16 +141,7 @@ impl SpamStatus {
         Variable::Integer(match self {
             SpamStatus::Unknown => 0,
             SpamStatus::Ham => 1,
-            SpamStatus::MaybeSpam(pct) => {
-                let n = (pct * 10.0) as i64;
-                if n < 2 {
-                    2
-                } else if n > 9 {
-                    9
-                } else {
-                    n
-                }
-            }
+            SpamStatus::MaybeSpam(pct) => ((pct * 10.0) as i64).clamp(2, 9),
             SpamStatus::Spam => 10,
         })
     }
@@ -158,16 +149,7 @@ impl SpamStatus {
     pub(crate) fn as_percentage(&self) -> Variable {
         Variable::Integer(match self {
             SpamStatus::Unknown | SpamStatus::Ham => 0,
-            SpamStatus::MaybeSpam(pct) => {
-                let n = (pct * 100.0).ceil() as i64;
-                if n > 100 {
-                    100
-                } else if n < 1 {
-                    1
-                } else {
-                    n
-                }
-            }
+            SpamStatus::MaybeSpam(pct) => ((pct * 100.0).ceil() as i64).clamp(1, 100),
             SpamStatus::Spam => 100,
         })
     }

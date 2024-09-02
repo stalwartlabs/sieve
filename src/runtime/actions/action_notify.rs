@@ -194,10 +194,8 @@ impl Notify {
                 subject.as_str()
             } else if let Some(subject) = &notify_message {
                 subject.as_ref()
-            } else if let Some(subject) = ctx.message.subject() {
-                subject
             } else {
-                ""
+                ctx.message.subject().unwrap_or_default()
             };
             let mut iter = subject.chars().enumerate();
             let mut buf = [0; 4];

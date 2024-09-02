@@ -357,24 +357,6 @@ impl Default for Number {
     }
 }
 
-trait IntoBool {
-    fn into_bool(self) -> bool;
-}
-
-impl IntoBool for f64 {
-    #[inline(always)]
-    fn into_bool(self) -> bool {
-        self != 0.0
-    }
-}
-
-impl IntoBool for i64 {
-    #[inline(always)]
-    fn into_bool(self) -> bool {
-        self != 0
-    }
-}
-
 impl From<bool> for Number {
     #[inline(always)]
     fn from(b: bool) -> Self {
