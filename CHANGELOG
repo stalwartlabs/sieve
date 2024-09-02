@@ -1,3 +1,8 @@
+sieve-rs 0.5.1
+================================
+- Case insensitive envelope tests (#6).
+- Set envelope variables internally (#10).
+
 sieve-rs 0.5.0
 ================================
 - Removed context.
