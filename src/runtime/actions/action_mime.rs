@@ -383,11 +383,7 @@ impl ExtractText {
                     .insert(var_name.to_string().into(), value.into());
             }
             VariableType::Envelope(env) => {
-                ctx.queued_events = vec![Event::SetEnvelope {
-                    envelope: *env,
-                    value,
-                }]
-                .into_iter();
+                ctx.add_set_envelope_event(*env, value);
             }
             _ => (),
         }
