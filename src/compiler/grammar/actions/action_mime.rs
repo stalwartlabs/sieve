@@ -59,7 +59,7 @@ pub(crate) struct ExtractText {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum MimeOpts<T> {
+pub enum MimeOpts<T> {
     Type,
     Subtype,
     ContentType,

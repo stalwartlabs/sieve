@@ -32,7 +32,7 @@ use crate::compiler::{
 use crate::compiler::grammar::{AddressPart, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestAddress {
+pub struct TestAddress {
     pub header_list: Vec<Value>,
     pub key_list: Vec<Value>,
     pub address_part: AddressPart,

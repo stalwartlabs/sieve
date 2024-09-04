@@ -284,7 +284,7 @@ pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Sieve {
-    instructions: Vec<Instruction>,
+    pub instructions: Vec<Instruction>,
     num_vars: usize,
     num_match_vars: usize,
 }

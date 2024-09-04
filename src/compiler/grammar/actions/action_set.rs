@@ -36,7 +36,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Modifier {
+pub enum Modifier {
     Lower,
     Upper,
     LowerFirst,
@@ -65,7 +65,7 @@ impl Modifier {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Set {
+pub struct Set {
     pub modifiers: Vec<Modifier>,
     pub name: VariableType,
     pub value: Value,

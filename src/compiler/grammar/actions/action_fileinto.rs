@@ -33,7 +33,7 @@ use crate::compiler::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct FileInto {
+pub struct FileInto {
     pub copy: bool,
     pub create: bool,
     pub folder: Value,
