@@ -635,11 +635,7 @@ mod tests {
                     .into()
             })
             .with_function("is_ascii", |_, v| {
-                v[0].to_string()
-                    .as_ref()
-                    .chars()
-                    .any(|c| !c.is_ascii())
-                    .into()
+                v[0].to_string().as_ref().is_ascii().into()
             })
             .with_function("char_count", |_, v| {
                 v[0].to_string().as_ref().chars().count().into()

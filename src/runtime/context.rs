@@ -579,7 +579,7 @@ impl<'x> Context<'x> {
         name: impl Into<Cow<'static, str>>,
         value: impl Into<Variable>,
     ) {
-        self.vars_env.insert(name.into(), value.into());
+        self.vars_global.insert(name.into(), value.into());
     }
 
     pub fn with_global_variable(
