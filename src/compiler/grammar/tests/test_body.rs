@@ -32,7 +32,7 @@ use crate::compiler::{
 use crate::compiler::grammar::{test::Test, MatchType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestBody {
+pub struct TestBody {
     pub key_list: Vec<Value>,
     pub body_transform: BodyTransform,
     pub match_type: MatchType,
@@ -42,7 +42,7 @@ pub(crate) struct TestBody {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum BodyTransform {
+pub enum BodyTransform {
     Raw,
     Content(Vec<Value>),
     Text,

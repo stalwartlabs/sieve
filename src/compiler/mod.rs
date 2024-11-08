@@ -95,7 +95,7 @@ impl Default for Compiler {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Value {
+pub enum Value {
     Text(Arc<String>),
     Number(Number),
     Variable(VariableType),

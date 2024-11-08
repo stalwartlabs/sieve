@@ -55,7 +55,7 @@ use super::{
 use super::tests::test_ihave::Error;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) enum Instruction {
+pub enum Instruction {
     Require(Vec<Capability>),
     Keep(Keep),
     FileInto(FileInto),

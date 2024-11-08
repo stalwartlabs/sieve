@@ -33,7 +33,7 @@ use crate::compiler::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Keep {
+pub struct Keep {
     pub flags: Vec<Value>,
 }
 

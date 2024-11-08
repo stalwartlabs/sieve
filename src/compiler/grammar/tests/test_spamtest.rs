@@ -37,7 +37,7 @@ use crate::compiler::grammar::{test::Test, MatchType};
 */
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestSpamTest {
+pub struct TestSpamTest {
     pub value: Value,
     pub match_type: MatchType,
     pub comparator: Comparator,

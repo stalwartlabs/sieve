@@ -37,7 +37,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Vacation {
+pub struct Vacation {
     pub subject: Option<Value>,
     pub from: Option<Value>,
     pub mime: bool,
@@ -46,7 +46,7 @@ pub(crate) struct Vacation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct TestVacation {
+pub struct TestVacation {
     pub addresses: Vec<Value>,
     pub period: Period,
     pub handle: Option<Value>,
@@ -54,7 +54,7 @@ pub(crate) struct TestVacation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Period {
+pub enum Period {
     Days(u64),
     Seconds(u64),
     Default,
