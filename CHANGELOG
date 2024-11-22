@@ -1,3 +1,7 @@
+sieve-rs 0.5.3
+================================
+- Fixed `register_match_var` function.
+
 sieve-rs 0.5.2
 ================================
 - Fixed `set_global_variable` function.
