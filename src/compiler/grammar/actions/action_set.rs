@@ -36,6 +36,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Modifier {
     Lower,
     Upper,

@@ -912,7 +912,7 @@ impl<'x> CompilerState<'x> {
             debug_assert!(num < 63);
 
             for pos in &block.match_test_pos {
-                if let Instruction::Test(test) = &mut self.instructions[*pos] {
+                if let Some(Instruction::Test(test)) = self.instructions.get_mut(*pos) {
                     let match_type = match test {
                         Test::Address(t) => &mut t.match_type,
                         Test::Body(t) => &mut t.match_type,
