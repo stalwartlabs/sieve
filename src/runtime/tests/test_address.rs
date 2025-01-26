@@ -186,7 +186,7 @@ impl TestAddress {
     }
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     #[allow(unused_assignments)]
     pub(crate) fn find_addresses(
         &self,

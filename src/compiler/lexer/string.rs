@@ -48,7 +48,7 @@ enum State {
     },
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn tokenize_string(
         &mut self,
         bytes: &[u8],

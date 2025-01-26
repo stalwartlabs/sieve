@@ -42,7 +42,7 @@ impl Set {
     }
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable) {
         if variable.len() > self.runtime.max_variable_size {
             let mut new_variable = String::with_capacity(self.runtime.max_variable_size);

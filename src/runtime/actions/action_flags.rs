@@ -103,7 +103,7 @@ impl EditFlags {
     }
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     pub(crate) fn tokenize_flags(
         &self,
         strings: &[Value],

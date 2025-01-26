@@ -68,7 +68,7 @@ impl TestNotifyMethodCapability {
             .eval_value(&self.notification_capability)
             .to_string()
             .eq_ignore_ascii_case("online")
-            || !validate_uri(uri.as_ref()).map_or(false, |scheme| {
+            || !validate_uri(uri.as_ref()).is_some_and( |scheme| {
                 ctx.runtime
                     .valid_notification_uris
                     .contains(&Cow::from(scheme))

@@ -44,7 +44,7 @@ pub(crate) struct TestAddress {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_address(&mut self) -> Result<Test, CompileError> {
         let mut address_part = AddressPart::All;
         let mut match_type = MatchType::Is;

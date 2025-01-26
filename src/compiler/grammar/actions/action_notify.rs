@@ -55,7 +55,7 @@ pub(crate) struct Notify {
     pub method: Value,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_notify(&mut self) -> Result<(), CompileError> {
         let method;
         let mut from = None;

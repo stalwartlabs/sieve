@@ -43,7 +43,7 @@ pub(crate) enum Action {
     Remove,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_flag_action(&mut self, word: Word) -> Result<(), CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         let action = match word {

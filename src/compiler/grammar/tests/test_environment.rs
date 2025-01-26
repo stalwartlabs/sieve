@@ -31,7 +31,7 @@ use crate::compiler::grammar::{test::Test, MatchType};
 
 use super::test_string::TestString;
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_environment(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;

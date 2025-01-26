@@ -30,7 +30,7 @@ use crate::compiler::{
     CompileError,
 };
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     fn add_capability(&mut self, capabilities: &mut Vec<Capability>, capability: Capability) {
         if !self.has_capability(&capability) {
             let parent_capability = if matches!(&capability, Capability::SpamTestPlus) {

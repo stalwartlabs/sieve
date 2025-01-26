@@ -34,7 +34,7 @@ pub(crate) struct Reject {
     pub reason: Value,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_reject(&mut self, ereject: bool) -> Result<(), CompileError> {
         let cmd = Instruction::Reject(Reject {
             ereject,

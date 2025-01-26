@@ -149,7 +149,7 @@ impl TestEnvelope {
     }
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     fn find_envelopes(
         &self,
         test_envelope: &TestEnvelope,

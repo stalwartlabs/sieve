@@ -39,7 +39,7 @@ pub(crate) struct TestSpecialUseExists {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_specialuseexists(&mut self) -> Result<Test, CompileError> {
         let mut maybe_attributes = self.parse_strings(false)?;
 

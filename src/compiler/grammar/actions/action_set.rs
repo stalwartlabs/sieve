@@ -78,7 +78,7 @@ pub(crate) struct Let {
     pub expr: Vec<Expression>,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_set(&mut self) -> Result<(), CompileError> {
         let mut modifiers = Vec::new();
         let mut name = None;

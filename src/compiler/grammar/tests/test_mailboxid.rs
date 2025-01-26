@@ -35,7 +35,7 @@ pub(crate) struct TestMailboxIdExists {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_mailboxidexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxIdExists(TestMailboxIdExists {
             mailbox_ids: self.parse_strings(false)?,

@@ -21,7 +21,6 @@
  * for more details.
 */
 
-use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -46,7 +45,7 @@ pub(crate) struct TestEnvelope {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_envelope(&mut self) -> Result<Test, CompileError> {
         let mut address_part = AddressPart::All;
         let mut match_type = MatchType::Is;
@@ -211,8 +210,8 @@ impl TryFrom<String> for Envelope {
     type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        if let Some(envelope) = ENVELOPE.get(&value) {
-            Ok(*envelope)
+        if let Some(envelope) = lookup_envelope(&value) {
+            Ok(envelope)
         } else {
             Err(value)
         }
@@ -223,23 +222,26 @@ impl<'x> TryFrom<&'x str> for Envelope {
     type Error = &'x str;
 
     fn try_from(value: &'x str) -> Result<Self, Self::Error> {
-        if let Some(envelope) = ENVELOPE.get(value) {
-            Ok(*envelope)
+        if let Some(envelope) = lookup_envelope(value) {
+            Ok(envelope)
         } else {
             Err(value)
         }
     }
 }
 
-pub(crate) static ENVELOPE: phf::Map<&'static str, Envelope> = phf_map! {
-    "from" => Envelope::From,
-    "to" => Envelope::To,
-    "bytimeabsolute" => Envelope::ByTimeAbsolute,
-    "bytimerelative" => Envelope::ByTimeRelative,
-    "bymode" => Envelope::ByMode,
-    "bytrace" => Envelope::ByTrace,
-    "notify" => Envelope::Notify,
-    "orcpt" => Envelope::Orcpt,
-    "ret" => Envelope::Ret,
-    "envid" => Envelope::Envid,
-};
+fn lookup_envelope(input: &str) -> Option<Envelope> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "from" => Envelope::From,
+        "to" => Envelope::To,
+        "bytimeabsolute" => Envelope::ByTimeAbsolute,
+        "bytimerelative" => Envelope::ByTimeRelative,
+        "bymode" => Envelope::ByMode,
+        "bytrace" => Envelope::ByTrace,
+        "notify" => Envelope::Notify,
+        "orcpt" => Envelope::Orcpt,
+        "ret" => Envelope::Ret,
+        "envid" => Envelope::Envid,
+    )
+}

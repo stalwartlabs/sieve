@@ -41,7 +41,7 @@ pub(crate) struct Error {
     pub message: Value,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_ihave(&mut self) -> Result<Test, CompileError> {
         Ok(Test::Ihave(TestIhave {
             capabilities: self

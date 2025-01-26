@@ -22,7 +22,6 @@
 */
 
 use mail_parser::HeaderName;
-use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{
@@ -80,7 +79,7 @@ pub(crate) enum DatePart {
     Weekday,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_date(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
@@ -183,9 +182,9 @@ impl<'x> CompilerState<'x> {
                     } else if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token {
                             if let Some(date_part_) =
-                                DATE_PART.get(&string.to_string().to_ascii_lowercase())
+                                lookup_date_part(&string.to_string().to_ascii_lowercase())
                             {
-                                date_part = (*date_part_).into();
+                                date_part = date_part_.into();
                                 continue;
                             }
                         }
@@ -261,9 +260,9 @@ impl<'x> CompilerState<'x> {
                     if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token {
                             if let Some(date_part_) =
-                                DATE_PART.get(&string.to_string().to_ascii_lowercase())
+                                lookup_date_part(&string.to_string().to_ascii_lowercase())
                             {
-                                date_part = (*date_part_).into();
+                                date_part = date_part_.into();
                                 continue;
                             }
                         }
@@ -337,18 +336,21 @@ impl<'x> CompilerState<'x> {
                     "0" and "6". "0" is Sunday, "1" is Monday, etc.
 */
 
-static DATE_PART: phf::Map<&'static str, DatePart> = phf_map! {
-    "year" => DatePart::Year,
-    "month" => DatePart::Month,
-    "day" => DatePart::Day,
-    "date" => DatePart::Date,
-    "julian" => DatePart::Julian,
-    "hour" => DatePart::Hour,
-    "minute" => DatePart::Minute,
-    "second" => DatePart::Second,
-    "time" => DatePart::Time,
-    "iso8601" => DatePart::Iso8601,
-    "std11" => DatePart::Std11,
-    "zone" => DatePart::Zone,
-    "weekday" => DatePart::Weekday,
-};
+fn lookup_date_part(input: &str) -> Option<DatePart> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "year" => DatePart::Year,
+        "month" => DatePart::Month,
+        "day" => DatePart::Day,
+        "date" => DatePart::Date,
+        "julian" => DatePart::Julian,
+        "hour" => DatePart::Hour,
+        "minute" => DatePart::Minute,
+        "second" => DatePart::Second,
+        "time" => DatePart::Time,
+        "iso8601" => DatePart::Iso8601,
+        "std11" => DatePart::Std11,
+        "zone" => DatePart::Zone,
+        "weekday" => DatePart::Weekday,
+    )
+}

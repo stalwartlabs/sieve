@@ -50,7 +50,7 @@ pub(crate) enum Location {
     Global,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_include(&mut self) -> Result<(), CompileError> {
         let value;
         let mut once = false;

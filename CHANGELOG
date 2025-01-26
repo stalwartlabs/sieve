@@ -1,3 +1,8 @@
+sieve-rs 0.6.0
+================================
+- Replaced `phf` with `hashify`.
+- Bump `mail-parser` dependency to 0.10.0.
+
 sieve-rs 0.5.3
 ================================
 - Fixed `register_match_var` function.
