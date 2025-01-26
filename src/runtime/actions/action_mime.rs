@@ -396,7 +396,7 @@ enum StackItem<'x> {
     None,
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     pub(crate) fn build_message_id(&mut self) -> Option<Event> {
         if self.has_changes {
             self.last_message_id += 1;

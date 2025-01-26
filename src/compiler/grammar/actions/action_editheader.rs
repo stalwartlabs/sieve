@@ -59,7 +59,7 @@ pub(crate) struct DeleteHeader {
     pub mime_anychild: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_addheader(&mut self) -> Result<(), CompileError> {
         let mut field_name = None;
         let value;

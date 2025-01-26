@@ -67,7 +67,7 @@ pub(crate) enum MimeOpts<T> {
     None,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_replace(&mut self) -> Result<(), CompileError> {
         let mut subject = None;
         let mut from = None;

@@ -80,7 +80,7 @@ impl Convert {
                     if part
                         .content_type()
                         .and_then(|ct| ct.c_subtype.as_ref())
-                        .map_or(false, |st| st.eq_ignore_ascii_case("plain")) =>
+                        .is_some_and( |st| st.eq_ignore_ascii_case("plain")) =>
                 {
                     (
                         PartType::Html(text_to_html(text.as_ref()).into()),

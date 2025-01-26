@@ -259,7 +259,7 @@ impl Compiler {
                                 let tag = state.tokens.next().unwrap().unwrap();
                                 let label = state.tokens.expect_static_string()?;
                                 for block in &state.block_stack {
-                                    if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                    if block.label.as_ref().is_some_and( |n| n.eq(&label)) {
                                         return Err(
                                             tag.custom(ErrorType::LabelAlreadyDefined(label))
                                         );
@@ -300,7 +300,7 @@ impl Compiler {
                                 {
                                     if let Word::ForEveryPart = &block.btype {
                                         num_pops += 1;
-                                        if block.label.as_ref().map_or(false, |n| n.eq(&label)) {
+                                        if block.label.as_ref().is_some_and( |n| n.eq(&label)) {
                                             state
                                                 .instructions
                                                 .push(Instruction::ForEveryPartPop(num_pops));
@@ -838,7 +838,7 @@ impl Compiler {
     }
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn is_var_local(&self, name: &str) -> bool {
         let name = name.to_ascii_lowercase();
         if self.block.vars_local.contains_key(&name) {

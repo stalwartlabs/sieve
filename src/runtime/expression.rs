@@ -29,7 +29,7 @@ use crate::{compiler::Number, runtime::Variable, Context};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     pub(crate) fn eval_expression(&mut self, expr: &[Expression]) -> Result<Variable, Event> {
         let mut exprs = expr.iter().skip(self.expr_pos);
         while let Some(expr) = exprs.next() {
@@ -91,7 +91,7 @@ impl<'x> Context<'x> {
                     }
                 }
                 Expression::JmpIf { val, pos } => {
-                    if self.expr_stack.last().map_or(false, |v| v.to_bool()) == *val {
+                    if self.expr_stack.last().is_some_and(|v| v.to_bool()) == *val {
                         self.expr_pos += *pos as usize;
                         for _ in 0..*pos {
                             exprs.next();

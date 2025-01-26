@@ -74,7 +74,7 @@ servermetadata [MATCH-TYPE] [COMPARATOR]
 
 */
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
         Ok(Test::MailboxExists(TestMailboxExists {
             mailbox_names: self.parse_strings(false)?,

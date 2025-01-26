@@ -47,7 +47,7 @@ pub(crate) struct TestValidNotifyMethod {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_valid_notify_method(&mut self) -> Result<Test, CompileError> {
         Ok(Test::ValidNotifyMethod(TestValidNotifyMethod {
             notification_uris: self.parse_strings(false)?,

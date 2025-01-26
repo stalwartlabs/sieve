@@ -136,7 +136,7 @@ struct Block {
     jmps: Vec<usize>,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test(&mut self) -> Result<(), CompileError> {
         let mut block_stack: Vec<Block> = Vec::new();
         let mut block = Block {

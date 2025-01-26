@@ -23,7 +23,6 @@
 
 use std::fmt::Display;
 
-use phf::phf_map;
 use serde::{Deserialize, Serialize};
 
 use self::{expr::Expression, instruction::CompilerState};
@@ -152,7 +151,7 @@ pub(crate) struct While {
     pub jz_pos: usize,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     #[inline(always)]
     pub fn expect_instruction_end(&mut self) -> Result<(), CompileError> {
         self.tokens.expect_token(Token::Semicolon)
@@ -232,11 +231,11 @@ impl<'x> CompilerState<'x> {
             _ => {
                 let token_info = self.tokens.unwrap_next()?;
                 if let Token::StringConstant(text) = &token_info.token {
-                    if let Some(relational) = RELATIONAL.get(text.to_string().as_ref()) {
+                    if let Some(relational) = lookup_relational(text.to_string().as_ref()) {
                         return Ok(if word == Word::Value {
-                            MatchType::Value(*relational)
+                            MatchType::Value(relational)
                         } else {
-                            MatchType::Count(*relational)
+                            MatchType::Count(relational)
                         });
                     }
                 }
@@ -247,8 +246,8 @@ impl<'x> CompilerState<'x> {
 
     pub(crate) fn parse_comparator(&mut self) -> Result<Comparator, CompileError> {
         let comparator = self.tokens.expect_static_string()?;
-        Ok(if let Some(comparator) = COMPARATOR.get(&comparator) {
-            comparator.clone()
+        Ok(if let Some(comparator) = lookup_comparator(&comparator) {
+            comparator
         } else {
             Comparator::Other(comparator)
         })
@@ -466,8 +465,8 @@ impl<'x> CompilerState<'x> {
 
 impl Capability {
     pub fn parse(capability: &str) -> Capability {
-        if let Some(capability) = CAPABILITIES.get(capability) {
-            capability.clone()
+        if let Some(capability) = lookup_capabilities(capability) {
+            capability
         } else if let Some(comparator) = capability.strip_prefix("comparator-") {
             Capability::Comparator(Comparator::Other(comparator.to_string()))
         } else {
@@ -528,20 +527,26 @@ impl Capability {
     }
 }
 
-static RELATIONAL: phf::Map<&'static str, RelationalMatch> = phf_map! {
-    "gt" => RelationalMatch::Gt,
-    "ge" => RelationalMatch::Ge,
-    "lt" => RelationalMatch::Lt,
-    "le" => RelationalMatch::Le,
-    "eq" => RelationalMatch::Eq,
-    "ne" => RelationalMatch::Ne,
-};
+fn lookup_relational(input: &str) -> Option<RelationalMatch> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "gt" => RelationalMatch::Gt,
+        "ge" => RelationalMatch::Ge,
+        "lt" => RelationalMatch::Lt,
+        "le" => RelationalMatch::Le,
+        "eq" => RelationalMatch::Eq,
+        "ne" => RelationalMatch::Ne,
+    )
+}
 
-static COMPARATOR: phf::Map<&'static str, Comparator> = phf_map! {
-    "i;octet" => Comparator::Octet,
-    "i;ascii-casemap" => Comparator::AsciiCaseMap,
-    "i;ascii-numeric" => Comparator::AsciiNumeric,
-};
+fn lookup_comparator(input: &str) -> Option<Comparator> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "i;octet" => Comparator::Octet,
+        "i;ascii-casemap" => Comparator::AsciiCaseMap,
+        "i;ascii-numeric" => Comparator::AsciiNumeric,
+    )
+}
 
 impl Invalid {
     pub fn name(&self) -> &str {
@@ -631,56 +636,59 @@ impl Display for Capability {
     }
 }
 
-static CAPABILITIES: phf::Map<&'static str, Capability> = phf_map! {
-    "envelope" => Capability::Envelope,
-    "envelope-dsn" => Capability::EnvelopeDsn,
-    "envelope-deliverby" => Capability::EnvelopeDeliverBy,
-    "fileinto" => Capability::FileInto,
-    "encoded-character" => Capability::EncodedCharacter,
-    "comparator-elbonia" => Capability::Comparator(Comparator::Elbonia),
-    "comparator-i;octet" => Capability::Comparator(Comparator::Octet),
-    "comparator-i;ascii-casemap" => Capability::Comparator(Comparator::AsciiCaseMap),
-    "comparator-i;ascii-numeric" => Capability::Comparator(Comparator::AsciiNumeric),
-    "body" => Capability::Body,
-    "convert" => Capability::Convert,
-    "copy" => Capability::Copy,
-    "relational" => Capability::Relational,
-    "date" => Capability::Date,
-    "index" => Capability::Index,
-    "duplicate" => Capability::Duplicate,
-    "variables" => Capability::Variables,
-    "editheader" => Capability::EditHeader,
-    "foreverypart" => Capability::ForEveryPart,
-    "mime" => Capability::Mime,
-    "replace" => Capability::Replace,
-    "enclose" => Capability::Enclose,
-    "extracttext" => Capability::ExtractText,
-    "enotify" => Capability::Enotify,
-    "redirect-dsn" => Capability::RedirectDsn,
-    "redirect-deliverby" => Capability::RedirectDeliverBy,
-    "environment" => Capability::Environment,
-    "reject" => Capability::Reject,
-    "ereject" => Capability::Ereject,
-    "extlists" => Capability::ExtLists,
-    "subaddress" => Capability::SubAddress,
-    "vacation" => Capability::Vacation,
-    "vacation-seconds" => Capability::VacationSeconds,
-    "fcc" => Capability::Fcc,
-    "mailbox" => Capability::Mailbox,
-    "mailboxid" => Capability::MailboxId,
-    "mboxmetadata" => Capability::MboxMetadata,
-    "servermetadata" => Capability::ServerMetadata,
-    "special-use" => Capability::SpecialUse,
-    "imap4flags" => Capability::Imap4Flags,
-    "ihave" => Capability::Ihave,
-    "imapsieve" => Capability::ImapSieve,
-    "include" => Capability::Include,
-    "regex" => Capability::Regex,
-    "spamtest" => Capability::SpamTest,
-    "spamtestplus" => Capability::SpamTestPlus,
-    "virustest" => Capability::VirusTest,
+fn lookup_capabilities(input: &str) -> Option<Capability> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "envelope" => Capability::Envelope,
+        "envelope-dsn" => Capability::EnvelopeDsn,
+        "envelope-deliverby" => Capability::EnvelopeDeliverBy,
+        "fileinto" => Capability::FileInto,
+        "encoded-character" => Capability::EncodedCharacter,
+        "comparator-elbonia" => Capability::Comparator(Comparator::Elbonia),
+        "comparator-i;octet" => Capability::Comparator(Comparator::Octet),
+        "comparator-i;ascii-casemap" => Capability::Comparator(Comparator::AsciiCaseMap),
+        "comparator-i;ascii-numeric" => Capability::Comparator(Comparator::AsciiNumeric),
+        "body" => Capability::Body,
+        "convert" => Capability::Convert,
+        "copy" => Capability::Copy,
+        "relational" => Capability::Relational,
+        "date" => Capability::Date,
+        "index" => Capability::Index,
+        "duplicate" => Capability::Duplicate,
+        "variables" => Capability::Variables,
+        "editheader" => Capability::EditHeader,
+        "foreverypart" => Capability::ForEveryPart,
+        "mime" => Capability::Mime,
+        "replace" => Capability::Replace,
+        "enclose" => Capability::Enclose,
+        "extracttext" => Capability::ExtractText,
+        "enotify" => Capability::Enotify,
+        "redirect-dsn" => Capability::RedirectDsn,
+        "redirect-deliverby" => Capability::RedirectDeliverBy,
+        "environment" => Capability::Environment,
+        "reject" => Capability::Reject,
+        "ereject" => Capability::Ereject,
+        "extlists" => Capability::ExtLists,
+        "subaddress" => Capability::SubAddress,
+        "vacation" => Capability::Vacation,
+        "vacation-seconds" => Capability::VacationSeconds,
+        "fcc" => Capability::Fcc,
+        "mailbox" => Capability::Mailbox,
+        "mailboxid" => Capability::MailboxId,
+        "mboxmetadata" => Capability::MboxMetadata,
+        "servermetadata" => Capability::ServerMetadata,
+        "special-use" => Capability::SpecialUse,
+        "imap4flags" => Capability::Imap4Flags,
+        "ihave" => Capability::Ihave,
+        "imapsieve" => Capability::ImapSieve,
+        "include" => Capability::Include,
+        "regex" => Capability::Regex,
+        "spamtest" => Capability::SpamTest,
+        "spamtestplus" => Capability::SpamTestPlus,
+        "virustest" => Capability::VirusTest,
 
-    // Extensions
-    "vnd.stalwart.while" => Capability::While,
-    "vnd.stalwart.expressions" => Capability::Expressions,
-};
+        // Extensions
+        "vnd.stalwart.while" => Capability::While,
+        "vnd.stalwart.expressions" => Capability::Expressions,
+    )
+}

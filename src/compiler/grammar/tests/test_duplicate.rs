@@ -48,7 +48,7 @@ pub(crate) enum DupMatch {
     Default,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_duplicate(&mut self) -> Result<Test, CompileError> {
         let mut handle = None;
         let mut dup_match = DupMatch::Default;

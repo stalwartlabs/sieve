@@ -176,9 +176,9 @@ impl TestBody {
                     (
                         BodyTransform::Text,
                         PartType::Binary(bytes) | PartType::InlineBinary(bytes),
-                    ) if part.content_type().map_or(false, |ct| {
+                    ) if part.content_type().is_some_and( |ct| {
                         ct.c_type.eq_ignore_ascii_case("application")
-                            && ct.c_subtype.as_ref().map_or(false, |st| st.contains("xml"))
+                            && ct.c_subtype.as_ref().is_some_and( |st| st.contains("xml"))
                     }) =>
                     {
                         html_to_text(std::str::from_utf8(bytes.as_ref()).unwrap_or("")).into()

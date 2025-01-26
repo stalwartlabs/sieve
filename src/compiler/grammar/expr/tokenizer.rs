@@ -100,7 +100,7 @@ where
                 b'[' if matches!(self.buf.get(0..7), Some(b"header.")) => {
                     self.buf.push(ch);
                 }
-                b'-' if self.buf.last().map_or(false, |c| *c == b'[')
+                b'-' if self.buf.last().is_some_and( |c| *c == b'[')
                     || matches!(self.buf.get(0..7), Some(b"header.")) =>
                 {
                     self.buf.push(ch);
@@ -111,7 +111,7 @@ where
                 b']' if self.buf.contains(&b'[') => {
                     self.buf.push(b']');
                 }
-                b'*' if self.buf.last().map_or(false, |&c| c == b'[' || c == b'.') => {
+                b'*' if self.buf.last().is_some_and( |&c| c == b'[' || c == b'.') => {
                     self.buf.push(ch);
                 }
                 _ => {

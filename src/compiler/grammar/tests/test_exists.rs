@@ -39,7 +39,7 @@ pub(crate) struct TestExists {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_exists(&mut self) -> Result<Test, CompileError> {
         let mut header_names = None;
 

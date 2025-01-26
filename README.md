@@ -234,11 +234,9 @@ To fuzz the library with `cargo-fuzz`:
 
 Licensed under the terms of the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html) as published by
 the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-See [LICENSE](LICENSE) for more details.
 
-You can be released from the requirements of the AGPLv3 license by purchasing
-a commercial license. Please contact licensing@stalw.art for more details.
+You can be released from the requirements of the AGPLv3 license by purchasing a commercial license. Please contact licensing@stalw.art for more details.
   
 ## Copyright
 
-Copyright (C) 2020-2023, Stalwart Labs Ltd.
+Copyright (C) 2020, Stalwart Labs LLC

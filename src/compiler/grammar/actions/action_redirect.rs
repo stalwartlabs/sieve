@@ -94,7 +94,7 @@ pub enum ByMode {
     Default,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_redirect(&mut self) -> Result<(), CompileError> {
         let address;
         let mut copy = false;

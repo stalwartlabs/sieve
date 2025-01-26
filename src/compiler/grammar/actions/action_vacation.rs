@@ -90,7 +90,7 @@ vacation [FCC]
    SPECIAL-USE = ":specialuse" string
 */
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_vacation(&mut self) -> Result<(), CompileError> {
         let mut period = Period::Default;
         let mut subject = None;

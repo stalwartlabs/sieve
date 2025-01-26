@@ -39,7 +39,7 @@ pub(crate) struct Convert {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_convert(&mut self) -> Result<Test, CompileError> {
         Ok(Test::Convert(Convert {
             from_media_type: self.parse_string()?,

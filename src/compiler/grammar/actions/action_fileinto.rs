@@ -42,7 +42,7 @@ pub(crate) struct FileInto {
     pub special_use: Option<Value>,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_fileinto(&mut self) -> Result<(), CompileError> {
         let folder;
         let mut copy = false;

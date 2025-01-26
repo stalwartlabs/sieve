@@ -203,7 +203,7 @@ impl TestHeader {
     }
 }
 
-impl<'x> Context<'x> {
+impl Context<'_> {
     pub(crate) fn parse_header_names<'z: 'y, 'y>(
         &'z self,
         header_names: &'y [Value],

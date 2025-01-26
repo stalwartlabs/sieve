@@ -29,7 +29,7 @@ use crate::{
     Compiler,
 };
 
-use super::{word::WORDS, StringConstant, Token};
+use super::{word::lookup_words, StringConstant, Token};
 
 pub(crate) struct Tokenizer<'x> {
     pub compiler: &'x Compiler,
@@ -99,12 +99,12 @@ impl<'x> Tokenizer<'x> {
     pub fn get_current_token(&mut self) -> Option<TokenInfo> {
         if !self.buf.is_empty() {
             let word = std::str::from_utf8(&self.buf).unwrap();
-            let token = if let Some(word) = WORDS.get(word) {
+            let token = if let Some(word) = lookup_words(word) {
                 if self.token_is_tag {
                     self.token_line_pos -= 1;
-                    Token::Tag(*word)
+                    Token::Tag(word)
                 } else {
-                    Token::Identifier(*word)
+                    Token::Identifier(word)
                 }
             } else if self.buf.first().unwrap().is_ascii_digit() {
                 let multiplier = match self.buf.last().unwrap() {
@@ -342,7 +342,7 @@ impl<'x> Tokenizer<'x> {
     }
 }
 
-impl<'x> Iterator for Tokenizer<'x> {
+impl Iterator for Tokenizer<'_> {
     type Item = Result<TokenInfo, CompileError>;
 
     fn next(&mut self) -> Option<Self::Item> {

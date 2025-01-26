@@ -38,7 +38,7 @@ pub(crate) struct TestSize {
     pub is_not: bool,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_size(&mut self) -> Result<Test, CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         let over = match token_info.token {

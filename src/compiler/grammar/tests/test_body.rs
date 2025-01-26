@@ -48,7 +48,7 @@ pub(crate) enum BodyTransform {
     Text,
 }
 
-impl<'x> CompilerState<'x> {
+impl CompilerState<'_> {
     pub(crate) fn parse_test_body(&mut self) -> Result<Test, CompileError> {
         let mut body_transform = BodyTransform::Text;
         let mut match_type = MatchType::Is;

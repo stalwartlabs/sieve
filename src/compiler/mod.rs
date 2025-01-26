@@ -530,7 +530,7 @@ mod tests {
 
         for file_name in fs::read_dir(&test_dir).unwrap() {
             let mut file_name = file_name.unwrap().path();
-            if file_name.extension().map_or(false, |e| e == "sieve") {
+            if file_name.extension().is_some_and(|e| e == "sieve") {
                 println!("Parsing {}", file_name.display());
 
                 /*if !file_name
