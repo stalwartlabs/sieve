@@ -110,12 +110,12 @@ impl TestVacation {
                         if header
                             .value
                             .as_text()
-                            .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
+                            .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
                         {
                             return TestResult::Bool(false);
                         }
                     } else if header_name.eq_ignore_ascii_case("X-Auto-Response-Suppress") {
-                        if header.value.as_text().is_some_and( |v| {
+                        if header.value.as_text().is_some_and(|v| {
                             v.to_ascii_lowercase()
                                 .split(',')
                                 .any(|v| ["all", "oof"].contains(&v.trim()))
@@ -126,7 +126,7 @@ impl TestVacation {
                         && header
                             .value
                             .as_text()
-                            .is_some_and( |v| v.eq_ignore_ascii_case("bulk"))
+                            .is_some_and(|v| v.eq_ignore_ascii_case("bulk"))
                     {
                         return TestResult::Bool(false);
                     }

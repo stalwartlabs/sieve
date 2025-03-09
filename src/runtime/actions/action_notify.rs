@@ -25,7 +25,7 @@ impl Notify {
                 && header
                     .value
                     .as_text()
-                    .map_or(true, |v| !v.eq_ignore_ascii_case("no"))
+                    .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
             {
                 return;
             }
