@@ -8,7 +8,7 @@ use mail_parser::{DateTime, HeaderName};
 
 use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Redirect},
-    Context, Envelope, Event, Recipient,
+    Context, Event, Recipient,
 };
 
 impl Redirect {
@@ -25,13 +25,7 @@ impl Redirect {
                     < ctx.runtime.max_received_headers
             {
                 // Try to avoid forwarding loops
-                if !self.list
-                    && (address.eq_ignore_ascii_case(ctx.user_address.as_ref())
-                        || ctx.envelope.iter().any(|(e, v)| {
-                            matches!(e, Envelope::From)
-                                && v.to_string().eq_ignore_ascii_case(address.as_str())
-                        }))
-                {
+                if !self.list && address.eq_ignore_ascii_case(ctx.user_address.as_ref()) {
                     return;
                 }
 
