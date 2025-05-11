@@ -28,7 +28,7 @@ impl Replace {
         let mut part_ids = ctx.find_nested_parts_ids(false);
         part_ids.sort_unstable_by_key(|a| Reverse(*a));
         for part_id in part_ids {
-            ctx.message.parts.remove(part_id);
+            ctx.message.parts.remove(part_id as usize);
         }
         ctx.has_changes = true;
 
@@ -36,11 +36,11 @@ impl Replace {
         let body = ctx.eval_value(&self.replacement).to_string().into_owned();
         let body_len = body.len();
 
-        let part = &mut ctx.message.parts[ctx.part];
+        let part = &mut ctx.message.parts[ctx.part as usize];
 
         ctx.message_size = ctx.message_size + body_len
             - (if part.offset_body != 0 {
-                part.offset_end - part.offset_header
+                (part.offset_end - part.offset_header) as usize
             } else {
                 part.body.len()
             });
@@ -56,7 +56,7 @@ impl Replace {
 
         if ctx.part == 0 {
             for mut header in prev_headers {
-                let mut size = header.offset_end - header.offset_field;
+                let mut size = (header.offset_end - header.offset_field) as usize;
                 match &header.name {
                     HeaderName::Subject => {
                         if self.subject.is_some() {
@@ -312,7 +312,7 @@ impl ExtractText {
         let mut value = String::new();
 
         if !ctx.part_iter_stack.is_empty() {
-            match ctx.message.parts.get(ctx.part).map(|p| &p.body) {
+            match ctx.message.parts.get(ctx.part as usize).map(|p| &p.body) {
                 Some(PartType::Text(text)) => {
                     value = if let Some(first) = &self.first {
                         text.chars().take(*first).collect()
@@ -383,15 +383,19 @@ impl Context<'_> {
         let mut current_message = &self.message;
         let mut current_boundary = "";
         let mut message = Vec::with_capacity(self.message_size);
-        let mut iter = [0].iter();
+        let mut iter = [0u32].iter();
         let mut iter_stack = Vec::new();
         let mut last_offset = 0;
 
         'outer: loop {
-            while let Some(part) = iter.next().and_then(|p| current_message.parts.get(*p)) {
+            while let Some(part) = iter
+                .next()
+                .and_then(|p| current_message.parts.get(*p as usize))
+            {
                 if last_offset > 0 {
                     message.extend_from_slice(
-                        &current_message.raw_message[last_offset..part.offset_header],
+                        &current_message.raw_message
+                            [last_offset as usize..part.offset_header as usize],
                     );
                 } else if !current_boundary.is_empty()
                     && part.offset_end == 0
@@ -409,7 +413,7 @@ impl Context<'_> {
                         if header.offset_field != header.offset_start {
                             message.extend_from_slice(
                                 &current_message.raw_message
-                                    [header.offset_field..header.offset_end],
+                                    [header.offset_field as usize..header.offset_end as usize],
                             );
                         } else {
                             // Renamed header
@@ -417,7 +421,7 @@ impl Context<'_> {
                             message.extend_from_slice(b":");
                             message.extend_from_slice(
                                 &current_message.raw_message
-                                    [header.offset_start..header.offset_end],
+                                    [header.offset_start as usize..header.offset_end as usize],
                             );
                         }
                     } else {
@@ -451,7 +455,8 @@ impl Context<'_> {
                         continue 'outer;
                     } else {
                         message.extend_from_slice(
-                            &current_message.raw_message[part.offset_body..part.offset_end],
+                            &current_message.raw_message
+                                [part.offset_body as usize..part.offset_end as usize],
                         )
                     }
                 } else {
@@ -504,7 +509,9 @@ impl Context<'_> {
                 match prev_item {
                     StackItem::Message(prev_message) => {
                         if last_offset > 0 {
-                            if let Some(bytes) = current_message.raw_message.get(last_offset..) {
+                            if let Some(bytes) =
+                                current_message.raw_message.get(last_offset as usize..)
+                            {
                                 message.extend_from_slice(bytes);
                             }
                             last_offset = 0;
@@ -521,7 +528,8 @@ impl Context<'_> {
                     }
                     StackItem::None => {
                         message.extend_from_slice(
-                            &current_message.raw_message[last_offset..prev_part.offset_end],
+                            &current_message.raw_message
+                                [last_offset as usize..prev_part.offset_end as usize],
                         );
                         last_offset = prev_part.offset_end;
                     }
@@ -533,7 +541,7 @@ impl Context<'_> {
         }
 
         if last_offset > 0 {
-            if let Some(bytes) = current_message.raw_message.get(last_offset..) {
+            if let Some(bytes) = current_message.raw_message.get(last_offset as usize..) {
                 message.extend_from_slice(bytes);
             }
         }

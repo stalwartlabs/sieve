@@ -188,9 +188,9 @@ impl GlobPattern {
             captured_values.push((0usize, value_.to_string()));
         }
 
-        let mut wildcard_pos = 1;
+        let mut wildcard_pos: usize = 1;
         for item in &self.pattern {
-            if wildcard_pos <= MAX_MATCH_VARIABLES {
+            if wildcard_pos <= MAX_MATCH_VARIABLES as usize {
                 last_pos = match item {
                     PatternChar::WildcardMany { mut num, match_pos } => {
                         while num > 1 {

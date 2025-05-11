@@ -257,7 +257,7 @@ impl CompilerState<'_> {
         let num = var_name
             .parse()
             .map_err(|_| ErrorType::InvalidNumber(var_name.to_string()))?;
-        if num < MAX_MATCH_VARIABLES {
+        if num < MAX_MATCH_VARIABLES as usize {
             if self.register_match_var(num) {
                 let total_vars = num + 1;
                 if total_vars > self.vars_match_max {

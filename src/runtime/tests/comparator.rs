@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::{
     compiler::{
@@ -73,35 +73,35 @@ impl Comparator {
         pattern: &Value,
         pattern_expr: &Variable,
         value: &str,
-        mut capture_positions: u64,
+        capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
     ) -> bool {
-        let regex = if let Value::Regex(regex) = pattern {
-            Cow::Borrowed(&regex.regex)
+        if let Value::Regex(regex) = pattern {
+            let lazy_regex = regex.regex.0.load();
+            if let Some(regex) = lazy_regex.as_ref() {
+                eval_regex(regex, value, capture_positions, captured_values)
+            } else {
+                match fancy_regex::Regex::new(&regex.expr) {
+                    Ok(fancy_regex) => {
+                        let result =
+                            eval_regex(&fancy_regex, value, capture_positions, captured_values);
+                        regex.regex.0.store(Arc::new(Some(fancy_regex)));
+                        result
+                    }
+                    Err(err) => {
+                        debug_assert!(false, "Failed to compile regex: {err:?}");
+                        false
+                    }
+                }
+            }
         } else {
             match fancy_regex::Regex::new(pattern_expr.to_string().as_ref()) {
-                Ok(regex) => Cow::Owned(regex),
+                Ok(regex) => eval_regex(&regex, value, capture_positions, captured_values),
                 Err(err) => {
                     debug_assert!(false, "Failed to compile regex: {err:?}");
-                    return false;
+                    false
                 }
             }
-        };
-
-        if capture_positions == 0 {
-            regex.is_match(value).unwrap_or_default()
-        } else if let Ok(Some(captures)) = regex.captures(value) {
-            captured_values.clear();
-            while capture_positions != 0 {
-                let index = 63 - capture_positions.leading_zeros();
-                capture_positions ^= 1 << index;
-                if let Some(match_var) = captures.get(index as usize) {
-                    captured_values.push((index as usize, match_var.as_str().to_string()));
-                }
-            }
-            true
-        } else {
-            false
         }
     }
 
@@ -111,6 +111,29 @@ impl Comparator {
             Comparator::AsciiNumeric => MatchAs::Number,
             _ => MatchAs::Octet,
         }
+    }
+}
+
+fn eval_regex(
+    regex: &fancy_regex::Regex,
+    value: &str,
+    mut capture_positions: u64,
+    captured_values: &mut Vec<(usize, String)>,
+) -> bool {
+    if capture_positions == 0 {
+        regex.is_match(value).unwrap_or_default()
+    } else if let Ok(Some(captures)) = regex.captures(value) {
+        captured_values.clear();
+        while capture_positions != 0 {
+            let index = 63 - capture_positions.leading_zeros();
+            capture_positions ^= 1 << index;
+            if let Some(match_var) = captures.get(index as usize) {
+                captured_values.push((index as usize, match_var.as_str().to_string()));
+            }
+        }
+        true
+    } else {
+        false
     }
 }
 

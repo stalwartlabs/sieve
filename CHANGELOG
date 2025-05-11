@@ -1,3 +1,9 @@
+sieve-rs 0.7.0
+================================
+- Added `rkyv` support.
+- Bump `mail-parser` dependency to 0.11.0.
+- Fix: Allow redirect to sender (#11).
+
 sieve-rs 0.6.0
 ================================
 - Replaced `phf` with `hashify`.

@@ -47,7 +47,10 @@ impl<'x> Context<'x> {
             VariableType::Header(header) => self.eval_header(header),
             VariableType::Part(part) => match part {
                 MessagePart::TextBody(convert) => {
-                    let part = self.message.parts.get(*self.message.text_body.first()?)?;
+                    let part = self
+                        .message
+                        .parts
+                        .get(*self.message.text_body.first()? as usize)?;
                     match &part.body {
                         PartType::Text(text) => Some(text.as_ref().into()),
                         PartType::Html(html) if *convert => {
@@ -57,7 +60,10 @@ impl<'x> Context<'x> {
                     }
                 }
                 MessagePart::HtmlBody(convert) => {
-                    let part = self.message.parts.get(*self.message.html_body.first()?)?;
+                    let part = self
+                        .message
+                        .parts
+                        .get(*self.message.html_body.first()? as usize)?;
                     match &part.body {
                         PartType::Html(html) => Some(html.as_ref().into()),
                         PartType::Text(text) if *convert => {
@@ -66,7 +72,7 @@ impl<'x> Context<'x> {
                         _ => None,
                     }
                 }
-                MessagePart::Contents => match &self.message.parts.get(self.part)?.body {
+                MessagePart::Contents => match &self.message.parts.get(self.part as usize)?.body {
                     PartType::Text(text) | PartType::Html(text) => {
                         Variable::from(text.as_ref()).into()
                     }
@@ -76,10 +82,10 @@ impl<'x> Context<'x> {
                     _ => None,
                 },
                 MessagePart::Raw => {
-                    let part = self.message.parts.get(self.part)?;
+                    let part = self.message.parts.get(self.part as usize)?;
                     self.message
                         .raw_message()
-                        .get(part.raw_body_offset()..part.raw_end_offset())
+                        .get(part.raw_body_offset() as usize..part.raw_end_offset() as usize)
                         .map(|v| Variable::from(String::from_utf8_lossy(v)))
                 }
             },
@@ -152,7 +158,7 @@ impl<'x> Context<'x> {
                 match &header.part {
                     HeaderPart::Raw => {
                         if let Some(var) = raw
-                            .get(h.offset_field..h.offset_end)
+                            .get(h.offset_field as usize..h.offset_end as usize)
                             .map(sanitize_raw_header)
                         {
                             result.push(Variable::from(var));
@@ -161,9 +167,11 @@ impl<'x> Context<'x> {
                     HeaderPart::Text => {
                         if let HeaderValue::Text(text) = &h.value {
                             result.push(Variable::from(format!("{}: {}", h.name.as_str(), text)));
-                        } else if let HeaderValue::Text(text) =
-                            MessageStream::new(raw.get(h.offset_start..h.offset_end).unwrap_or(b""))
-                                .parse_unstructured()
+                        } else if let HeaderValue::Text(text) = MessageStream::new(
+                            raw.get(h.offset_start as usize..h.offset_end as usize)
+                                .unwrap_or(b""),
+                        )
+                        .parse_unstructured()
                         {
                             result.push(Variable::from(format!("{}: {}", h.name.as_str(), text)));
                         }
@@ -244,7 +252,7 @@ impl HeaderVariable {
                     }
                 }
                 HeaderValue::DateTime(_) => raw
-                    .get(header.offset_start..header.offset_end)
+                    .get(header.offset_start as usize..header.offset_end as usize)
                     .and_then(|bytes| std::str::from_utf8(bytes).ok())
                     .map(|s| s.trim())
                     .map(Variable::from),
@@ -277,7 +285,7 @@ impl HeaderVariable {
                 }
                 HeaderValue::Text(_) => {
                     let addr = raw
-                        .get(header.offset_start..header.offset_end)
+                        .get(header.offset_start as usize..header.offset_end as usize)
                         .and_then(|bytes| match MessageStream::new(bytes).parse_address() {
                             HeaderValue::Address(addr) => addr.into(),
                             _ => None,
@@ -315,7 +323,7 @@ impl HeaderVariable {
                 if let HeaderValue::DateTime(dt) = &header.value {
                     Variable::from(dt.to_timestamp()).into()
                 } else {
-                    raw.get(header.offset_start..header.offset_end)
+                    raw.get(header.offset_start as usize..header.offset_end as usize)
                         .and_then(|bytes| match MessageStream::new(bytes).parse_date() {
                             HeaderValue::DateTime(dt) => Variable::from(dt.to_timestamp()).into(),
                             _ => None,
@@ -335,7 +343,7 @@ impl HeaderVariable {
                 },
                 HeaderName::Other(_) => {
                     match MessageStream::new(
-                        raw.get(header.offset_start..header.offset_end)
+                        raw.get(header.offset_start as usize..header.offset_end as usize)
                             .unwrap_or(b""),
                     )
                     .parse_id()
@@ -354,11 +362,11 @@ impl HeaderVariable {
             },
 
             HeaderPart::Raw => raw
-                .get(header.offset_start..header.offset_end)
+                .get(header.offset_start as usize..header.offset_end as usize)
                 .map(sanitize_raw_header)
                 .map(Variable::from),
             HeaderPart::RawName => raw
-                .get(header.offset_field..header.offset_start - 1)
+                .get(header.offset_field as usize..header.offset_start as usize - 1)
                 .map(|bytes| std::str::from_utf8(bytes).unwrap_or_default())
                 .map(Variable::from),
             HeaderPart::Exists => Variable::from(true).into(),
@@ -369,9 +377,9 @@ impl HeaderVariable {
                         ct.c_subtype.as_ref().map(|s| Variable::from(s.as_ref()))
                     }
                     ContentTypePart::Attribute(attr) => ct.attributes.as_ref().and_then(|attrs| {
-                        attrs.iter().find_map(|(k, v)| {
-                            if k.eq_ignore_ascii_case(attr) {
-                                Some(Variable::from(v.as_ref()))
+                        attrs.iter().find_map(|a| {
+                            if a.name.eq_ignore_ascii_case(attr) {
+                                Some(Variable::from(a.value.as_ref()))
                             } else {
                                 None
                             }

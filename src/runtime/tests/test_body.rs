@@ -100,7 +100,10 @@ impl TestBody {
                         if let Some(part) = message.parts.first() {
                             String::from_utf8_lossy(
                                 raw_message
-                                    .get(part.raw_header_offset()..part.raw_body_offset())
+                                    .get(
+                                        part.raw_header_offset() as usize
+                                            ..part.raw_body_offset() as usize,
+                                    )
                                     .unwrap_or(b""),
                             )
                         } else {
@@ -113,7 +116,10 @@ impl TestBody {
                         {
                             let mime_body = std::str::from_utf8(
                                 raw_message
-                                    .get(part.raw_body_offset()..part.raw_end_offset())
+                                    .get(
+                                        part.raw_body_offset() as usize
+                                            ..part.raw_end_offset() as usize,
+                                    )
                                     .unwrap_or(b""),
                             )
                             .unwrap_or("");
@@ -132,7 +138,10 @@ impl TestBody {
                         } else {
                             String::from_utf8_lossy(
                                 raw_message
-                                    .get(part.raw_body_offset()..part.raw_end_offset())
+                                    .get(
+                                        part.raw_body_offset() as usize
+                                            ..part.raw_end_offset() as usize,
+                                    )
                                     .unwrap_or(b""),
                             )
                         }
@@ -146,7 +155,10 @@ impl TestBody {
                             _ if part.raw_end_offset() > part.raw_body_offset() => {
                                 String::from_utf8_lossy(
                                     raw_message
-                                        .get(part.raw_body_offset()..part.raw_end_offset())
+                                        .get(
+                                            part.raw_body_offset() as usize
+                                                ..part.raw_end_offset() as usize,
+                                        )
                                         .unwrap_or(b""),
                                 )
                             }
@@ -159,9 +171,9 @@ impl TestBody {
                     (
                         BodyTransform::Text,
                         PartType::Binary(bytes) | PartType::InlineBinary(bytes),
-                    ) if part.content_type().is_some_and( |ct| {
+                    ) if part.content_type().is_some_and(|ct| {
                         ct.c_type.eq_ignore_ascii_case("application")
-                            && ct.c_subtype.as_ref().is_some_and( |st| st.contains("xml"))
+                            && ct.c_subtype.as_ref().is_some_and(|st| st.contains("xml"))
                     }) =>
                     {
                         html_to_text(std::str::from_utf8(bytes.as_ref()).unwrap_or("")).into()

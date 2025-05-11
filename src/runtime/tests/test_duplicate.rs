@@ -26,7 +26,7 @@ impl TestDuplicate {
                             if let Some(bytes) = ctx
                                 .message
                                 .raw_message
-                                .get(header.offset_start..header.offset_end)
+                                .get(header.offset_start as usize..header.offset_end as usize)
                             {
                                 if let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
                                 {

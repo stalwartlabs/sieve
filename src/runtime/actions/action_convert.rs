@@ -63,7 +63,7 @@ impl Convert {
                     if part
                         .content_type()
                         .and_then(|ct| ct.c_subtype.as_ref())
-                        .is_some_and( |st| st.eq_ignore_ascii_case("plain")) =>
+                        .is_some_and(|st| st.eq_ignore_ascii_case("plain")) =>
                 {
                     (
                         PartType::Html(text_to_html(text.as_ref()).into()),
@@ -83,7 +83,7 @@ impl Convert {
             }];
             ctx.message_size = ctx.message_size + ct.len() + new_body.len() + 16
                 - (if part.offset_body != 0 {
-                    part.offset_end - part.offset_header
+                    (part.offset_end - part.offset_header) as usize
                 } else {
                     part.body.len()
                 });

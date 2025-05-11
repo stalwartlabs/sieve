@@ -213,7 +213,7 @@ impl Vacation {
                 HeaderName::References => {
                     if header.offset_start > 0 {
                         references = (&ctx.message.raw_message
-                            [header.offset_start..header.offset_end])
+                            [header.offset_start as usize..header.offset_end as usize])
                             .into();
                     }
                 }
@@ -222,7 +222,7 @@ impl Vacation {
                         && header.offset_start > 0
                     {
                         vacation_to_full = (&ctx.message.raw_message
-                            [header.offset_start..header.offset_end])
+                            [header.offset_start as usize..header.offset_end as usize])
                             .into();
                     }
                 }

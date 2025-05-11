@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use serde::{Deserialize, Serialize};
-
 use crate::compiler::{
     lexer::{tokenizer::TokenInfo, word::Word, Token},
     CompileError, ErrorType,
@@ -38,7 +36,15 @@ use super::{
 };
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) enum Test {
     True,
     False,
@@ -98,12 +104,6 @@ pub(crate) enum Test {
     Vacation(TestVacation),
 
     // Only test
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct EvalExpression {
-    pub expr: Vec<Expression>,
-    pub is_not: bool,
 }
 
 #[derive(Debug)]
