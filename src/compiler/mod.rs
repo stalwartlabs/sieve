@@ -4,18 +4,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{borrow::Cow, fmt::Display, sync::Arc};
-
-use ahash::AHashMap;
-use mail_parser::HeaderName;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-use crate::{runtime::RuntimeError, Compiler, Envelope, FunctionMap};
-
 use self::{
     grammar::{AddressPart, Capability},
     lexer::tokenizer::TokenInfo,
 };
+use crate::{runtime::RuntimeError, Compiler, Envelope, FunctionMap};
+use ahash::AHashMap;
+use arc_swap::ArcSwap;
+use mail_parser::HeaderName;
+use std::{borrow::Cow, fmt::Display, sync::Arc};
 
 pub mod grammar;
 pub mod lexer;
@@ -77,22 +74,70 @@ impl Default for Compiler {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    rkyv(serialize_bounds(
+        __S: rkyv::ser::Writer + rkyv::ser::Allocator,
+        __S::Error: rkyv::rancor::Source,
+    ))
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    rkyv(bytecheck(
+        bounds(
+            __C: rkyv::validation::ArchiveContext,
+        )
+    ))
+)]
 pub(crate) enum Value {
     Text(Arc<String>),
     Number(Number),
     Variable(VariableType),
     Regex(Regex),
-    List(Vec<Value>),
+    List(#[cfg_attr(feature = "rkyv", rkyv(omit_bounds))] Vec<Value>),
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct Regex {
-    pub regex: fancy_regex::Regex,
+    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
+    #[cfg_attr(any(test, feature = "serde"), serde(skip, default))]
+    pub regex: LazyRegex,
     pub expr: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+pub struct LazyRegex(pub Arc<ArcSwap<Option<fancy_regex::Regex>>>);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum VariableType {
     Local(usize),
     Match(usize),
@@ -103,13 +148,29 @@ pub enum VariableType {
     Part(MessagePart),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Transform {
     pub variable: Box<VariableType>,
     pub functions: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct HeaderVariable {
     pub name: Vec<HeaderName<'static>>,
     pub part: HeaderPart,
@@ -117,7 +178,15 @@ pub struct HeaderVariable {
     pub index_part: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum MessagePart {
     TextBody(bool),
     HtmlBody(bool),
@@ -125,7 +194,15 @@ pub enum MessagePart {
     Raw,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum HeaderPart {
     Text,
     Date,
@@ -138,14 +215,30 @@ pub enum HeaderPart {
     Exists,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum ContentTypePart {
     Type,
     Subtype,
     Attribute(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum ReceivedPart {
     From(ReceivedHostname),
     FromIp,
@@ -162,14 +255,30 @@ pub enum ReceivedPart {
     DateRaw,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum ReceivedHostname {
     Name,
     Ip,
     Any,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Number {
     Integer(i64),
     Float(f64),
@@ -350,28 +459,6 @@ impl PartialEq for Regex {
 
 impl Eq for Regex {}
 
-impl Serialize for Regex {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.expr.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for Regex {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        <String>::deserialize(deserializer).and_then(|expr| {
-            fancy_regex::Regex::new(&expr)
-                .map(|regex| Regex { regex, expr })
-                .map_err(|err| serde::de::Error::custom(err.to_string()))
-        })
-    }
-}
-
 impl TokenInfo {
     pub fn expected(self, expected: impl Into<Cow<'static, str>>) -> CompileError {
         CompileError {
@@ -397,6 +484,21 @@ impl TokenInfo {
             line_num: self.line_num,
             line_pos: self.line_pos,
             error_type,
+        }
+    }
+}
+
+impl Default for LazyRegex {
+    fn default() -> Self {
+        Self(Arc::new(ArcSwap::new(Arc::new(None))))
+    }
+}
+
+impl Regex {
+    pub fn new(expr: String, regex: fancy_regex::Regex) -> Self {
+        Self {
+            expr,
+            regex: LazyRegex(Arc::new(ArcSwap::new(Arc::new(Some(regex))))),
         }
     }
 }

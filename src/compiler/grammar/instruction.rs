@@ -5,7 +5,6 @@
  */
 
 use ahash::{AHashMap, AHashSet};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     compiler::{
@@ -37,7 +36,15 @@ use super::{
 
 use super::tests::test_ihave::Error;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) enum Instruction {
     Require(Vec<Capability>),
     Keep(Keep),
@@ -815,8 +822,8 @@ impl Compiler {
 
         Ok(Sieve {
             instructions: state.instructions,
-            num_vars,
-            num_match_vars: state.vars_match_max,
+            num_vars: num_vars as u32,
+            num_match_vars: state.vars_match_max as u32,
         })
     }
 }

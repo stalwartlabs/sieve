@@ -113,7 +113,7 @@ impl DeleteHeader {
                 }
 
                 if header.offset_end != 0 {
-                    deleted_bytes += header.offset_end - header.offset_field;
+                    deleted_bytes += (header.offset_end - header.offset_field) as usize;
                 } else {
                     deleted_bytes += header.name.as_str().len() + header.value.len() + 4;
                 }
@@ -126,7 +126,9 @@ impl DeleteHeader {
         if !deleted_headers.is_empty() {
             ctx.has_changes = true;
             for (part_id, header_pos) in deleted_headers.iter().rev() {
-                ctx.message.parts[*part_id].headers.remove(*header_pos);
+                ctx.message.parts[*part_id as usize]
+                    .headers
+                    .remove(*header_pos);
             }
         }
 
@@ -157,7 +159,7 @@ impl RemoveCrLf for &str {
 impl<'x> Context<'x> {
     pub(crate) fn insert_header(
         &mut self,
-        part_id: usize,
+        part_id: u32,
         header_name: HeaderName<'x>,
         header_value: impl Into<Cow<'static, str>>,
         last: bool,
@@ -173,9 +175,11 @@ impl<'x> Context<'x> {
         };
 
         if !last {
-            self.message.parts[part_id].headers.insert(0, header);
+            self.message.parts[part_id as usize]
+                .headers
+                .insert(0, header);
         } else {
-            self.message.parts[part_id].headers.push(header);
+            self.message.parts[part_id as usize].headers.push(header);
         }
     }
 }

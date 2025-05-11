@@ -5,7 +5,7 @@
  */
 
 use mail_parser::HeaderName;
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::{
     grammar::instruction::{CompilerState, MapLocalVars},
@@ -15,7 +15,15 @@ use crate::compiler::{
 
 use crate::compiler::grammar::test::Test;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestDuplicate {
     pub handle: Option<Value>,
     pub dup_match: DupMatch,
@@ -24,7 +32,15 @@ pub(crate) struct TestDuplicate {
     pub is_not: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) enum DupMatch {
     Header(Value),
     UniqueId(Value),

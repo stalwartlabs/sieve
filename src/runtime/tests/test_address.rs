@@ -205,7 +205,7 @@ impl Context<'_> {
                 let bytes = if header.offset_end > 0 {
                     self.message
                         .raw_message
-                        .get(header.offset_start..header.offset_end)
+                        .get(header.offset_start as usize..header.offset_end as usize)
                         .unwrap_or(b"")
                 } else if let HeaderValue::Text(text) = &header.value {
                     // Inserted header

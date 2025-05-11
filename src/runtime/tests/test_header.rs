@@ -126,9 +126,9 @@ impl TestHeader {
                             MimeOpts::Param(params) => {
                                 if let HeaderValue::ContentType(ct) = &header.value {
                                     if let Some(attributes) = &ct.attributes {
-                                        for (attr_name, _) in attributes {
+                                        for attr in attributes {
                                             if params.iter().any(|p| {
-                                                p.to_string().eq_ignore_ascii_case(attr_name)
+                                                p.to_string().eq_ignore_ascii_case(&attr.name)
                                             }) {
                                                 count += 1;
                                             }
@@ -217,7 +217,7 @@ impl Context<'_> {
         header_names: &[HeaderName],
         index: Option<i32>,
         any_child: bool,
-        mut visitor_fnc: impl FnMut(&Header, usize, usize) -> bool,
+        mut visitor_fnc: impl FnMut(&Header, u32, usize) -> bool,
     ) -> bool {
         let parts = [self.part];
         let mut part_iter = SubpartIterator::new(self, &parts, any_child);
@@ -322,7 +322,7 @@ impl Context<'_> {
                 if let HeaderValue::Text(text) = MessageStream::new(
                     self.message
                         .raw_message
-                        .get(header.offset_start..header.offset_end)
+                        .get(header.offset_start as usize..header.offset_end as usize)
                         .unwrap_or(b""),
                 )
                 .parse_unstructured()
@@ -346,9 +346,9 @@ impl Context<'_> {
             (MimeOpts::Param(params), HeaderValue::ContentType(ct)) => {
                 if let Some(attributes) = &ct.attributes {
                     for param in params {
-                        for (attr_name, attr_value) in attributes {
-                            if param.to_string().eq_ignore_ascii_case(attr_name)
-                                && visitor_fnc(attr_value.as_ref())
+                        for attr in attributes {
+                            if param.to_string().eq_ignore_ascii_case(&attr.name)
+                                && visitor_fnc(attr.value.as_ref())
                             {
                                 return true;
                             }

@@ -5,7 +5,7 @@
  */
 
 use mail_parser::HeaderName;
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::{
     grammar::{
@@ -18,7 +18,15 @@ use crate::compiler::{
 
 use crate::compiler::grammar::MatchType;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct AddHeader {
     pub last: bool,
     pub field_name: Value,
@@ -32,7 +40,15 @@ pub(crate) struct AddHeader {
                    [<value-patterns: string-list>]
 
 */
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct DeleteHeader {
     pub index: Option<i32>,
     pub comparator: Comparator,

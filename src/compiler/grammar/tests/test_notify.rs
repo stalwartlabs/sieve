@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability, Comparator},
@@ -14,7 +14,15 @@ use crate::compiler::{
 
 use crate::compiler::grammar::{test::Test, MatchType};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestNotifyMethodCapability {
     pub comparator: Comparator,
     pub match_type: MatchType,
@@ -24,7 +32,15 @@ pub(crate) struct TestNotifyMethodCapability {
     pub is_not: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestValidNotifyMethod {
     pub notification_uris: Vec<Value>,
     pub is_not: bool,

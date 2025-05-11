@@ -6,8 +6,6 @@
 
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
-
 use self::{expr::Expression, instruction::CompilerState};
 
 use super::{
@@ -21,7 +19,15 @@ pub mod instruction;
 pub mod test;
 pub mod tests;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Capability {
     Envelope,
     EnvelopeDsn,
@@ -74,7 +80,15 @@ pub enum Capability {
     While,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum AddressPart {
     LocalPart,
     Domain,
@@ -84,7 +98,15 @@ pub enum AddressPart {
     Name,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) enum MatchType {
     Is,
     Contains,
@@ -95,7 +117,15 @@ pub(crate) enum MatchType {
     List,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) enum RelationalMatch {
     Gt,
     Ge,
@@ -105,7 +135,15 @@ pub(crate) enum RelationalMatch {
     Ne,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Comparator {
     Elbonia,
     Octet,
@@ -114,21 +152,45 @@ pub enum Comparator {
     Other(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Clear {
     pub(crate) local_vars_idx: u32,
     pub(crate) local_vars_num: u32,
     pub(crate) match_vars: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Invalid {
     pub(crate) name: String,
     pub(crate) line_num: usize,
     pub(crate) line_pos: usize,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Clone)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct While {
     pub expr: Vec<Expression>,
     pub jz_pos: usize,
@@ -427,10 +489,7 @@ impl CompilerState<'_> {
                 if let Value::Text(expr) = key {
                     match fancy_regex::Regex::new(expr) {
                         Ok(regex) => {
-                            *key = Value::Regex(Regex {
-                                regex,
-                                expr: expr.to_string(),
-                            });
+                            *key = Value::Regex(Regex::new(expr.to_string(), regex));
                         }
                         Err(err) => {
                             return Err(self

@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use serde::{Deserialize, Serialize};
-
 use crate::compiler::{
     grammar::{
         instruction::{CompilerState, Instruction},
@@ -15,7 +13,15 @@ use crate::compiler::{
     CompileError, Value,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct FileInto {
     pub copy: bool,
     pub create: bool,

@@ -5,7 +5,7 @@
  */
 
 use mail_parser::HeaderName;
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, Capability},
@@ -15,7 +15,15 @@ use crate::compiler::{
 
 use crate::compiler::grammar::test::Test;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestExists {
     pub header_names: Vec<Value>,
     pub mime_anychild: bool,

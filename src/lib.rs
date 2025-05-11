@@ -16,19 +16,26 @@ use compiler::grammar::{
 };
 use mail_parser::{HeaderName, Message};
 use runtime::{context::ScriptStack, Variable};
-use serde::{Deserialize, Serialize};
 
 pub mod compiler;
 pub mod runtime;
 
-pub(crate) const MAX_MATCH_VARIABLES: usize = 63;
-pub(crate) const MAX_LOCAL_VARIABLES: usize = 256;
+pub(crate) const MAX_MATCH_VARIABLES: u32 = 63;
+pub(crate) const MAX_LOCAL_VARIABLES: u32 = 256;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub struct Sieve {
     instructions: Vec<Instruction>,
-    num_vars: usize,
-    num_match_vars: usize,
+    num_vars: u32,
+    num_match_vars: u32,
 }
 
 #[derive(Clone)]
@@ -101,9 +108,9 @@ pub struct Context<'x> {
     pub(crate) envelope: Vec<(Envelope, Variable)>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
-    pub(crate) part: usize,
-    pub(crate) part_iter: IntoIter<usize>,
-    pub(crate) part_iter_stack: Vec<(usize, IntoIter<usize>)>,
+    pub(crate) part: u32,
+    pub(crate) part_iter: IntoIter<u32>,
+    pub(crate) part_iter_stack: Vec<(u32, IntoIter<u32>)>,
 
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,
@@ -136,7 +143,15 @@ pub enum Script {
     Global(String),
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Envelope {
     From,
     To,
@@ -150,7 +165,15 @@ pub enum Envelope {
     Envid,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub enum Metadata<T> {
     Server { annotation: T },
     Mailbox { name: T, annotation: T },
@@ -225,7 +248,15 @@ pub enum Event {
 
 pub type ExternalId = u32;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
     pub mailbox_id: Option<T>,

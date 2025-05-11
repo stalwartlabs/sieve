@@ -100,11 +100,11 @@ impl<'x> Context<'x> {
                         prev_pos: self.pos,
                         prev_vars_local: std::mem::replace(
                             &mut self.vars_local,
-                            vec![Variable::default(); num_vars],
+                            vec![Variable::default(); num_vars as usize],
                         ),
                         prev_vars_match: std::mem::replace(
                             &mut self.vars_match,
-                            vec![Variable::default(); num_match_vars],
+                            vec![Variable::default(); num_match_vars as usize],
                         ),
                     });
                     self.pos = 0;
@@ -328,11 +328,11 @@ impl<'x> Context<'x> {
                                 prev_pos: self.pos,
                                 prev_vars_local: std::mem::replace(
                                     &mut self.vars_local,
-                                    vec![Variable::default(); script.num_vars],
+                                    vec![Variable::default(); script.num_vars as usize],
                                 ),
                                 prev_vars_match: std::mem::replace(
                                     &mut self.vars_match,
-                                    vec![Variable::default(); script.num_match_vars],
+                                    vec![Variable::default(); script.num_match_vars as usize],
                                 ),
                             });
                             self.pos = 0;
@@ -637,7 +637,7 @@ impl<'x> Context<'x> {
         &self.message
     }
 
-    pub fn part(&self) -> usize {
+    pub fn part(&self) -> u32 {
         self.part
     }
 }

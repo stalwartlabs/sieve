@@ -8,18 +8,14 @@ pub mod actions;
 pub mod context;
 pub mod eval;
 pub mod expression;
-pub mod serialize;
 pub mod tests;
 pub mod variables;
 
-use std::{borrow::Cow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
-
 use ahash::{AHashMap, AHashSet};
+use mail_parser::HeaderName;
 #[cfg(not(test))]
 use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
-
-use mail_parser::HeaderName;
-use serde::{Deserialize, Serialize};
+use std::{borrow::Cow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
 
 #[cfg(not(test))]
 use crate::Context;
@@ -34,7 +30,11 @@ use crate::{
 
 use self::eval::ToString;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub enum Variable {
     String(Arc<String>),
     Integer(i64),

@@ -220,10 +220,14 @@
           ],
           "key_list": [
             {
-              "Regex": "stephan(\\+.*)?@it\\.example\\.com"
+              "Regex": {
+                "expr": "stephan(\\+.*)?@it\\.example\\.com"
+              }
             },
             {
-              "Regex": "stephan(\\+.*)?@friep\\.example\\.com"
+              "Regex": {
+                "expr": "stephan(\\+.*)?@friep\\.example\\.com"
+              }
             }
           ],
           "address_part": "All",

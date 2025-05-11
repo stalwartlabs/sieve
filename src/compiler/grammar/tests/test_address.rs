@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::{
     grammar::{instruction::CompilerState, test::Test, Capability, Comparator},
@@ -14,7 +14,15 @@ use crate::compiler::{
 
 use crate::compiler::grammar::{AddressPart, MatchType};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestAddress {
     pub header_list: Vec<Value>,
     pub key_list: Vec<Value>,

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use serde::{Deserialize, Serialize};
+
 
 use crate::compiler::grammar::instruction::CompilerState;
 use crate::compiler::CompileError;
@@ -12,7 +12,15 @@ use crate::compiler::Value;
 
 use crate::compiler::grammar::test::Test;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
 pub(crate) struct TestValidExtList {
     pub list_names: Vec<Value>,
     pub is_not: bool,
