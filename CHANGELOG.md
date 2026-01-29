@@ -1,3 +1,8 @@
+sieve-rs 0.7.1
+================================
+- Bump `fancy-regex` dependency to 0.17.0.
+- Fixed `rkyv` serialization lifetimes for rustc 1.93.0.
+
 sieve-rs 0.7.0
 ================================
 - Added `rkyv` support.

@@ -40,7 +40,7 @@ pub(crate) enum StringConstant {
 }
 
 impl StringConstant {
-    pub fn to_string(&self) -> Cow<str> {
+    pub fn to_string(&'_ self) -> Cow<'_, str> {
         match self {
             StringConstant::String(s) => s.as_str().into(),
             StringConstant::Number(n) => n.to_string().into(),

@@ -18,7 +18,7 @@ use crate::{
 use super::glob::GlobPattern;
 
 pub(crate) trait Comparable {
-    fn to_str(&self) -> Cow<str>;
+    fn to_str(&'_ self) -> Cow<'_, str>;
     fn to_number(&self) -> Number;
 }
 
@@ -138,7 +138,7 @@ fn eval_regex(
 }
 
 impl Comparable for Variable {
-    fn to_str(&self) -> Cow<str> {
+    fn to_str(&'_ self) -> Cow<'_, str> {
         self.to_string()
     }
 
@@ -148,7 +148,7 @@ impl Comparable for Variable {
 }
 
 impl Comparable for &str {
-    fn to_str(&self) -> Cow<str> {
+    fn to_str(&'_ self) -> Cow<'_, str> {
         (*self).into()
     }
 

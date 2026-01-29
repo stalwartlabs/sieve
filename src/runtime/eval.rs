@@ -204,8 +204,8 @@ impl<'x> Context<'x> {
     }
 }
 
-impl HeaderVariable {
-    fn eval_part<'x>(&self, header: &'x Header<'x>, raw: &'x [u8], result: &mut Vec<Variable>) {
+impl<'x> HeaderVariable<'x> {
+    fn eval_part(&self, header: &'x Header<'x>, raw: &'x [u8], result: &mut Vec<Variable>) {
         let var = match &self.part {
             HeaderPart::Text => match &header.value {
                 HeaderValue::Text(v) if self.include_single_part() => {

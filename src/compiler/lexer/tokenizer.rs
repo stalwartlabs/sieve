@@ -426,7 +426,7 @@ impl Iterator for Tokenizer<'_> {
                         return Some(Err(self.invalid_character()));
                     }
                 },
-                State::BracketComment { .. } => match ch {
+                State::BracketComment => match ch {
                     b'/' if last_ch == b'*' => {
                         self.state = State::None;
                     }

@@ -144,7 +144,7 @@ pub enum VariableType {
     Global(String),
     Environment(String),
     Envelope(Envelope),
-    Header(HeaderVariable),
+    Header(HeaderVariable<'static>),
     Part(MessagePart),
 }
 
@@ -171,8 +171,8 @@ pub struct Transform {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
-pub struct HeaderVariable {
-    pub name: Vec<HeaderName<'static>>,
+pub struct HeaderVariable<'x> {
+    pub name: Vec<HeaderName<'x>>,
     pub part: HeaderPart,
     pub index_hdr: i32,
     pub index_part: i32,
