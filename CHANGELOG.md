@@ -1,6 +1,6 @@
 sieve-rs 0.7.2
 ================================
-
+- Fix: `replace` action adds additional `From` header.
 
 sieve-rs 0.7.1
 ================================
