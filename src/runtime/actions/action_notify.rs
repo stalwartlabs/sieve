@@ -295,10 +295,8 @@ pub fn validate_from(addr: &str) -> bool {
 
     for &ch in addr.as_bytes().iter() {
         match ch {
-            b'\"' => {
-                if last_ch != b'\\' {
-                    in_quote = !in_quote;
-                }
+            b'\"' if last_ch != b'\\' => {
+                in_quote = !in_quote;
             }
             b'<' if !in_quote => {
                 if !in_angle {

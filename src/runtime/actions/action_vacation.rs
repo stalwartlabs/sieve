@@ -38,15 +38,11 @@ impl TestVacation {
                     Envelope::From => {
                         from = value.to_string().to_ascii_lowercase();
                     }
-                    Envelope::To => {
-                        if !ctx.runtime.vacation_use_orig_rcpt {
-                            user_addresses.push(value.to_string());
-                        }
+                    Envelope::To if !ctx.runtime.vacation_use_orig_rcpt => {
+                        user_addresses.push(value.to_string());
                     }
-                    Envelope::Orcpt => {
-                        if ctx.runtime.vacation_use_orig_rcpt {
-                            user_addresses.push(value.to_string());
-                        }
+                    Envelope::Orcpt if ctx.runtime.vacation_use_orig_rcpt => {
+                        user_addresses.push(value.to_string());
                     }
                     _ => (),
                 }
@@ -210,21 +206,18 @@ impl Vacation {
                 HeaderName::MessageId => {
                     message_id = header.value.as_text();
                 }
-                HeaderName::References => {
-                    if header.offset_start > 0 {
-                        references = (&ctx.message.raw_message
-                            [header.offset_start as usize..header.offset_end as usize])
-                            .into();
-                    }
+                HeaderName::References if header.offset_start > 0 => {
+                    references = (&ctx.message.raw_message
+                        [header.offset_start as usize..header.offset_end as usize])
+                        .into();
                 }
-                HeaderName::From | HeaderName::Sender => {
+                HeaderName::From | HeaderName::Sender
                     if matches!(&header.value, HeaderValue::Address(address) if address.contains(vacation_to.as_ref()))
-                        && header.offset_start > 0
-                    {
-                        vacation_to_full = (&ctx.message.raw_message
-                            [header.offset_start as usize..header.offset_end as usize])
-                            .into();
-                    }
+                        && header.offset_start > 0 =>
+                {
+                    vacation_to_full = (&ctx.message.raw_message
+                        [header.offset_start as usize..header.offset_end as usize])
+                        .into();
                 }
                 _ => (),
             }

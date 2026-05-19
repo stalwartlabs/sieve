@@ -14,8 +14,7 @@ use crate::{
 impl Redirect {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         if let Some(address) = sanitize_address(ctx.eval_value(&self.address).to_string().as_ref())
-        {
-            if ctx.num_redirects < ctx.runtime.max_redirects
+            && ctx.num_redirects < ctx.runtime.max_redirects
                 && ctx.num_out_messages < ctx.runtime.max_out_messages
                 && ctx.message.parts[0]
                     .headers
@@ -82,7 +81,6 @@ impl Redirect {
                 });
                 ctx.queued_events = events.into_iter();
             }
-        }
     }
 }
 

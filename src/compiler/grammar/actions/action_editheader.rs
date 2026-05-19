@@ -6,14 +6,13 @@
 
 use mail_parser::HeaderName;
 
-
 use crate::compiler::{
-    grammar::{
-        instruction::{CompilerState, Instruction},
-        Capability, Comparator,
-    },
-    lexer::{word::Word, Token},
     CompileError, ErrorType, Value,
+    grammar::{
+        Capability, Comparator,
+        instruction::{CompilerState, Instruction},
+    },
+    lexer::{Token, word::Word},
 };
 
 use crate::compiler::grammar::MatchType;
@@ -74,13 +73,13 @@ impl CompilerState<'_> {
                 _ => {
                     let string = self.parse_string_token(token_info)?;
                     if field_name.is_none() {
-                        if let Value::Text(header_name) = &string {
-                            if HeaderName::parse(header_name.as_ref()).is_none() {
-                                return Err(self
-                                    .tokens
-                                    .unwrap_next()?
-                                    .custom(ErrorType::InvalidHeaderName));
-                            }
+                        if let Value::Text(header_name) = &string
+                            && HeaderName::parse(header_name.as_ref()).is_none()
+                        {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
                         }
 
                         field_name = string.into();
@@ -173,13 +172,13 @@ impl CompilerState<'_> {
                 }
                 _ => {
                     field_name = self.parse_string_token(token_info)?;
-                    if let Value::Text(header_name) = &field_name {
-                        if HeaderName::parse(header_name.as_ref()).is_none() {
-                            return Err(self
-                                .tokens
-                                .unwrap_next()?
-                                .custom(ErrorType::InvalidHeaderName));
-                        }
+                    if let Value::Text(header_name) = &field_name
+                        && HeaderName::parse(header_name.as_ref()).is_none()
+                    {
+                        return Err(self
+                            .tokens
+                            .unwrap_next()?
+                            .custom(ErrorType::InvalidHeaderName));
                     }
                     break;
                 }

@@ -235,19 +235,17 @@ impl<'x> Context<'x> {
                 .message
                 .raw_message
                 .get(header.offset_start as usize..header.offset_end as usize)?;
-            if let HeaderValue::DateTime(dt) = MessageStream::new(bytes).parse_date() {
-                if dt.is_valid() {
+            if let HeaderValue::DateTime(dt) = MessageStream::new(bytes).parse_date()
+                && dt.is_valid() {
                     return Some(Cow::Owned(dt));
                 }
-            }
         } else if let HeaderValue::Text(text) = &header.value {
             // Inserted header
             let bytes = format!("{text}\n").into_bytes();
-            if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date() {
-                if dt.is_valid() {
+            if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date()
+                && dt.is_valid() {
                     return Some(Cow::Owned(dt));
                 }
-            }
         }
         None
     }

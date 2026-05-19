@@ -244,10 +244,8 @@ impl CompilerState<'_> {
                         d_count -= 1;
                     }
                 }
-                Token::Comma => {
-                    if d_count == 0 {
-                        break;
-                    }
+                Token::Comma if d_count == 0 => {
+                    break;
                 }
                 Token::CurlyOpen => {
                     break;
@@ -275,15 +273,14 @@ impl CompilerState<'_> {
             Word::List => Ok(MatchType::List),
             _ => {
                 let token_info = self.tokens.unwrap_next()?;
-                if let Token::StringConstant(text) = &token_info.token {
-                    if let Some(relational) = lookup_relational(text.to_string().as_ref()) {
+                if let Token::StringConstant(text) = &token_info.token
+                    && let Some(relational) = lookup_relational(text.to_string().as_ref()) {
                         return Ok(if word == Word::Value {
                             MatchType::Value(relational)
                         } else {
                             MatchType::Count(relational)
                         });
                     }
-                }
                 Err(token_info.expected("relational match"))
             }
         }
@@ -464,15 +461,14 @@ impl CompilerState<'_> {
             } else {
             }
         }
-        if let Some(capability) = capability {
-            if !self.has_capability(&capability) {
+        if let Some(capability) = capability
+            && !self.has_capability(&capability) {
                 return Err(CompileError {
                     line_num,
                     line_pos,
                     error_type: ErrorType::UndeclaredCapability(capability),
                 });
             }
-        }
 
         Ok(())
     }

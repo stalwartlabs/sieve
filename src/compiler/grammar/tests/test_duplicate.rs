@@ -69,14 +69,13 @@ impl CompilerState<'_> {
                     self.validate_argument(2, None, line_num, line_pos)?;
                     self.tokens.next();
                     let header = self.parse_string()?;
-                    if let Value::Text(header_name) = &header {
-                        if HeaderName::parse(header_name.as_ref()).is_none() {
+                    if let Value::Text(header_name) = &header
+                        && HeaderName::parse(header_name.as_ref()).is_none() {
                             return Err(self
                                 .tokens
                                 .unwrap_next()?
                                 .custom(ErrorType::InvalidHeaderName));
                         }
-                    }
                     dup_match = DupMatch::Header(header);
                 }
                 Token::Tag(Word::UniqueId) => {

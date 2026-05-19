@@ -27,24 +27,19 @@ impl TestDuplicate {
                                 .message
                                 .raw_message
                                 .get(header.offset_start as usize..header.offset_end as usize)
-                            {
-                                if let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
-                                {
-                                    if !id.is_empty() {
+                                && let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
+                                    && !id.is_empty() {
                                         value = id.to_string();
                                         return true;
                                     }
-                                }
-                            }
                         } else if let HeaderValue::Text(text) = &header.value {
                             // Inserted header
                             let bytes = format!("{text}\n").into_bytes();
-                            if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id() {
-                                if !id.is_empty() {
+                            if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id()
+                                && !id.is_empty() {
                                     value = id.to_string();
                                     return true;
                                 }
-                            }
                         }
                         false
                     });

@@ -5,12 +5,12 @@
  */
 
 use crate::compiler::{
+    CompileError,
     grammar::{
-        instruction::{CompilerState, Instruction},
         Capability,
+        instruction::{CompilerState, Instruction},
     },
     lexer::Token,
-    CompileError,
 };
 
 impl CompilerState<'_> {
@@ -24,11 +24,11 @@ impl CompilerState<'_> {
             capabilities.push(capability.clone());
             self.block.capabilities.insert(capability);
 
-            if let Some(capability) = parent_capability {
-                if !self.has_capability(&capability) {
-                    capabilities.push(capability.clone());
-                    self.block.capabilities.insert(capability);
-                }
+            if let Some(capability) = parent_capability
+                && !self.has_capability(&capability)
+            {
+                capabilities.push(capability.clone());
+                self.block.capabilities.insert(capability);
             }
         }
     }

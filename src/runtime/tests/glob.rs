@@ -87,12 +87,10 @@ impl GlobPattern {
                         continue;
                     }
                 }
-                Some(PatternChar::WildcardSingle { .. }) => {
-                    if nx < value.len() {
-                        px += 1;
-                        nx += 1;
-                        continue;
-                    }
+                Some(PatternChar::WildcardSingle { .. }) if nx < value.len() => {
+                    px += 1;
+                    nx += 1;
+                    continue;
                 }
                 Some(PatternChar::WildcardMany { .. }) => {
                     next_px = px;
@@ -156,13 +154,11 @@ impl GlobPattern {
                         continue;
                     }
                 }
-                Some(PatternChar::WildcardSingle { match_pos }) => {
-                    if nx < value.len() {
-                        *match_pos = nx;
-                        px += 1;
-                        nx += 1;
-                        continue;
-                    }
+                Some(PatternChar::WildcardSingle { match_pos }) if nx < value.len() => {
+                    *match_pos = nx;
+                    px += 1;
+                    nx += 1;
+                    continue;
                 }
                 Some(PatternChar::WildcardMany { match_pos, .. }) => {
                     *match_pos = nx;
@@ -189,16 +185,16 @@ impl GlobPattern {
         }
 
         let mut wildcard_pos: usize = 1;
-        for item in &self.pattern {
+        for item in &mut self.pattern {
             if wildcard_pos <= MAX_MATCH_VARIABLES as usize {
                 last_pos = match item {
-                    PatternChar::WildcardMany { mut num, match_pos } => {
-                        while num > 1 {
+                    PatternChar::WildcardMany { num, match_pos } => {
+                        while *num > 1 {
                             if capture_positions & (1 << wildcard_pos) != 0 {
                                 captured_values.push((wildcard_pos, String::with_capacity(0)));
                             }
                             wildcard_pos += 1;
-                            num -= 1;
+                            *num -= 1;
                         }
 
                         if capture_positions & (1 << wildcard_pos) != 0 {
@@ -222,7 +218,7 @@ impl GlobPattern {
                             }
                         }
                         wildcard_pos += 1;
-                        match_pos
+                        *match_pos
                     }
                     PatternChar::WildcardSingle { match_pos } => {
                         if capture_positions & (1 << wildcard_pos) != 0 {
@@ -242,9 +238,9 @@ impl GlobPattern {
                             }
                         }
                         wildcard_pos += 1;
-                        match_pos
+                        *match_pos
                     }
-                    PatternChar::Char { match_pos, .. } => match_pos,
+                    PatternChar::Char { match_pos, .. } => *match_pos,
                 } + 1;
             } else {
                 break;

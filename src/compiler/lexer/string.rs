@@ -88,45 +88,39 @@ impl CompilerState<'_> {
                         var_has_namespace = true;
                     }
                     b'0'..=b'9' => {}
-                    b'}' => {
-                        if pos > var_start_pos {
-                            // Add any text before the variable
-                            if !decode_buf.is_empty() {
-                                self.add_value(
-                                    &mut items,
-                                    &decode_buf,
-                                    parse_decoded,
-                                    text_has_digits,
-                                    text_has_dots,
-                                )?;
-                                decode_buf.clear();
-                                text_has_digits = true;
-                                text_has_dots = false;
-                            }
-
-                            // Parse variable type
-                            let var_name = std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
-                            let var_type = if !var_is_number {
-                                self.parse_variable(var_name, var_has_namespace)
-                            } else {
-                                self.parse_match_variable(var_name)
-                            };
-
-                            match var_type {
-                                Ok(Some(var)) => items.push(Value::Variable(var)),
-                                Ok(None) => {}
-                                Err(
-                                    ErrorType::InvalidNamespace(_) | ErrorType::InvalidEnvelope(_),
-                                ) => {
-                                    is_var_error = true;
-                                }
-                                Err(e) => return Err(e),
-                            }
-
-                            state = State::None;
-                        } else {
-                            is_var_error = true;
+                    b'}' if pos > var_start_pos => {
+                        // Add any text before the variable
+                        if !decode_buf.is_empty() {
+                            self.add_value(
+                                &mut items,
+                                &decode_buf,
+                                parse_decoded,
+                                text_has_digits,
+                                text_has_dots,
+                            )?;
+                            decode_buf.clear();
+                            text_has_digits = true;
+                            text_has_dots = false;
                         }
+
+                        // Parse variable type
+                        let var_name = std::str::from_utf8(&bytes[var_start_pos..pos]).unwrap();
+                        let var_type = if !var_is_number {
+                            self.parse_variable(var_name, var_has_namespace)
+                        } else {
+                            self.parse_match_variable(var_name)
+                        };
+
+                        match var_type {
+                            Ok(Some(var)) => items.push(Value::Variable(var)),
+                            Ok(None) => {}
+                            Err(ErrorType::InvalidNamespace(_) | ErrorType::InvalidEnvelope(_)) => {
+                                is_var_error = true;
+                            }
+                            Err(e) => return Err(e),
+                        }
+
+                        state = State::None;
                     }
                     b':' => {
                         if parse_decoded && !var_has_namespace {
@@ -208,11 +202,9 @@ impl CompilerState<'_> {
                 if let State::Encoded {
                     initial_buf_size, ..
                 } = state
-                {
-                    if initial_buf_size != decode_buf.len() {
+                    && initial_buf_size != decode_buf.len() {
                         decode_buf.truncate(initial_buf_size);
                     }
-                }
                 decode_buf.extend_from_slice(&bytes[var_start_pos - 2..pos + 1]);
                 hex_start = usize::MAX;
                 state = State::None;

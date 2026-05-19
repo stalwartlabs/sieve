@@ -27,16 +27,15 @@ impl TestValidNotifyMethod {
         for uri in &self.notification_uris {
             let uri_ = ctx.eval_value(uri);
             let uri = uri_.to_string();
-            if let Some(scheme) = validate_uri(uri.as_ref()) {
-                if ctx
+            if let Some(scheme) = validate_uri(uri.as_ref())
+                && (ctx
                     .runtime
                     .valid_notification_uris
                     .contains(&Cow::from(scheme))
-                    || ctx.runtime.valid_notification_uris.contains(&uri)
+                    || ctx.runtime.valid_notification_uris.contains(&uri))
                 {
                     num_valid += 1;
                 }
-            }
         }
 
         TestResult::Bool((num_valid == self.notification_uris.len()) ^ self.is_not)

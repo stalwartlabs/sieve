@@ -61,14 +61,13 @@ impl CompilerState<'_> {
                 _ => {
                     let headers = self.parse_strings_token(token_info)?;
                     for header in &headers {
-                        if let Value::Text(header_name) = &header {
-                            if HeaderName::parse(header_name.as_ref()).is_none() {
+                        if let Value::Text(header_name) = &header
+                            && HeaderName::parse(header_name.as_ref()).is_none() {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
                                     .custom(ErrorType::InvalidHeaderName));
                             }
-                        }
                     }
                     header_names = headers.into();
                 }

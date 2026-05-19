@@ -85,8 +85,8 @@ impl Replace {
 
             // Add From
             let mut add_from = true;
-            if let Some(from) = self.from.as_ref().map(|f| ctx.eval_value(f)) {
-                if !from.is_empty() {
+            if let Some(from) = self.from.as_ref().map(|f| ctx.eval_value(f))
+                && !from.is_empty() {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("From".into()),
@@ -97,7 +97,6 @@ impl Replace {
                     );
                     add_from = false;
                 }
-            }
             if add_from {
                 ctx.insert_header(
                     0,
@@ -108,8 +107,8 @@ impl Replace {
             }
 
             // Add Subject
-            if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_value(f)) {
-                if !subject.is_empty() {
+            if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_value(f))
+                && !subject.is_empty() {
                     ctx.insert_header(
                         0,
                         HeaderName::Other("Subject".into()),
@@ -120,7 +119,6 @@ impl Replace {
                         true,
                     );
                 }
-            }
 
             // Add Date
             if add_date {
@@ -245,9 +243,9 @@ impl Enclose {
             {
                 header_name = header_name.trim();
                 header_value = header_value.trim();
-                if !header_value.is_empty() {
-                    if let Some(name) = HeaderName::parse(header_name) {
-                        if !ctx.runtime.protected_headers.contains(&name) {
+                if !header_value.is_empty()
+                    && let Some(name) = HeaderName::parse(header_name)
+                        && !ctx.runtime.protected_headers.contains(&name) {
                             match &name {
                                 HeaderName::Date => {
                                     add_date = false;
@@ -268,8 +266,6 @@ impl Enclose {
                                 true,
                             );
                         }
-                    }
-                }
             }
         }
 
@@ -540,11 +536,10 @@ impl Context<'_> {
             }
         }
 
-        if last_offset > 0 {
-            if let Some(bytes) = current_message.raw_message.get(last_offset as usize..) {
+        if last_offset > 0
+            && let Some(bytes) = current_message.raw_message.get(last_offset as usize..) {
                 message.extend_from_slice(bytes);
             }
-        }
 
         message
     }

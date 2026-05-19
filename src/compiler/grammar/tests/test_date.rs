@@ -7,12 +7,12 @@
 use mail_parser::HeaderName;
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{word::Word, StringConstant, Token},
     CompileError, ErrorType, Number, Value,
+    grammar::{Capability, Comparator, instruction::CompilerState},
+    lexer::{StringConstant, Token, word::Word},
 };
 
-use crate::compiler::grammar::{test::Test, MatchType};
+use crate::compiler::grammar::{MatchType, test::Test};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -184,23 +184,22 @@ impl CompilerState<'_> {
                 _ => {
                     if header_name.is_none() {
                         let header = self.parse_string_token(token_info)?;
-                        if let Value::Text(header_name) = &header {
-                            if HeaderName::parse(header_name.as_ref()).is_none() {
-                                return Err(self
-                                    .tokens
-                                    .unwrap_next()?
-                                    .custom(ErrorType::InvalidHeaderName));
-                            }
+                        if let Value::Text(header_name) = &header
+                            && HeaderName::parse(header_name.as_ref()).is_none()
+                        {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
                         }
                         header_name = header.into();
                     } else if date_part.is_none() {
-                        if let Token::StringConstant(string) = &token_info.token {
-                            if let Some(date_part_) =
+                        if let Token::StringConstant(string) = &token_info.token
+                            && let Some(date_part_) =
                                 lookup_date_part(&string.to_string().to_ascii_lowercase())
-                            {
-                                date_part = date_part_.into();
-                                continue;
-                            }
+                        {
+                            date_part = date_part_.into();
+                            continue;
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {
@@ -272,13 +271,12 @@ impl CompilerState<'_> {
                 }
                 _ => {
                     if date_part.is_none() {
-                        if let Token::StringConstant(string) = &token_info.token {
-                            if let Some(date_part_) =
+                        if let Token::StringConstant(string) = &token_info.token
+                            && let Some(date_part_) =
                                 lookup_date_part(&string.to_string().to_ascii_lowercase())
-                            {
-                                date_part = date_part_.into();
-                                continue;
-                            }
+                        {
+                            date_part = date_part_.into();
+                            continue;
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {

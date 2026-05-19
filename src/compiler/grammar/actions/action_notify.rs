@@ -4,19 +4,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-
-
 use crate::{
+    FileCarbonCopy,
     compiler::{
-        grammar::{
-            instruction::{CompilerState, Instruction, MapLocalVars},
-            Capability,
-        },
-        lexer::{word::Word, Token},
         CompileError, ErrorType, Value,
+        grammar::{
+            Capability,
+            instruction::{CompilerState, Instruction, MapLocalVars},
+        },
+        lexer::{Token, word::Word},
     },
     runtime::actions::action_notify::{validate_from, validate_uri},
-    FileCarbonCopy,
 };
 
 /*
@@ -66,10 +64,10 @@ impl CompilerState<'_> {
                 Token::Tag(Word::From) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     let address = self.parse_string()?;
-                    if let Value::Text(address) = &address {
-                        if address.is_empty() || !validate_from(address) {
-                            return Err(token_info.custom(ErrorType::InvalidAddress));
-                        }
+                    if let Value::Text(address) = &address
+                        && (address.is_empty() || !validate_from(address))
+                    {
+                        return Err(token_info.custom(ErrorType::InvalidAddress));
                     }
                     from = address.into();
                 }
@@ -131,10 +129,10 @@ impl CompilerState<'_> {
                     flags = self.parse_strings(false)?;
                 }
                 _ => {
-                    if let Token::StringConstant(uri) = &token_info.token {
-                        if validate_uri(uri.to_string().as_ref()).is_none() {
-                            return Err(token_info.custom(ErrorType::InvalidURI));
-                        }
+                    if let Token::StringConstant(uri) = &token_info.token
+                        && validate_uri(uri.to_string().as_ref()).is_none()
+                    {
+                        return Err(token_info.custom(ErrorType::InvalidURI));
                     }
 
                     method = self.parse_string_token(token_info)?;

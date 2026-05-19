@@ -31,9 +31,9 @@ impl AddHeader {
             }
         }
 
-        if !header_name.is_empty() {
-            if let Some(header_name) = HeaderName::parse(header_name) {
-                if !ctx.runtime.protected_headers.contains(&header_name) {
+        if !header_name.is_empty()
+            && let Some(header_name) = HeaderName::parse(header_name)
+                && !ctx.runtime.protected_headers.contains(&header_name) {
                     ctx.has_changes = true;
                     ctx.insert_header(
                         ctx.part,
@@ -45,8 +45,6 @@ impl AddHeader {
                         self.last,
                     )
                 }
-            }
-        }
     }
 }
 

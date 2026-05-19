@@ -124,8 +124,8 @@ impl TestHeader {
                                 }
                             }
                             MimeOpts::Param(params) => {
-                                if let HeaderValue::ContentType(ct) = &header.value {
-                                    if let Some(attributes) = &ct.attributes {
+                                if let HeaderValue::ContentType(ct) = &header.value
+                                    && let Some(attributes) = &ct.attributes {
                                         for attr in attributes {
                                             if params.iter().any(|p| {
                                                 p.to_string().eq_ignore_ascii_case(&attr.name)
@@ -134,7 +134,6 @@ impl TestHeader {
                                             }
                                         }
                                     }
-                                }
                             }
                         }
 

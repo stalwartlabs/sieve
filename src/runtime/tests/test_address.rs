@@ -180,22 +180,20 @@ impl Context<'_> {
         match &header.value {
             HeaderValue::Address(Address::List(addr_list)) => {
                 for addr in addr_list {
-                    if let Some(addr) = part.eval(addr) {
-                        if visitor_fnc(addr) {
+                    if let Some(addr) = part.eval(addr)
+                        && visitor_fnc(addr) {
                             return true;
                         }
-                    }
                 }
                 false
             }
             HeaderValue::Address(Address::Group(group_list)) => {
                 for group in group_list {
                     for addr in &group.addresses {
-                        if let Some(addr) = part.eval(addr) {
-                            if visitor_fnc(addr) {
+                        if let Some(addr) = part.eval(addr)
+                            && visitor_fnc(addr) {
                                 return true;
                             }
-                        }
                     }
                 }
                 false
@@ -218,22 +216,20 @@ impl Context<'_> {
                 match MessageStream::new(bytes).parse_address() {
                     HeaderValue::Address(Address::List(addr_list)) => {
                         for addr in &addr_list {
-                            if let Some(addr) = part.eval(addr) {
-                                if visitor_fnc(addr) {
+                            if let Some(addr) = part.eval(addr)
+                                && visitor_fnc(addr) {
                                     return true;
                                 }
-                            }
                         }
                         false
                     }
                     HeaderValue::Address(Address::Group(group_list)) => {
                         for group in group_list {
                             for addr in &group.addresses {
-                                if let Some(addr) = part.eval(addr) {
-                                    if visitor_fnc(addr) {
+                                if let Some(addr) = part.eval(addr)
+                                    && visitor_fnc(addr) {
                                         return true;
                                     }
-                                }
                             }
                         }
                         false
