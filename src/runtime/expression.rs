@@ -6,9 +6,9 @@
 
 use std::{cmp::Ordering, fmt::Display};
 
-use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
 use crate::Event;
-use crate::{compiler::Number, runtime::Variable, Context};
+use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
+use crate::{Context, compiler::Number, runtime::Variable};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 

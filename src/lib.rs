@@ -10,12 +10,12 @@ use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{
+    Capability,
     actions::action_redirect::{ByTime, Notify, Ret},
     instruction::Instruction,
-    Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::{context::ScriptStack, Variable};
+use runtime::{Variable, context::ScriptStack};
 
 pub mod compiler;
 pub mod runtime;

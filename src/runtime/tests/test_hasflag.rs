@@ -5,11 +5,11 @@
  */
 
 use crate::{
-    compiler::{
-        grammar::{tests::test_hasflag::TestHasFlag, MatchType},
-        Number, VariableType,
-    },
     Context,
+    compiler::{
+        Number, VariableType,
+        grammar::{MatchType, tests::test_hasflag::TestHasFlag},
+    },
 };
 
 use super::TestResult;

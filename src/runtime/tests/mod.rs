@@ -5,8 +5,8 @@
  */
 
 use crate::{
-    compiler::grammar::{test::Test, Capability},
     Context, Event, Mailbox,
+    compiler::grammar::{Capability, test::Test},
 };
 
 use super::RuntimeError;

@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-
-
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{tokenizer::TokenInfo, word::Word, Token},
     CompileError, ErrorType, Value, VariableType,
+    grammar::{Capability, Comparator, instruction::CompilerState},
+    lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
 
-use crate::compiler::grammar::{test::Test, MatchType};
+use crate::compiler::grammar::{MatchType, test::Test};
 
 /*
    Usage: hasflag [MATCH-TYPE] [COMPARATOR]
@@ -111,7 +109,7 @@ impl CompilerState<'_> {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
-                                    .custom(ErrorType::ExpectedConstantString))
+                                    .custom(ErrorType::ExpectedConstantString));
                             }
                         }
                     }

@@ -6,17 +6,17 @@
 
 use std::borrow::Cow;
 
-use mail_parser::{parsers::MessageStream, DateTime, Header, HeaderValue};
+use mail_parser::{DateTime, Header, HeaderValue, parsers::MessageStream};
 
 use crate::{
-    compiler::{
-        grammar::{
-            tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
-            MatchType,
-        },
-        Number,
-    },
     Context, Event,
+    compiler::{
+        Number,
+        grammar::{
+            MatchType,
+            tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
+        },
+    },
 };
 
 use super::TestResult;
@@ -236,16 +236,18 @@ impl<'x> Context<'x> {
                 .raw_message
                 .get(header.offset_start as usize..header.offset_end as usize)?;
             if let HeaderValue::DateTime(dt) = MessageStream::new(bytes).parse_date()
-                && dt.is_valid() {
-                    return Some(Cow::Owned(dt));
-                }
+                && dt.is_valid()
+            {
+                return Some(Cow::Owned(dt));
+            }
         } else if let HeaderValue::Text(text) = &header.value {
             // Inserted header
             let bytes = format!("{text}\n").into_bytes();
             if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date()
-                && dt.is_valid() {
-                    return Some(Cow::Owned(dt));
-                }
+                && dt.is_valid()
+            {
+                return Some(Cow::Owned(dt));
+            }
         }
         None
     }

@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::{parsers::MessageStream, Header, HeaderName, HeaderValue};
+use mail_parser::{Header, HeaderName, HeaderValue, parsers::MessageStream};
 
 use crate::{
+    Context, Event,
     compiler::{
-        grammar::{actions::action_mime::MimeOpts, tests::test_header::TestHeader, MatchType},
         Number, Value,
+        grammar::{MatchType, actions::action_mime::MimeOpts, tests::test_header::TestHeader},
     },
     runtime::Variable,
-    Context, Event,
 };
 
-use super::{mime::SubpartIterator, TestResult};
+use super::{TestResult, mime::SubpartIterator};
 
 impl TestHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -125,15 +125,17 @@ impl TestHeader {
                             }
                             MimeOpts::Param(params) => {
                                 if let HeaderValue::ContentType(ct) = &header.value
-                                    && let Some(attributes) = &ct.attributes {
-                                        for attr in attributes {
-                                            if params.iter().any(|p| {
-                                                p.to_string().eq_ignore_ascii_case(&attr.name)
-                                            }) {
-                                                count += 1;
-                                            }
+                                    && let Some(attributes) = &ct.attributes
+                                {
+                                    for attr in attributes {
+                                        if params
+                                            .iter()
+                                            .any(|p| p.to_string().eq_ignore_ascii_case(&attr.name))
+                                        {
+                                            count += 1;
                                         }
                                     }
+                                }
                             }
                         }
 

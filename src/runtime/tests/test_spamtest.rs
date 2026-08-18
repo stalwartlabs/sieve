@@ -5,15 +5,15 @@
  */
 
 use crate::{
+    Context, SpamStatus, VirusStatus,
     compiler::{
-        grammar::{
-            tests::test_spamtest::{TestSpamTest, TestVirusTest},
-            MatchType,
-        },
         Number,
+        grammar::{
+            MatchType,
+            tests::test_spamtest::{TestSpamTest, TestVirusTest},
+        },
     },
     runtime::Variable,
-    Context, SpamStatus, VirusStatus,
 };
 
 use super::TestResult;

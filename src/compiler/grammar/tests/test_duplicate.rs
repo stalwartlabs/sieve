@@ -6,11 +6,10 @@
 
 use mail_parser::HeaderName;
 
-
 use crate::compiler::{
-    grammar::instruction::{CompilerState, MapLocalVars},
-    lexer::{word::Word, Token},
     CompileError, ErrorType, Value,
+    grammar::instruction::{CompilerState, MapLocalVars},
+    lexer::{Token, word::Word},
 };
 
 use crate::compiler::grammar::test::Test;
@@ -70,12 +69,13 @@ impl CompilerState<'_> {
                     self.tokens.next();
                     let header = self.parse_string()?;
                     if let Value::Text(header_name) = &header
-                        && HeaderName::parse(header_name.as_ref()).is_none() {
-                            return Err(self
-                                .tokens
-                                .unwrap_next()?
-                                .custom(ErrorType::InvalidHeaderName));
-                        }
+                        && HeaderName::parse(header_name.as_ref()).is_none()
+                    {
+                        return Err(self
+                            .tokens
+                            .unwrap_next()?
+                            .custom(ErrorType::InvalidHeaderName));
+                    }
                     dup_match = DupMatch::Header(header);
                 }
                 Token::Tag(Word::UniqueId) => {

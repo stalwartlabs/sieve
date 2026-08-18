@@ -7,11 +7,11 @@
 use mail_parser::DateTime;
 
 use crate::{
-    compiler::{
-        grammar::{tests::test_envelope::TestEnvelope, MatchType},
-        Number,
-    },
     Context, Envelope, Event,
+    compiler::{
+        Number,
+        grammar::{MatchType, tests::test_envelope::TestEnvelope},
+    },
 };
 
 use super::TestResult;

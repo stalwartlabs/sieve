@@ -7,9 +7,9 @@
 use std::sync::Arc;
 
 use crate::{
+    Context, Event, Script, Sieve,
     compiler::grammar::actions::action_include::{Include, Location},
     runtime::RuntimeError,
-    Context, Event, Script, Sieve,
 };
 
 pub(crate) enum IncludeResult {

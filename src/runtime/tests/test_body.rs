@@ -4,20 +4,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::{decoders::html::html_to_text, MimeHeaders, PartType};
+use mail_parser::{MimeHeaders, PartType, decoders::html::html_to_text};
 
 use crate::{
-    compiler::{
-        grammar::{
-            tests::test_body::{BodyTransform, TestBody},
-            MatchType,
-        },
-        Number,
-    },
     Context,
+    compiler::{
+        Number,
+        grammar::{
+            MatchType,
+            tests::test_body::{BodyTransform, TestBody},
+        },
+    },
 };
 
-use super::{mime::ContentTypeFilter, TestResult};
+use super::{TestResult, mime::ContentTypeFilter};
 
 impl TestBody {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {

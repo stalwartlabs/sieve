@@ -5,16 +5,16 @@
  */
 
 use crate::{
+    FileCarbonCopy,
     compiler::{
+        CompileError, Value,
         grammar::{
+            Capability,
             instruction::{CompilerState, Instruction},
             test::Test,
-            Capability,
         },
-        lexer::{word::Word, Token},
-        CompileError, Value,
+        lexer::{Token, word::Word},
     },
-    FileCarbonCopy,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -9,14 +9,14 @@ use std::borrow::Cow;
 use mail_parser::{Header, HeaderName, HeaderValue};
 
 use crate::{
+    Context,
     compiler::grammar::{
+        MatchType,
         actions::{
             action_editheader::{AddHeader, DeleteHeader},
             action_mime::MimeOpts,
         },
-        MatchType,
     },
-    Context,
 };
 
 impl AddHeader {
@@ -33,18 +33,19 @@ impl AddHeader {
 
         if !header_name.is_empty()
             && let Some(header_name) = HeaderName::parse(header_name)
-                && !ctx.runtime.protected_headers.contains(&header_name) {
-                    ctx.has_changes = true;
-                    ctx.insert_header(
-                        ctx.part,
-                        header_name,
-                        ctx.eval_value(&self.value)
-                            .to_string()
-                            .as_ref()
-                            .remove_crlf(ctx.runtime.max_header_size),
-                        self.last,
-                    )
-                }
+            && !ctx.runtime.protected_headers.contains(&header_name)
+        {
+            ctx.has_changes = true;
+            ctx.insert_header(
+                ctx.part,
+                header_name,
+                ctx.eval_value(&self.value)
+                    .to_string()
+                    .as_ref()
+                    .remove_crlf(ctx.runtime.max_header_size),
+                self.last,
+            )
+        }
     }
 }
 

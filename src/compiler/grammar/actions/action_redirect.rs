@@ -5,12 +5,12 @@
  */
 
 use crate::compiler::{
-    grammar::{
-        instruction::{CompilerState, Instruction, MapLocalVars},
-        Capability,
-    },
-    lexer::{word::Word, Token},
     CompileError, Value,
+    grammar::{
+        Capability,
+        instruction::{CompilerState, Instruction, MapLocalVars},
+    },
+    lexer::{Token, word::Word},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -7,15 +7,16 @@
 use ahash::{AHashMap, AHashSet};
 
 use crate::{
-    compiler::{
-        grammar::{test::Test, MatchType},
-        lexer::{tokenizer::Tokenizer, word::Word, Token},
-        CompileError, ErrorType, Value, VariableType,
-    },
     Compiler, Sieve,
+    compiler::{
+        CompileError, ErrorType, Value, VariableType,
+        grammar::{MatchType, test::Test},
+        lexer::{Token, tokenizer::Tokenizer, word::Word},
+    },
 };
 
 use super::{
+    Capability, Clear, Invalid, While,
     actions::{
         action_convert::Convert,
         action_editheader::{AddHeader, DeleteHeader},
@@ -31,7 +32,6 @@ use super::{
         action_vacation::Vacation,
     },
     expr::Expression,
-    Capability, Clear, Invalid, While,
 };
 
 use super::tests::test_ihave::Error;

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use super::{tokenizer::Tokenizer, BinaryOperator, Expression, Token};
+use super::{BinaryOperator, Expression, Token, tokenizer::Tokenizer};
 
 pub(crate) struct ExpressionParser<'x, F>
 where

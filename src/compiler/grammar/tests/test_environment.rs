@@ -5,12 +5,12 @@
  */
 
 use crate::compiler::{
-    grammar::{instruction::CompilerState, Capability, Comparator},
-    lexer::{word::Word, Token},
     CompileError, Value, VariableType,
+    grammar::{Capability, Comparator, instruction::CompilerState},
+    lexer::{Token, word::Word},
 };
 
-use crate::compiler::grammar::{test::Test, MatchType};
+use crate::compiler::grammar::{MatchType, test::Test};
 
 use super::test_string::TestString;
 

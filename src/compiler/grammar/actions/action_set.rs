@@ -5,15 +5,15 @@
  */
 
 use crate::{
+    Envelope,
     compiler::{
+        CompileError, ErrorType, Value, VariableType,
         grammar::{
             expr::Expression,
             instruction::{CompilerState, Instruction},
         },
-        lexer::{tokenizer::TokenInfo, word::Word, Token},
-        CompileError, ErrorType, Value, VariableType,
+        lexer::{Token, tokenizer::TokenInfo, word::Word},
     },
-    Envelope,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

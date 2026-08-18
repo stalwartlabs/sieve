@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{iter::Peekable, slice::Iter};
-
+use super::{StringConstant, Token, word::lookup_words};
 use crate::{
+    Compiler,
     compiler::{CompileError, ErrorType, Number},
     runtime::eval::IntoString,
-    Compiler,
 };
-
-use super::{word::lookup_words, StringConstant, Token};
+use std::{iter::Peekable, slice::Iter};
 
 pub(crate) struct Tokenizer<'x> {
     pub compiler: &'x Compiler,
@@ -161,24 +159,20 @@ impl<'x> Tokenizer<'x> {
                 let constant = self.buf.to_vec().into_string();
                 if !str_type.has_other && str_type.has_digits {
                     if !str_type.has_dots {
-                        if let Some(number) = constant.parse::<i64>().ok().and_then(|n| {
-                            if n.to_string() == constant {
-                                Some(n)
-                            } else {
-                                None
-                            }
-                        }) {
+                        if let Some(number) = constant
+                            .parse::<i64>()
+                            .ok()
+                            .filter(|&n| n.to_string() == constant)
+                        {
                             Token::StringConstant(StringConstant::Number(Number::Integer(number)))
                         } else {
                             Token::StringConstant(StringConstant::String(constant))
                         }
-                    } else if let Some(number) = constant.parse::<f64>().ok().and_then(|n| {
-                        if n.to_string() == constant {
-                            Some(n)
-                        } else {
-                            None
-                        }
-                    }) {
+                    } else if let Some(number) = constant
+                        .parse::<f64>()
+                        .ok()
+                        .filter(|&n| n.to_string() == constant)
+                    {
                         Token::StringConstant(StringConstant::Number(Number::Float(number)))
                     } else {
                         Token::StringConstant(StringConstant::String(constant))

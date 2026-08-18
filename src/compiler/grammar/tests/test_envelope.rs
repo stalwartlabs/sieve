@@ -4,18 +4,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-
-
 use crate::{
-    compiler::{
-        grammar::{instruction::CompilerState, Capability, Comparator},
-        lexer::{word::Word, Token},
-        CompileError, ErrorType, Value,
-    },
     Envelope,
+    compiler::{
+        CompileError, ErrorType, Value,
+        grammar::{Capability, Comparator, instruction::CompilerState},
+        lexer::{Token, word::Word},
+    },
 };
 
-use crate::compiler::grammar::{test::Test, AddressPart, MatchType};
+use crate::compiler::grammar::{AddressPart, MatchType, test::Test};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(

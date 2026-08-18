@@ -4,11 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-
-
 use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
     CompileError, Value,
+    grammar::instruction::{CompilerState, Instruction},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

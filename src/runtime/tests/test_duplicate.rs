@@ -6,11 +6,11 @@
 
 use std::borrow::Cow;
 
-use mail_parser::{parsers::MessageStream, HeaderValue};
+use mail_parser::{HeaderValue, parsers::MessageStream};
 
 use crate::{
-    compiler::grammar::tests::test_duplicate::{DupMatch, TestDuplicate},
     Context, Event,
+    compiler::grammar::tests::test_duplicate::{DupMatch, TestDuplicate},
 };
 
 use super::TestResult;
@@ -28,18 +28,20 @@ impl TestDuplicate {
                                 .raw_message
                                 .get(header.offset_start as usize..header.offset_end as usize)
                                 && let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
-                                    && !id.is_empty() {
-                                        value = id.to_string();
-                                        return true;
-                                    }
+                                && !id.is_empty()
+                            {
+                                value = id.to_string();
+                                return true;
+                            }
                         } else if let HeaderValue::Text(text) = &header.value {
                             // Inserted header
                             let bytes = format!("{text}\n").into_bytes();
                             if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id()
-                                && !id.is_empty() {
-                                    value = id.to_string();
-                                    return true;
-                                }
+                                && !id.is_empty()
+                            {
+                                value = id.to_string();
+                                return true;
+                            }
                         }
                         false
                     });

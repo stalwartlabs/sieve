@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{compiler::grammar::actions::action_fileinto::FileInto, Context, Event};
+use crate::{Context, Event, compiler::grammar::actions::action_fileinto::FileInto};
 
 impl FileInto {
     pub(crate) fn exec(&self, ctx: &mut Context) {
