@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use sieve::{runtime::RuntimeError, Compiler, Event, Input, Runtime};
+use sieve::{Compiler, Event, Input, Runtime, runtime::RuntimeError};
 
 fn main() {
     let text_script = br#"

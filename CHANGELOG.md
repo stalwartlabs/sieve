@@ -1,3 +1,7 @@
+sieve-rs 0.7.3
+================================
+- Bump `mail-builder` dependency to 0.5.
+
 sieve-rs 0.7.2
 ================================
 - Fix: `replace` action adds additional `From` header.

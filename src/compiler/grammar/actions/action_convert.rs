@@ -5,11 +5,11 @@
  */
 
 use crate::compiler::{
+    CompileError, Value,
     grammar::{
         instruction::{CompilerState, Instruction},
         test::Test,
     },
-    CompileError, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

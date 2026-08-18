@@ -10,15 +10,15 @@ use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
 use mail_parser::{HeaderName, HeaderValue};
 
 use crate::{
+    Context, Envelope, Event, Recipient,
     compiler::grammar::{
+        AddressPart,
         actions::{
             action_redirect::{ByTime, Notify, Ret},
             action_vacation::{Period, TestVacation, Vacation},
         },
-        AddressPart,
     },
     runtime::tests::TestResult,
-    Context, Envelope, Event, Recipient,
 };
 
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
@@ -228,10 +228,10 @@ impl Vacation {
             ctx.eval_value(from)
         } else if !ctx.user_address.is_empty() {
             ctx.user_from_field().into()
-        } else if let Some(addr) =
-            ctx.envelope
-                .iter()
-                .find_map(|(n, v)| if n == &Envelope::To { Some(v) } else { None })
+        } else if let Some(addr) = ctx
+            .envelope
+            .iter()
+            .find_map(|(n, v)| if n == &Envelope::To { Some(v) } else { None })
         {
             addr.to_string().into()
         } else {

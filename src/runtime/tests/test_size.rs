@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{compiler::grammar::tests::test_size::TestSize, Context};
+use crate::{Context, compiler::grammar::tests::test_size::TestSize};
 
 use super::TestResult;
 

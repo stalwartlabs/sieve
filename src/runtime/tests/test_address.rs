@@ -5,22 +5,22 @@
  */
 
 use mail_parser::{
+    Addr, Address, Header, HeaderValue,
     parsers::{
+        MessageStream,
         fields::address::{
             parse_address_detail_part, parse_address_domain, parse_address_local_part,
             parse_address_user_part,
         },
-        MessageStream,
     },
-    Addr, Address, Header, HeaderValue,
 };
 
 use crate::{
-    compiler::{
-        grammar::{tests::test_address::TestAddress, AddressPart, MatchType},
-        Number,
-    },
     Context, Event,
+    compiler::{
+        Number,
+        grammar::{AddressPart, MatchType, tests::test_address::TestAddress},
+    },
 };
 
 use super::TestResult;
@@ -181,9 +181,10 @@ impl Context<'_> {
             HeaderValue::Address(Address::List(addr_list)) => {
                 for addr in addr_list {
                     if let Some(addr) = part.eval(addr)
-                        && visitor_fnc(addr) {
-                            return true;
-                        }
+                        && visitor_fnc(addr)
+                    {
+                        return true;
+                    }
                 }
                 false
             }
@@ -191,9 +192,10 @@ impl Context<'_> {
                 for group in group_list {
                     for addr in &group.addresses {
                         if let Some(addr) = part.eval(addr)
-                            && visitor_fnc(addr) {
-                                return true;
-                            }
+                            && visitor_fnc(addr)
+                        {
+                            return true;
+                        }
                     }
                 }
                 false
@@ -217,9 +219,10 @@ impl Context<'_> {
                     HeaderValue::Address(Address::List(addr_list)) => {
                         for addr in &addr_list {
                             if let Some(addr) = part.eval(addr)
-                                && visitor_fnc(addr) {
-                                    return true;
-                                }
+                                && visitor_fnc(addr)
+                            {
+                                return true;
+                            }
                         }
                         false
                     }
@@ -227,9 +230,10 @@ impl Context<'_> {
                         for group in group_list {
                             for addr in &group.addresses {
                                 if let Some(addr) = part.eval(addr)
-                                    && visitor_fnc(addr) {
-                                        return true;
-                                    }
+                                    && visitor_fnc(addr)
+                                {
+                                    return true;
+                                }
                             }
                         }
                         false

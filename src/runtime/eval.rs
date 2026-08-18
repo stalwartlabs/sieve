@@ -7,17 +7,17 @@
 use std::cmp::Ordering;
 
 use mail_parser::{
+    Addr, Header, HeaderName, HeaderValue, Host, PartType, Received,
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
-    Addr, Header, HeaderName, HeaderValue, Host, PartType, Received,
 };
 
 use crate::{
+    Context,
     compiler::{
         ContentTypePart, HeaderPart, HeaderVariable, MessagePart, ReceivedHostname, ReceivedPart,
         Value, VariableType,
     },
-    Context,
 };
 
 use super::Variable;
@@ -33,17 +33,10 @@ impl<'x> Context<'x> {
                 .get(var_name.as_str())
                 .or_else(|| self.runtime.environment.get(var_name.as_str()))
                 .cloned(),
-            VariableType::Envelope(envelope) => {
-                self.envelope.iter().find_map(
-                    |(e, v)| {
-                        if e == envelope {
-                            Some(v.clone())
-                        } else {
-                            None
-                        }
-                    },
-                )
-            }
+            VariableType::Envelope(envelope) => self
+                .envelope
+                .iter()
+                .find_map(|(e, v)| if e == envelope { Some(v.clone()) } else { None }),
             VariableType::Header(header) => self.eval_header(header),
             VariableType::Part(part) => match part {
                 MessagePart::TextBody(convert) => {

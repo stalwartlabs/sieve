@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{compiler::grammar::tests::test_extlists::TestValidExtList, Context};
+use crate::{Context, compiler::grammar::tests::test_extlists::TestValidExtList};
 
 use super::TestResult;
 

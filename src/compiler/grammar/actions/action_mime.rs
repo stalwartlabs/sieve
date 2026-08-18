@@ -5,9 +5,9 @@
  */
 
 use crate::compiler::{
-    grammar::instruction::{CompilerState, Instruction},
-    lexer::{word::Word, Token},
     CompileError, Value, VariableType,
+    grammar::instruction::{CompilerState, Instruction},
+    lexer::{Token, word::Word},
 };
 
 use super::action_set::Modifier;

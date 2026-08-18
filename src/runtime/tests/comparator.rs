@@ -7,12 +7,12 @@
 use std::{borrow::Cow, sync::Arc};
 
 use crate::{
+    MatchAs,
     compiler::{
-        grammar::{Comparator, RelationalMatch},
         Number, Value,
+        grammar::{Comparator, RelationalMatch},
     },
     runtime::Variable,
-    MatchAs,
 };
 
 use super::glob::GlobPattern;

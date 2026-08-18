@@ -5,11 +5,11 @@
  */
 
 use crate::{
-    compiler::{
-        grammar::{tests::test_string::TestString, MatchType},
-        Number,
-    },
     Context, Event,
+    compiler::{
+        Number,
+        grammar::{MatchType, tests::test_string::TestString},
+    },
 };
 
 use super::TestResult;

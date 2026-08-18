@@ -9,17 +9,17 @@ use std::fmt::Display;
 use mail_parser::HeaderName;
 
 use crate::{
+    Envelope, MAX_MATCH_VARIABLES,
     compiler::{
-        grammar::{
-            expr::{self},
-            instruction::CompilerState,
-            AddressPart,
-        },
         ContentTypePart, ErrorType, HeaderPart, HeaderVariable, MessagePart, Number,
         ReceivedHostname, ReceivedPart, Value, VariableType,
+        grammar::{
+            AddressPart,
+            expr::{self},
+            instruction::CompilerState,
+        },
     },
     runtime::eval::IntoString,
-    Envelope, MAX_MATCH_VARIABLES,
 };
 
 enum State {
@@ -202,9 +202,10 @@ impl CompilerState<'_> {
                 if let State::Encoded {
                     initial_buf_size, ..
                 } = state
-                    && initial_buf_size != decode_buf.len() {
-                        decode_buf.truncate(initial_buf_size);
-                    }
+                    && initial_buf_size != decode_buf.len()
+                {
+                    decode_buf.truncate(initial_buf_size);
+                }
                 decode_buf.extend_from_slice(&bytes[var_start_pos - 2..pos + 1]);
                 hex_start = usize::MAX;
                 state = State::None;

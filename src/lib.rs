@@ -10,12 +10,12 @@ use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{
+    Capability,
     actions::action_redirect::{ByTime, Notify, Ret},
     instruction::Instruction,
-    Capability,
 };
 use mail_parser::{HeaderName, Message};
-use runtime::{context::ScriptStack, Variable};
+use runtime::{Variable, context::ScriptStack};
 
 pub mod compiler;
 pub mod runtime;
@@ -327,15 +327,15 @@ mod tests {
 
     use ahash::{AHashMap, AHashSet};
     use mail_parser::{
-        parsers::MessageStream, Encoding, HeaderValue, Message, MessageParser, MessagePart,
-        PartType,
+        Encoding, HeaderValue, Message, MessageParser, MessagePart, PartType,
+        parsers::MessageStream,
     };
 
     use crate::{
-        compiler::grammar::Capability,
-        runtime::{actions::action_mime::reset_test_boundary, Variable},
         Compiler, Context, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime,
         SpamStatus, VirusStatus,
+        compiler::grammar::Capability,
+        runtime::{Variable, actions::action_mime::reset_test_boundary},
     };
 
     impl Variable {
@@ -576,9 +576,11 @@ mod tests {
                     } => {
                         for action in &actions {
                             if let Event::FileInto { folder, create, .. } = action
-                                && *create && !mailboxes.contains(folder) {
-                                    mailboxes.push(folder.to_string());
-                                }
+                                && *create
+                                && !mailboxes.contains(folder)
+                            {
+                                mailboxes.push(folder.to_string());
+                            }
                         }
                         input = (special_use.is_empty()
                             && mailboxes_.iter().all(|n| {
@@ -644,9 +646,10 @@ mod tests {
                                                                 message_id: message_id_,
                                                                 message,
                                                             } = item
-                                                                && message_id == message_id_ {
-                                                                    return Some(message);
-                                                                }
+                                                                && message_id == message_id_
+                                                            {
+                                                                return Some(message);
+                                                            }
                                                             None
                                                         })
                                                         .unwrap();

@@ -9,8 +9,8 @@ use std::fmt::Display;
 use self::{expr::Expression, instruction::CompilerState};
 
 use super::{
-    lexer::{tokenizer::TokenInfo, word::Word, Token},
     CompileError, ErrorType, Regex, Value,
+    lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
 
 pub mod actions;
@@ -274,13 +274,14 @@ impl CompilerState<'_> {
             _ => {
                 let token_info = self.tokens.unwrap_next()?;
                 if let Token::StringConstant(text) = &token_info.token
-                    && let Some(relational) = lookup_relational(text.to_string().as_ref()) {
-                        return Ok(if word == Word::Value {
-                            MatchType::Value(relational)
-                        } else {
-                            MatchType::Count(relational)
-                        });
-                    }
+                    && let Some(relational) = lookup_relational(text.to_string().as_ref())
+                {
+                    return Ok(if word == Word::Value {
+                        MatchType::Value(relational)
+                    } else {
+                        MatchType::Count(relational)
+                    });
+                }
                 Err(token_info.expected("relational match"))
             }
         }
@@ -464,13 +465,14 @@ impl CompilerState<'_> {
             }
         }
         if let Some(capability) = capability
-            && !self.has_capability(&capability) {
-                return Err(CompileError {
-                    line_num,
-                    line_pos,
-                    error_type: ErrorType::UndeclaredCapability(capability),
-                });
-            }
+            && !self.has_capability(&capability)
+        {
+            return Err(CompileError {
+                line_num,
+                line_pos,
+                error_type: ErrorType::UndeclaredCapability(capability),
+            });
+        }
 
         Ok(())
     }

@@ -10,15 +10,15 @@ use ahash::AHashMap;
 use mail_parser::Message;
 
 use crate::{
-    compiler::grammar::{instruction::Instruction, Capability},
-    Context, Envelope, Event, Input, Metadata, Runtime, Sieve, SpamStatus, VirusStatus,
-    MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES,
+    Context, Envelope, Event, Input, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES, Metadata, Runtime,
+    Sieve, SpamStatus, VirusStatus,
+    compiler::grammar::{Capability, instruction::Instruction},
 };
 
 use super::{
-    actions::action_include::IncludeResult,
-    tests::{test_envelope::parse_envelope_address, TestResult},
     RuntimeError, Variable,
+    actions::action_include::IncludeResult,
+    tests::{TestResult, test_envelope::parse_envelope_address},
 };
 
 #[derive(Clone, Debug)]

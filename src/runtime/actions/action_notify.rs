@@ -5,14 +5,14 @@
  */
 
 use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
-use mail_parser::{decoders::quoted_printable::HEX_MAP, HeaderName};
+use mail_parser::{HeaderName, decoders::quoted_printable::HEX_MAP};
 
 use crate::{
+    Context, Event, Importance, Recipient,
     compiler::grammar::actions::{
         action_notify::Notify,
         action_redirect::{ByTime, Ret},
     },
-    Context, Event, Importance, Recipient,
 };
 
 use super::action_vacation::MAX_SUBJECT_LEN;
@@ -509,7 +509,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
             },
             _ => match &state {
                 State::ParamName => {
-                    if ch.is_ascii_alphanumeric() || [b'-', b'_'].contains(&ch) {
+                    if ch.is_ascii_alphanumeric() || b"-_".contains(&ch) {
                         buf.push(ch);
                     } else {
                         return None;
@@ -547,11 +547,7 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
         }
     }
 
-    if has_addresses {
-        Some(params)
-    } else {
-        None
-    }
+    if has_addresses { Some(params) } else { None }
 }
 
 #[inline(always)]

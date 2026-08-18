@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{compiler::grammar::tests::test_exists::TestExists, Context};
+use crate::{Context, compiler::grammar::tests::test_exists::TestExists};
 
-use super::{mime::SubpartIterator, TestResult};
+use super::{TestResult, mime::SubpartIterator};
 
 impl TestExists {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {

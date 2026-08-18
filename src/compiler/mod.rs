@@ -8,7 +8,7 @@ use self::{
     grammar::{AddressPart, Capability},
     lexer::tokenizer::TokenInfo,
 };
-use crate::{runtime::RuntimeError, Compiler, Envelope, FunctionMap};
+use crate::{Compiler, Envelope, FunctionMap, runtime::RuntimeError};
 use ahash::AHashMap;
 use arc_swap::ArcSwap;
 use mail_parser::HeaderName;

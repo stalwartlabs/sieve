@@ -5,11 +5,11 @@
  */
 
 use crate::{
-    compiler::{
-        grammar::actions::action_flags::{Action, EditFlags},
-        Value, VariableType,
-    },
     Context,
+    compiler::{
+        Value, VariableType,
+        grammar::actions::action_flags::{Action, EditFlags},
+    },
 };
 
 impl EditFlags {

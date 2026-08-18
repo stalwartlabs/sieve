@@ -47,10 +47,9 @@ impl<'x> SubpartIterator<'x> {
                 }
                 return Some((part_id, subpart));
             }
-            if let Some(prev_iter) = self.iter_stack.pop() {
+            {
+                let prev_iter = self.iter_stack.pop()?;
                 self.iter = prev_iter;
-            } else {
-                return None;
             }
         }
     }

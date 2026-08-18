@@ -6,18 +6,17 @@
 
 use mail_parser::HeaderName;
 
-
 use crate::compiler::{
+    CompileError, ErrorType, Value,
     grammar::{
+        Capability, Comparator,
         actions::action_mime::MimeOpts,
         instruction::{CompilerState, MapLocalVars},
-        Capability, Comparator,
     },
-    lexer::{word::Word, Token},
-    CompileError, ErrorType, Value,
+    lexer::{Token, word::Word},
 };
 
-use crate::compiler::grammar::{test::Test, MatchType};
+use crate::compiler::grammar::{MatchType, test::Test};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -138,12 +137,13 @@ impl CompilerState<'_> {
                         let headers = self.parse_strings_token(token_info)?;
                         for header in &headers {
                             if let Value::Text(header_name) = &header
-                                && HeaderName::parse(header_name.as_ref()).is_none() {
-                                    return Err(self
-                                        .tokens
-                                        .unwrap_next()?
-                                        .custom(ErrorType::InvalidHeaderName));
-                                }
+                                && HeaderName::parse(header_name.as_ref()).is_none()
+                            {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .custom(ErrorType::InvalidHeaderName));
+                            }
                         }
                         header_list = headers.into();
                     } else {

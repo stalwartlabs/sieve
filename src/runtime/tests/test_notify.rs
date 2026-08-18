@@ -7,15 +7,15 @@
 use std::borrow::Cow;
 
 use crate::{
+    Context,
     compiler::{
-        grammar::{
-            tests::test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
-            MatchType,
-        },
         Number,
+        grammar::{
+            MatchType,
+            tests::test_notify::{TestNotifyMethodCapability, TestValidNotifyMethod},
+        },
     },
     runtime::actions::action_notify::validate_uri,
-    Context,
 };
 
 use super::TestResult;
@@ -33,9 +33,9 @@ impl TestValidNotifyMethod {
                     .valid_notification_uris
                     .contains(&Cow::from(scheme))
                     || ctx.runtime.valid_notification_uris.contains(&uri))
-                {
-                    num_valid += 1;
-                }
+            {
+                num_valid += 1;
+            }
         }
 
         TestResult::Bool((num_valid == self.notification_uris.len()) ^ self.is_not)
@@ -50,7 +50,7 @@ impl TestNotifyMethodCapability {
             .eval_value(&self.notification_capability)
             .to_string()
             .eq_ignore_ascii_case("online")
-            || !validate_uri(uri.as_ref()).is_some_and( |scheme| {
+            || !validate_uri(uri.as_ref()).is_some_and(|scheme| {
                 ctx.runtime
                     .valid_notification_uris
                     .contains(&Cow::from(scheme))

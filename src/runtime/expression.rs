@@ -6,9 +6,9 @@
 
 use std::{cmp::Ordering, fmt::Display};
 
-use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
 use crate::Event;
-use crate::{compiler::Number, runtime::Variable, Context};
+use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
+use crate::{Context, compiler::Number, runtime::Variable};
 
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
 
@@ -384,11 +384,11 @@ mod test {
 
     use crate::{
         compiler::{
-            grammar::expr::{
-                parser::ExpressionParser, tokenizer::Tokenizer, BinaryOperator, Expression, Token,
-                UnaryOperator,
-            },
             VariableType,
+            grammar::expr::{
+                BinaryOperator, Expression, Token, UnaryOperator, parser::ExpressionParser,
+                tokenizer::Tokenizer,
+            },
         },
         runtime::Variable,
     };
@@ -612,7 +612,7 @@ mod test {
             eval(&str_expr_float)
                 .map(|v| {
                     // Divisions by zero are converted to 0.0
-                    if matches!(&v, Value::Float(f) if f.is_infinite()) {
+                    if matches!(&v, Value::Float(f) if f64::is_infinite(*f)) {
                         Value::Float(0.0)
                     } else {
                         v

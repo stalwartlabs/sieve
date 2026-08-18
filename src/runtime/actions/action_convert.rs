@@ -5,12 +5,12 @@
  */
 
 use mail_parser::{
-    decoders::html::{html_to_text, text_to_html},
     Encoding, Header, HeaderName, HeaderValue, MimeHeaders, PartType,
+    decoders::html::{html_to_text, text_to_html},
 };
 
 use crate::{
-    compiler::grammar::actions::action_convert::Convert, runtime::tests::TestResult, Context,
+    Context, compiler::grammar::actions::action_convert::Convert, runtime::tests::TestResult,
 };
 
 #[derive(Clone, Copy)]

@@ -5,13 +5,14 @@
  */
 
 use crate::compiler::{
-    lexer::{tokenizer::TokenInfo, word::Word, Token},
     CompileError, ErrorType,
+    lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
 
 use super::{
+    Capability, Invalid,
     actions::{action_convert::Convert, action_vacation::TestVacation},
-    expr::{parser::ExpressionParser, tokenizer::Tokenizer, Expression, UnaryOperator},
+    expr::{Expression, UnaryOperator, parser::ExpressionParser, tokenizer::Tokenizer},
     instruction::{CompilerState, Instruction},
     tests::{
         test_address::TestAddress,
@@ -32,7 +33,6 @@ use super::{
         test_specialuse::TestSpecialUseExists,
         test_string::TestString,
     },
-    Capability, Invalid,
 };
 
 #[allow(clippy::enum_variant_names)]

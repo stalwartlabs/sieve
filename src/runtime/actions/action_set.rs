@@ -5,12 +5,12 @@
  */
 
 use crate::{
+    Context, Envelope, Event,
     compiler::{
-        grammar::actions::action_set::{Modifier, Set},
         VariableType,
+        grammar::actions::action_set::{Modifier, Set},
     },
     runtime::Variable,
-    Context, Envelope, Event,
 };
 use std::fmt::Write;
 
@@ -78,17 +78,10 @@ impl Context<'_> {
         match var_name {
             VariableType::Local(var_id) => self.vars_local.get(*var_id),
             VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
-            VariableType::Envelope(env) => {
-                self.envelope.iter().find_map(
-                    |(name, val)| {
-                        if name == env {
-                            Some(val)
-                        } else {
-                            None
-                        }
-                    },
-                )
-            }
+            VariableType::Envelope(env) => self
+                .envelope
+                .iter()
+                .find_map(|(name, val)| if name == env { Some(val) } else { None }),
             _ => unreachable!(),
         }
     }

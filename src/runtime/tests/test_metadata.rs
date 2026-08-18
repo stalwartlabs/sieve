@@ -5,14 +5,14 @@
  */
 
 use crate::{
-    compiler::{
-        grammar::{
-            tests::test_mailbox::{TestMetadata, TestMetadataExists},
-            MatchType,
-        },
-        Number,
-    },
     Context, Metadata,
+    compiler::{
+        Number,
+        grammar::{
+            MatchType,
+            tests::test_mailbox::{TestMetadata, TestMetadataExists},
+        },
+    },
 };
 
 use super::TestResult;

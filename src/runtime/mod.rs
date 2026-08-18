@@ -21,11 +21,11 @@ use std::{borrow::Cow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
 use crate::Context;
 
 use crate::{
-    compiler::{
-        grammar::{expr::parser::ID_EXTERNAL, Capability, Invalid},
-        Number,
-    },
     ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
+    compiler::{
+        Number,
+        grammar::{Capability, Invalid, expr::parser::ID_EXTERNAL},
+    },
 };
 
 use self::eval::ToString;
@@ -688,11 +688,7 @@ impl Input {
 
 impl From<bool> for Input {
     fn from(value: bool) -> Self {
-        if value {
-            Input::True
-        } else {
-            Input::False
-        }
+        if value { Input::True } else { Input::False }
     }
 }
 

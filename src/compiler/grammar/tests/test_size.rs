@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-
-
 use crate::compiler::{
-    grammar::instruction::CompilerState,
-    lexer::{word::Word, Token},
     CompileError,
+    grammar::instruction::CompilerState,
+    lexer::{Token, word::Word},
 };
 
 use crate::compiler::grammar::test::Test;

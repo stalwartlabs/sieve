@@ -7,15 +7,15 @@
 use std::cmp::Reverse;
 
 use mail_parser::{
-    decoders::html::html_to_text, Encoding, HeaderName, Message, MessagePart, PartType,
+    Encoding, HeaderName, Message, MessagePart, PartType, decoders::html::html_to_text,
 };
 
 use crate::{
-    compiler::{
-        grammar::actions::action_mime::{Enclose, ExtractText, Replace},
-        VariableType,
-    },
     Context, Event,
+    compiler::{
+        VariableType,
+        grammar::actions::action_mime::{Enclose, ExtractText, Replace},
+    },
 };
 
 use super::action_editheader::RemoveCrLf;
@@ -90,17 +90,18 @@ impl Replace {
             // Add From
             let mut add_from = true;
             if let Some(from) = self.from.as_ref().map(|f| ctx.eval_value(f))
-                && !from.is_empty() {
-                    ctx.insert_header(
-                        0,
-                        HeaderName::Other("From".into()),
-                        from.to_string()
-                            .as_ref()
-                            .remove_crlf(ctx.runtime.max_header_size),
-                        true,
-                    );
-                    add_from = false;
-                }
+                && !from.is_empty()
+            {
+                ctx.insert_header(
+                    0,
+                    HeaderName::Other("From".into()),
+                    from.to_string()
+                        .as_ref()
+                        .remove_crlf(ctx.runtime.max_header_size),
+                    true,
+                );
+                add_from = false;
+            }
             if add_from && !has_original_from {
                 ctx.insert_header(
                     0,
@@ -112,17 +113,18 @@ impl Replace {
 
             // Add Subject
             if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_value(f))
-                && !subject.is_empty() {
-                    ctx.insert_header(
-                        0,
-                        HeaderName::Other("Subject".into()),
-                        subject
-                            .to_string()
-                            .as_ref()
-                            .remove_crlf(ctx.runtime.max_header_size),
-                        true,
-                    );
-                }
+                && !subject.is_empty()
+            {
+                ctx.insert_header(
+                    0,
+                    HeaderName::Other("Subject".into()),
+                    subject
+                        .to_string()
+                        .as_ref()
+                        .remove_crlf(ctx.runtime.max_header_size),
+                    true,
+                );
+            }
 
             // Add Date
             if add_date {
@@ -258,27 +260,28 @@ impl Enclose {
                 header_value = header_value.trim();
                 if !header_value.is_empty()
                     && let Some(name) = HeaderName::parse(header_name)
-                        && !ctx.runtime.protected_headers.contains(&name) {
-                            match &name {
-                                HeaderName::Date => {
-                                    add_date = false;
-                                }
-                                HeaderName::From => {
-                                    add_from = false;
-                                }
-                                HeaderName::MessageId => {
-                                    add_message_id = false;
-                                }
-                                _ => (),
-                            }
-
-                            ctx.insert_header(
-                                0,
-                                HeaderName::Other(header_name.to_string().into()),
-                                header_value.remove_crlf(ctx.runtime.max_header_size),
-                                true,
-                            );
+                    && !ctx.runtime.protected_headers.contains(&name)
+                {
+                    match &name {
+                        HeaderName::Date => {
+                            add_date = false;
                         }
+                        HeaderName::From => {
+                            add_from = false;
+                        }
+                        HeaderName::MessageId => {
+                            add_message_id = false;
+                        }
+                        _ => (),
+                    }
+
+                    ctx.insert_header(
+                        0,
+                        HeaderName::Other(header_name.to_string().into()),
+                        header_value.remove_crlf(ctx.runtime.max_header_size),
+                        true,
+                    );
+                }
             }
         }
 
@@ -556,9 +559,10 @@ impl Context<'_> {
         }
 
         if last_offset > 0
-            && let Some(bytes) = current_message.raw_message.get(last_offset as usize..) {
-                message.extend_from_slice(bytes);
-            }
+            && let Some(bytes) = current_message.raw_message.get(last_offset as usize..)
+        {
+            message.extend_from_slice(bytes);
+        }
 
         message
     }
