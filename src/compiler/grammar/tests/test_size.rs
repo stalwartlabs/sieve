@@ -23,7 +23,7 @@ use crate::compiler::grammar::test::Test;
 )]
 pub(crate) struct TestSize {
     pub over: bool,
-    pub limit: usize,
+    pub limit: u64,
     pub is_not: bool,
 }
 
@@ -41,7 +41,7 @@ impl CompilerState<'_> {
         if let Token::Number(limit) = token_info.token {
             Ok(Test::Size(TestSize {
                 over,
-                limit,
+                limit: limit as u64,
                 is_not: false,
             }))
         } else {

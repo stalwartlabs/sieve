@@ -39,7 +39,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_list = None;
-        let mut key_list;
+        let key_list;
         let mut index = None;
         let mut index_last = false;
 
@@ -133,9 +133,10 @@ impl CompilerState<'_> {
                 }
                 _ => {
                     if header_list.is_none() {
-                        header_list = self.parse_strings_token(token_info)?.into();
+                        let headers = self.parse_raw_strings_token(token_info)?;
+                        header_list = self.resolve_header_names(headers).0.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -145,7 +146,7 @@ impl CompilerState<'_> {
         if !mime && mime_anychild {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Address(TestAddress {
             header_list: header_list.unwrap(),

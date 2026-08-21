@@ -4,17 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use ahash::{AHashMap, AHashSet};
-
-use crate::{
-    Compiler, Sieve,
-    compiler::{
-        CompileError, ErrorType, Value, VariableType,
-        grammar::{MatchType, test::Test},
-        lexer::{Token, tokenizer::Tokenizer, word::Word},
-    },
-};
-
+use super::tests::test_ihave::Error;
 use super::{
     Capability, Clear, Invalid, While,
     actions::{
@@ -33,8 +23,16 @@ use super::{
     },
     expr::Expression,
 };
-
-use super::tests::test_ihave::Error;
+use crate::{
+    Compiler, Sieve,
+    compiler::{
+        CompileError, ConstantId, ErrorType, RawValue, Value, VariableType,
+        grammar::{MatchType, test::Test},
+        lexer::{Token, tokenizer::Tokenizer, word::Word},
+    },
+};
+use ahash::{AHashMap, AHashSet};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(
@@ -46,66 +44,66 @@ use super::tests::test_ihave::Error;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) enum Instruction {
-    Require(Vec<Capability>),
-    Keep(Keep),
-    FileInto(FileInto),
-    Redirect(Redirect),
+    Require(Box<[Capability]>),
+    Keep(Box<Keep>),
+    FileInto(Box<FileInto>),
+    Redirect(Box<Redirect>),
     Discard,
     Stop,
-    Invalid(Invalid),
-    Test(Test),
-    Jmp(usize),
-    Jz(usize),
-    Jnz(usize),
+    Invalid(Box<Invalid>),
+    Test(Box<Test>),
+    Jmp(u32),
+    Jz(u32),
+    Jnz(u32),
 
     // RFC 5703
     ForEveryPartPush,
     ForEveryPart(ForEveryPart),
-    ForEveryPartPop(usize),
-    Replace(Replace),
-    Enclose(Enclose),
-    ExtractText(ExtractText),
+    ForEveryPartPop(u32),
+    Replace(Box<Replace>),
+    Enclose(Box<Enclose>),
+    ExtractText(Box<ExtractText>),
 
     // RFC 6558
-    Convert(Convert),
+    Convert(Box<Convert>),
 
     // RFC 5293
-    AddHeader(AddHeader),
-    DeleteHeader(DeleteHeader),
+    AddHeader(Box<AddHeader>),
+    DeleteHeader(Box<DeleteHeader>),
 
     // RFC 5229
-    Set(Set),
+    Set(Box<Set>),
     Clear(Clear),
 
     // RFC 5435
-    Notify(Notify),
+    Notify(Box<Notify>),
 
     // RFC 5429
-    Reject(Reject),
+    Reject(Box<Reject>),
 
     // RFC 5230
-    Vacation(Vacation),
+    Vacation(Box<Vacation>),
 
     // RFC 5463
-    Error(Error),
+    Error(Box<Error>),
 
     // RFC 5232
-    EditFlags(EditFlags),
+    EditFlags(Box<EditFlags>),
 
     // RFC 6609
-    Include(Include),
+    Include(Box<Include>),
     Return,
 
     // For every line extension
-    While(While),
+    While(Box<While>),
 
     // Expression extension
-    Eval(Vec<Expression>),
-    Let(Let),
+    Eval(Box<[Expression]>),
+    Let(Box<Let>),
 
     // Test only
     #[cfg(test)]
-    TestCmd(Vec<Value>),
+    TestCmd(Box<[Value]>),
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -121,7 +119,7 @@ pub(crate) struct Block {
     pub(crate) break_jmps: Vec<usize>,
     pub(crate) match_test_pos: Vec<usize>,
     pub(crate) match_test_vars: u64,
-    pub(crate) vars_local: AHashMap<String, usize>,
+    pub(crate) vars_local: AHashMap<String, u16>,
     pub(crate) capabilities: AHashSet<Capability>,
     pub(crate) require_pos: usize,
 }
@@ -140,6 +138,48 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) vars_local: usize,
     pub(crate) param_check: [bool; MAX_PARAMS],
     pub(crate) includes_num: usize,
+    pub(crate) constants: Vec<Arc<str>>,
+    pub(crate) constants_map: AHashMap<Arc<str>, ConstantId>,
+}
+
+impl CompilerState<'_> {
+    pub(crate) fn intern(&mut self, text: impl AsRef<str>) -> ConstantId {
+        let text = text.as_ref();
+        if let Some(id) = self.constants_map.get(text) {
+            return *id;
+        }
+
+        let id = ConstantId::new(self.constants.len());
+        let text: Arc<str> = Arc::from(text);
+        self.constants.push(text.clone());
+        self.constants_map.insert(text, id);
+        id
+    }
+
+    pub(crate) fn constant(&self, id: ConstantId) -> &str {
+        self.constants.get(id.index()).map_or("", |v| v.as_ref())
+    }
+
+    pub(crate) fn text(&mut self, text: impl AsRef<str>) -> Value {
+        Value::Text(self.intern(text))
+    }
+
+    pub(crate) fn intern_raw(&mut self, value: RawValue) -> Value {
+        match value {
+            RawValue::Text(text) => self.text(text),
+            RawValue::Number(number) => Value::Number(number),
+            RawValue::Value(value) => value,
+        }
+    }
+
+    pub(crate) fn intern_raw_list(&mut self, values: Vec<RawValue>) -> Vec<Value> {
+        let mut result = Vec::with_capacity(values.len());
+        for value in values {
+            let value = self.intern_raw(value);
+            result.push(value);
+        }
+        result
+    }
 }
 
 impl Compiler {
@@ -166,6 +206,8 @@ impl Compiler {
             vars_local: 0,
             param_check: [false; MAX_PARAMS],
             includes_num: 0,
+            constants: Vec::new(),
+            constants_map: AHashMap::new(),
         };
 
         while let Some(token_info) = state.tokens.next() {
@@ -264,9 +306,7 @@ impl Compiler {
                             state.instructions.push(Instruction::ForEveryPartPush);
                             state
                                 .instructions
-                                .push(Instruction::ForEveryPart(ForEveryPart {
-                                    jz_pos: usize::MAX,
-                                }));
+                                .push(Instruction::ForEveryPart(ForEveryPart { jz_pos: u32::MAX }));
                         }
                         Word::Break => {
                             if let Some(Ok(Token::Tag(Word::Name))) =
@@ -291,9 +331,9 @@ impl Compiler {
                                     if let Word::ForEveryPart = &block.btype {
                                         num_pops += 1;
                                         if block.label.as_ref().is_some_and(|n| n.eq(&label)) {
-                                            state
-                                                .instructions
-                                                .push(Instruction::ForEveryPartPop(num_pops));
+                                            state.instructions.push(Instruction::ForEveryPartPop(
+                                                num_pops as u32,
+                                            ));
                                             block.break_jmps.push(state.instructions.len());
                                             label_found = true;
                                             break;
@@ -328,7 +368,7 @@ impl Compiler {
                                 block.break_jmps.push(state.instructions.len());
                             }
 
-                            state.instructions.push(Instruction::Jmp(usize::MAX));
+                            state.instructions.push(Instruction::Jmp(u32::MAX));
                         }
                         Word::Replace => {
                             state.validate_argument(
@@ -500,7 +540,7 @@ impl Compiler {
                             if num_pops > 0 {
                                 state
                                     .instructions
-                                    .push(Instruction::ForEveryPartPop(num_pops));
+                                    .push(Instruction::ForEveryPartPop(num_pops as u32));
                             }
 
                             state.instructions.push(Instruction::Return);
@@ -555,7 +595,9 @@ impl Compiler {
                                 token_info.line_pos,
                             )?;
                             let expr = state.parse_expr()?;
-                            state.instructions.push(Instruction::Eval(expr));
+                            state
+                                .instructions
+                                .push(Instruction::Eval(expr.into_boxed_slice()));
                         }
 
                         // While extension
@@ -570,10 +612,10 @@ impl Compiler {
                             is_new_block = Block::new(Word::While).into();
 
                             let expr = state.parse_expr()?;
-                            state.instructions.push(Instruction::While(While {
+                            state.instructions.push(Instruction::While(Box::new(While {
                                 expr,
-                                jz_pos: usize::MAX,
-                            }));
+                                jz_pos: u32::MAX,
+                            })));
                         }
                         Word::Continue => {
                             state.validate_argument(
@@ -592,7 +634,7 @@ impl Compiler {
                                 } else if found_while == 1 {
                                     state
                                         .instructions
-                                        .push(Instruction::Jmp(block.last_block_start));
+                                        .push(Instruction::Jmp(block.last_block_start as u32));
                                     found_while += 1;
                                     break;
                                 }
@@ -605,11 +647,13 @@ impl Compiler {
                         _ => {
                             if state.has_capability(&Capability::Ihave) {
                                 state.ignore_instruction()?;
-                                state.instructions.push(Instruction::Invalid(Invalid {
-                                    name: instruction.to_string(),
-                                    line_num: token_info.line_num,
-                                    line_pos: token_info.line_pos,
-                                }));
+                                state
+                                    .instructions
+                                    .push(Instruction::Invalid(Box::new(Invalid {
+                                        name: instruction.to_string(),
+                                        line_num: token_info.line_num as u32,
+                                        line_pos: (token_info.line_pos) as u32,
+                                    })));
                                 continue;
                             } else {
                                 return Err(CompileError {
@@ -651,18 +695,18 @@ impl Compiler {
                         Word::ForEveryPart => {
                             state
                                 .instructions
-                                .push(Instruction::Jmp(prev_block.last_block_start));
+                                .push(Instruction::Jmp(prev_block.last_block_start as u32));
                             let cur_pos = state.instructions.len();
                             if let Instruction::ForEveryPart(fep) =
                                 &mut state.instructions[prev_block.last_block_start]
                             {
-                                fep.jz_pos = cur_pos;
+                                fep.jz_pos = cur_pos as u32;
                             } else {
                                 debug_assert!(false, "This should not have happened.");
                             }
                             for pos in state.block.break_jmps {
                                 if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
-                                    *jmp_pos = cur_pos;
+                                    *jmp_pos = cur_pos as u32;
                                 } else {
                                     debug_assert!(false, "This should not have happened.");
                                 }
@@ -676,13 +720,13 @@ impl Compiler {
                             );
                             if next_is_block {
                                 prev_block.if_jmps.push(state.instructions.len());
-                                state.instructions.push(Instruction::Jmp(usize::MAX));
+                                state.instructions.push(Instruction::Jmp(u32::MAX));
                             }
                             let cur_pos = state.instructions.len();
                             if let Instruction::Jz(jmp_pos) =
                                 &mut state.instructions[prev_block.last_block_start]
                             {
-                                *jmp_pos = cur_pos;
+                                *jmp_pos = cur_pos as u32;
                             } else {
                                 debug_assert!(false, "This should not have happened.");
                             }
@@ -690,7 +734,7 @@ impl Compiler {
                                 for pos in prev_block.if_jmps.drain(..) {
                                     if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos]
                                     {
-                                        *jmp_pos = cur_pos;
+                                        *jmp_pos = cur_pos as u32;
                                     } else {
                                         debug_assert!(false, "This should not have happened.");
                                     }
@@ -704,7 +748,7 @@ impl Compiler {
                             let cur_pos = state.instructions.len();
                             for pos in prev_block.if_jmps.drain(..) {
                                 if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
-                                    *jmp_pos = cur_pos;
+                                    *jmp_pos = cur_pos as u32;
                                 } else {
                                     debug_assert!(false, "This should not have happened.");
                                 }
@@ -714,18 +758,18 @@ impl Compiler {
                         Word::While => {
                             state
                                 .instructions
-                                .push(Instruction::Jmp(prev_block.last_block_start));
+                                .push(Instruction::Jmp(prev_block.last_block_start as u32));
                             let cur_pos = state.instructions.len();
                             if let Instruction::While(fep) =
                                 &mut state.instructions[prev_block.last_block_start]
                             {
-                                fep.jz_pos = cur_pos;
+                                fep.jz_pos = cur_pos as u32;
                             } else {
                                 debug_assert!(false, "This should not have happened.");
                             }
                             for pos in state.block.break_jmps {
                                 if let Instruction::Jmp(jmp_pos) = &mut state.instructions[pos] {
-                                    *jmp_pos = cur_pos;
+                                    *jmp_pos = cur_pos as u32;
                                 } else {
                                     debug_assert!(false, "This should not have happened.");
                                 }
@@ -743,11 +787,13 @@ impl Compiler {
                 #[cfg(test)]
                 Token::Unknown(instruction) if instruction.contains("test") => {
                     let has_arguments = instruction != "test";
-                    let mut arguments = vec![Value::Text(instruction.into())];
+                    let mut arguments = vec![state.text(&instruction)];
 
                     if !has_arguments {
                         arguments.push(state.parse_string()?);
-                        state.instructions.push(Instruction::TestCmd(arguments));
+                        state
+                            .instructions
+                            .push(Instruction::TestCmd(arguments.into_boxed_slice()));
                         let mut new_block = Block::new(Word::Else);
                         new_block.line_num = state.tokens.line_num;
                         new_block.line_pos = state.tokens.pos - state.tokens.line_start;
@@ -758,7 +804,7 @@ impl Compiler {
                     } else {
                         loop {
                             arguments.push(match state.tokens.unwrap_next()?.token {
-                                Token::StringConstant(s) => Value::from(s),
+                                Token::StringConstant(s) => state.intern_raw(s.into()),
                                 Token::StringVariable(s) => state
                                     .tokenize_string(&s, true)
                                     .map_err(|error_type| CompileError {
@@ -769,25 +815,29 @@ impl Compiler {
                                 Token::Number(n) => {
                                     Value::Number(crate::compiler::Number::Integer(n as i64))
                                 }
-                                Token::Identifier(s) => Value::Text(s.to_string().into()),
-                                Token::Tag(s) => Value::Text(format!(":{s}").into()),
-                                Token::Unknown(s) => Value::Text(s.into()),
+                                Token::Identifier(s) => state.text(s.to_string()),
+                                Token::Tag(s) => state.text(format!(":{s}")),
+                                Token::Unknown(s) => state.text(s),
                                 Token::Semicolon => break,
                                 other => panic!("Invalid test param {other:?}"),
                             });
                         }
-                        state.instructions.push(Instruction::TestCmd(arguments));
+                        state
+                            .instructions
+                            .push(Instruction::TestCmd(arguments.into_boxed_slice()));
                     }
                 }
 
                 Token::Unknown(instruction) => {
                     if state.has_capability(&Capability::Ihave) {
                         state.ignore_instruction()?;
-                        state.instructions.push(Instruction::Invalid(Invalid {
-                            name: instruction,
-                            line_num: token_info.line_num,
-                            line_pos: token_info.line_pos,
-                        }));
+                        state
+                            .instructions
+                            .push(Instruction::Invalid(Box::new(Invalid {
+                                name: instruction,
+                                line_num: token_info.line_num as u32,
+                                line_pos: (token_info.line_pos) as u32,
+                            })));
                     } else {
                         return Err(CompileError {
                             line_num: state.block.line_num,
@@ -816,12 +866,16 @@ impl Compiler {
         // Map local variables
         let mut num_vars = std::cmp::max(state.vars_num_max, state.vars_num);
         if state.vars_local > 0 {
-            state.map_local_vars(num_vars);
+            state.map_local_vars(num_vars as u16);
             num_vars += state.vars_local;
         }
 
+        state.instructions.shrink_to_fit();
+        state.constants.shrink_to_fit();
+
         Ok(Sieve {
             instructions: state.instructions,
+            constants: state.constants.into(),
             num_vars: num_vars as u32,
             num_match_vars: state.vars_match_max as u32,
         })
@@ -848,21 +902,21 @@ impl CompilerState<'_> {
         self.vars_global.contains(&name)
     }
 
-    pub(crate) fn register_local_var(&mut self, name: String, register_as_local: bool) -> usize {
+    pub(crate) fn register_local_var(&mut self, name: String, register_as_local: bool) -> u16 {
         if let Some(var_id) = self.get_local_var(&name) {
             var_id
         } else if !register_as_local || self.block_stack.is_empty() {
-            let var_id = self.vars_num;
+            let var_id = self.vars_num as u16;
             self.block.vars_local.insert(name, var_id);
             self.vars_num += 1;
             var_id
         } else {
-            let var_id = usize::MAX - self.vars_local;
+            let var_id = u16::MAX - self.vars_local as u16;
             self.block_stack
                 .first_mut()
                 .unwrap()
                 .vars_local
-                .insert(name, usize::MAX - self.vars_local);
+                .insert(name, var_id);
             self.vars_local += 1;
             var_id
         }
@@ -872,7 +926,7 @@ impl CompilerState<'_> {
         self.vars_global.insert(name.to_ascii_lowercase());
     }
 
-    pub(crate) fn get_local_var(&self, name: &str) -> Option<usize> {
+    pub(crate) fn get_local_var(&self, name: &str) -> Option<u16> {
         let name = name.to_ascii_lowercase();
         if let Some(var_id) = self.block.vars_local.get(&name) {
             Some(*var_id)
@@ -903,7 +957,7 @@ impl CompilerState<'_> {
 
             for pos in &block.match_test_pos {
                 if let Some(Instruction::Test(test)) = self.instructions.get_mut(*pos) {
-                    let match_type = match test {
+                    let match_type = match &mut **test {
                         Test::Address(t) => &mut t.match_type,
                         Test::Body(t) => &mut t.match_type,
                         Test::Date(t) => &mut t.match_type,
@@ -961,7 +1015,7 @@ impl CompilerState<'_> {
         }
     }
 
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         for instruction in &mut self.instructions {
             match instruction {
                 Instruction::Test(v) => v.map_local_vars(last_id),
@@ -1050,11 +1104,11 @@ impl CompilerState<'_> {
 }
 
 pub trait MapLocalVars {
-    fn map_local_vars(&mut self, last_id: usize);
+    fn map_local_vars(&mut self, last_id: u16);
 }
 
 impl MapLocalVars for Test {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         match self {
             Test::Address(v) => {
                 v.header_list.map_local_vars(last_id);
@@ -1152,10 +1206,10 @@ impl MapLocalVars for Test {
 }
 
 impl MapLocalVars for VariableType {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         match self {
             VariableType::Local(id) if *id > last_id => {
-                *id = (usize::MAX - *id) + last_id;
+                *id = (u16::MAX - *id) + last_id;
             }
             _ => (),
         }
@@ -1163,7 +1217,7 @@ impl MapLocalVars for VariableType {
 }
 
 impl MapLocalVars for Value {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         match self {
             Value::Variable(var) => var.map_local_vars(last_id),
             Value::List(items) => items.map_local_vars(last_id),
@@ -1173,7 +1227,7 @@ impl MapLocalVars for Value {
 }
 
 impl<T: MapLocalVars> MapLocalVars for Option<T> {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         if let Some(value) = self {
             value.map_local_vars(last_id);
         }
@@ -1181,15 +1235,19 @@ impl<T: MapLocalVars> MapLocalVars for Option<T> {
 }
 
 impl MapLocalVars for Expression {
-    fn map_local_vars(&mut self, last_id: usize) {
-        if let Expression::Variable(var) = self {
-            var.map_local_vars(last_id)
+    fn map_local_vars(&mut self, last_id: u16) {
+        match self {
+            Expression::VariableLocal(id) if *id > last_id => {
+                *id = (u16::MAX - *id) + last_id;
+            }
+            Expression::VariableOther(var) => var.map_local_vars(last_id),
+            _ => (),
         }
     }
 }
 
-impl<T: MapLocalVars> MapLocalVars for Vec<T> {
-    fn map_local_vars(&mut self, last_id: usize) {
+impl<T: MapLocalVars> MapLocalVars for [T] {
+    fn map_local_vars(&mut self, last_id: u16) {
         for item in self {
             item.map_local_vars(last_id);
         }

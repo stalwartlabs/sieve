@@ -14,15 +14,17 @@
         "Header": {
           "header_list": [
             {
-              "Text": "X-Sieve-Filtered"
+              "Header": {
+                "other": "X-Sieve-Filtered"
+              }
             }
           ],
           "key_list": [
             {
-              "Text": "<kim@job.example.com>"
+              "Text": 0
             },
             {
-              "Text": "<kim@home.example.com>"
+              "Text": 1
             }
           ],
           "match_type": "Contains",
@@ -47,10 +49,12 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": "X-Sieve-Filtered"
+          "Header": {
+            "other": "X-Sieve-Filtered"
+          }
         },
         "value": {
-          "Text": "<kim@job.example.com>"
+          "Text": 0
         }
       }
     }
@@ -61,7 +65,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "kim@home.example.com"
+          "Text": 2
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -78,11 +82,11 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Contains",
         "field_name": {
-          "Text": "Delivered-To"
+          "Header": "delivered_to"
         },
         "value_patterns": [
           {
-            "Text": "bob@example.com"
+            "Text": 3
           }
         ],
         "mime_anychild": false
@@ -95,10 +99,12 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": "X-Hello"
+          "Header": {
+            "other": "X-Hello"
+          }
         },
         "value": {
-          "Text": "World"
+          "Text": 4
         }
       }
     }
@@ -111,7 +117,9 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Text": "X-Hello"
+          "Header": {
+            "other": "X-Hello"
+          }
         },
         "value_patterns": [],
         "mime_anychild": false
@@ -128,14 +136,20 @@
           "Matches": 0
         },
         "field_name": {
-          "Text": "X-Hello"
+          "Header": {
+            "other": "X-Hello"
+          }
         },
         "value_patterns": [
           {
-            "Text": "hello*world"
+            "Glob": {
+              "expr": "hello*world"
+            }
           },
           {
-            "Text": "hi?there"
+            "Glob": {
+              "expr": "hi?there"
+            }
           }
         ],
         "mime_anychild": false
@@ -150,11 +164,13 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Text": "X-By"
+          "Header": {
+            "other": "X-By"
+          }
         },
         "value_patterns": [
           {
-            "Text": "abc"
+            "Text": 5
           }
         ],
         "mime_anychild": false

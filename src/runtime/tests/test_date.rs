@@ -4,10 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::borrow::Cow;
-
-use mail_parser::{DateTime, Header, HeaderValue, parsers::MessageStream};
-
+use super::TestResult;
 use crate::{
     Context, Event,
     compiler::{
@@ -18,8 +15,8 @@ use crate::{
         },
     },
 };
-
-use super::TestResult;
+use mail_parser::{DateTime, Header, HeaderValue, parsers::MessageStream};
+use std::borrow::Cow;
 
 impl TestDate {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -94,7 +91,7 @@ impl TestDate {
                         if let Some(dt) = ctx.find_dates(header) {
                             let date_part =
                                 self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
-                            for key in &key_list {
+                            for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
                                 if match &self.match_type {
                                     MatchType::Is => self.comparator.is(&date_part.as_str(), key),
                                     MatchType::Contains => self
@@ -107,15 +104,17 @@ impl TestDate {
                                     ),
                                     MatchType::Matches(capture_positions) => {
                                         self.comparator.matches(
-                                            &date_part,
+                                            Some(pattern),
                                             key.to_string().as_ref(),
+                                            &date_part,
                                             *capture_positions,
                                             &mut captured_values,
                                         )
                                     }
                                     MatchType::Regex(capture_positions) => self.comparator.matches(
-                                        &date_part,
+                                        Some(pattern),
                                         key.to_string().as_ref(),
+                                        &date_part,
                                         *capture_positions,
                                         &mut captured_values,
                                     ),
@@ -182,8 +181,8 @@ impl TestCurrentDate {
                     }),
                 );
 
-                for key in &self.key_list {
-                    let key = ctx.eval_value(key);
+                for pattern in &self.key_list {
+                    let key = ctx.eval_value(pattern);
 
                     if match &self.match_type {
                         MatchType::Is => self.comparator.is(&date_part.as_str(), &key),
@@ -195,14 +194,16 @@ impl TestCurrentDate {
                                 .relational(rel_match, &date_part.as_str(), &key)
                         }
                         MatchType::Matches(capture_positions) => self.comparator.matches(
-                            &date_part,
+                            Some(pattern),
                             key.to_string().as_ref(),
+                            &date_part,
                             *capture_positions,
                             &mut captured_values,
                         ),
                         MatchType::Regex(capture_positions) => self.comparator.matches(
-                            &date_part,
+                            Some(pattern),
                             key.to_string().as_ref(),
+                            &date_part,
                             *capture_positions,
                             &mut captured_values,
                         ),

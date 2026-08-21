@@ -7,7 +7,7 @@
 use crate::{
     Metadata,
     compiler::{
-        CompileError, Value,
+        CompileError, RawValue, Value,
         grammar::{
             Capability, Comparator,
             instruction::{CompilerState, MapLocalVars},
@@ -108,7 +108,7 @@ impl CompilerState<'_> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut mailbox = None;
         let mut annotation_name = None;
-        let mut key_list: Vec<Value>;
+        let key_list: Vec<RawValue>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -145,13 +145,13 @@ impl CompilerState<'_> {
                     } else if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Metadata(TestMetadata {
             match_type,
@@ -169,7 +169,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut annotation_name = None;
-        let mut key_list: Vec<Value>;
+        let key_list: Vec<RawValue>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -204,13 +204,13 @@ impl CompilerState<'_> {
                     if annotation_name.is_none() {
                         annotation_name = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Metadata(TestMetadata {
             match_type,
@@ -225,7 +225,7 @@ impl CompilerState<'_> {
 }
 
 impl MapLocalVars for Metadata<Value> {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         match self {
             Metadata::Mailbox { name, annotation } => {
                 name.map_local_vars(last_id);

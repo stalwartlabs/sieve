@@ -101,16 +101,17 @@ impl TestVacation {
                 HeaderName::Received => {
                     received_count += 1;
                 }
+                HeaderName::AutoSubmitted => {
+                    if header
+                        .value
+                        .as_text()
+                        .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
+                    {
+                        return TestResult::Bool(false);
+                    }
+                }
                 HeaderName::Other(header_name) => {
-                    if header_name.eq_ignore_ascii_case("Auto-Submitted") {
-                        if header
-                            .value
-                            .as_text()
-                            .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
-                        {
-                            return TestResult::Bool(false);
-                        }
-                    } else if header_name.eq_ignore_ascii_case("X-Auto-Response-Suppress") {
+                    if header_name.eq_ignore_ascii_case("X-Auto-Response-Suppress") {
                         if header.value.as_text().is_some_and(|v| {
                             v.to_ascii_lowercase()
                                 .split(',')

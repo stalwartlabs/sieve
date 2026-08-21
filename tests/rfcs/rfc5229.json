@@ -18,7 +18,7 @@
           "Local": 0
         },
         "value": {
-          "Text": "$"
+          "Text": 0
         }
       }
     }
@@ -34,7 +34,7 @@
         "value": {
           "List": [
             {
-              "Text": "regarding "
+              "Text": 1
             },
             {
               "Variable": {
@@ -42,7 +42,7 @@
               }
             },
             {
-              "Text": "{beep}"
+              "Text": 2
             }
           ]
         }
@@ -58,7 +58,7 @@
           "Local": 2
         },
         "value": {
-          "Text": "Ethelbert"
+          "Text": 3
         }
       }
     }
@@ -70,14 +70,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
               "List": [
                 {
-                  "Text": "dear "
+                  "Text": 4
                 },
                 {
                   "Variable": {
@@ -110,12 +110,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "List-ID"
+              "Header": "list_id"
             }
           ],
           "key_list": [
             {
-              "Text": "*<*@*"
+              "Glob": {
+                "expr": "*<*@*"
+              }
             }
           ],
           "match_type": {
@@ -145,7 +147,7 @@
         "folder": {
           "List": [
             {
-              "Text": "INBOX.lists."
+              "Text": 5
             },
             {
               "Variable": {
@@ -171,12 +173,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "[*] *"
+              "Glob": {
+                "expr": "[*] *"
+              }
             }
           ],
           "match_type": {
@@ -206,7 +210,7 @@
         "folder": {
           "List": [
             {
-              "Text": "INBOX.lists."
+              "Text": 5
             },
             {
               "Variable": {
@@ -232,18 +236,22 @@
         "Address": {
           "header_list": [
             {
-              "Text": "To"
+              "Header": "to"
             },
             {
-              "Text": "Cc"
+              "Header": "cc"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote@**.com"
+              "Glob": {
+                "expr": "coyote@**.com"
+              }
             },
             {
-              "Text": "wile@**.com"
+              "Glob": {
+                "expr": "wile@**.com"
+              }
             }
           ],
           "address_part": "All",
@@ -273,7 +281,7 @@
         "folder": {
           "List": [
             {
-              "Text": "INBOX.business."
+              "Text": 6
             },
             {
               "Variable": {
@@ -317,12 +325,14 @@
         "Address": {
           "header_list": [
             {
-              "Text": "To"
+              "Header": "to"
             }
           ],
           "key_list": [
             {
-              "Text": "*.com"
+              "Glob": {
+                "expr": "*.com"
+              }
             }
           ],
           "address_part": "Domain",
@@ -356,7 +366,7 @@
           "Local": 3
         },
         "value": {
-          "Text": "Mr"
+          "Text": 7
         }
       }
     }
@@ -370,7 +380,7 @@
           "Local": 4
         },
         "value": {
-          "Text": "Wile"
+          "Text": 8
         }
       }
     }
@@ -384,7 +394,7 @@
           "Local": 5
         },
         "value": {
-          "Text": "Coyote"
+          "Text": 9
         }
       }
     }
@@ -400,7 +410,7 @@
         "value": {
           "List": [
             {
-              "Text": "Dear "
+              "Text": 10
             },
             {
               "Variable": {
@@ -408,7 +418,7 @@
               }
             },
             {
-              "Text": " "
+              "Text": 11
             },
             {
               "Variable": {
@@ -416,7 +426,7 @@
               }
             },
             {
-              "Text": ",\nI'm out, please leave a message after the meep.\n"
+              "Text": 12
             }
           ]
         }
@@ -432,7 +442,7 @@
           "Local": 7
         },
         "value": {
-          "Text": "juMBlEd lETteRS"
+          "Text": 13
         }
       }
     }
@@ -521,7 +531,7 @@
           "Local": 8
         },
         "value": {
-          "Text": "Rock*"
+          "Text": 14
         }
       }
     }
@@ -542,7 +552,7 @@
               }
             },
             {
-              "Text": " pending"
+              "Text": 15
             }
           ]
         }
@@ -562,7 +572,7 @@
             {
               "List": [
                 {
-                  "Text": " "
+                  "Text": 11
                 },
                 {
                   "Variable": {
@@ -570,14 +580,16 @@
                   }
                 },
                 {
-                  "Text": " "
+                  "Text": 11
                 }
               ]
             }
           ],
           "key_list": [
             {
-              "Text": "* pending *"
+              "Glob": {
+                "expr": "* pending *"
+              }
             }
           ],
           "is_not": false

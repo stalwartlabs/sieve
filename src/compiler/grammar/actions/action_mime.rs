@@ -22,7 +22,7 @@ use super::action_set::Modifier;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct ForEveryPart {
-    pub jz_pos: usize,
+    pub jz_pos: u32,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -67,7 +67,7 @@ pub(crate) struct Enclose {
 )]
 pub(crate) struct ExtractText {
     pub modifiers: Vec<Modifier>,
-    pub first: Option<usize>,
+    pub first: Option<u32>,
     pub name: VariableType,
 }
 
@@ -117,12 +117,13 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::Replace(Replace {
-            subject,
-            from,
-            replacement,
-            mime,
-        }));
+        self.instructions
+            .push(Instruction::Replace(Box::new(Replace {
+                subject,
+                from,
+                replacement,
+                mime,
+            })));
         Ok(())
     }
 
@@ -149,11 +150,12 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::Enclose(Enclose {
-            subject,
-            headers,
-            value,
-        }));
+        self.instructions
+            .push(Instruction::Enclose(Box::new(Enclose {
+                subject,
+                headers,
+                value,
+            })));
         Ok(())
     }
 
@@ -168,7 +170,7 @@ impl CompilerState<'_> {
             match token_info.token {
                 Token::Tag(Word::First) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
-                    first = self.tokens.expect_number(usize::MAX)?.into();
+                    first = (self.tokens.expect_number(u32::MAX as usize)? as u32).into();
                 }
                 Token::Tag(
                     word @ (Word::Lower
@@ -205,11 +207,11 @@ impl CompilerState<'_> {
         modifiers.sort_unstable_by_key(|m| std::cmp::Reverse(m.order()));
 
         self.instructions
-            .push(Instruction::ExtractText(ExtractText {
+            .push(Instruction::ExtractText(Box::new(ExtractText {
                 modifiers,
                 first,
                 name,
-            }));
+            })));
         Ok(())
     }
 

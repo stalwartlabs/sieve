@@ -6,9 +6,12 @@
 
 use self::{
     grammar::{AddressPart, Capability},
-    lexer::tokenizer::TokenInfo,
+    lexer::{StringConstant, tokenizer::TokenInfo},
 };
-use crate::{Compiler, Envelope, FunctionMap, runtime::RuntimeError};
+use crate::{
+    Compiler, Envelope, FunctionMap,
+    runtime::{RuntimeError, tests::glob::CompiledGlob},
+};
 use ahash::AHashMap;
 use arc_swap::ArcSwap;
 use mail_parser::HeaderName;
@@ -103,11 +106,55 @@ impl Default for Compiler {
     ))
 )]
 pub(crate) enum Value {
-    Text(Arc<String>),
+    Text(ConstantId),
     Number(Number),
     Variable(VariableType),
     Regex(Regex),
+    Glob(Glob),
+    Header(HeaderName<'static>),
     List(#[cfg_attr(feature = "rkyv", rkyv(omit_bounds))] Vec<Value>),
+}
+
+#[derive(Debug)]
+pub(crate) enum RawValue {
+    Text(String),
+    Number(Number),
+    Value(Value),
+}
+
+impl From<StringConstant> for RawValue {
+    fn from(value: StringConstant) -> Self {
+        match value {
+            StringConstant::String(text) => RawValue::Text(text),
+            StringConstant::Number(number) => RawValue::Number(number),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[repr(transparent)]
+pub struct ConstantId(u32);
+
+impl ConstantId {
+    pub(crate) const UNRESOLVED: ConstantId = ConstantId(u32::MAX);
+
+    #[inline(always)]
+    pub(crate) fn new(index: usize) -> Self {
+        ConstantId(index as u32)
+    }
+
+    #[inline(always)]
+    pub(crate) fn index(&self) -> usize {
+        self.0 as usize
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +176,25 @@ pub struct Regex {
 #[derive(Debug, Clone)]
 pub struct LazyRegex(pub Arc<ArcSwap<Option<fancy_regex::Regex>>>);
 
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+pub struct Glob {
+    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
+    #[cfg_attr(any(test, feature = "serde"), serde(skip, default))]
+    pub glob: LazyGlob,
+    pub expr: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LazyGlob(pub(crate) Arc<ArcSwap<Option<CompiledGlob>>>);
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(test, feature = "serde"),
@@ -139,8 +205,8 @@ pub struct LazyRegex(pub Arc<ArcSwap<Option<fancy_regex::Regex>>>);
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub enum VariableType {
-    Local(usize),
-    Match(usize),
+    Local(u16),
+    Match(u8),
     Global(String),
     Environment(String),
     Envelope(Envelope),
@@ -159,7 +225,7 @@ pub enum VariableType {
 )]
 pub struct Transform {
     pub variable: Box<VariableType>,
-    pub functions: Vec<usize>,
+    pub functions: Vec<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -313,7 +379,7 @@ impl Display for Number {
 }
 
 impl Compiler {
-    pub const VERSION: u32 = 2;
+    pub const VERSION: u32 = 3;
 
     pub fn new() -> Self {
         Compiler {
@@ -493,6 +559,30 @@ impl Default for LazyRegex {
         Self(Arc::new(ArcSwap::new(Arc::new(None))))
     }
 }
+
+impl Default for LazyGlob {
+    fn default() -> Self {
+        Self(Arc::new(ArcSwap::new(Arc::new(None))))
+    }
+}
+
+impl Glob {
+    pub fn new(expr: String, to_lower: bool) -> Self {
+        let compiled = CompiledGlob::compile(&expr, to_lower);
+        Self {
+            expr,
+            glob: LazyGlob(Arc::new(ArcSwap::new(Arc::new(Some(compiled))))),
+        }
+    }
+}
+
+impl PartialEq for Glob {
+    fn eq(&self, other: &Self) -> bool {
+        self.expr == other.expr
+    }
+}
+
+impl Eq for Glob {}
 
 impl Regex {
     pub fn new(expr: String, regex: fancy_regex::Regex) -> Self {

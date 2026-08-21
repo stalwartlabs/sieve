@@ -18,12 +18,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote"
+              "Text": 0
             }
           ],
           "match_type": "Contains",
@@ -49,11 +49,11 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.harassment"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": {
-          "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
+          "Text": 1
         },
         "special_use": null
       }
@@ -66,11 +66,11 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": "INBOX.no-such-folder"
+          "Text": 4
         },
         "flags": [],
         "mailbox_id": {
-          "Text": "Fnosuch"
+          "Text": 3
         },
         "special_use": null
       }
@@ -84,21 +84,21 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": "You got mail!"
+          "Text": 6
         },
         "fcc": {
           "mailbox": {
-            "Text": "INBOX.Sent"
+            "Text": 5
           },
           "mailbox_id": {
-            "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
+            "Text": 1
           },
           "create": false,
           "flags": [],
           "special_use": null
         },
         "method": {
-          "Text": "mailto:ken@example.com"
+          "Text": 7
         }
       }
     }
@@ -110,12 +110,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote"
+              "Text": 0
             }
           ],
           "match_type": "Contains",
@@ -141,7 +141,7 @@
         "MailboxIdExists": {
           "mailbox_ids": [
             {
-              "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
+              "Text": 1
             }
           ],
           "is_not": false
@@ -162,11 +162,11 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.name.will.not.be.used"
+          "Text": 8
         },
         "flags": [],
         "mailbox_id": {
-          "Text": "F6352ae03-b7f5-463c-896f-d8b48ee3"
+          "Text": 1
         },
         "special_use": null
       }
@@ -185,7 +185,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.harassment"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": null,

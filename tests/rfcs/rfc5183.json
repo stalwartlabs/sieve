@@ -25,7 +25,9 @@
           ],
           "key_list": [
             {
-              "Text": "*.example.com"
+              "Glob": {
+                "expr": "*.example.com"
+              }
             }
           ],
           "is_not": false

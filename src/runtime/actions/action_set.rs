@@ -41,15 +41,19 @@ impl Context<'_> {
 
         match var_name {
             VariableType::Local(var_id) => {
-                if let Some(var) = self.vars_local.get_mut(*var_id) {
+                if let Some(var) = self.vars_local.get_mut(*var_id as usize) {
                     *var = variable.clone();
                 } else {
                     debug_assert!(false, "Non-existent local variable {var_id}");
                 }
             }
             VariableType::Global(var_name) => {
-                self.vars_global
-                    .insert(var_name.to_string().into(), variable.clone());
+                if let Some(value) = self.vars_global.get_mut(var_name.as_str()) {
+                    *value = variable.clone();
+                } else {
+                    self.vars_global
+                        .insert(var_name.to_string().into(), variable.clone());
+                }
             }
             VariableType::Envelope(env) => {
                 self.add_set_envelope_event(*env, variable.to_string().into_owned());
@@ -76,7 +80,7 @@ impl Context<'_> {
 
     pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable> {
         match var_name {
-            VariableType::Local(var_id) => self.vars_local.get(*var_id),
+            VariableType::Local(var_id) => self.vars_local.get(*var_id as usize),
             VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
             VariableType::Envelope(env) => self
                 .envelope

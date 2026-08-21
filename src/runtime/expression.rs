@@ -4,25 +4,46 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{cmp::Ordering, fmt::Display};
-
 use crate::Event;
 use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
-use crate::{Context, compiler::Number, runtime::Variable};
-
 use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
+use crate::{Context, compiler::Number, runtime::Variable};
+use std::sync::Arc;
+use std::{cmp::Ordering, fmt::Display};
 
 impl Context<'_> {
     pub(crate) fn eval_expression(&mut self, expr: &[Expression]) -> Result<Variable, Event> {
-        let mut exprs = expr.iter().skip(self.expr_pos);
-        while let Some(expr) = exprs.next() {
+        while let Some(item) = expr.get(self.expr_pos) {
             self.expr_pos += 1;
-            match expr {
-                Expression::Variable(v) => {
+            match item {
+                Expression::VariableLocal(id) => {
+                    let value = self
+                        .vars_local
+                        .get(*id as usize)
+                        .cloned()
+                        .unwrap_or_default();
+                    self.expr_stack.push(value);
+                }
+                Expression::VariableMatch(id) => {
+                    let value = self
+                        .vars_match
+                        .get(*id as usize)
+                        .cloned()
+                        .unwrap_or_default();
+                    self.expr_stack.push(value);
+                }
+                Expression::VariableOther(v) => {
                     self.expr_stack.push(self.variable(v).unwrap_or_default());
                 }
-                Expression::Constant(val) => {
-                    self.expr_stack.push(Variable::from(val));
+                Expression::ConstantInteger(i) => {
+                    self.expr_stack.push(Variable::Integer(*i));
+                }
+                Expression::ConstantFloat(f) => {
+                    self.expr_stack.push(Variable::Float(*f));
+                }
+                Expression::ConstantString(id) => {
+                    let value = self.constant(*id);
+                    self.expr_stack.push(Variable::String(value));
                 }
                 Expression::UnaryOperator(op) => {
                     let value = self.expr_stack.pop().unwrap_or_default();
@@ -54,18 +75,13 @@ impl Context<'_> {
                     let num_args = *num_args as usize;
 
                     if let Some(fnc) = self.runtime.functions.get(*id as usize) {
-                        let mut arguments = vec![Variable::Integer(0); num_args];
-                        for arg_num in 0..num_args {
-                            arguments[num_args - arg_num - 1] =
-                                self.expr_stack.pop().unwrap_or_default();
-                        }
-                        self.expr_stack.push((fnc)(self, arguments));
+                        let start = self.expr_stack.len().saturating_sub(num_args);
+                        let arguments = self.expr_stack.split_off(start);
+                        let result = (fnc)(self, arguments);
+                        self.expr_stack.push(result);
                     } else {
-                        let mut arguments = vec![Variable::Integer(0); num_args];
-                        for arg_num in 0..num_args {
-                            arguments[num_args - arg_num - 1] =
-                                self.expr_stack.pop().unwrap_or_default();
-                        }
+                        let start = self.expr_stack.len().saturating_sub(num_args);
+                        let arguments = self.expr_stack.split_off(start);
                         self.pos -= 1; // We need to re-evaluate the function call
                         return Err(Event::Function {
                             id: ID_EXTERNAL - *id,
@@ -76,9 +92,6 @@ impl Context<'_> {
                 Expression::JmpIf { val, pos } => {
                     if self.expr_stack.last().is_some_and(|v| v.to_bool()) == *val {
                         self.expr_pos += *pos as usize;
-                        for _ in 0..*pos {
-                            exprs.next();
-                        }
                     }
                 }
                 Expression::ArrayAccess => {
@@ -88,12 +101,10 @@ impl Context<'_> {
                         .push(array.get(index).cloned().unwrap_or_default());
                 }
                 Expression::ArrayBuild(num_items) => {
-                    let num_items = *num_items as usize;
-                    let mut items = vec![Variable::Integer(0); num_items];
-                    for arg_num in 0..num_items {
-                        items[num_items - arg_num - 1] = self.expr_stack.pop().unwrap_or_default();
-                    }
-                    self.expr_stack.push(Variable::Array(items.into()));
+                    let start = self.expr_stack.len().saturating_sub(*num_items as usize);
+                    let items = Arc::from(&self.expr_stack[start..]);
+                    self.expr_stack.truncate(start);
+                    self.expr_stack.push(Variable::Array(items));
                 }
             }
         }
@@ -113,14 +124,12 @@ impl Variable {
             (Variable::Integer(i), Variable::Float(f))
             | (Variable::Float(f), Variable::Integer(i)) => Variable::Float(i as f64 + f),
             (Variable::Array(a), Variable::Array(b)) => {
-                Variable::Array(a.iter().chain(b.iter()).cloned().collect::<Vec<_>>().into())
+                Variable::Array(a.iter().chain(b.iter()).cloned().collect())
             }
-            (Variable::Array(a), b) => a.iter().cloned().chain([b]).collect::<Vec<_>>().into(),
-            (a, Variable::Array(b)) => [a]
-                .into_iter()
-                .chain(b.iter().cloned())
-                .collect::<Vec<_>>()
-                .into(),
+            (Variable::Array(a), b) => Variable::Array(a.iter().cloned().chain([b]).collect()),
+            (a, Variable::Array(b)) => {
+                Variable::Array([a].into_iter().chain(b.iter().cloned()).collect())
+            }
             (Variable::String(a), b) => {
                 if !a.is_empty() {
                     Variable::String(format!("{}{}", a, b).into())
@@ -144,13 +153,9 @@ impl Variable {
             (Variable::Float(a), Variable::Float(b)) => Variable::Float(a - b),
             (Variable::Integer(a), Variable::Float(b)) => Variable::Float(a as f64 - b),
             (Variable::Float(a), Variable::Integer(b)) => Variable::Float(a - b as f64),
-            (Variable::Array(a), b) | (b, Variable::Array(a)) => Variable::Array(
-                a.iter()
-                    .filter(|v| *v != &b)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .into(),
-            ),
+            (Variable::Array(a), b) | (b, Variable::Array(a)) => {
+                Variable::Array(a.iter().filter(|v| *v != &b).cloned().collect())
+            }
             (a, b) => a.parse_number().op_subtract(b.parse_number()),
         }
     }
@@ -406,12 +411,15 @@ mod test {
 
             while let Some(expr) = exprs.next() {
                 match expr {
-                    Expression::Variable(VariableType::Global(v)) => {
-                        stack.push(variables.get(v)?.clone());
+                    Expression::VariableOther(v) => {
+                        if let VariableType::Global(v) = v.as_ref() {
+                            stack.push(variables.get(v)?.clone());
+                        } else {
+                            unreachable!("Invalid expression")
+                        }
                     }
-                    Expression::Constant(val) => {
-                        stack.push(Variable::from(val));
-                    }
+                    Expression::ConstantInteger(i) => stack.push(Variable::Integer(*i)),
+                    Expression::ConstantFloat(f) => stack.push(Variable::Float(*f)),
                     Expression::UnaryOperator(op) => {
                         let value = stack.pop()?;
                         stack.push(match op {

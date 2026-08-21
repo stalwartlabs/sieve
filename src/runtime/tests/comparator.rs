@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, cmp::Ordering, sync::Arc};
 
 use crate::{
     MatchAs,
@@ -15,7 +15,7 @@ use crate::{
     runtime::Variable,
 };
 
-use super::glob::GlobPattern;
+use super::glob::CompiledGlob;
 
 pub(crate) trait Comparable {
     fn to_str(&'_ self) -> Cow<'_, str>;
@@ -27,7 +27,7 @@ impl Comparator {
         match self {
             Comparator::Octet => a.to_str() == b.to_str(),
             Comparator::AsciiNumeric => RelationalMatch::Eq.cmp(&a.to_number(), &b.to_number()),
-            _ => a.to_str().to_lowercase() == b.to_str().to_lowercase(),
+            _ => casemap_eq(a.to_str().as_ref(), b.to_str().as_ref()),
         }
     }
 
@@ -48,23 +48,33 @@ impl Comparator {
         match self {
             Comparator::Octet => relation.cmp(a.to_str().as_ref(), b.to_str().as_ref()),
             Comparator::AsciiNumeric => relation.cmp(&a.to_number(), &b.to_number()),
-            _ => relation.cmp(&a.to_str().to_lowercase(), &b.to_str().to_lowercase()),
+            _ => relation.matches(casemap_cmp(a.to_str().as_ref(), b.to_str().as_ref())),
         }
     }
 
     pub(crate) fn matches(
         &self,
+        pattern: Option<&Value>,
+        pattern_expr: &str,
         value: &str,
-        pattern: &str,
         capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
     ) -> bool {
-        let pattern = GlobPattern::compile(pattern, matches!(self, Comparator::AsciiCaseMap));
-        match self {
-            Comparator::AsciiCaseMap if capture_positions == 0 => pattern.matches(value),
-            Comparator::AsciiCaseMap => pattern.capture(value, capture_positions, captured_values),
-            _ if capture_positions == 0 => pattern.matches(value),
-            _ => pattern.capture(value, capture_positions, captured_values),
+        let to_lower = matches!(self, Comparator::AsciiCaseMap);
+
+        if let Some(Value::Glob(glob)) = pattern {
+            let cached = glob.glob.0.load();
+            if let Some(compiled) = cached.as_ref() {
+                eval_glob(compiled, value, capture_positions, captured_values)
+            } else {
+                let compiled = CompiledGlob::compile(&glob.expr, to_lower);
+                let result = eval_glob(&compiled, value, capture_positions, captured_values);
+                glob.glob.0.store(Arc::new(Some(compiled)));
+                result
+            }
+        } else {
+            let compiled = CompiledGlob::compile(pattern_expr, to_lower);
+            eval_glob(&compiled, value, capture_positions, captured_values)
         }
     }
 
@@ -114,6 +124,37 @@ impl Comparator {
     }
 }
 
+fn eval_glob(
+    compiled: &CompiledGlob,
+    value: &str,
+    capture_positions: u64,
+    captured_values: &mut Vec<(usize, String)>,
+) -> bool {
+    if capture_positions == 0 {
+        compiled.matches(value)
+    } else {
+        compiled.capture(value, capture_positions, captured_values)
+    }
+}
+
+pub(crate) fn casemap_eq(a: &str, b: &str) -> bool {
+    if a.is_ascii() && b.is_ascii() {
+        a.eq_ignore_ascii_case(b)
+    } else {
+        a.to_lowercase() == b.to_lowercase()
+    }
+}
+
+pub(crate) fn casemap_cmp(a: &str, b: &str) -> Ordering {
+    if a.is_ascii() && b.is_ascii() {
+        a.bytes()
+            .map(|c| c.to_ascii_lowercase())
+            .cmp(b.bytes().map(|c| c.to_ascii_lowercase()))
+    } else {
+        a.to_lowercase().cmp(&b.to_lowercase())
+    }
+}
+
 fn eval_regex(
     regex: &fancy_regex::Regex,
     value: &str,
@@ -160,6 +201,17 @@ impl Comparable for &str {
 }
 
 impl RelationalMatch {
+    pub fn matches(&self, ordering: Ordering) -> bool {
+        match self {
+            RelationalMatch::Gt => ordering == Ordering::Greater,
+            RelationalMatch::Ge => ordering != Ordering::Less,
+            RelationalMatch::Lt => ordering == Ordering::Less,
+            RelationalMatch::Le => ordering != Ordering::Greater,
+            RelationalMatch::Eq => ordering == Ordering::Equal,
+            RelationalMatch::Ne => ordering != Ordering::Equal,
+        }
+    }
+
     pub fn cmp<T>(&self, a: &T, b: &T) -> bool
     where
         T: PartialOrd + ?Sized,

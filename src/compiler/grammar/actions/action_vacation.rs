@@ -206,34 +206,35 @@ impl CompilerState<'_> {
         }
 
         self.instructions
-            .push(Instruction::Test(Test::Vacation(TestVacation {
+            .push(Instruction::Test(Box::new(Test::Vacation(TestVacation {
                 period,
                 handle,
                 reason: reason.clone(),
                 addresses,
-            })));
+            }))));
 
         self.instructions
-            .push(Instruction::Jz(self.instructions.len() + 2));
+            .push(Instruction::Jz((self.instructions.len() + 2) as u32));
 
-        self.instructions.push(Instruction::Vacation(Vacation {
-            reason,
-            subject,
-            from,
-            mime,
-            fcc: if let Some(fcc) = fcc {
-                FileCarbonCopy {
-                    mailbox: fcc,
-                    create,
-                    flags,
-                    special_use,
-                    mailbox_id,
-                }
-                .into()
-            } else {
-                None
-            },
-        }));
+        self.instructions
+            .push(Instruction::Vacation(Box::new(Vacation {
+                reason,
+                subject,
+                from,
+                mime,
+                fcc: if let Some(fcc) = fcc {
+                    FileCarbonCopy {
+                        mailbox: fcc,
+                        create,
+                        flags,
+                        special_use,
+                        mailbox_id,
+                    }
+                    .into()
+                } else {
+                    None
+                },
+            })));
 
         Ok(())
     }

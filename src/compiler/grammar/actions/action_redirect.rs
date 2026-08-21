@@ -253,34 +253,35 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::Redirect(Redirect {
-            address,
-            copy,
-            notify,
-            return_of_content: ret,
-            by_time: if let Some(alimit) = by_alimit {
-                ByTime::Absolute {
-                    alimit,
-                    mode: by_mode,
-                    trace: by_trace,
-                }
-            } else if let Some(rlimit) = by_rlimit {
-                ByTime::Relative {
-                    rlimit,
-                    mode: by_mode,
-                    trace: by_trace,
-                }
-            } else {
-                ByTime::None
-            },
-            list,
-        }));
+        self.instructions
+            .push(Instruction::Redirect(Box::new(Redirect {
+                address,
+                copy,
+                notify,
+                return_of_content: ret,
+                by_time: if let Some(alimit) = by_alimit {
+                    ByTime::Absolute {
+                        alimit,
+                        mode: by_mode,
+                        trace: by_trace,
+                    }
+                } else if let Some(rlimit) = by_rlimit {
+                    ByTime::Relative {
+                        rlimit,
+                        mode: by_mode,
+                        trace: by_trace,
+                    }
+                } else {
+                    ByTime::None
+                },
+                list,
+            })));
         Ok(())
     }
 }
 
 impl MapLocalVars for ByTime<Value> {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         if let ByTime::Absolute { alimit, .. } = self {
             alimit.map_local_vars(last_id)
         }

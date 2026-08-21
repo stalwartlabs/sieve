@@ -60,12 +60,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "$$$"
+              "Text": 0
             }
           ],
           "match_type": "Contains",
@@ -95,10 +95,10 @@
         "Exists": {
           "header_names": [
             {
-              "Text": "From"
+              "Header": "from"
             },
             {
-              "Text": "Date"
+              "Header": "date"
             }
           ],
           "mime_anychild": false,
@@ -120,12 +120,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "fool@example.com"
+              "Text": 1
             }
           ],
           "match_type": "Contains",
@@ -155,12 +155,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "MAKE MONEY FAST"
+              "Text": 2
             }
           ],
           "match_type": "Contains",
@@ -212,12 +212,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote"
+              "Text": 3
             }
           ],
           "match_type": "Contains",
@@ -253,12 +253,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "$$$"
+              "Text": 0
             }
           ],
           "match_type": "Contains",
@@ -294,7 +294,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX"
+          "Text": 4
         },
         "flags": [],
         "mailbox_id": null,
@@ -309,12 +309,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "From"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote"
+              "Text": 3
             }
           ],
           "match_type": "Contains",
@@ -339,7 +339,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "acm@example.com"
+          "Text": 5
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -361,12 +361,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "$$$"
+              "Text": 0
             }
           ],
           "match_type": "Contains",
@@ -391,7 +391,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "postmaster@example.com"
+          "Text": 6
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -412,7 +412,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "field@example.com"
+          "Text": 7
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -428,12 +428,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote"
+              "Text": 3
             }
           ],
           "match_type": "Contains",
@@ -459,7 +459,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.harassment"
+          "Text": 8
         },
         "flags": [],
         "mailbox_id": null,
@@ -473,7 +473,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "bart@example.com"
+          "Text": 9
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -525,12 +525,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "idiot@example.com"
+              "Text": 10
             }
           ],
           "match_type": "Contains",
@@ -560,12 +560,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "tim@example.com"
+              "Text": 11
             }
           ],
           "address_part": "All",
@@ -598,7 +598,7 @@
           ],
           "key_list": [
             {
-              "Text": "tim@example.com"
+              "Text": 11
             }
           ],
           "address_part": "All",
@@ -627,10 +627,10 @@
         "Exists": {
           "header_names": [
             {
-              "Text": "From"
+              "Header": "from"
             },
             {
-              "Text": "Date"
+              "Header": "date"
             }
           ],
           "mime_anychild": false,
@@ -656,12 +656,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "X-Caffeine"
+              "Header": {
+                "other": "X-Caffeine"
+              }
             }
           ],
           "key_list": [
             {
-              "Text": ""
+              "Text": 12
             }
           ],
           "match_type": "Is",
@@ -687,12 +689,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "X-Caffeine"
+              "Header": {
+                "other": "X-Caffeine"
+              }
             }
           ],
           "key_list": [
             {
-              "Text": ""
+              "Text": 12
             }
           ],
           "match_type": "Contains",
@@ -718,12 +722,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Cc"
+              "Header": "cc"
             }
           ],
           "key_list": [
             {
-              "Text": "?*"
+              "Glob": {
+                "expr": "?*"
+              }
             }
           ],
           "match_type": {
@@ -755,12 +761,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Sender"
+              "Header": "sender"
             }
           ],
           "key_list": [
             {
-              "Text": "owner-ietf-mta-filters@imc.org"
+              "Text": 13
             }
           ],
           "match_type": "Is",
@@ -786,7 +792,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "filter"
+          "Text": 14
         },
         "flags": [],
         "mailbox_id": null,
@@ -807,15 +813,15 @@
         "Address": {
           "header_list": [
             {
-              "Text": "From"
+              "Header": "from"
             },
             {
-              "Text": "To"
+              "Header": "to"
             }
           ],
           "key_list": [
             {
-              "Text": "example.com"
+              "Text": 15
             }
           ],
           "address_part": "Domain",
@@ -855,18 +861,18 @@
         "Address": {
           "header_list": [
             {
-              "Text": "To"
+              "Header": "to"
             },
             {
-              "Text": "Cc"
+              "Header": "cc"
             },
             {
-              "Text": "Bcc"
+              "Header": "bcc"
             }
           ],
           "key_list": [
             {
-              "Text": "me@example.com"
+              "Text": 16
             }
           ],
           "address_part": "All",
@@ -892,15 +898,19 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*make*money*fast*"
+              "Glob": {
+                "expr": "*make*money*fast*"
+              }
             },
             {
-              "Text": "*university*dipl*mas*"
+              "Glob": {
+                "expr": "*university*dipl*mas*"
+              }
             }
           ],
           "match_type": {
@@ -928,7 +938,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "spam"
+          "Text": 17
         },
         "flags": [],
         "mailbox_id": null,
@@ -949,7 +959,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "personal"
+          "Text": 18
         },
         "flags": [],
         "mailbox_id": null,

@@ -4,29 +4,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::cmp::Ordering;
-
+use super::Variable;
+use crate::{
+    Context,
+    compiler::{
+        ConstantId, ContentTypePart, HeaderPart, HeaderVariable, MessagePart, ReceivedHostname,
+        ReceivedPart, Value, VariableType,
+    },
+};
 use mail_parser::{
     Addr, Header, HeaderName, HeaderValue, Host, PartType, Received,
     decoders::html::{html_to_text, text_to_html},
     parsers::MessageStream,
 };
-
-use crate::{
-    Context,
-    compiler::{
-        ContentTypePart, HeaderPart, HeaderVariable, MessagePart, ReceivedHostname, ReceivedPart,
-        Value, VariableType,
-    },
-};
-
-use super::Variable;
+use std::cmp::Ordering;
 
 impl<'x> Context<'x> {
     pub(crate) fn variable<'y: 'x>(&'y self, var: &VariableType) -> Option<Variable> {
         match var {
-            VariableType::Local(var_num) => self.vars_local.get(*var_num).cloned(),
-            VariableType::Match(var_num) => self.vars_match.get(*var_num).cloned(),
+            VariableType::Local(var_num) => self.vars_local.get(*var_num as usize).cloned(),
+            VariableType::Match(var_num) => self.vars_match.get(*var_num as usize).cloned(),
             VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()).cloned(),
             VariableType::Environment(var_name) => self
                 .vars_env
@@ -85,16 +82,24 @@ impl<'x> Context<'x> {
         }
     }
 
+    #[inline(always)]
+    pub(crate) fn constant(&self, id: ConstantId) -> std::sync::Arc<str> {
+        self.constants
+            .get(id.index())
+            .cloned()
+            .unwrap_or_else(super::empty_string)
+    }
+
     pub(crate) fn eval_value(&self, string: &Value) -> Variable {
         match string {
-            Value::Text(text) => Variable::String(text.clone()),
+            Value::Text(text) => Variable::String(self.constant(*text)),
             Value::Variable(var) => self.variable(var).unwrap_or_default(),
             Value::List(list) => {
                 let mut data = String::new();
                 for item in list {
                     match item {
-                        Value::Text(string) => {
-                            data.push_str(string);
+                        Value::Text(id) => {
+                            data.push_str(&self.constant(*id));
                         }
                         Value::Variable(var) => {
                             if let Some(value) = self.variable(var) {
@@ -107,13 +112,18 @@ impl<'x> Context<'x> {
                         Value::Number(n) => {
                             data.push_str(&n.to_string());
                         }
-                        Value::Regex(_) => (),
+                        Value::Regex(_) | Value::Glob(_) => (),
+                        Value::Header(name) => {
+                            data.push_str(name.as_str());
+                        }
                     }
                 }
                 data.into()
             }
             Value::Number(n) => Variable::from(*n),
             Value::Regex(r) => Variable::String(r.expr.clone().into()),
+            Value::Glob(g) => Variable::String(g.expr.clone().into()),
+            Value::Header(name) => Variable::from(name.as_str()),
         }
     }
 
@@ -451,7 +461,7 @@ pub(crate) trait IntoString: Sized {
     fn into_string(self) -> String;
 }
 
-pub(crate) trait ToString: Sized {
+pub(crate) trait ToString {
     fn to_string(&self) -> String;
 }
 

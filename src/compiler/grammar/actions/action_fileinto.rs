@@ -95,14 +95,15 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::FileInto(FileInto {
-            folder,
-            copy,
-            create,
-            flags,
-            mailbox_id,
-            special_use,
-        }));
+        self.instructions
+            .push(Instruction::FileInto(Box::new(FileInto {
+                folder,
+                copy,
+                create,
+                flags,
+                mailbox_id,
+                special_use,
+            })));
         Ok(())
     }
 }

@@ -1,3 +1,7 @@
+sieve-rs 0.8.0
+================================
+- Serialization format improvements.
+
 sieve-rs 0.7.3
 ================================
 - Bump `mail-builder` dependency to 0.5.

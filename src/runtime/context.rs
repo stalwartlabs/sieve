@@ -24,6 +24,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub(crate) struct ScriptStack {
     pub(crate) script: Arc<Sieve>,
+    pub(crate) prev_constants: Arc<[Arc<str>]>,
     pub(crate) prev_pos: usize,
     pub(crate) prev_vars_local: Vec<Variable>,
     pub(crate) prev_vars_match: Vec<Variable>,
@@ -59,6 +60,8 @@ impl<'x> Context<'x> {
                 message_id: 0,
             }
             .into(),
+            constants: Arc::from([]),
+            flags: Vec::new(),
             queued_events: vec![].into_iter(),
             has_changes: false,
             user_address: "".into(),
@@ -96,6 +99,7 @@ impl<'x> Context<'x> {
 
                     self.script_cache.insert(name, script.clone());
                     self.script_stack.push(ScriptStack {
+                        prev_constants: std::mem::replace(&mut self.constants, script.constants()),
                         script,
                         prev_pos: self.pos,
                         prev_vars_local: std::mem::replace(
@@ -119,12 +123,14 @@ impl<'x> Context<'x> {
         }
 
         let mut current_script = self.script_stack.last()?.script.clone();
-        let mut iter = current_script.instructions.get(self.pos..)?.iter();
+        let cpu_limit = self.runtime.cpu_limit;
+
+        let mut iter = current_script.instructions_from(self.pos);
 
         'outer: loop {
             while let Some(instruction) = iter.next() {
                 self.num_instructions += 1;
-                if self.num_instructions > self.runtime.cpu_limit {
+                if self.num_instructions > cpu_limit {
                     self.finish_loop();
                     return Some(Err(RuntimeError::CPULimitReached));
                 }
@@ -133,24 +139,24 @@ impl<'x> Context<'x> {
                 match instruction {
                     Instruction::Jz(jmp_pos) => {
                         if !self.test_result {
-                            debug_assert!(*jmp_pos > self.pos - 1);
-                            self.pos = *jmp_pos;
-                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            debug_assert!(*jmp_pos as usize > self.pos - 1);
+                            self.pos = *jmp_pos as usize;
+                            iter = current_script.instructions_from(self.pos);
                             continue;
                         }
                     }
                     Instruction::Jnz(jmp_pos) => {
                         if self.test_result {
-                            debug_assert!(*jmp_pos > self.pos - 1);
-                            self.pos = *jmp_pos;
-                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            debug_assert!(*jmp_pos as usize > self.pos - 1);
+                            self.pos = *jmp_pos as usize;
+                            iter = current_script.instructions_from(self.pos);
                             continue;
                         }
                     }
                     Instruction::Jmp(jmp_pos) => {
-                        debug_assert_ne!(*jmp_pos, self.pos - 1);
-                        self.pos = *jmp_pos;
-                        iter = current_script.instructions.get(self.pos..)?.iter();
+                        debug_assert_ne!(*jmp_pos as usize, self.pos - 1);
+                        self.pos = *jmp_pos as usize;
+                        iter = current_script.instructions_from(self.pos);
                         continue;
                     }
                     Instruction::Test(test) => match test.exec(self) {
@@ -220,7 +226,7 @@ impl<'x> Context<'x> {
                         self.final_event = Event::Discard.into();
                     }
                     Instruction::Stop => {
-                        self.script_stack.clear();
+                        self.clear_script_stack();
                         break 'outer;
                     }
                     Instruction::Reject(reject) => {
@@ -235,11 +241,11 @@ impl<'x> Context<'x> {
                             self.part = next_part;
                         } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop()
                         {
-                            debug_assert!(fep.jz_pos > self.pos - 1);
+                            debug_assert!(fep.jz_pos as usize > self.pos - 1);
                             self.part_iter = prev_part_iter;
                             self.part = prev_part;
-                            self.pos = fep.jz_pos;
-                            iter = current_script.instructions.get(self.pos..)?.iter();
+                            self.pos = fep.jz_pos as usize;
+                            iter = current_script.instructions_from(self.pos);
                             continue;
                         } else {
                             self.part = 0;
@@ -256,7 +262,7 @@ impl<'x> Context<'x> {
                     }
                     Instruction::ForEveryPartPop(num_pops) => {
                         debug_assert!(
-                            *num_pops > 0 && *num_pops <= self.part_iter_stack.len(),
+                            *num_pops > 0 && *num_pops as usize <= self.part_iter_stack.len(),
                             "Pop out of range: {} with {} items.",
                             num_pops,
                             self.part_iter_stack.len()
@@ -273,9 +279,9 @@ impl<'x> Context<'x> {
                     Instruction::While(while_) => match self.eval_expression(&while_.expr) {
                         Ok(result) => {
                             if !result.to_bool() {
-                                debug_assert!(while_.jz_pos > self.pos - 1);
-                                self.pos = while_.jz_pos;
-                                iter = current_script.instructions.get(self.pos..)?.iter();
+                                debug_assert!(while_.jz_pos as usize > self.pos - 1);
+                                self.pos = while_.jz_pos as usize;
+                                iter = current_script.instructions_from(self.pos);
                                 continue;
                             }
                         }
@@ -324,6 +330,10 @@ impl<'x> Context<'x> {
                     Instruction::Include(include) => match include.exec(self) {
                         IncludeResult::Cached(script) => {
                             self.script_stack.push(ScriptStack {
+                                prev_constants: std::mem::replace(
+                                    &mut self.constants,
+                                    script.constants(),
+                                ),
                                 script: script.clone(),
                                 prev_pos: self.pos,
                                 prev_vars_local: std::mem::replace(
@@ -337,7 +347,7 @@ impl<'x> Context<'x> {
                             });
                             self.pos = 0;
                             current_script = script;
-                            iter = current_script.instructions.iter();
+                            iter = current_script.instructions_from(0);
                             continue;
                         }
                         IncludeResult::Event(event) => {
@@ -377,7 +387,9 @@ impl<'x> Context<'x> {
                     }
                     Instruction::Invalid(invalid) => {
                         self.finish_loop();
-                        return Some(Err(RuntimeError::InvalidInstruction(invalid.clone())));
+                        return Some(Err(RuntimeError::InvalidInstruction(
+                            invalid.as_ref().clone(),
+                        )));
                     }
                     #[cfg(test)]
                     Instruction::TestCmd(arguments) => {
@@ -393,6 +405,7 @@ impl<'x> Context<'x> {
             }
 
             if let Some(prev_script) = self.script_stack.pop() {
+                self.constants = prev_script.prev_constants;
                 self.pos = prev_script.prev_pos;
                 self.vars_local = prev_script.prev_vars_local;
                 self.vars_match = prev_script.prev_vars_match;
@@ -400,7 +413,7 @@ impl<'x> Context<'x> {
 
             if let Some(script_stack) = self.script_stack.last() {
                 current_script = script_stack.script.clone();
-                iter = current_script.instructions.get(self.pos..)?.iter();
+                iter = current_script.instructions_from(self.pos);
             } else {
                 break;
             }
@@ -440,8 +453,13 @@ impl<'x> Context<'x> {
         }
     }
 
-    pub(crate) fn finish_loop(&mut self) {
+    pub(crate) fn clear_script_stack(&mut self) {
         self.script_stack.clear();
+        self.constants = Arc::from([]);
+    }
+
+    pub(crate) fn finish_loop(&mut self) {
+        self.clear_script_stack();
         if let Some(event) = self.final_event.take() {
             self.queued_events = if let Event::Keep {
                 mut flags,
@@ -669,6 +687,8 @@ impl<'x> Context<'x> {
                 message_id: 0,
             }
             .into(),
+            constants: Arc::from([]),
+            flags: Vec::new(),
             queued_events: vec![].into_iter(),
             has_changes: false,
             user_address: "".into(),

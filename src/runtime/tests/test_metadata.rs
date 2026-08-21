@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::TestResult;
 use crate::{
     Context, Metadata,
     compiler::{
@@ -14,8 +15,6 @@ use crate::{
         },
     },
 };
-
-use super::TestResult;
 
 impl TestMetadata {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -75,8 +74,9 @@ impl TestMetadata {
                         self.comparator.relational(relation, &value, &key)
                     }
                     MatchType::Matches(capture_positions) => self.comparator.matches(
-                        value,
+                        Some(pattern),
                         key.to_string().as_ref(),
+                        value,
                         *capture_positions,
                         &mut captured_values,
                     ),

@@ -453,12 +453,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             }
           ],
           "key_list": [
             {
-              "Text": "image"
+              "Text": 0
             }
           ],
           "match_type": "Is",
@@ -484,7 +484,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.images"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -499,12 +499,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             }
           ],
           "key_list": [
             {
-              "Text": "text/html"
+              "Text": 2
             }
           ],
           "match_type": "Is",
@@ -530,7 +530,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.html"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,
@@ -557,12 +557,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Disposition"
+              "Header": "content_disposition"
             }
           ],
           "key_list": [
             {
-              "Text": "important"
+              "Text": 5
             }
           ],
           "match_type": "Contains",
@@ -571,7 +571,7 @@
           "mime_opts": {
             "Param": [
               {
-                "Text": "filename"
+                "Text": 4
               }
             ]
           },
@@ -594,12 +594,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             }
           ],
           "key_list": [
             {
-              "Text": "pdf"
+              "Text": 6
             }
           ],
           "match_type": "Is",
@@ -643,7 +643,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.important"
+          "Text": 7
         },
         "flags": [],
         "mailbox_id": null,
@@ -676,12 +676,14 @@
         "Address": {
           "header_list": [
             {
-              "Text": "content-from"
+              "Header": {
+                "other": "content-from"
+              }
             }
           ],
           "key_list": [
             {
-              "Text": "tim@example.com"
+              "Text": 8
             }
           ],
           "address_part": "All",
@@ -707,7 +709,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.part-from-tim"
+          "Text": 9
         },
         "flags": [],
         "mailbox_id": null,
@@ -722,7 +724,7 @@
         "Exists": {
           "header_names": [
             {
-              "Text": "content-md5"
+              "Header": "content_md5"
             }
           ],
           "mime_anychild": true,
@@ -744,7 +746,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.md5"
+          "Text": 10
         },
         "flags": [],
         "mailbox_id": null,
@@ -771,12 +773,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             }
           ],
           "key_list": [
             {
-              "Text": "application/exe"
+              "Text": 11
             }
           ],
           "match_type": "Is",
@@ -802,15 +804,17 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             },
             {
-              "Text": "Content-Disposition"
+              "Header": "content_disposition"
             }
           ],
           "key_list": [
             {
-              "Text": "*.com"
+              "Glob": {
+                "expr": "*.com"
+              }
             }
           ],
           "match_type": {
@@ -821,7 +825,7 @@
           "mime_opts": {
             "Param": [
               {
-                "Text": "filename"
+                "Text": 4
               }
             ]
           },
@@ -844,7 +848,7 @@
         "subject": null,
         "from": null,
         "replacement": {
-          "Text": "Executable attachment removed by user filter"
+          "Text": 12
         },
         "mime": false
       }
@@ -875,36 +879,52 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             },
             {
-              "Text": "Content-Disposition"
+              "Header": "content_disposition"
             }
           ],
           "key_list": [
             {
-              "Text": "*.com"
+              "Glob": {
+                "expr": "*.com"
+              }
             },
             {
-              "Text": "*.exe"
+              "Glob": {
+                "expr": "*.exe"
+              }
             },
             {
-              "Text": "*.vbs"
+              "Glob": {
+                "expr": "*.vbs"
+              }
             },
             {
-              "Text": "*.scr"
+              "Glob": {
+                "expr": "*.scr"
+              }
             },
             {
-              "Text": "*.pif"
+              "Glob": {
+                "expr": "*.pif"
+              }
             },
             {
-              "Text": "*.hta"
+              "Glob": {
+                "expr": "*.hta"
+              }
             },
             {
-              "Text": "*.bat"
+              "Glob": {
+                "expr": "*.bat"
+              }
             },
             {
-              "Text": "*.zip"
+              "Glob": {
+                "expr": "*.zip"
+              }
             }
           ],
           "match_type": {
@@ -915,7 +935,7 @@
           "mime_opts": {
             "Param": [
               {
-                "Text": "filename"
+                "Text": 4
               }
             ]
           },
@@ -936,11 +956,11 @@
     {
       "Enclose": {
         "subject": {
-          "Text": "Warning"
+          "Text": 13
         },
         "headers": [],
         "value": {
-          "Text": "Warning\n"
+          "Text": 14
         }
       }
     }
@@ -970,12 +990,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "boss@example.org"
+              "Text": 15
             }
           ],
           "match_type": "Contains",
@@ -1001,12 +1021,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -1072,12 +1094,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             }
           ],
           "key_list": [
             {
-              "Text": "text"
+              "Text": 16
             }
           ],
           "match_type": "Is",
@@ -1143,12 +1165,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "FYI:"
+              "Text": 17
             }
           ],
           "match_type": "Contains",

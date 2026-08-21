@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::HeaderName;
-
 use crate::compiler::{
     CompileError, ErrorType, Value,
     grammar::{Capability, instruction::CompilerState},
@@ -58,16 +56,13 @@ impl CompilerState<'_> {
                     mime_anychild = true;
                 }
                 _ => {
-                    let headers = self.parse_strings_token(token_info)?;
-                    for header in &headers {
-                        if let Value::Text(header_name) = &header
-                            && HeaderName::parse(header_name.as_ref()).is_none()
-                        {
-                            return Err(self
-                                .tokens
-                                .unwrap_next()?
-                                .custom(ErrorType::InvalidHeaderName));
-                        }
+                    let headers = self.parse_raw_strings_token(token_info)?;
+                    let (headers, all_valid) = self.resolve_header_names(headers);
+                    if !all_valid {
+                        return Err(self
+                            .tokens
+                            .unwrap_next()?
+                            .custom(ErrorType::InvalidHeaderName));
                     }
                     header_names = headers.into();
                 }

@@ -12,9 +12,9 @@ impl TestSize {
     pub(crate) fn exec(&self, ctx: &Context) -> TestResult {
         TestResult::Bool(
             (if self.over {
-                ctx.message_size > self.limit
+                ctx.message_size as u64 > self.limit
             } else {
-                ctx.message_size < self.limit
+                (ctx.message_size as u64) < self.limit
             }) ^ self.is_not,
         )
     }

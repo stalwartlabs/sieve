@@ -29,7 +29,7 @@
           ],
           "key_list": [
             {
-              "Text": "SUCCESS"
+              "Text": 0
             }
           ],
           "address_part": "All",
@@ -57,7 +57,7 @@
           ],
           "key_list": [
             {
-              "Text": "FAILURE"
+              "Text": 1
             }
           ],
           "address_part": "All",
@@ -117,7 +117,9 @@
           ],
           "key_list": [
             {
-              "Text": "rfc822;*@example.com"
+              "Glob": {
+                "expr": "rfc822;*@example.com"
+              }
             }
           ],
           "address_part": "All",
@@ -147,7 +149,7 @@
           ],
           "key_list": [
             {
-              "Text": "-"
+              "Text": 2
             }
           ],
           "address_part": "All",
@@ -210,7 +212,9 @@
           "date_part": "Iso8601",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -292,7 +296,9 @@
           ],
           "key_list": [
             {
-              "Text": "*T*:*:*"
+              "Glob": {
+                "expr": "*T*:*:*"
+              }
             }
           ],
           "address_part": "All",
@@ -382,7 +388,7 @@
         "folder": {
           "List": [
             {
-              "Text": "missed-"
+              "Text": 3
             },
             {
               "Variable": {
@@ -414,12 +420,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "user@example.com"
+              "Text": 4
             }
           ],
           "address_part": "All",
@@ -444,7 +450,7 @@
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": "elsewhere@example.com"
+          "Text": 5
         },
         "notify": "Never",
         "return_of_content": "Default",
@@ -460,12 +466,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "user@example.com"
+              "Text": 4
             }
           ],
           "address_part": "All",
@@ -490,7 +496,7 @@
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": "cellphone@example.com"
+          "Text": 6
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -547,7 +553,9 @@
           "date_part": "Date",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -600,7 +608,9 @@
           "date_part": "Zone",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -646,14 +656,14 @@
       "Redirect": {
         "copy": true,
         "address": {
-          "Text": "cellphone@example.com"
+          "Text": 6
         },
         "notify": "Default",
         "return_of_content": "Default",
         "by_time": {
           "Absolute": {
             "alimit": {
-              "Text": "T20:00:00"
+              "Text": 7
             },
             "mode": "Return",
             "trace": false

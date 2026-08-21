@@ -21,7 +21,7 @@ impl Notify {
     pub(crate) fn exec(&self, ctx: &mut Context) {
         // Do not notify on Auto-Submitted messages
         for header in &ctx.message.parts[0].headers {
-            if matches!(&header.name, HeaderName::Other(name) if name.eq_ignore_ascii_case("Auto-Submitted"))
+            if header.name.as_str().eq_ignore_ascii_case("Auto-Submitted")
                 && header
                     .value
                     .as_text()

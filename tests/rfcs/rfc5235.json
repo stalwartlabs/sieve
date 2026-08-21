@@ -47,7 +47,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.unclassified"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -94,7 +94,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.spam-trap"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -135,7 +135,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.unclassified"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -182,7 +182,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.not-spam"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": null,
@@ -229,7 +229,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.spam-trap"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -280,7 +280,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.unclassified"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -327,7 +327,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.not-spam"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": null,
@@ -374,7 +374,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.spam-trap"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -424,7 +424,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.unclassified"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -464,7 +464,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.quarantine"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,

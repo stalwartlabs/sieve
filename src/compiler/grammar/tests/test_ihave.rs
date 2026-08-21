@@ -51,9 +51,9 @@ impl CompilerState<'_> {
     }
 
     pub(crate) fn parse_error(&mut self) -> Result<(), CompileError> {
-        let cmd = Instruction::Error(Error {
+        let cmd = Instruction::Error(Box::new(Error {
             message: self.parse_string()?,
-        });
+        }));
         self.instructions.push(cmd);
         Ok(())
     }

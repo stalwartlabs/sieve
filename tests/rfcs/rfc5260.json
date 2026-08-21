@@ -20,12 +20,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "boss@example.com"
+              "Text": 0
             }
           ],
           "match_type": "Is",
@@ -50,11 +50,11 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Text": "date"
+            "Header": "date"
           },
           "key_list": [
             {
-              "Text": "09"
+              "Text": 1
             }
           ],
           "match_type": {
@@ -82,7 +82,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Text": "date"
+            "Header": "date"
           },
           "key_list": [
             {
@@ -117,7 +117,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "urgent"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": null,
@@ -131,7 +131,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Text": "received"
+            "Header": "received"
           },
           "key_list": [
             {
@@ -163,7 +163,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Text": "received"
+            "Header": "received"
           },
           "key_list": [
             {
@@ -196,7 +196,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "weekend"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,
@@ -271,7 +271,7 @@
           "date_part": "Hour",
           "key_list": [
             {
-              "Text": "09"
+              "Text": 1
             }
           ],
           "is_not": false
@@ -320,7 +320,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "pager@example.com"
+          "Text": 4
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -342,7 +342,7 @@
           "date_part": "Date",
           "key_list": [
             {
-              "Text": "2007-06-30"
+              "Text": 5
             }
           ],
           "is_not": false
@@ -369,7 +369,7 @@
           "date_part": "Date",
           "key_list": [
             {
-              "Text": "2007-07-07"
+              "Text": 6
             }
           ],
           "is_not": false
@@ -394,7 +394,7 @@
           },
           "handle": null,
           "reason": {
-            "Text": "I'm away during the first week in July."
+            "Text": 7
           }
         }
       }
@@ -415,7 +415,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": "I'm away during the first week in July."
+          "Text": 7
         }
       }
     }
@@ -433,7 +433,9 @@
           "date_part": "Month",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -486,7 +488,9 @@
           "date_part": "Year",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -533,7 +537,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "-"
+          "Text": 8
         },
         "flags": [],
         "mailbox_id": null,
@@ -554,7 +558,9 @@
           "date_part": "Std11",
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -574,7 +580,9 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Text": "Processing-date"
+          "Header": {
+            "other": "Processing-date"
+          }
         },
         "value": {
           "Variable": {
@@ -590,11 +598,11 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Text": "received"
+            "Header": "received"
           },
           "key_list": [
             {
-              "Text": "2007-02-26T09:00:00-05:00"
+              "Text": 9
             }
           ],
           "match_type": {
@@ -624,7 +632,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "aftercutoff@example.org"
+          "Text": 10
         },
         "notify": "Default",
         "return_of_content": "Default",

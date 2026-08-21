@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::{Header, HeaderName, HeaderValue, parsers::MessageStream};
-
+use super::{TestResult, mime::SubpartIterator};
 use crate::{
     Context, Event,
     compiler::{
@@ -14,8 +13,14 @@ use crate::{
     },
     runtime::Variable,
 };
+use mail_parser::{Header, HeaderName, HeaderValue, parsers::MessageStream};
 
-use super::{TestResult, mime::SubpartIterator};
+pub(crate) fn borrow_header_name<'y>(name: &'y HeaderName<'static>) -> HeaderName<'y> {
+    match name {
+        HeaderName::Other(name) => HeaderName::Other(std::borrow::Cow::Borrowed(name.as_ref())),
+        other => other.clone(),
+    }
+}
 
 impl TestHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -81,8 +86,9 @@ impl TestHeader {
                             {
                                 if is_matches {
                                     if self.comparator.matches(
-                                        value,
+                                        Some(pattern),
                                         pattern_expr.to_string().as_ref(),
+                                        value,
                                         *capture_positions,
                                         &mut captured_values,
                                     ) {
@@ -194,7 +200,9 @@ impl Context<'_> {
     ) -> Vec<HeaderName<'y>> {
         let mut result = Vec::with_capacity(header_names.len());
         for header_name in header_names {
-            if let Some(header_name) = self.parse_header_name(header_name) {
+            if let Value::Header(header_name) = header_name {
+                result.push(borrow_header_name(header_name));
+            } else if let Some(header_name) = self.parse_header_name(header_name) {
                 result.push(header_name);
             }
         }
@@ -203,6 +211,10 @@ impl Context<'_> {
 
     #[inline(always)]
     pub(crate) fn parse_header_name(&self, header_name: &Value) -> Option<HeaderName<'static>> {
+        if let Value::Header(header_name) = header_name {
+            return Some(header_name.clone());
+        }
+
         let h_ = self.eval_value(header_name);
         let h = h_.to_string();
 
@@ -320,17 +332,17 @@ impl Context<'_> {
                 visitor_fnc(text.as_ref())
             }
             (MimeOpts::None, _) => {
-                if let HeaderValue::Text(text) = MessageStream::new(
+                let decoded = MessageStream::new(
                     self.message
                         .raw_message
                         .get(header.offset_start as usize..header.offset_end as usize)
                         .unwrap_or(b""),
                 )
-                .parse_unstructured()
-                {
-                    visitor_fnc(text.as_ref())
-                } else {
-                    visitor_fnc("")
+                .parse_unstructured();
+
+                match decoded {
+                    HeaderValue::Text(text) => visitor_fnc(text.as_ref()),
+                    _ => visitor_fnc(""),
                 }
             }
             (MimeOpts::Type, HeaderValue::ContentType(ct)) => visitor_fnc(ct.c_type.as_ref()),

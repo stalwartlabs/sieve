@@ -57,7 +57,7 @@ impl CompilerState<'_> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut notification_uri = None;
         let mut notification_capability = None;
-        let mut key_list;
+        let key_list;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -94,13 +94,13 @@ impl CompilerState<'_> {
                     } else if notification_capability.is_none() {
                         notification_capability = self.parse_string_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::NotifyMethodCapability(TestNotifyMethodCapability {
             key_list,

@@ -73,8 +73,9 @@ impl TestString {
                                     self.comparator.relational(relation, source, &key)
                                 }
                                 MatchType::Matches(capture_positions) => self.comparator.matches(
-                                    source.to_string().as_ref(),
+                                    Some(pattern),
                                     key.to_string().as_ref(),
+                                    source.to_string().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
                                 ),

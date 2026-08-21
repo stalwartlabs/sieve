@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::borrow::Cow;
-
-use mail_parser::{Header, HeaderName, HeaderValue};
-
 use crate::{
     Context,
     compiler::grammar::{
@@ -18,6 +14,8 @@ use crate::{
         },
     },
 };
+use mail_parser::{Header, HeaderName, HeaderValue};
+use std::borrow::Cow;
 
 impl AddHeader {
     pub(crate) fn exec(&self, ctx: &mut Context) {
@@ -85,8 +83,9 @@ impl DeleteHeader {
                                     self.comparator.relational(rel_match, &value, pattern_expr)
                                 }
                                 MatchType::Matches(_) => self.comparator.matches(
-                                    value,
+                                    Some(pattern),
                                     pattern_expr.to_string().as_ref(),
+                                    value,
                                     0,
                                     &mut Vec::new(),
                                 ),

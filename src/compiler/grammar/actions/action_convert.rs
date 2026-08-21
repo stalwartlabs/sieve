@@ -39,12 +39,12 @@ impl CompilerState<'_> {
     }
 
     pub(crate) fn parse_convert(&mut self) -> Result<(), CompileError> {
-        let cmd = Instruction::Convert(Convert {
+        let cmd = Instruction::Convert(Box::new(Convert {
             from_media_type: self.parse_string()?,
             to_media_type: self.parse_string()?,
             transcoding_params: self.parse_strings(false)?,
             is_not: false,
-        });
+        }));
         self.instructions.push(cmd);
         Ok(())
     }

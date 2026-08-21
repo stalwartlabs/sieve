@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::DateTime;
-
+use super::TestResult;
 use crate::{
     Context, Envelope, Event,
     compiler::{
@@ -13,8 +12,7 @@ use crate::{
         grammar::{MatchType, tests::test_envelope::TestEnvelope},
     },
 };
-
-use super::TestResult;
+use mail_parser::DateTime;
 
 impl TestEnvelope {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -55,8 +53,9 @@ impl TestEnvelope {
                     for (pattern_expr, pattern) in key_list.iter().zip(self.key_list.iter()) {
                         if is_matches {
                             if self.comparator.matches(
-                                value,
+                                Some(pattern),
                                 pattern_expr.to_string().as_ref(),
+                                value,
                                 *capture_positions,
                                 &mut captured_positions,
                             ) {

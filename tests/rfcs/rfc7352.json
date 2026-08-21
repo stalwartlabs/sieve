@@ -45,7 +45,7 @@
           "handle": null,
           "dup_match": {
             "Header": {
-              "Text": "message-id"
+              "Header": "message_id"
             }
           },
           "seconds": null,
@@ -72,12 +72,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "message-id"
+              "Header": "message_id"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -155,7 +157,7 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": "Trash/Duplicate"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -170,12 +172,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "ALERT: *"
+              "Glob": {
+                "expr": "ALERT: *"
+              }
             }
           ],
           "match_type": {
@@ -230,7 +234,7 @@
         "name": null,
         "flags": [
           {
-            "Text": "\\seen"
+            "Text": 1
           }
         ]
       }
@@ -243,7 +247,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "Alerts"
+          "Text": 2
         },
         "flags": [],
         "mailbox_id": null,
@@ -261,7 +265,9 @@
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -314,12 +320,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -374,7 +382,7 @@
           "handle": null,
           "dup_match": {
             "UniqueId": {
-              "Text": ""
+              "Text": 3
             }
           },
           "seconds": 1800,
@@ -400,16 +408,16 @@
         "message": {
           "List": [
             {
-              "Text": "[SIEVE] "
+              "Text": 4
             },
             {
-              "Text": ": "
+              "Text": 5
             }
           ]
         },
         "fcc": null,
         "method": {
-          "Text": "xmpp:user@im.example.com"
+          "Text": 6
         }
       }
     }
@@ -424,7 +432,9 @@
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -477,12 +487,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -540,12 +552,14 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "Text": ""
+              "Text": 3
             }
           ],
           "key_list": [
             {
-              "Text": "Re:*"
+              "Glob": {
+                "expr": "Re:*"
+              }
             }
           ],
           "is_not": false
@@ -593,7 +607,7 @@
           "handle": null,
           "dup_match": {
             "UniqueId": {
-              "Text": " "
+              "Text": 7
             }
           },
           "seconds": 1800,
@@ -619,16 +633,16 @@
         "message": {
           "List": [
             {
-              "Text": "[SIEVE] "
+              "Text": 4
             },
             {
-              "Text": ": "
+              "Text": 5
             }
           ]
         },
         "fcc": null,
         "method": {
-          "Text": "xmpp:user@im.example.com"
+          "Text": 6
         }
       }
     }
@@ -639,11 +653,13 @@
       "Test": {
         "Duplicate": {
           "handle": {
-            "Text": "notifier"
+            "Text": 8
           },
           "dup_match": {
             "Header": {
-              "Text": "X-Event-ID"
+              "Header": {
+                "other": "X-Event-ID"
+              }
             }
           },
           "seconds": null,
@@ -669,11 +685,13 @@
       "Test": {
         "Duplicate": {
           "handle": {
-            "Text": "support"
+            "Text": 9
           },
           "dup_match": {
             "Header": {
-              "Text": "X-Ticket-ID"
+              "Header": {
+                "other": "X-Ticket-ID"
+              }
             }
           },
           "seconds": null,
@@ -696,12 +714,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             }
           ],
           "key_list": [
             {
-              "Text": "support@example.com"
+              "Text": 10
             }
           ],
           "address_part": "All",
@@ -727,12 +745,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "fileserver"
+              "Text": 11
             }
           ],
           "match_type": "Contains",
@@ -759,7 +777,7 @@
         "name": null,
         "flags": [
           {
-            "Text": "\\seen"
+            "Text": 1
           }
         ]
       }

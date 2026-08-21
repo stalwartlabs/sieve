@@ -65,7 +65,10 @@ impl CompilerState<'_> {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
                     let address = self.parse_string()?;
                     if let Value::Text(address) = &address
-                        && (address.is_empty() || !validate_from(address))
+                        && {
+                            let address = self.constant(*address);
+                            address.is_empty() || !validate_from(address)
+                        }
                     {
                         return Err(token_info.custom(ErrorType::InvalidAddress));
                     }
@@ -147,7 +150,7 @@ impl CompilerState<'_> {
             return Err(self.tokens.unwrap_next()?.missing_tag(":fcc"));
         }
 
-        self.instructions.push(Instruction::Notify(Notify {
+        self.instructions.push(Instruction::Notify(Box::new(Notify {
             method,
             from,
             importance,
@@ -165,13 +168,13 @@ impl CompilerState<'_> {
             } else {
                 None
             },
-        }));
+        })));
         Ok(())
     }
 }
 
 impl MapLocalVars for FileCarbonCopy<Value> {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         self.mailbox.map_local_vars(last_id);
         self.mailbox_id.map_local_vars(last_id);
         self.flags.map_local_vars(last_id);

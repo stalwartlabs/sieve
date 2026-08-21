@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::{MimeHeaders, PartType, decoders::html::html_to_text};
-
+use super::{TestResult, mime::ContentTypeFilter};
 use crate::{
     Context,
     compiler::{
@@ -16,8 +15,7 @@ use crate::{
         },
     },
 };
-
-use super::{TestResult, mime::ContentTypeFilter};
+use mail_parser::{MimeHeaders, PartType, decoders::html::html_to_text};
 
 impl TestBody {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -40,8 +38,9 @@ impl TestBody {
                         self.comparator.relational(rel_match, &subject, key)
                     }
                     MatchType::Matches(_) => self.comparator.matches(
-                        subject,
+                        Some(pattern),
                         key.to_string().as_ref(),
+                        subject,
                         0,
                         &mut Vec::new(),
                     ),
@@ -146,25 +145,20 @@ impl TestBody {
                             )
                         }
                     }
-                    (BodyTransform::Raw, _) => {
-                        match &part.body {
-                            PartType::Text(text) if part.raw_body_offset() == 0 => {
-                                // Inserted part
-                                text.as_ref().into()
-                            }
-                            _ if part.raw_end_offset() > part.raw_body_offset() => {
-                                String::from_utf8_lossy(
-                                    raw_message
-                                        .get(
-                                            part.raw_body_offset() as usize
-                                                ..part.raw_end_offset() as usize,
-                                        )
-                                        .unwrap_or(b""),
-                                )
-                            }
-                            _ => return false,
+                    (BodyTransform::Raw, _) => match &part.body {
+                        PartType::Text(text) if part.raw_body_offset() == 0 => text.as_ref().into(),
+                        _ if part.raw_end_offset() > part.raw_body_offset() => {
+                            String::from_utf8_lossy(
+                                raw_message
+                                    .get(
+                                        part.raw_body_offset() as usize
+                                            ..part.raw_end_offset() as usize,
+                                    )
+                                    .unwrap_or(b""),
+                            )
                         }
-                    }
+                        _ => return false,
+                    },
                     (_, PartType::Text(text))
                     | (BodyTransform::Content(_), PartType::Html(text)) => text.as_ref().into(),
                     (_, PartType::Html(html)) => html_to_text(html.as_ref()).into(),
@@ -198,8 +192,9 @@ impl TestBody {
                             self.comparator.relational(rel_match, &text.as_ref(), key)
                         }
                         MatchType::Matches(_) => self.comparator.matches(
-                            text.as_ref(),
+                            Some(pattern),
                             key.to_string().as_ref(),
+                            text.as_ref(),
                             0,
                             &mut Vec::new(),
                         ),

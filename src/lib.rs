@@ -6,8 +6,6 @@
 
 #![doc = include_str!("../README.md")]
 
-use std::{borrow::Cow, sync::Arc, vec::IntoIter};
-
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::{
     Capability,
@@ -16,14 +14,16 @@ use compiler::grammar::{
 };
 use mail_parser::{HeaderName, Message};
 use runtime::{Variable, context::ScriptStack};
+use std::{borrow::Cow, sync::Arc, vec::IntoIter};
 
 pub mod compiler;
 pub mod runtime;
+pub(crate) mod serialize;
 
 pub(crate) const MAX_MATCH_VARIABLES: u32 = 63;
 pub(crate) const MAX_LOCAL_VARIABLES: u32 = 256;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
@@ -34,6 +34,12 @@ pub(crate) const MAX_LOCAL_VARIABLES: u32 = 256;
 )]
 pub struct Sieve {
     instructions: Vec<Instruction>,
+    #[cfg_attr(
+        any(test, feature = "serde"),
+        serde(with = "crate::serialize::as_string_vec_serde")
+    )]
+    #[cfg_attr(feature = "rkyv", rkyv(with = crate::serialize::AsStringVec))]
+    constants: Arc<[Arc<str>]>,
     num_vars: u32,
     num_match_vars: u32,
 }
@@ -125,6 +131,9 @@ pub struct Context<'x> {
     pub(crate) vars_match: Vec<Variable>,
     pub(crate) expr_stack: Vec<Variable>,
     pub(crate) expr_pos: usize,
+
+    pub(crate) constants: Arc<[Arc<str>]>,
+    pub(crate) flags: Vec<Arc<str>>,
 
     pub(crate) queued_events: IntoIter<Event>,
     pub(crate) final_event: Option<Event>,
@@ -318,6 +327,64 @@ pub enum VirusStatus {
     Virus,
 }
 
+impl Sieve {
+    #[inline(always)]
+    pub(crate) fn instructions_from(&self, pos: usize) -> std::slice::Iter<'_, Instruction> {
+        self.instructions.get(pos..).unwrap_or_default().iter()
+    }
+
+    #[inline(always)]
+    pub(crate) fn constants(&self) -> Arc<[Arc<str>]> {
+        self.constants.clone()
+    }
+
+    pub fn constant_count(&self) -> usize {
+        self.constants.len()
+    }
+
+    pub fn instruction_count(&self) -> usize {
+        self.instructions.len()
+    }
+
+    pub fn instruction_footprint(&self) -> usize {
+        self.instructions.capacity() * std::mem::size_of::<Instruction>()
+    }
+
+    pub fn instruction_size() -> usize {
+        std::mem::size_of::<Instruction>()
+    }
+
+    pub fn expression_size() -> usize {
+        std::mem::size_of::<compiler::grammar::expr::Expression>()
+    }
+
+    pub fn value_size() -> usize {
+        std::mem::size_of::<compiler::Value>()
+    }
+
+    pub fn probe_sizes() -> Vec<(&'static str, usize)> {
+        vec![
+            ("Value", std::mem::size_of::<compiler::Value>()),
+            (
+                "VariableType",
+                std::mem::size_of::<compiler::VariableType>(),
+            ),
+            (
+                "HeaderVariable",
+                std::mem::size_of::<compiler::HeaderVariable<'static>>(),
+            ),
+            ("HeaderPart", std::mem::size_of::<compiler::HeaderPart>()),
+            ("Regex", std::mem::size_of::<compiler::Regex>()),
+            ("Glob", std::mem::size_of::<compiler::Glob>()),
+            ("Number", std::mem::size_of::<compiler::Number>()),
+            (
+                "HeaderName",
+                std::mem::size_of::<mail_parser::HeaderName<'static>>(),
+            ),
+        ]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -332,7 +399,7 @@ mod tests {
     };
 
     use crate::{
-        Compiler, Context, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime,
+        Compiler, Context, Envelope, Event, FunctionMap, Input, Mailbox, Recipient, Runtime, Sieve,
         SpamStatus, VirusStatus,
         compiler::grammar::Capability,
         runtime::{Variable, actions::action_mime::reset_test_boundary},
@@ -520,12 +587,22 @@ mod tests {
                         raw_message: b""[..].into(),
                     });
             instance.message_size = raw_message.len();
-            if let Some((pos, script_cache, script_stack, vars_global, vars_local, vars_match)) =
-                prev_state.take()
+            if let Some((
+                pos,
+                script_cache,
+                script_stack,
+                constants,
+                flags,
+                vars_global,
+                vars_local,
+                vars_match,
+            )) = prev_state.take()
             {
                 instance.pos = pos;
                 instance.script_cache = script_cache;
                 instance.script_stack = script_stack;
+                instance.constants = constants;
+                instance.flags = flags;
                 instance.vars_global = vars_global;
                 instance.vars_local = vars_local;
                 instance.vars_match = vars_match;
@@ -669,6 +746,8 @@ mod tests {
                                             instance.pos,
                                             instance.script_cache,
                                             instance.script_stack,
+                                            instance.constants,
+                                            instance.flags,
                                             instance.vars_global,
                                             instance.vars_local,
                                             instance.vars_match,
@@ -962,6 +1041,67 @@ mod tests {
 
             return;
         }
+    }
+
+    const ROUND_TRIP_SCRIPT: &str = concat!(
+        "require [\"variables\", \"fileinto\"];\n",
+        "if header :contains \"subject\" \"hello\" { set \"greeting\" \"hello\"; }\n",
+        "if header :matches \"subject\" \"*world*\" { fileinto \"hello\"; }\n"
+    );
+
+    #[test]
+    fn constants_serialize_as_strings() {
+        let script = Compiler::new()
+            .compile(&add_crlf(ROUND_TRIP_SCRIPT.as_bytes()))
+            .unwrap();
+
+        let json = serde_json::to_value(&script).unwrap();
+        let constants = json
+            .get("constants")
+            .expect("constants field")
+            .as_array()
+            .expect("constants array");
+
+        assert!(
+            constants.iter().all(|value| value.is_string()),
+            "constants must serialize as plain strings: {constants:?}"
+        );
+        assert_eq!(
+            constants
+                .iter()
+                .filter(|value| value.as_str() == Some("hello"))
+                .count(),
+            1,
+            "repeated literals must be deduplicated: {constants:?}"
+        );
+
+        let restored: Sieve = serde_json::from_value(json).unwrap();
+        assert_eq!(script, restored);
+    }
+
+    #[test]
+    #[cfg(feature = "rkyv")]
+    fn constants_rkyv_round_trip() {
+        use crate::serialize::AsStringVec;
+        use rkyv::{Archive, with::ArchiveWith};
+        use std::marker::PhantomData;
+        use std::sync::Arc;
+
+        fn assert_same_archived<T: ?Sized>(_: PhantomData<T>, _: PhantomData<T>) {}
+
+        assert_same_archived(
+            PhantomData::<<Vec<String> as Archive>::Archived>,
+            PhantomData::<<AsStringVec as ArchiveWith<Arc<[Arc<str>]>>>::Archived>,
+        );
+
+        let script = Compiler::new()
+            .compile(&add_crlf(ROUND_TRIP_SCRIPT.as_bytes()))
+            .unwrap();
+
+        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&script).unwrap();
+        let restored = rkyv::from_bytes::<Sieve, rkyv::rancor::Error>(&bytes).unwrap();
+
+        assert_eq!(script, restored);
     }
 
     fn add_crlf(bytes: &[u8]) -> Vec<u8> {

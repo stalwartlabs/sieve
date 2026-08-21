@@ -74,11 +74,14 @@ impl CompilerState<'_> {
         if !capabilities.is_empty() {
             if self.block.require_pos == usize::MAX {
                 self.block.require_pos = self.instructions.len();
-                self.instructions.push(Instruction::Require(capabilities));
+                self.instructions
+                    .push(Instruction::Require(capabilities.into_boxed_slice()));
             } else if let Some(Instruction::Require(capabilties)) =
                 self.instructions.get_mut(self.block.require_pos)
             {
-                capabilties.extend(capabilities)
+                let mut merged = std::mem::take(capabilties).into_vec();
+                merged.extend(capabilities);
+                *capabilties = merged.into_boxed_slice();
             } else {
                 #[cfg(test)]
                 panic!(

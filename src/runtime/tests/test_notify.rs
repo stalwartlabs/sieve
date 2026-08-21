@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::borrow::Cow;
-
+use super::TestResult;
 use crate::{
     Context,
     compiler::{
@@ -17,8 +16,7 @@ use crate::{
     },
     runtime::actions::action_notify::validate_uri,
 };
-
-use super::TestResult;
+use std::borrow::Cow;
 
 impl TestValidNotifyMethod {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
@@ -78,8 +76,9 @@ impl TestNotifyMethodCapability {
                         self.comparator.relational(relation, &"maybe", &key)
                     }
                     MatchType::Matches(_) => self.comparator.matches(
-                        "maybe",
+                        Some(pattern),
                         key.to_string().as_ref(),
+                        "maybe",
                         0,
                         &mut Vec::new(),
                     ),

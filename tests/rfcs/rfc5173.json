@@ -15,7 +15,7 @@
         "Body": {
           "key_list": [
             {
-              "Text": "MAKE MONEY FAST"
+              "Text": 0
             }
           ],
           "body_transform": "Raw",
@@ -44,16 +44,16 @@
         "Body": {
           "key_list": [
             {
-              "Text": "missile"
+              "Text": 2
             },
             {
-              "Text": "coordinates"
+              "Text": 3
             }
           ],
           "body_transform": {
             "Content": [
               {
-                "Text": "text"
+                "Text": 1
               }
             ]
           },
@@ -78,7 +78,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "secrets"
+          "Text": 4
         },
         "flags": [],
         "mailbox_id": null,
@@ -93,13 +93,13 @@
         "Body": {
           "key_list": [
             {
-              "Text": ""
+              "Text": 6
             }
           ],
           "body_transform": {
             "Content": [
               {
-                "Text": "audio/mp3"
+                "Text": 5
               }
             ]
           },
@@ -124,7 +124,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "jukebox"
+          "Text": 7
         },
         "flags": [],
         "mailbox_id": null,
@@ -139,7 +139,7 @@
         "Body": {
           "key_list": [
             {
-              "Text": "project schedule"
+              "Text": 8
             }
           ],
           "body_transform": "Text",
@@ -164,7 +164,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "project/schedule"
+          "Text": 9
         },
         "flags": [],
         "mailbox_id": null,

@@ -18,7 +18,9 @@
         "Header": {
           "header_list": [
             {
-              "Text": "x-priority"
+              "Header": {
+                "other": "x-priority"
+              }
             }
           ],
           "key_list": [
@@ -53,7 +55,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "Priority"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -74,7 +76,7 @@
         "Address": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             }
           ],
           "key_list": [
@@ -109,7 +111,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "SPAM"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -130,12 +132,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "M"
+              "Text": 2
             }
           ],
           "address_part": "All",
@@ -163,7 +165,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "From N-Z"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,
@@ -184,7 +186,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "From A-M"
+          "Text": 4
         },
         "flags": [],
         "mailbox_id": null,
@@ -199,10 +201,10 @@
         "Address": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             },
             {
-              "Text": "cc"
+              "Header": "cc"
             }
           ],
           "key_list": [
@@ -237,15 +239,15 @@
         "Address": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             },
             {
-              "Text": "cc"
+              "Header": "cc"
             }
           ],
           "key_list": [
             {
-              "Text": "me@foo.example.com"
+              "Text": 5
             }
           ],
           "address_part": "All",
@@ -271,7 +273,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "Only me"
+          "Text": 6
         },
         "flags": [],
         "mailbox_id": null,

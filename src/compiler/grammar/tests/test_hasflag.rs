@@ -5,7 +5,7 @@
  */
 
 use crate::compiler::{
-    CompileError, ErrorType, Value, VariableType,
+    CompileError, ErrorType, RawValue, Value, VariableType,
     grammar::{Capability, Comparator, instruction::CompilerState},
     lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
@@ -41,7 +41,7 @@ impl CompilerState<'_> {
         let mut comparator = Comparator::AsciiCaseMap;
         let mut is_local = false;
 
-        let mut maybe_variables;
+        let maybe_variables;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -76,7 +76,7 @@ impl CompilerState<'_> {
                     is_local = true;
                 }
                 _ => {
-                    maybe_variables = self.parse_strings_token(token_info)?;
+                    maybe_variables = self.parse_raw_strings_token(token_info)?;
                     break;
                 }
             }
@@ -94,27 +94,26 @@ impl CompilerState<'_> {
 
                     let mut variable_list = Vec::with_capacity(maybe_variables.len());
                     for variable in maybe_variables {
-                        match variable {
-                            Value::Text(var_name) => {
-                                variable_list.push(
-                                    self.register_variable(var_name.to_string(), is_local)
-                                        .map_err(|error_type| CompileError {
-                                            line_num,
-                                            line_pos,
-                                            error_type,
-                                        })?,
-                                );
-                            }
+                        let var_name = match variable {
+                            RawValue::Text(text) => text,
+                            RawValue::Value(Value::Text(id)) => self.constant(id).to_string(),
                             _ => {
                                 return Err(self
                                     .tokens
                                     .unwrap_next()?
                                     .custom(ErrorType::ExpectedConstantString));
                             }
-                        }
+                        };
+                        variable_list.push(self.register_variable(var_name, is_local).map_err(
+                            |error_type| CompileError {
+                                line_num,
+                                line_pos,
+                                error_type,
+                            },
+                        )?);
                     }
-                    let mut flags = self.parse_strings(false)?;
-                    self.validate_match(&match_type, &mut flags)?;
+                    let flags = self.parse_raw_strings(false)?;
+                    let flags = self.validate_match(&match_type, &comparator, flags)?;
 
                     Ok(Test::HasFlag(TestHasFlag {
                         comparator,
@@ -131,13 +130,13 @@ impl CompilerState<'_> {
                 }
             }
             _ => {
-                self.validate_match(&match_type, &mut maybe_variables)?;
+                let flags = self.validate_match(&match_type, &comparator, maybe_variables)?;
 
                 Ok(Test::HasFlag(TestHasFlag {
                     comparator,
                     match_type,
                     variable_list: Vec::new(),
-                    flags: maybe_variables,
+                    flags,
                     is_not: false,
                 }))
             }

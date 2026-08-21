@@ -4,11 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::compiler::{
-    CompileError, ErrorType,
-    lexer::{Token, tokenizer::TokenInfo, word::Word},
-};
-
 use super::{
     Capability, Invalid,
     actions::{action_convert::Convert, action_vacation::TestVacation},
@@ -33,6 +28,10 @@ use super::{
         test_specialuse::TestSpecialUseExists,
         test_string::TestString,
     },
+};
+use crate::compiler::{
+    CompileError, ErrorType,
+    lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
 
 #[allow(clippy::enum_variant_names)]
@@ -152,9 +151,9 @@ impl CompilerState<'_> {
                         is_not = block.is_not;
                         block.jmps.push(self.instructions.len());
                         self.instructions.push(if block.is_all {
-                            Instruction::Jz(usize::MAX)
+                            Instruction::Jz(u32::MAX)
                         } else {
-                            Instruction::Jnz(usize::MAX)
+                            Instruction::Jnz(u32::MAX)
                         });
                         continue;
                     }
@@ -172,7 +171,7 @@ impl CompilerState<'_> {
                                 if let Instruction::Jnz(jmp_pos) | Instruction::Jz(jmp_pos) =
                                     &mut self.instructions[jmp_pos]
                                 {
-                                    *jmp_pos = cur_pos;
+                                    *jmp_pos = cur_pos as u32;
                                 } else {
                                     debug_assert!(false, "This should not have happened")
                                 }
@@ -487,14 +486,14 @@ impl CompilerState<'_> {
                             token_info.line_pos,
                         )?;
 
-                        Instruction::Eval(self.parse_expr()?)
+                        Instruction::Eval(self.parse_expr()?.into_boxed_slice())
                     }
                     Token::Identifier(word) => {
                         self.ignore_test()?;
                         Test::Invalid(Invalid {
                             name: word.to_string(),
-                            line_num: token_info.line_num,
-                            line_pos: token_info.line_pos,
+                            line_num: token_info.line_num as u32,
+                            line_pos: (token_info.line_pos) as u32,
                         })
                         .into()
                     }
@@ -503,7 +502,7 @@ impl CompilerState<'_> {
                         use crate::compiler::Value;
 
                         let mut arguments = Vec::new();
-                        arguments.push(Value::Text(name.into()));
+                        arguments.push(self.text(&name));
                         while !matches!(
                             self.tokens.peek().map(|r| r.map(|t| &t.token)),
                             Some(Ok(Token::Comma
@@ -511,7 +510,7 @@ impl CompilerState<'_> {
                                 | Token::CurlyOpen))
                         ) {
                             arguments.push(match self.tokens.unwrap_next()?.token {
-                                Token::StringConstant(s) => Value::from(s),
+                                Token::StringConstant(s) => self.intern_raw(s.into()),
                                 Token::StringVariable(s) => self
                                     .tokenize_string(&s, true)
                                     .map_err(|error_type| CompileError {
@@ -522,9 +521,9 @@ impl CompilerState<'_> {
                                 Token::Number(n) => {
                                     Value::Number(crate::compiler::Number::Integer(n as i64))
                                 }
-                                Token::Identifier(s) => Value::Text(s.to_string().into()),
-                                Token::Tag(s) => Value::Text(format!(":{s}").into()),
-                                Token::Unknown(s) => Value::Text(s.into()),
+                                Token::Identifier(s) => self.text(s.to_string()),
+                                Token::Tag(s) => self.text(format!(":{s}")),
+                                Token::Unknown(s) => self.text(s),
                                 other => panic!("Invalid test param {other:?}"),
                             });
                         }
@@ -538,8 +537,8 @@ impl CompilerState<'_> {
                         self.ignore_test()?;
                         Test::Invalid(Invalid {
                             name,
-                            line_num: token_info.line_num,
-                            line_pos: token_info.line_pos,
+                            line_num: token_info.line_num as u32,
+                            line_pos: (token_info.line_pos) as u32,
                         })
                         .into()
                     }
@@ -559,7 +558,7 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::Jz(usize::MAX));
+        self.instructions.push(Instruction::Jz(u32::MAX));
         Ok(())
     }
 
@@ -577,7 +576,19 @@ impl CompilerState<'_> {
         ))
         .parse()
         {
-            Ok(parser) => Ok(parser.output),
+            Ok(parser) => {
+                let mut output = parser.output;
+                let string_constants = parser.string_constants;
+                for (pos, text) in string_constants {
+                    let id = self.intern(text);
+                    if let Some(Expression::ConstantString(slot)) = output.get_mut(pos) {
+                        *slot = id;
+                    } else {
+                        debug_assert!(false, "Expression constant slot {pos} not found.");
+                    }
+                }
+                Ok(output)
+            }
             Err(err) => {
                 let err = ErrorType::InvalidExpression(format!(
                     "{}: {}",
@@ -593,16 +604,16 @@ impl CompilerState<'_> {
 
 impl From<Test> for Instruction {
     fn from(test: Test) -> Self {
-        Instruction::Test(test)
+        Instruction::Test(Box::new(test))
     }
 }
 
 impl Instruction {
     pub fn set_not(mut self) -> Self {
         match &mut self {
-            Instruction::Test(test) => match test {
-                Test::True => return Instruction::Test(Test::False),
-                Test::False => return Instruction::Test(Test::True),
+            Instruction::Test(test) => match &mut **test {
+                Test::True => return Instruction::Test(Box::new(Test::False)),
+                Test::False => return Instruction::Test(Box::new(Test::True)),
                 Test::Address(op) => {
                     op.is_not = true;
                 }
@@ -678,7 +689,11 @@ impl Instruction {
                 }
                 Test::Vacation(_) | Test::Invalid(_) => {}
             },
-            Instruction::Eval(expr) => expr.push(Expression::UnaryOperator(UnaryOperator::Not)),
+            Instruction::Eval(expr) => {
+                let mut items = std::mem::take(expr).into_vec();
+                items.push(Expression::UnaryOperator(UnaryOperator::Not));
+                *expr = items.into_boxed_slice();
+            }
             _ => (),
         }
         self

@@ -4,12 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::cmp::Reverse;
-
-use mail_parser::{
-    Encoding, HeaderName, Message, MessagePart, PartType, decoders::html::html_to_text,
-};
-
+use super::action_editheader::RemoveCrLf;
 use crate::{
     Context, Event,
     compiler::{
@@ -17,8 +12,10 @@ use crate::{
         grammar::actions::action_mime::{Enclose, ExtractText, Replace},
     },
 };
-
-use super::action_editheader::RemoveCrLf;
+use mail_parser::{
+    Encoding, HeaderName, Message, MessagePart, PartType, decoders::html::html_to_text,
+};
+use std::cmp::Reverse;
 
 #[cfg(not(test))]
 use mail_builder::headers::message_id::generate_message_id_header;
@@ -333,14 +330,17 @@ impl ExtractText {
             match ctx.message.parts.get(ctx.part as usize).map(|p| &p.body) {
                 Some(PartType::Text(text)) => {
                     value = if let Some(first) = &self.first {
-                        text.chars().take(*first).collect()
+                        text.chars().take(*first as usize).collect()
                     } else {
                         text.as_ref().to_string()
                     };
                 }
                 Some(PartType::Html(html)) => {
                     value = if let Some(first) = &self.first {
-                        html_to_text(html.as_ref()).chars().take(*first).collect()
+                        html_to_text(html.as_ref())
+                            .chars()
+                            .take(*first as usize)
+                            .collect()
                     } else {
                         html_to_text(html.as_ref())
                     };
@@ -357,7 +357,7 @@ impl ExtractText {
 
         match &self.name {
             VariableType::Local(var_id) => {
-                if let Some(var) = ctx.vars_local.get_mut(*var_id) {
+                if let Some(var) = ctx.vars_local.get_mut(*var_id as usize) {
                     *var = value.into();
                 } else {
                     debug_assert!(false, "Non-existent local variable {var_id}");

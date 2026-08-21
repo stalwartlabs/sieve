@@ -33,7 +33,7 @@
           ],
           "key_list": [
             {
-              "Text": ":addrbook:default"
+              "Text": 0
             }
           ],
           "address_part": "All",
@@ -84,7 +84,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "spam"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -131,7 +131,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "spam"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -146,7 +146,7 @@
         "ValidExtList": {
           "list_names": [
             {
-              "Text": "addrbook"
+              "Text": 2
             }
           ],
           "is_not": false
@@ -178,7 +178,7 @@
           ],
           "key_list": [
             {
-              "Text": ":addrbook:default"
+              "Text": 0
             }
           ],
           "address_part": "All",
@@ -260,7 +260,7 @@
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": ""
+            "Text": 3
           },
           "match_type": {
             "Value": "Ge"
@@ -285,7 +285,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "spam"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
@@ -304,7 +304,7 @@
           "date_part": "Date",
           "key_list": [
             {
-              "Text": "tag:example.com,2011-01-01:localHolidays"
+              "Text": 4
             }
           ],
           "is_not": false
@@ -328,7 +328,7 @@
         "message": null,
         "fcc": null,
         "method": {
-          "Text": "xmpp:romeo@im.example.com"
+          "Text": 5
         }
       }
     }
@@ -343,7 +343,7 @@
           ],
           "key_list": [
             {
-              "Text": "mylist"
+              "Text": 6
             }
           ],
           "address_part": "Detail",
@@ -368,12 +368,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "tag:example.com,2010-05-28:mylist"
+              "Text": 7
             }
           ],
           "match_type": "List",
@@ -398,7 +398,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "tag:example.com,2010-05-28:mylist"
+          "Text": 7
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -414,12 +414,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "received"
+              "Header": "received"
             }
           ],
           "key_list": [
             {
-              "Text": "*(* [*.*.*.*])*"
+              "Glob": {
+                "expr": "*(* [*.*.*.*])*"
+              }
             }
           ],
           "match_type": {
@@ -456,7 +458,7 @@
               }
             },
             {
-              "Text": "."
+              "Text": 8
             },
             {
               "Variable": {
@@ -464,7 +466,7 @@
               }
             },
             {
-              "Text": "."
+              "Text": 8
             },
             {
               "Variable": {
@@ -472,7 +474,7 @@
               }
             },
             {
-              "Text": "."
+              "Text": 8
             },
             {
               "Variable": {
@@ -500,7 +502,7 @@
           ],
           "key_list": [
             {
-              "Text": "tag:example.com,2011-04-10:DisallowedIPs"
+              "Text": 9
             }
           ],
           "is_not": false
@@ -520,7 +522,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": "Message not allowed from this IP address"
+          "Text": 10
         }
       }
     }
@@ -554,15 +556,15 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Content-Type"
+              "Header": "content_type"
             },
             {
-              "Text": "Content-Disposition"
+              "Header": "content_disposition"
             }
           ],
           "key_list": [
             {
-              "Text": "tag:example.com,2011-04-10:BadFileNameExts"
+              "Text": 12
             }
           ],
           "match_type": "List",
@@ -571,7 +573,7 @@
           "mime_opts": {
             "Param": [
               {
-                "Text": "filename"
+                "Text": 11
               }
             ]
           },
@@ -592,11 +594,11 @@
     {
       "Enclose": {
         "subject": {
-          "Text": "Warning"
+          "Text": 13
         },
         "headers": [],
         "value": {
-          "Text": "WARNING!\n"
+          "Text": 14
         }
       }
     }

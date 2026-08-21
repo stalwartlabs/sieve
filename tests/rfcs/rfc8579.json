@@ -18,12 +18,12 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX/Archive"
+          "Text": 1
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "\\Archive"
+          "Text": 0
         }
       }
     }
@@ -35,12 +35,12 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "Spam"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "\\Junk"
+          "Text": 2
         }
       }
     }
@@ -52,12 +52,12 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": "Spam"
+          "Text": 3
         },
         "flags": [],
         "mailbox_id": null,
         "special_use": {
-          "Text": "\\Junk"
+          "Text": 2
         }
       }
     }
@@ -78,7 +78,7 @@
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Text": 4
             }
           ],
           "is_not": false
@@ -101,7 +101,7 @@
           "Local": 0
         },
         "value": {
-          "Text": ""
+          "Text": 5
         }
       }
     }
@@ -132,7 +132,7 @@
           ],
           "key_list": [
             {
-              "Text": "COPY"
+              "Text": 6
             }
           ],
           "is_not": false
@@ -152,11 +152,11 @@
       "Test": {
         "SpecialUseExists": {
           "mailbox": {
-            "Text": ""
+            "Text": 5
           },
           "attributes": [
             {
-              "Text": "\\Junk"
+              "Text": 2
             }
           ],
           "is_not": false
@@ -176,7 +176,7 @@
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": "spam-report@example.org"
+          "Text": 7
         },
         "notify": "Default",
         "return_of_content": "Default",

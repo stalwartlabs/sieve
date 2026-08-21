@@ -8,11 +8,9 @@ pub mod string;
 pub mod tokenizer;
 pub mod word;
 
-use std::{borrow::Cow, fmt::Display};
-
 use self::word::Word;
-
-use super::{Number, Value};
+use super::Number;
+use std::{borrow::Cow, fmt::Display};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Token {
@@ -51,15 +49,6 @@ impl StringConstant {
         match self {
             StringConstant::String(s) => s,
             StringConstant::Number(n) => n.to_string(),
-        }
-    }
-}
-
-impl From<StringConstant> for Value {
-    fn from(value: StringConstant) -> Self {
-        match value {
-            StringConstant::String(s) => Value::Text(s.into()),
-            StringConstant::Number(n) => Value::Number(n),
         }
     }
 }

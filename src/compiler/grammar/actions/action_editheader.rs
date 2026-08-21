@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::HeaderName;
-
 use crate::compiler::{
-    CompileError, ErrorType, Value,
+    CompileError, ErrorType, RawValue, Value,
     grammar::{
         Capability, Comparator,
         instruction::{CompilerState, Instruction},
@@ -71,39 +69,41 @@ impl CompilerState<'_> {
                     last = true;
                 }
                 _ => {
-                    let string = self.parse_string_token(token_info)?;
+                    let string = self.parse_raw_string_token(token_info)?;
                     if field_name.is_none() {
-                        if let Value::Text(header_name) = &string
-                            && HeaderName::parse(header_name.as_ref()).is_none()
-                        {
-                            return Err(self
-                                .tokens
-                                .unwrap_next()?
-                                .custom(ErrorType::InvalidHeaderName));
-                        }
-
-                        field_name = string.into();
+                        field_name = match self.resolve_header_name(string) {
+                            Some(header_name) => header_name.into(),
+                            None => {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .custom(ErrorType::InvalidHeaderName));
+                            }
+                        };
                     } else {
-                        if matches!(
-                            &string,
-                            Value::Text(value) if value.len() > self.compiler.max_header_size
-                        ) {
+                        let header_size = match &string {
+                            RawValue::Text(value) => value.len(),
+                            RawValue::Value(Value::Text(id)) => self.constant(*id).len(),
+                            _ => 0,
+                        };
+                        if header_size > self.compiler.max_header_size {
                             return Err(self
                                 .tokens
                                 .unwrap_next()?
                                 .custom(ErrorType::HeaderTooLong));
                         }
-                        value = string;
+                        value = self.intern_raw(string);
                         break;
                     }
                 }
             }
         }
-        self.instructions.push(Instruction::AddHeader(AddHeader {
-            last,
-            field_name: field_name.unwrap(),
-            value,
-        }));
+        self.instructions
+            .push(Instruction::AddHeader(Box::new(AddHeader {
+                last,
+                field_name: field_name.unwrap(),
+                value,
+            })));
         Ok(())
     }
 
@@ -171,15 +171,16 @@ impl CompilerState<'_> {
                     mime_anychild = true;
                 }
                 _ => {
-                    field_name = self.parse_string_token(token_info)?;
-                    if let Value::Text(header_name) = &field_name
-                        && HeaderName::parse(header_name.as_ref()).is_none()
-                    {
-                        return Err(self
-                            .tokens
-                            .unwrap_next()?
-                            .custom(ErrorType::InvalidHeaderName));
-                    }
+                    let header_name = self.parse_raw_string_token(token_info)?;
+                    field_name = match self.resolve_header_name(header_name) {
+                        Some(field_name) => field_name,
+                        None => {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
+                        }
+                    };
                     break;
                 }
             }
@@ -189,23 +190,24 @@ impl CompilerState<'_> {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
 
-        let cmd = Instruction::DeleteHeader(DeleteHeader {
+        let value_patterns = if let Some(Ok(
+            Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
+        )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
+        {
+            let key_list = self.parse_raw_strings(false)?;
+            self.validate_match(&match_type, &comparator, key_list)?
+        } else {
+            Vec::new()
+        };
+
+        let cmd = Instruction::DeleteHeader(Box::new(DeleteHeader {
             index: if index_last { index.map(|i| -i) } else { index },
             comparator,
             match_type,
             field_name,
-            value_patterns: if let Some(Ok(
-                Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen,
-            )) = self.tokens.peek().map(|r| r.map(|t| &t.token))
-            {
-                let mut key_list = self.parse_strings(false)?;
-                self.validate_match(&match_type, &mut key_list)?;
-                key_list
-            } else {
-                Vec::new()
-            },
+            value_patterns,
             mime_anychild,
-        });
+        }));
         self.instructions.push(cmd);
         Ok(())
     }

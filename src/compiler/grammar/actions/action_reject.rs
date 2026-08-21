@@ -25,10 +25,10 @@ pub(crate) struct Reject {
 
 impl CompilerState<'_> {
     pub(crate) fn parse_reject(&mut self, ereject: bool) -> Result<(), CompileError> {
-        let cmd = Instruction::Reject(Reject {
+        let cmd = Instruction::Reject(Box::new(Reject {
             ereject,
             reason: self.parse_string()?,
-        });
+        }));
         self.instructions.push(cmd);
         Ok(())
     }

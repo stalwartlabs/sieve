@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::HeaderName;
-
 use crate::compiler::{
     CompileError, ErrorType, Value,
     grammar::instruction::{CompilerState, MapLocalVars},
@@ -67,16 +65,16 @@ impl CompilerState<'_> {
                 Token::Tag(Word::Header) => {
                     self.validate_argument(2, None, line_num, line_pos)?;
                     self.tokens.next();
-                    let header = self.parse_string()?;
-                    if let Value::Text(header_name) = &header
-                        && HeaderName::parse(header_name.as_ref()).is_none()
-                    {
-                        return Err(self
-                            .tokens
-                            .unwrap_next()?
-                            .custom(ErrorType::InvalidHeaderName));
-                    }
-                    dup_match = DupMatch::Header(header);
+                    let header = self.parse_raw_string()?;
+                    dup_match = match self.resolve_header_name(header) {
+                        Some(header) => DupMatch::Header(header),
+                        None => {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
+                        }
+                    };
                 }
                 Token::Tag(Word::UniqueId) => {
                     self.validate_argument(2, None, line_num, line_pos)?;
@@ -108,7 +106,7 @@ impl CompilerState<'_> {
 }
 
 impl MapLocalVars for DupMatch {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         match self {
             DupMatch::Header(header) => header.map_local_vars(last_id),
             DupMatch::UniqueId(unique_id) => unique_id.map_local_vars(last_id),

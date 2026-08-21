@@ -15,12 +15,12 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "someone@example.com"
+              "Text": 0
             }
           ],
           "address_part": "All",
@@ -45,7 +45,7 @@
       "Reject": {
         "ereject": true,
         "reason": {
-          "Text": "I no longer accept mail from this address"
+          "Text": 1
         }
       }
     }
@@ -74,7 +74,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": "Your message is too big.  If you want to send me a big attachment,\nput it on a public web site and send me a URL.\n"
+          "Text": 2
         }
       }
     }
@@ -86,12 +86,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "coyote@desert.example.org"
+              "Text": 3
             }
           ],
           "match_type": "Contains",
@@ -116,7 +116,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": "I am not taking mail from you, and I don't\nwant your birdseed, either!\n"
+          "Text": 4
         }
       }
     }

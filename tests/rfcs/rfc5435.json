@@ -17,10 +17,10 @@
         "ValidNotifyMethod": {
           "notification_uris": [
             {
-              "Text": "mailto:"
+              "Text": 0
             },
             {
-              "Text": "http://gw.example.net/notify?test"
+              "Text": 1
             }
           ],
           "is_not": true
@@ -46,14 +46,14 @@
           "comparator": "AsciiCaseMap",
           "match_type": "Is",
           "notification_uri": {
-            "Text": "xmpp:tim@example.com?message;subject=SIEVE"
+            "Text": 2
           },
           "notification_capability": {
-            "Text": "Online"
+            "Text": 3
           },
           "key_list": [
             {
-              "Text": "yes"
+              "Text": 4
             }
           ],
           "is_not": false
@@ -79,11 +79,11 @@
         },
         "options": [],
         "message": {
-          "Text": "You got mail"
+          "Text": 5
         },
         "fcc": null,
         "method": {
-          "Text": "xmpp:tim@example.com?message;subject=SIEVE"
+          "Text": 2
         }
       }
     }
@@ -102,11 +102,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": "You got mail"
+          "Text": 5
         },
         "fcc": null,
         "method": {
-          "Text": "tel:+14085551212"
+          "Text": 6
         }
       }
     }
@@ -118,12 +118,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "boss@example.org"
+              "Text": 7
             }
           ],
           "match_type": "Contains",
@@ -154,11 +154,11 @@
         },
         "options": [],
         "message": {
-          "Text": "This is probably very important"
+          "Text": 8
         },
         "fcc": null,
         "method": {
-          "Text": "mailto:alm@example.com"
+          "Text": 9
         }
       }
     }
@@ -174,12 +174,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             }
           ],
           "key_list": [
             {
-              "Text": "sievemailinglist@example.org"
+              "Text": 10
             }
           ],
           "match_type": "Contains",
@@ -205,12 +205,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -264,12 +266,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "From"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -330,16 +334,16 @@
         "message": {
           "List": [
             {
-              "Text": "[SIEVE] "
+              "Text": 11
             },
             {
-              "Text": ": "
+              "Text": 12
             }
           ]
         },
         "fcc": null,
         "method": {
-          "Text": "mailto:alm@example.com"
+          "Text": 9
         }
       }
     }
@@ -351,7 +355,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.sieve"
+          "Text": 13
         },
         "flags": [],
         "mailbox_id": null,
@@ -376,12 +380,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "*@*.example.org"
+              "Glob": {
+                "expr": "*@*.example.org"
+              }
             }
           ],
           "match_type": {
@@ -412,7 +418,9 @@
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -443,7 +451,7 @@
         "value": {
           "List": [
             {
-              "Text": " [really: "
+              "Text": 14
             },
             {
               "Variable": {
@@ -451,7 +459,7 @@
               }
             },
             {
-              "Text": "]"
+              "Text": 15
             }
           ]
         }
@@ -475,12 +483,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -534,12 +544,14 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -594,11 +606,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": ": "
+          "Text": 12
         },
         "fcc": null,
         "method": {
-          "Text": "mailto:alm@example.com"
+          "Text": 9
         }
       }
     }
@@ -622,7 +634,7 @@
           "Local": 0
         },
         "value": {
-          "Text": "xmpp:tim@example.com?message;subject=SIEVE;body=You%20got%20mail"
+          "Text": 16
         }
       }
     }
@@ -634,12 +646,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "Your dog"
+              "Text": 17
             }
           ],
           "match_type": "Contains",
@@ -667,7 +679,7 @@
           "Local": 0
         },
         "value": {
-          "Text": "tel:+14085551212"
+          "Text": 6
         }
       }
     }
@@ -679,12 +691,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "to"
+              "Header": "to"
             }
           ],
           "key_list": [
             {
-              "Text": "sievemailinglist@example.org"
+              "Text": 10
             }
           ],
           "match_type": "Contains",
@@ -712,7 +724,7 @@
           "Local": 0
         },
         "value": {
-          "Text": ""
+          "Text": 18
         }
       }
     }
@@ -733,7 +745,7 @@
           ],
           "key_list": [
             {
-              "Text": ""
+              "Text": 18
             }
           ],
           "is_not": true
@@ -771,12 +783,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "boss@example.org"
+              "Text": 7
             }
           ],
           "match_type": "Contains",
@@ -802,12 +814,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -861,12 +875,12 @@
         "Header": {
           "header_list": [
             {
-              "Text": "subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "FYI:"
+              "Text": 19
             }
           ],
           "match_type": "Contains",
@@ -897,11 +911,11 @@
         },
         "options": [],
         "message": {
-          "Text": "BOSS: "
+          "Text": 20
         },
         "fcc": null,
         "method": {
-          "Text": "tel:+14085551212"
+          "Text": 6
         }
       }
     }

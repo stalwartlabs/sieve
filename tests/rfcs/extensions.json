@@ -97,7 +97,7 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "Text": "%{A * (B / C) - D + E + global.test}"
+              "Text": 0
             }
           ],
           "key_list": [
@@ -135,7 +135,7 @@
           "Local": 5
         },
         "value": {
-          "Text": "The result of 2 + 3 is %{2 + 3}"
+          "Text": 1
         }
       }
     }
@@ -149,7 +149,7 @@
           "Local": 6
         },
         "value": {
-          "Text": "The result of 2 + 3 is %{2 + 3} and 3 + 4 is %{3 + 4}"
+          "Text": 2
         }
       }
     }
@@ -165,7 +165,7 @@
         "value": {
           "List": [
             {
-              "Text": "A is "
+              "Text": 3
             },
             {
               "Variable": {
@@ -173,7 +173,7 @@
               }
             },
             {
-              "Text": " and 2 + 2 is %{2 + 2}!"
+              "Text": 4
             }
           ]
         }
@@ -189,7 +189,7 @@
           "Local": 8
         },
         "value": {
-          "Text": "%{}"
+          "Text": 5
         }
       }
     }
@@ -203,7 +203,7 @@
           "Local": 9
         },
         "value": {
-          "Text": "%{2 + 3"
+          "Text": 6
         }
       }
     }
@@ -215,7 +215,7 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [

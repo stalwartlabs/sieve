@@ -28,7 +28,7 @@ pub(crate) struct Keep {
 
 impl CompilerState<'_> {
     pub(crate) fn parse_keep(&mut self) -> Result<(), CompileError> {
-        let cmd = Instruction::Keep(Keep {
+        let cmd = Instruction::Keep(Box::new(Keep {
             flags: match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
                 Some(Ok(Token::Tag(Word::Flags))) => {
                     let token_info = self.tokens.next().unwrap().unwrap();
@@ -42,7 +42,7 @@ impl CompilerState<'_> {
                 }
                 _ => Vec::new(),
             },
-        });
+        }));
         self.instructions.push(cmd);
         Ok(())
     }

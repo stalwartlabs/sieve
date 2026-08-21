@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::HeaderName;
-
 use crate::compiler::{
     CompileError, ErrorType, Number, Value,
     grammar::{Capability, Comparator, instruction::CompilerState},
@@ -98,7 +96,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_name = None;
-        let mut key_list;
+        let key_list;
         let mut index = None;
         let mut index_last = false;
         let mut zone = Zone::Local;
@@ -183,16 +181,16 @@ impl CompilerState<'_> {
                 }
                 _ => {
                     if header_name.is_none() {
-                        let header = self.parse_string_token(token_info)?;
-                        if let Value::Text(header_name) = &header
-                            && HeaderName::parse(header_name.as_ref()).is_none()
-                        {
-                            return Err(self
-                                .tokens
-                                .unwrap_next()?
-                                .custom(ErrorType::InvalidHeaderName));
-                        }
-                        header_name = header.into();
+                        let header = self.parse_raw_string_token(token_info)?;
+                        header_name = match self.resolve_header_name(header) {
+                            Some(header) => header.into(),
+                            None => {
+                                return Err(self
+                                    .tokens
+                                    .unwrap_next()?
+                                    .custom(ErrorType::InvalidHeaderName));
+                            }
+                        };
                     } else if date_part.is_none() {
                         if let Token::StringConstant(string) = &token_info.token
                             && let Some(date_part_) =
@@ -203,7 +201,7 @@ impl CompilerState<'_> {
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -213,7 +211,7 @@ impl CompilerState<'_> {
         if !mime && mime_anychild {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Date(TestDate {
             header_name: header_name.unwrap(),
@@ -231,7 +229,7 @@ impl CompilerState<'_> {
     pub(crate) fn parse_test_currentdate(&mut self) -> Result<Test, CompileError> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
-        let mut key_list;
+        let key_list;
         let mut zone = None;
         let mut date_part = None;
 
@@ -280,13 +278,13 @@ impl CompilerState<'_> {
                         }
                         return Err(token_info.expected("valid date part"));
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::CurrentDate(TestCurrentDate {
             key_list,

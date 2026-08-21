@@ -22,7 +22,7 @@
         "MailboxExists": {
           "mailbox_names": [
             {
-              "Text": "Partners"
+              "Text": 0
             }
           ],
           "is_not": false
@@ -43,7 +43,7 @@
         "copy": false,
         "create": true,
         "folder": {
-          "Text": "Partners"
+          "Text": 0
         },
         "flags": [],
         "mailbox_id": null,
@@ -63,7 +63,7 @@
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": "This message was not accepted by the Mailstore"
+          "Text": 1
         }
       }
     }
@@ -78,16 +78,16 @@
           "medatata": {
             "Mailbox": {
               "name": {
-                "Text": "INBOX"
+                "Text": 2
               },
               "annotation": {
-                "Text": "/private/vendor/vendor.isode/auto-replies"
+                "Text": 3
               }
             }
           },
           "key_list": [
             {
-              "Text": "on"
+              "Text": 4
             }
           ],
           "is_not": false
@@ -110,7 +110,7 @@
           "period": "Default",
           "handle": null,
           "reason": {
-            "Text": "I'm away on holidays till March 2009.\nExpect a delay.\n"
+            "Text": 5
           }
         }
       }
@@ -131,7 +131,7 @@
         "mime": false,
         "fcc": null,
         "reason": {
-          "Text": "I'm away on holidays till March 2009.\nExpect a delay.\n"
+          "Text": 5
         }
       }
     }
@@ -148,13 +148,15 @@
           "medatata": {
             "Server": {
               "annotation": {
-                "Text": "/private/vendor/vendor.isode/notification-uri"
+                "Text": 6
               }
             }
           },
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "is_not": false
@@ -203,12 +205,12 @@
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "Text": ""
+              "Text": 7
             }
           ],
           "key_list": [
             {
-              "Text": "none"
+              "Text": 8
             }
           ],
           "is_not": true
@@ -232,7 +234,9 @@
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -263,7 +267,7 @@
         "value": {
           "List": [
             {
-              "Text": " [really: "
+              "Text": 9
             },
             {
               "Variable": {
@@ -271,7 +275,7 @@
               }
             },
             {
-              "Text": "]"
+              "Text": 10
             }
           ]
         }
@@ -295,12 +299,14 @@
         "Header": {
           "header_list": [
             {
-              "Text": "Subject"
+              "Header": "subject"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "match_type": {
@@ -354,12 +360,14 @@
         "Address": {
           "header_list": [
             {
-              "Text": "from"
+              "Header": "from"
             }
           ],
           "key_list": [
             {
-              "Text": "*"
+              "Glob": {
+                "expr": "*"
+              }
             }
           ],
           "address_part": "All",
@@ -414,11 +422,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": ": "
+          "Text": 11
         },
         "fcc": null,
         "method": {
-          "Text": ""
+          "Text": 7
         }
       }
     }
@@ -441,10 +449,10 @@
           "mailbox": null,
           "annotation_names": [
             {
-              "Text": "hello"
+              "Text": 12
             },
             {
-              "Text": "world"
+              "Text": 13
             }
           ],
           "is_not": false
@@ -468,14 +476,14 @@
       "Test": {
         "MetadataExists": {
           "mailbox": {
-            "Text": "INBOX"
+            "Text": 2
           },
           "annotation_names": [
             {
-              "Text": "hi"
+              "Text": 14
             },
             {
-              "Text": "there"
+              "Text": 15
             }
           ],
           "is_not": false

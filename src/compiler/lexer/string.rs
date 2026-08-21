@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::fmt::Display;
-
-use mail_parser::HeaderName;
-
 use crate::{
     Envelope, MAX_MATCH_VARIABLES,
     compiler::{
@@ -21,6 +17,8 @@ use crate::{
     },
     runtime::eval::IntoString,
 };
+use mail_parser::HeaderName;
+use std::fmt::Display;
 
 enum State {
     None,
@@ -241,7 +239,7 @@ impl CompilerState<'_> {
 
         Ok(match items.len() {
             1 => items.pop().unwrap(),
-            0 => Value::Text(String::new().into()),
+            0 => self.text(""),
             _ => Value::List(items),
         })
     }
@@ -256,7 +254,7 @@ impl CompilerState<'_> {
                 if total_vars > self.vars_match_max {
                     self.vars_match_max = total_vars;
                 }
-                Ok(Some(VariableType::Match(num)))
+                Ok(Some(VariableType::Match(num as u8)))
             } else {
                 Ok(None)
             }
@@ -494,14 +492,14 @@ impl CompilerState<'_> {
         has_dots: bool,
     ) -> Result<(), ErrorType> {
         if !parse_decoded {
-            items.push(if has_digits {
+            let value = if has_digits {
                 if has_dots {
                     match std::str::from_utf8(buf)
                         .ok()
                         .and_then(|v| (v, v.parse::<f64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Float(n)),
-                        _ => Value::Text(buf.to_vec().into_string().into()),
+                        _ => self.text(buf.to_vec().into_string()),
                     }
                 } else {
                     match std::str::from_utf8(buf)
@@ -509,12 +507,13 @@ impl CompilerState<'_> {
                         .and_then(|v| (v, v.parse::<i64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Integer(n)),
-                        _ => Value::Text(buf.to_vec().into_string().into()),
+                        _ => self.text(buf.to_vec().into_string()),
                     }
                 }
             } else {
-                Value::Text(buf.to_vec().into_string().into())
-            });
+                self.text(buf.to_vec().into_string())
+            };
+            items.push(value);
         } else {
             match self.tokenize_string(buf, false)? {
                 Value::List(new_items) => items.extend(new_items),
@@ -622,23 +621,6 @@ impl TryFrom<&str> for AddressPart {
     }
 }
 
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Value::Text(t) => f.write_str(t),
-            Value::List(l) => {
-                for i in l {
-                    i.fmt(f)?;
-                }
-                Ok(())
-            }
-            Value::Number(n) => n.fmt(f),
-            Value::Variable(v) => v.fmt(f),
-            Value::Regex(r) => f.write_str(&r.expr),
-        }
-    }
-}
-
 impl Display for VariableType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -724,6 +706,11 @@ mod tests {
     use crate::compiler::lexer::word::Word;
     use crate::compiler::{AddressPart, HeaderPart, HeaderVariable, VariableType};
     use crate::{AHashSet, Compiler};
+    use ahash::AHashMap;
+
+    fn text(state: &mut CompilerState, value: &str) -> Value {
+        Value::Text(state.intern(value))
+    }
 
     #[test]
     fn tokenize_string() {
@@ -732,13 +719,13 @@ mod tests {
         block.match_test_pos.push(0);
         let mut compiler = CompilerState {
             compiler: &c,
-            instructions: vec![Instruction::Test(Test::String(TestString {
+            instructions: vec![Instruction::Test(Box::new(Test::String(TestString {
                 match_type: MatchType::Regex(u64::MAX),
                 comparator: Comparator::AsciiCaseMap,
                 source: vec![Value::Variable(VariableType::Local(0))],
                 key_list: vec![Value::Variable(VariableType::Local(0))],
                 is_not: false,
-            }))],
+            })))],
             block_stack: Vec::new(),
             block,
             last_block_type: Word::Not,
@@ -750,36 +737,26 @@ mod tests {
             vars_match_max: usize::MAX,
             param_check: [false; MAX_PARAMS],
             includes_num: 0,
+            constants: Vec::new(),
+            constants_map: AHashMap::new(),
         };
 
         for (input, expected_result) in [
-            ("$${hex:24 24}", Value::Text("$$$".to_string().into())),
-            ("$${hex:40}", Value::Text("$@".to_string().into())),
-            ("${hex: 40 }", Value::Text("@".to_string().into())),
-            ("${HEX: 40}", Value::Text("@".to_string().into())),
-            ("${hex:40", Value::Text("${hex:40".to_string().into())),
-            ("${hex:400}", Value::Text("${hex:400}".to_string().into())),
-            (
-                "${hex:4${hex:30}}",
-                Value::Text("${hex:40}".to_string().into()),
-            ),
-            ("${unicode:40}", Value::Text("@".to_string().into())),
-            (
-                "${ unicode:40}",
-                Value::Text("${ unicode:40}".to_string().into()),
-            ),
-            ("${UNICODE:40}", Value::Text("@".to_string().into())),
-            ("${UnICoDE:0000040}", Value::Text("@".to_string().into())),
-            ("${Unicode:40}", Value::Text("@".to_string().into())),
-            (
-                "${Unicode:40 40 ",
-                Value::Text("${Unicode:40 40 ".to_string().into()),
-            ),
-            (
-                "${Unicode:Cool}",
-                Value::Text("${Unicode:Cool}".to_string().into()),
-            ),
-            ("", Value::Text("".to_string().into())),
+            ("$${hex:24 24}", text(&mut compiler, "$$$")),
+            ("$${hex:40}", text(&mut compiler, "$@")),
+            ("${hex: 40 }", text(&mut compiler, "@")),
+            ("${HEX: 40}", text(&mut compiler, "@")),
+            ("${hex:40", text(&mut compiler, "${hex:40")),
+            ("${hex:400}", text(&mut compiler, "${hex:400}")),
+            ("${hex:4${hex:30}}", text(&mut compiler, "${hex:40}")),
+            ("${unicode:40}", text(&mut compiler, "@")),
+            ("${ unicode:40}", text(&mut compiler, "${ unicode:40}")),
+            ("${UNICODE:40}", text(&mut compiler, "@")),
+            ("${UnICoDE:0000040}", text(&mut compiler, "@")),
+            ("${Unicode:40}", text(&mut compiler, "@")),
+            ("${Unicode:40 40 ", text(&mut compiler, "${Unicode:40 40 ")),
+            ("${Unicode:Cool}", text(&mut compiler, "${Unicode:Cool}")),
+            ("", text(&mut compiler, "")),
             (
                 "${global.full}",
                 Value::Variable(VariableType::Global("full".to_string())),
@@ -787,52 +764,52 @@ mod tests {
             (
                 "${BAD${global.Company}",
                 Value::List(vec![
-                    Value::Text("${BAD".to_string().into()),
+                    text(&mut compiler, "${BAD"),
                     Value::Variable(VariableType::Global("company".to_string())),
                 ]),
             ),
             (
                 "${President, ${global.Company} Inc.}",
                 Value::List(vec![
-                    Value::Text("${President, ".to_string().into()),
+                    text(&mut compiler, "${President, "),
                     Value::Variable(VariableType::Global("company".to_string())),
-                    Value::Text(" Inc.}".to_string().into()),
+                    text(&mut compiler, " Inc.}"),
                 ]),
             ),
             (
                 "dear${hex:20 24 7b}global.Name}",
                 Value::List(vec![
-                    Value::Text("dear ".to_string().into()),
+                    text(&mut compiler, "dear "),
                     Value::Variable(VariableType::Global("name".to_string())),
                 ]),
             ),
             (
                 "INBOX.lists.${2}",
                 Value::List(vec![
-                    Value::Text("INBOX.lists.".to_string().into()),
+                    text(&mut compiler, "INBOX.lists."),
                     Value::Variable(VariableType::Match(2)),
                 ]),
             ),
             (
                 "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test",
-                Value::Text("Ein unerhört großer Test".to_string().into()),
+                text(&mut compiler, "Ein unerhört großer Test"),
             ),
-            ("&%${}!", Value::Text("&%${}!".to_string().into())),
-            ("${doh!}", Value::Text("${doh!}".to_string().into())),
+            ("&%${}!", text(&mut compiler, "&%${}!")),
+            ("${doh!}", text(&mut compiler, "${doh!}")),
             (
                 "${hex: 20 }${global.hi}${hex: 20 }",
                 Value::List(vec![
-                    Value::Text(" ".to_string().into()),
+                    text(&mut compiler, " "),
                     Value::Variable(VariableType::Global("hi".to_string())),
-                    Value::Text(" ".to_string().into()),
+                    text(&mut compiler, " "),
                 ]),
             ),
             (
                 "${hex:20 24 7b z}${global.hi}${unicode:}${unicode: }${hex:20}",
                 Value::List(vec![
-                    Value::Text("${hex:20 24 7b z}".to_string().into()),
+                    text(&mut compiler, "${hex:20 24 7b z}"),
                     Value::Variable(VariableType::Global("hi".to_string())),
-                    Value::Text("${unicode:}${unicode: } ".to_string().into()),
+                    text(&mut compiler, "${unicode:}${unicode: } "),
                 ]),
             ),
             (

@@ -19,7 +19,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut name = None;
-        let mut key_list;
+        let key_list;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -61,13 +61,13 @@ impl CompilerState<'_> {
                             return Err(token_info.expected("environment variable"));
                         }
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Environment(TestString {
             source: vec![name.unwrap()],

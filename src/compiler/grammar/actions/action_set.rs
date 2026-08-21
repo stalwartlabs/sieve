@@ -132,11 +132,11 @@ impl CompilerState<'_> {
 
         modifiers.sort_unstable_by_key(|m| std::cmp::Reverse(m.order()));
 
-        self.instructions.push(Instruction::Set(Set {
+        self.instructions.push(Instruction::Set(Box::new(Set {
             modifiers,
             name: name.unwrap(),
             value,
-        }));
+        })));
         Ok(())
     }
 
@@ -145,7 +145,8 @@ impl CompilerState<'_> {
         let name = self.parse_variable_name(name, false)?;
         let expr = self.parse_expr()?;
 
-        self.instructions.push(Instruction::Let(Let { name, expr }));
+        self.instructions
+            .push(Instruction::Let(Box::new(Let { name, expr })));
         Ok(())
     }
 

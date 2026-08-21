@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use mail_parser::HeaderName;
 use std::fmt::Display;
 
 use self::{expr::Expression, instruction::CompilerState};
 
 use super::{
-    CompileError, ErrorType, Regex, Value,
+    CompileError, ErrorType, Glob, RawValue, Regex, Value,
     lexer::{Token, tokenizer::TokenInfo, word::Word},
 };
 
@@ -178,8 +179,8 @@ pub struct Clear {
 )]
 pub struct Invalid {
     pub(crate) name: String,
-    pub(crate) line_num: usize,
-    pub(crate) line_pos: usize,
+    pub(crate) line_num: u32,
+    pub(crate) line_pos: u32,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -193,7 +194,7 @@ pub struct Invalid {
 )]
 pub(crate) struct While {
     pub expr: Vec<Expression>,
-    pub jz_pos: usize,
+    pub jz_pos: u32,
 }
 
 impl CompilerState<'_> {
@@ -320,19 +321,45 @@ impl CompilerState<'_> {
     }
 
     pub fn parse_string(&mut self) -> Result<Value, CompileError> {
+        let value = self.parse_raw_string()?;
+        Ok(self.intern_raw(value))
+    }
+
+    pub(crate) fn parse_strings(&mut self, allow_empty: bool) -> Result<Vec<Value>, CompileError> {
+        let values = self.parse_raw_strings(allow_empty)?;
+        Ok(self.intern_raw_list(values))
+    }
+
+    pub(crate) fn parse_string_token(
+        &mut self,
+        token_info: TokenInfo,
+    ) -> Result<Value, CompileError> {
+        let value = self.parse_raw_string_token(token_info)?;
+        Ok(self.intern_raw(value))
+    }
+
+    pub(crate) fn parse_strings_token(
+        &mut self,
+        token_info: TokenInfo,
+    ) -> Result<Vec<Value>, CompileError> {
+        let values = self.parse_raw_strings_token(token_info)?;
+        Ok(self.intern_raw_list(values))
+    }
+
+    pub(crate) fn parse_raw_string(&mut self) -> Result<RawValue, CompileError> {
         let next_token = self.tokens.unwrap_next()?;
         match next_token.token {
-            Token::StringConstant(s) => Ok(Value::from(s)),
-            Token::StringVariable(s) => {
-                self.tokenize_string(&s, true)
-                    .map_err(|error_type| CompileError {
-                        line_num: next_token.line_num,
-                        line_pos: next_token.line_pos,
-                        error_type,
-                    })
-            }
+            Token::StringConstant(s) => Ok(s.into()),
+            Token::StringVariable(s) => self
+                .tokenize_string(&s, true)
+                .map(RawValue::Value)
+                .map_err(|error_type| CompileError {
+                    line_num: next_token.line_num,
+                    line_pos: next_token.line_pos,
+                    error_type,
+                }),
             Token::BracketOpen => {
-                let mut items = self.parse_string_list(false)?;
+                let mut items = self.parse_raw_string_list(false)?;
                 match items.pop() {
                     Some(s) if items.is_empty() => Ok(s),
                     _ => Err(next_token.expected("string")),
@@ -342,81 +369,82 @@ impl CompilerState<'_> {
         }
     }
 
-    pub(crate) fn parse_strings(&mut self, allow_empty: bool) -> Result<Vec<Value>, CompileError> {
+    pub(crate) fn parse_raw_strings(
+        &mut self,
+        allow_empty: bool,
+    ) -> Result<Vec<RawValue>, CompileError> {
         let token_info = self.tokens.unwrap_next()?;
         match token_info.token {
-            Token::BracketOpen => self.parse_string_list(allow_empty),
-            Token::StringConstant(s) => Ok(vec![Value::from(s)]),
-            Token::StringVariable(s) => {
-                self.tokenize_string(&s, true)
-                    .map(|s| vec![s])
-                    .map_err(|error_type| CompileError {
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                        error_type,
-                    })
-            }
+            Token::BracketOpen => self.parse_raw_string_list(allow_empty),
+            Token::StringConstant(s) => Ok(vec![s.into()]),
+            Token::StringVariable(s) => self
+                .tokenize_string(&s, true)
+                .map(|s| vec![RawValue::Value(s)])
+                .map_err(|error_type| CompileError {
+                    line_num: token_info.line_num,
+                    line_pos: token_info.line_pos,
+                    error_type,
+                }),
             _ => Err(token_info.expected("'[' or string")),
         }
     }
 
-    pub(crate) fn parse_string_token(
+    pub(crate) fn parse_raw_string_token(
         &mut self,
         token_info: TokenInfo,
-    ) -> Result<Value, CompileError> {
+    ) -> Result<RawValue, CompileError> {
         match token_info.token {
-            Token::StringConstant(s) => Ok(Value::from(s)),
-            Token::StringVariable(s) => {
-                self.tokenize_string(&s, true)
-                    .map_err(|error_type| CompileError {
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                        error_type,
-                    })
-            }
+            Token::StringConstant(s) => Ok(s.into()),
+            Token::StringVariable(s) => self
+                .tokenize_string(&s, true)
+                .map(RawValue::Value)
+                .map_err(|error_type| CompileError {
+                    line_num: token_info.line_num,
+                    line_pos: token_info.line_pos,
+                    error_type,
+                }),
             _ => Err(token_info.expected("string")),
         }
     }
 
-    pub(crate) fn parse_strings_token(
+    pub(crate) fn parse_raw_strings_token(
         &mut self,
         token_info: TokenInfo,
-    ) -> Result<Vec<Value>, CompileError> {
+    ) -> Result<Vec<RawValue>, CompileError> {
         match token_info.token {
-            Token::StringConstant(s) => Ok(vec![Value::from(s)]),
-            Token::StringVariable(s) => {
-                self.tokenize_string(&s, true)
-                    .map(|s| vec![s])
-                    .map_err(|error_type| CompileError {
-                        line_num: token_info.line_num,
-                        line_pos: token_info.line_pos,
-                        error_type,
-                    })
-            }
-            Token::BracketOpen => self.parse_string_list(false),
+            Token::StringConstant(s) => Ok(vec![s.into()]),
+            Token::StringVariable(s) => self
+                .tokenize_string(&s, true)
+                .map(|s| vec![RawValue::Value(s)])
+                .map_err(|error_type| CompileError {
+                    line_num: token_info.line_num,
+                    line_pos: token_info.line_pos,
+                    error_type,
+                }),
+            Token::BracketOpen => self.parse_raw_string_list(false),
             _ => Err(token_info.expected("string")),
         }
     }
 
-    pub(crate) fn parse_string_list(
+    pub(crate) fn parse_raw_string_list(
         &mut self,
         allow_empty: bool,
-    ) -> Result<Vec<Value>, CompileError> {
+    ) -> Result<Vec<RawValue>, CompileError> {
         let mut strings = Vec::new();
         loop {
             let token_info = self.tokens.unwrap_next()?;
             match token_info.token {
                 Token::StringConstant(s) => {
-                    strings.push(Value::from(s));
+                    strings.push(s.into());
                 }
                 Token::StringVariable(s) => {
-                    strings.push(self.tokenize_string(&s, true).map_err(|error_type| {
-                        CompileError {
+                    strings.push(RawValue::Value(self.tokenize_string(&s, true).map_err(
+                        |error_type| CompileError {
                             line_num: token_info.line_num,
                             line_pos: token_info.line_pos,
                             error_type,
-                        }
-                    })?);
+                        },
+                    )?));
                 }
                 Token::Comma => (),
                 Token::BracketClose if !strings.is_empty() || allow_empty => break,
@@ -477,18 +505,64 @@ impl CompilerState<'_> {
         Ok(())
     }
 
+    fn header_name(&mut self, header: RawValue) -> Result<Value, Value> {
+        match header {
+            RawValue::Text(text) => {
+                match HeaderName::parse(text.as_str()).map(HeaderName::into_owned) {
+                    Some(header_name) => Ok(Value::Header(header_name)),
+                    None => Err(self.text(text)),
+                }
+            }
+            RawValue::Value(Value::Text(id)) => {
+                match HeaderName::parse(self.constant(id)).map(HeaderName::into_owned) {
+                    Some(header_name) => Ok(Value::Header(header_name)),
+                    None => Err(Value::Text(id)),
+                }
+            }
+            other => Ok(self.intern_raw(other)),
+        }
+    }
+
+    pub(crate) fn resolve_header_name(&mut self, header: RawValue) -> Option<Value> {
+        self.header_name(header).ok()
+    }
+
+    pub(crate) fn resolve_header_names(&mut self, headers: Vec<RawValue>) -> (Vec<Value>, bool) {
+        let mut all_valid = true;
+        let mut values = Vec::with_capacity(headers.len());
+
+        for header in headers {
+            match self.header_name(header) {
+                Ok(value) => values.push(value),
+                Err(value) => {
+                    all_valid = false;
+                    values.push(value);
+                }
+            }
+        }
+
+        (values, all_valid)
+    }
+
     pub(crate) fn validate_match(
         &mut self,
         match_type: &MatchType,
-        key_list: &mut [Value],
-    ) -> Result<(), CompileError> {
-        if matches!(match_type, MatchType::Regex(_)) {
-            for key in key_list {
-                if let Value::Text(expr) = key {
-                    match fancy_regex::Regex::new(expr) {
-                        Ok(regex) => {
-                            *key = Value::Regex(Regex::new(expr.to_string(), regex));
+        comparator: &Comparator,
+        key_list: Vec<RawValue>,
+    ) -> Result<Vec<Value>, CompileError> {
+        match match_type {
+            MatchType::Regex(_) => {
+                let mut keys = Vec::with_capacity(key_list.len());
+                for key in key_list {
+                    let expr = match self.match_expression(key) {
+                        Ok(expr) => expr,
+                        Err(key) => {
+                            keys.push(key);
+                            continue;
                         }
+                    };
+                    match fancy_regex::Regex::new(&expr) {
+                        Ok(regex) => keys.push(Value::Regex(Regex::new(expr, regex))),
                         Err(err) => {
                             return Err(self
                                 .tokens
@@ -497,9 +571,29 @@ impl CompilerState<'_> {
                         }
                     }
                 }
+                Ok(keys)
             }
+            MatchType::Matches(_) => {
+                let to_lower = matches!(comparator, Comparator::AsciiCaseMap);
+                let mut keys = Vec::with_capacity(key_list.len());
+                for key in key_list {
+                    match self.match_expression(key) {
+                        Ok(expr) => keys.push(Value::Glob(Glob::new(expr, to_lower))),
+                        Err(key) => keys.push(key),
+                    }
+                }
+                Ok(keys)
+            }
+            _ => Ok(self.intern_raw_list(key_list)),
         }
-        Ok(())
+    }
+
+    fn match_expression(&mut self, key: RawValue) -> Result<String, Value> {
+        match key {
+            RawValue::Text(text) => Ok(text),
+            RawValue::Value(Value::Text(id)) => Ok(self.constant(id).to_string()),
+            other => Err(self.intern_raw(other)),
+        }
     }
 }
 
@@ -594,11 +688,11 @@ impl Invalid {
     }
 
     pub fn line_num(&self) -> usize {
-        self.line_num
+        self.line_num as usize
     }
 
     pub fn line_pos(&self) -> usize {
-        self.line_pos
+        self.line_pos as usize
     }
 }
 

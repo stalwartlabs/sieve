@@ -4,33 +4,31 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::TestResult;
 use crate::{
     Context,
     compiler::{
-        Number, VariableType,
+        Number,
         grammar::{MatchType, tests::test_hasflag::TestHasFlag},
     },
 };
 
-use super::TestResult;
-
 impl TestHasFlag {
     pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let mut variable_list_ = None;
-        let variable_list = if !self.variable_list.is_empty() {
-            &self.variable_list
-        } else {
-            variable_list_.get_or_insert_with(|| vec![VariableType::Global("__flags".to_string())])
-        };
+        let variable_list = &self.variable_list;
 
         let result = if let MatchType::Count(rel_match) = &self.match_type {
             let mut flag_count = 0;
-            for variable in variable_list {
-                match ctx.get_variable(variable) {
-                    Some(flags) if !flags.is_empty() => {
-                        flag_count += flags.to_string().split(' ').count();
+            if variable_list.is_empty() {
+                flag_count = ctx.global_flags().len();
+            } else {
+                for variable in variable_list {
+                    match ctx.get_variable(variable) {
+                        Some(flags) if !flags.is_empty() => {
+                            flag_count += flags.to_string().split(' ').count();
+                        }
+                        _ => (),
                     }
-                    _ => (),
                 }
             }
 
@@ -48,39 +46,24 @@ impl TestHasFlag {
         } else {
             let mut captured_values = Vec::new();
             let result = ctx.tokenize_flags(&self.flags, |check_flag| {
-                for variable in variable_list {
-                    match ctx.get_variable(variable) {
-                        Some(flags) if !flags.is_empty() => {
-                            for flag in flags.to_string().split(' ') {
-                                if match &self.match_type {
-                                    MatchType::Is => self.comparator.is(&flag, &check_flag),
-                                    MatchType::Contains => {
-                                        self.comparator.contains(flag, check_flag)
+                if variable_list.is_empty() {
+                    for flag in ctx.global_flags() {
+                        if self.check_flag(flag, check_flag, &mut captured_values) {
+                            return true;
+                        }
+                    }
+                } else {
+                    for variable in variable_list {
+                        match ctx.get_variable(variable) {
+                            Some(flags) if !flags.is_empty() => {
+                                for flag in flags.to_string().split(' ') {
+                                    if self.check_flag(flag, check_flag, &mut captured_values) {
+                                        return true;
                                     }
-                                    MatchType::Value(rel_match) => {
-                                        self.comparator.relational(rel_match, &flag, &check_flag)
-                                    }
-                                    MatchType::Matches(capture_positions) => {
-                                        self.comparator.matches(
-                                            flag,
-                                            check_flag,
-                                            *capture_positions,
-                                            &mut captured_values,
-                                        )
-                                    }
-                                    MatchType::Regex(capture_positions) => self.comparator.matches(
-                                        flag,
-                                        check_flag,
-                                        *capture_positions,
-                                        &mut captured_values,
-                                    ),
-                                    MatchType::Count(_) | MatchType::List => false,
-                                } {
-                                    return true;
                                 }
                             }
+                            _ => (),
                         }
-                        _ => (),
                     }
                 }
                 false
@@ -92,5 +75,24 @@ impl TestHasFlag {
         };
 
         TestResult::Bool(result ^ self.is_not)
+    }
+
+    fn check_flag(
+        &self,
+        flag: &str,
+        check_flag: &str,
+        captured_values: &mut Vec<(usize, String)>,
+    ) -> bool {
+        match &self.match_type {
+            MatchType::Is => self.comparator.is(&flag, &check_flag),
+            MatchType::Contains => self.comparator.contains(flag, check_flag),
+            MatchType::Value(rel_match) => {
+                self.comparator.relational(rel_match, &flag, &check_flag)
+            }
+            MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => self
+                .comparator
+                .matches(None, check_flag, flag, *capture_positions, captured_values),
+            MatchType::Count(_) | MatchType::List => false,
+        }
     }
 }

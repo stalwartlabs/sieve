@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use crate::compiler::ConstantId;
+
 use super::{BinaryOperator, Expression, Token, tokenizer::Tokenizer};
 
 pub(crate) struct ExpressionParser<'x, F>
@@ -12,6 +14,7 @@ where
 {
     pub(crate) tokenizer: Tokenizer<'x, F>,
     pub(crate) output: Vec<Expression>,
+    pub(crate) string_constants: Vec<(usize, String)>,
     operator_stack: Vec<(Token, Option<usize>)>,
     arg_count: Vec<i32>,
 }
@@ -28,6 +31,7 @@ where
         Self {
             tokenizer,
             output: Vec::new(),
+            string_constants: Vec::new(),
             operator_stack: Vec::new(),
             arg_count: Vec::new(),
         }
@@ -42,15 +46,17 @@ where
                 Token::Variable(v) => {
                     self.inc_arg_count();
                     is_var_or_fnc = true;
-                    self.output.push(Expression::Variable(v))
+                    self.output.push(Expression::variable(v))
                 }
                 Token::Number(n) => {
                     self.inc_arg_count();
-                    self.output.push(Expression::Constant(n.into()))
+                    self.output.push(Expression::constant(n.into()))
                 }
                 Token::String(s) => {
                     self.inc_arg_count();
-                    self.output.push(Expression::Constant(s.into()))
+                    self.string_constants.push((self.output.len(), s.clone()));
+                    self.output
+                        .push(Expression::ConstantString(ConstantId::UNRESOLVED))
                 }
                 Token::UnaryOperator(uop) => {
                     self.operator_stack.push((Token::UnaryOperator(uop), None))

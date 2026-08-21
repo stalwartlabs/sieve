@@ -11,15 +11,7 @@ pub mod expression;
 pub mod tests;
 pub mod variables;
 
-use ahash::{AHashMap, AHashSet};
-use mail_parser::HeaderName;
-#[cfg(not(test))]
-use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
-use std::{borrow::Cow, fmt::Display, hash::Hash, ops::Deref, sync::Arc};
-
-#[cfg(not(test))]
-use crate::Context;
-
+use self::eval::ToString;
 use crate::{
     ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
     compiler::{
@@ -27,8 +19,20 @@ use crate::{
         grammar::{Capability, Invalid, expr::parser::ID_EXTERNAL},
     },
 };
+use ahash::{AHashMap, AHashSet};
+use mail_parser::HeaderName;
+#[cfg(not(test))]
+use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
+use std::{
+    borrow::Cow,
+    fmt::Display,
+    hash::Hash,
+    ops::Deref,
+    sync::{Arc, OnceLock},
+};
 
-use self::eval::ToString;
+#[cfg(not(test))]
+use crate::Context;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
@@ -36,10 +40,10 @@ use self::eval::ToString;
     derive(serde::Serialize, serde::Deserialize)
 )]
 pub enum Variable {
-    String(Arc<String>),
+    String(Arc<str>),
     Integer(i64),
     Float(f64),
-    Array(Arc<Vec<Variable>>),
+    Array(Arc<[Variable]>),
 }
 
 #[derive(Debug)]
@@ -52,16 +56,27 @@ pub enum RuntimeError {
     CPULimitReached,
 }
 
+static EMPTY_STRING: OnceLock<Arc<str>> = OnceLock::new();
+static EMPTY_ARRAY: OnceLock<Arc<[Variable]>> = OnceLock::new();
+
+pub(crate) fn empty_string() -> Arc<str> {
+    EMPTY_STRING.get_or_init(|| Arc::from("")).clone()
+}
+
+fn empty_array() -> Arc<[Variable]> {
+    EMPTY_ARRAY.get_or_init(|| Arc::from([])).clone()
+}
+
 impl Default for Variable {
     fn default() -> Self {
-        Variable::String(Arc::new(String::new()))
+        Variable::String(empty_string())
     }
 }
 
 impl Variable {
     pub fn to_string(&self) -> Cow<'_, str> {
         match self {
-            Variable::String(s) => Cow::Borrowed(s.as_str()),
+            Variable::String(s) => Cow::Borrowed(s.as_ref()),
             Variable::Integer(n) => Cow::Owned(n.to_string()),
             Variable::Float(n) => Cow::Owned(n.to_string()),
             Variable::Array(l) => Cow::Owned(l.to_string()),
@@ -77,7 +92,7 @@ impl Variable {
         let s = match self {
             Variable::Integer(n) => return Number::Integer(*n).into(),
             Variable::Float(n) => return Number::Float(*n).into(),
-            Variable::String(s) if !s.is_empty() => s.as_str(),
+            Variable::String(s) if !s.is_empty() => s.as_ref(),
             _ => return None,
         };
 
@@ -128,19 +143,19 @@ impl Variable {
         }
     }
 
-    pub fn into_array(self) -> Arc<Vec<Variable>> {
+    pub fn into_array(self) -> Arc<[Variable]> {
         match self {
             Variable::Array(l) => l,
-            v if !v.is_empty() => vec![v].into(),
-            _ => vec![].into(),
+            v if !v.is_empty() => Arc::from([v]),
+            _ => empty_array(),
         }
     }
 
-    pub fn to_array(&self) -> Arc<Vec<Variable>> {
+    pub fn to_array(&self) -> Arc<[Variable]> {
         match self {
             Variable::Array(l) => l.clone(),
-            v if !v.is_empty() => vec![v.clone()].into(),
-            _ => vec![].into(),
+            v if !v.is_empty() => Arc::from([v.clone()]),
+            _ => empty_array(),
         }
     }
 
@@ -169,20 +184,20 @@ impl From<String> for Variable {
 
 impl<'x> From<&'x String> for Variable {
     fn from(s: &'x String) -> Self {
-        Variable::String(s.as_str().to_string().into())
+        Variable::String(s.as_str().into())
     }
 }
 
 impl<'x> From<&'x str> for Variable {
     fn from(s: &'x str) -> Self {
-        Variable::String(s.to_string().into())
+        Variable::String(s.into())
     }
 }
 
 impl<'x> From<Cow<'x, str>> for Variable {
     fn from(s: Cow<'x, str>) -> Self {
         match s {
-            Cow::Borrowed(s) => Variable::String(s.to_string().into()),
+            Cow::Borrowed(s) => Variable::String(s.into()),
             Cow::Owned(s) => Variable::String(s.into()),
         }
     }
@@ -270,7 +285,7 @@ impl PartialOrd for Number {
     }
 }
 
-impl self::eval::ToString for Vec<Variable> {
+impl self::eval::ToString for [Variable] {
     fn to_string(&self) -> String {
         let mut result = String::with_capacity(self.len() * 10);
         for item in self {

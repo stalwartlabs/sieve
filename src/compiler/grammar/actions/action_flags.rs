@@ -50,7 +50,7 @@ impl CompilerState<'_> {
             _ => unreachable!(),
         };
 
-        let instruction = Instruction::EditFlags(
+        let instruction = Instruction::EditFlags(Box::new(
             match (
                 &token_info.token,
                 self.tokens.peek().map(|r| r.map(|t| &t.token)),
@@ -78,7 +78,7 @@ impl CompilerState<'_> {
                     return Err(token_info.custom(ErrorType::InvalidArguments));
                 }
             },
-        );
+        ));
 
         self.instructions.push(instruction);
 

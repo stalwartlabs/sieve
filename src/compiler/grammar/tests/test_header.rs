@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_parser::HeaderName;
-
 use crate::compiler::{
     CompileError, ErrorType, Value,
     grammar::{
@@ -44,7 +42,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut header_list = None;
-        let mut key_list;
+        let key_list;
         let mut index = None;
         let mut index_last = false;
 
@@ -134,20 +132,17 @@ impl CompilerState<'_> {
                 }
                 _ => {
                     if header_list.is_none() {
-                        let headers = self.parse_strings_token(token_info)?;
-                        for header in &headers {
-                            if let Value::Text(header_name) = &header
-                                && HeaderName::parse(header_name.as_ref()).is_none()
-                            {
-                                return Err(self
-                                    .tokens
-                                    .unwrap_next()?
-                                    .custom(ErrorType::InvalidHeaderName));
-                            }
+                        let headers = self.parse_raw_strings_token(token_info)?;
+                        let (headers, all_valid) = self.resolve_header_names(headers);
+                        if !all_valid {
+                            return Err(self
+                                .tokens
+                                .unwrap_next()?
+                                .custom(ErrorType::InvalidHeaderName));
                         }
                         header_list = headers.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
@@ -157,7 +152,7 @@ impl CompilerState<'_> {
         if !mime && (mime_anychild || mime_opts != MimeOpts::None) {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::Header(TestHeader {
             header_list: header_list.unwrap(),
@@ -173,7 +168,7 @@ impl CompilerState<'_> {
 }
 
 impl MapLocalVars for MimeOpts<Value> {
-    fn map_local_vars(&mut self, last_id: usize) {
+    fn map_local_vars(&mut self, last_id: u16) {
         if let MimeOpts::Param(value) = self {
             value.map_local_vars(last_id)
         }

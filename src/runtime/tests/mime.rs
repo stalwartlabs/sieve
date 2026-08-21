@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use crate::Context;
+use mail_parser::{Message, MessagePart, MimeHeaders, PartType};
 use std::slice::Iter;
 
-use mail_parser::{Message, MessagePart, MimeHeaders, PartType};
-
-use crate::Context;
+const FIRST_PART: [u32; 1] = [0];
 
 #[derive(Debug)]
 pub(crate) enum ContentTypeFilter {
@@ -63,10 +63,11 @@ impl<'x> Context<'x> {
         visitor_fnc: &mut impl FnMut(&MessagePart, &[u8]) -> bool,
     ) -> bool {
         let mut iter_stack = Vec::new();
-        let mut iter = vec![self.part].into_iter();
+        let root = [self.part];
+        let mut iter = root.iter();
 
         loop {
-            while let Some(part_id) = iter.next() {
+            while let Some(&part_id) = iter.next() {
                 if let Some(subpart) = message.parts.get(part_id as usize) {
                     let process_part = if !ct_filter.is_empty() {
                         let mut process_part = false;
@@ -110,14 +111,11 @@ impl<'x> Context<'x> {
                     }
                     match &subpart.body {
                         PartType::Multipart(subparts) => {
-                            iter_stack.push((
-                                std::mem::replace(&mut iter, subparts.clone().into_iter()),
-                                None,
-                            ));
+                            iter_stack.push((std::mem::replace(&mut iter, subparts.iter()), None));
                         }
                         PartType::Message(next_message) => {
                             iter_stack.push((
-                                std::mem::replace(&mut iter, vec![0].into_iter()),
+                                std::mem::replace(&mut iter, FIRST_PART.iter()),
                                 Some(message),
                             ));
                             message = next_message;

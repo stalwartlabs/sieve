@@ -5,7 +5,7 @@
  */
 
 use crate::compiler::{
-    CompileError, Value,
+    CompileError, RawValue, Value,
     grammar::{Capability, Comparator, instruction::CompilerState},
     lexer::{Token, word::Word},
 };
@@ -34,7 +34,7 @@ impl CompilerState<'_> {
         let mut match_type = MatchType::Is;
         let mut comparator = Comparator::AsciiCaseMap;
         let mut source = None;
-        let mut key_list: Vec<Value>;
+        let key_list: Vec<RawValue>;
 
         loop {
             let token_info = self.tokens.unwrap_next()?;
@@ -70,13 +70,13 @@ impl CompilerState<'_> {
                     if source.is_none() {
                         source = self.parse_strings_token(token_info)?.into();
                     } else {
-                        key_list = self.parse_strings_token(token_info)?;
+                        key_list = self.parse_raw_strings_token(token_info)?;
                         break;
                     }
                 }
             }
         }
-        self.validate_match(&match_type, &mut key_list)?;
+        let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
         Ok(Test::String(TestString {
             source: source.unwrap(),

@@ -23,7 +23,7 @@
           },
           "handle": null,
           "reason": {
-            "Text": "Gone Fishin'"
+            "Text": 4
           }
         }
       }
@@ -41,26 +41,26 @@
       "Vacation": {
         "subject": null,
         "from": {
-          "Text": "hemingway@example.com"
+          "Text": 0
         },
         "mime": false,
         "fcc": {
           "mailbox": {
-            "Text": "INBOX.Sent"
+            "Text": 2
           },
           "mailbox_id": null,
           "create": true,
           "flags": [
             {
-              "Text": "\\Seen"
+              "Text": 3
             }
           ],
           "special_use": {
-            "Text": "\\Sent"
+            "Text": 1
           }
         },
         "reason": {
-          "Text": "Gone Fishin'"
+          "Text": 4
         }
       }
     }
@@ -73,11 +73,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": "You got mail!"
+          "Text": 5
         },
         "fcc": {
           "mailbox": {
-            "Text": "INBOX.Sent"
+            "Text": 2
           },
           "mailbox_id": null,
           "create": false,
@@ -85,7 +85,7 @@
           "special_use": null
         },
         "method": {
-          "Text": "mailto:ken@example.com"
+          "Text": 6
         }
       }
     }
@@ -98,14 +98,14 @@
           "comparator": "AsciiCaseMap",
           "match_type": "Is",
           "notification_uri": {
-            "Text": "xmpp:"
+            "Text": 7
           },
           "notification_capability": {
-            "Text": "fcc"
+            "Text": 8
           },
           "key_list": [
             {
-              "Text": "yes"
+              "Text": 9
             }
           ],
           "is_not": false
@@ -127,11 +127,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": "You got mail"
+          "Text": 10
         },
         "fcc": {
           "mailbox": {
-            "Text": "INBOX.Sent"
+            "Text": 2
           },
           "mailbox_id": null,
           "create": false,
@@ -139,7 +139,7 @@
           "special_use": null
         },
         "method": {
-          "Text": "xmpp:ken@example.com?message;subject=SIEVE"
+          "Text": 11
         }
       }
     }
@@ -158,11 +158,11 @@
         "importance": null,
         "options": [],
         "message": {
-          "Text": "You got mail!"
+          "Text": 5
         },
         "fcc": {
           "mailbox": {
-            "Text": "INBOX.Sent"
+            "Text": 2
           },
           "mailbox_id": null,
           "create": false,
@@ -170,7 +170,7 @@
           "special_use": null
         },
         "method": {
-          "Text": "mailto:ken@example.com"
+          "Text": 6
         }
       }
     }

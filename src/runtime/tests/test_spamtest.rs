@@ -35,8 +35,9 @@ impl TestSpamTest {
                 .contains(status.to_string().as_ref(), value.to_string().as_ref()),
             MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.matches(
-                status.to_string().as_ref(),
+                Some(&self.value),
                 value.to_string().as_ref(),
+                status.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),
@@ -79,8 +80,9 @@ impl TestVirusTest {
                 .contains(status.to_string().as_ref(), value.to_string().as_ref()),
             MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
             MatchType::Matches(capture_positions) => self.comparator.matches(
-                status.to_string().as_ref(),
+                Some(&self.value),
                 value.to_string().as_ref(),
+                status.to_string().as_ref(),
                 *capture_positions,
                 &mut captured_values,
             ),

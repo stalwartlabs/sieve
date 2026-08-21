@@ -80,12 +80,13 @@ impl CompilerState<'_> {
             }
         }
 
-        self.instructions.push(Instruction::Include(Include {
-            location,
-            once,
-            optional,
-            value,
-        }));
+        self.instructions
+            .push(Instruction::Include(Box::new(Include {
+                location,
+                once,
+                optional,
+                value,
+            })));
         Ok(())
     }
 }

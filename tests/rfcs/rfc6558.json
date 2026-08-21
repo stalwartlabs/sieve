@@ -13,17 +13,17 @@
     {
       "Convert": {
         "from_media_type": {
-          "Text": "image/tiff"
+          "Text": 0
         },
         "to_media_type": {
-          "Text": "image/jpeg"
+          "Text": 1
         },
         "transcoding_params": [
           {
-            "Text": "pix-x=320"
+            "Text": 2
           },
           {
-            "Text": "pix-y=240"
+            "Text": 3
           }
         ],
         "is_not": false
@@ -36,17 +36,17 @@
       "Test": {
         "Convert": {
           "from_media_type": {
-            "Text": "image/tiff"
+            "Text": 0
           },
           "to_media_type": {
-            "Text": "image/jpeg"
+            "Text": 1
           },
           "transcoding_params": [
             {
-              "Text": "pix-x=320"
+              "Text": 2
             },
             {
-              "Text": "pix-y=240"
+              "Text": 3
             }
           ],
           "is_not": false
@@ -67,7 +67,7 @@
         "copy": false,
         "create": false,
         "folder": {
-          "Text": "INBOX.pics"
+          "Text": 4
         },
         "flags": [],
         "mailbox_id": null,
