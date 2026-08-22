@@ -22,7 +22,7 @@ use crate::compiler::grammar::test::Test;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestExists {
-    pub header_names: Vec<Value>,
+    pub header_names: Box<[Value]>,
     pub mime_anychild: bool,
     pub is_not: bool,
 }
@@ -73,10 +73,10 @@ impl CompilerState<'_> {
             return Err(self.tokens.unwrap_next()?.missing_tag(":mime"));
         }
 
-        Ok(Test::Exists(TestExists {
-            header_names: header_names.unwrap(),
+        Ok(Test::Exists(Box::new(TestExists {
+            header_names: header_names.unwrap().into(),
             mime_anychild,
             is_not: false,
-        }))
+        })))
     }
 }

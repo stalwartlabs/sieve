@@ -25,17 +25,31 @@ use crate::{
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
-#[allow(clippy::large_enum_variant)]
+#[repr(u8)]
 pub(crate) enum Modifier {
-    Lower,
-    Upper,
-    LowerFirst,
-    UpperFirst,
-    QuoteWildcard,
-    QuoteRegex,
-    EncodeUrl,
-    Length,
-    Replace { find: Value, replace: Value },
+    Lower = 0,
+    Upper = 1,
+    LowerFirst = 2,
+    UpperFirst = 3,
+    QuoteWildcard = 4,
+    QuoteRegex = 5,
+    EncodeUrl = 6,
+    Length = 7,
+    Replace(Box<Replacement>) = 8,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+pub(crate) struct Replacement {
+    pub find: Value,
+    pub replace: Value,
 }
 
 impl Modifier {
@@ -49,7 +63,7 @@ impl Modifier {
             Modifier::QuoteRegex => 21,
             Modifier::EncodeUrl => 15,
             Modifier::Length => 10,
-            Modifier::Replace { .. } => 40,
+            Modifier::Replace(_) => 40,
         }
     }
 }
@@ -64,7 +78,7 @@ impl Modifier {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Set {
-    pub modifiers: Vec<Modifier>,
+    pub modifiers: Box<[Modifier]>,
     pub name: VariableType,
     pub value: Value,
 }
@@ -80,7 +94,7 @@ pub(crate) struct Set {
 )]
 pub(crate) struct Let {
     pub name: VariableType,
-    pub expr: Vec<Expression>,
+    pub expr: Box<[Expression]>,
 }
 
 impl CompilerState<'_> {
@@ -111,10 +125,10 @@ impl CompilerState<'_> {
                 Token::Tag(Word::Replace) => {
                     let find = self.tokens.unwrap_next()?;
                     let replace = self.tokens.unwrap_next()?;
-                    modifiers.push(Modifier::Replace {
+                    modifiers.push(Modifier::Replace(Box::new(Replacement {
                         find: self.parse_string_token(find)?,
                         replace: self.parse_string_token(replace)?,
-                    });
+                    })));
                 }
                 Token::Tag(Word::Local) => {
                     is_local = true;
@@ -133,7 +147,7 @@ impl CompilerState<'_> {
         modifiers.sort_unstable_by_key(|m| std::cmp::Reverse(m.order()));
 
         self.instructions.push(Instruction::Set(Box::new(Set {
-            modifiers,
+            modifiers: modifiers.into(),
             name: name.unwrap(),
             value,
         })));
@@ -145,8 +159,10 @@ impl CompilerState<'_> {
         let name = self.parse_variable_name(name, false)?;
         let expr = self.parse_expr()?;
 
-        self.instructions
-            .push(Instruction::Let(Box::new(Let { name, expr })));
+        self.instructions.push(Instruction::Let(Box::new(Let {
+            name,
+            expr: expr.into(),
+        })));
         Ok(())
     }
 
@@ -174,13 +190,21 @@ impl CompilerState<'_> {
     ) -> Result<VariableType, ErrorType> {
         let name = name.to_lowercase();
         if let Some((namespace, part)) = name.split_once('.') {
-            match namespace {
-                "global" | "t" => Ok(VariableType::Global(part.to_string())),
-                "envelope" => Envelope::try_from(part)
-                    .map(VariableType::Envelope)
-                    .map_err(|_| ErrorType::InvalidNamespace(namespace.to_string())),
-                _ => Err(ErrorType::InvalidNamespace(namespace.to_string())),
-            }
+            let mut variable = None;
+            hashify::fnc_map!(namespace.as_bytes(),
+                "global" => {
+                    variable = VariableType::Global(part.to_string()).into();
+                },
+                "t" => {
+                    variable = VariableType::Global(part.to_string()).into();
+                },
+                "envelope" => {
+                    variable = Envelope::try_from(part).ok().map(VariableType::Envelope);
+                },
+                _ => {}
+            );
+
+            variable.ok_or_else(|| ErrorType::InvalidNamespace(namespace.to_string()))
         } else {
             Ok(if !self.is_var_global(&name) {
                 VariableType::Local(self.register_local_var(name, register_as_local))

@@ -69,12 +69,12 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Environment(TestString {
-            source: vec![name.unwrap()],
-            key_list,
+        Ok(Test::Environment(Box::new(TestString {
+            source: vec![name.unwrap()].into(),
+            key_list: key_list.into(),
             match_type,
             comparator,
             is_not: false,
-        }))
+        })))
     }
 }

@@ -30,7 +30,7 @@ impl TestHeader {
             MimeOpts::Type => MimeOpts::Type,
             MimeOpts::Subtype => MimeOpts::Subtype,
             MimeOpts::ContentType => MimeOpts::ContentType,
-            MimeOpts::Param(params) => MimeOpts::Param(ctx.eval_values(params)),
+            MimeOpts::Param(params) => MimeOpts::Param(ctx.eval_values(params).into()),
             MimeOpts::None => MimeOpts::None,
         };
 

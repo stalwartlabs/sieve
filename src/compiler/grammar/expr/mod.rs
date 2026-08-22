@@ -5,7 +5,6 @@
  */
 
 use crate::compiler::{ConstantId, Number, VariableType};
-use std::sync::Arc;
 
 pub mod parser;
 pub mod tokenizer;
@@ -19,19 +18,20 @@ pub mod tokenizer;
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Expression {
-    VariableLocal(u16),
-    VariableMatch(u8),
-    VariableOther(Box<VariableType>),
-    ConstantInteger(i64),
-    ConstantFloat(f64),
-    ConstantString(ConstantId),
-    BinaryOperator(BinaryOperator),
-    UnaryOperator(UnaryOperator),
-    JmpIf { val: bool, pos: u32 },
-    Function { id: u32, num_args: u32 },
-    ArrayAccess,
-    ArrayBuild(u32),
+    VariableLocal(u16) = 0,
+    VariableMatch(u8) = 1,
+    VariableOther(Box<VariableType>) = 2,
+    ConstantInteger(i64) = 3,
+    ConstantFloat(f64) = 4,
+    ConstantString(ConstantId) = 5,
+    BinaryOperator(BinaryOperator) = 6,
+    UnaryOperator(UnaryOperator) = 7,
+    JmpIf { val: bool, pos: u32 } = 8,
+    Function { id: u32, num_args: u32 } = 9,
+    ArrayAccess = 10,
+    ArrayBuild(u32) = 11,
 }
 
 impl Eq for Expression {}
@@ -45,47 +45,11 @@ impl Expression {
         }
     }
 
-    pub(crate) fn constant(constant: Constant) -> Self {
-        match constant {
-            Constant::Integer(i) => Expression::ConstantInteger(i),
-            Constant::Float(f) => Expression::ConstantFloat(f),
-            Constant::String(_) => {
-                debug_assert!(false, "String constants must be interned by the caller.");
-                Expression::ConstantString(ConstantId::UNRESOLVED)
-            }
+    pub(crate) fn number(number: Number) -> Self {
+        match number {
+            Number::Integer(i) => Expression::ConstantInteger(i),
+            Number::Float(f) => Expression::ConstantFloat(f),
         }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-#[cfg_attr(
-    any(test, feature = "serde"),
-    derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
-pub(crate) enum Constant {
-    Integer(i64),
-    Float(f64),
-    String(Arc<str>),
-}
-
-impl Eq for Constant {}
-
-impl From<Number> for Constant {
-    fn from(value: Number) -> Self {
-        match value {
-            Number::Integer(i) => Constant::Integer(i),
-            Number::Float(f) => Constant::Float(f),
-        }
-    }
-}
-
-impl From<String> for Constant {
-    fn from(value: String) -> Self {
-        Constant::String(value.into())
     }
 }
 
@@ -98,22 +62,23 @@ impl From<String> for Constant {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum BinaryOperator {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
+    Add = 0,
+    Subtract = 1,
+    Multiply = 2,
+    Divide = 3,
 
-    And,
-    Or,
-    Xor,
+    And = 4,
+    Or = 5,
+    Xor = 6,
 
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
+    Eq = 7,
+    Ne = 8,
+    Lt = 9,
+    Le = 10,
+    Gt = 11,
+    Ge = 12,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -125,9 +90,10 @@ pub(crate) enum BinaryOperator {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum UnaryOperator {
-    Not,
-    Minus,
+    Not = 0,
+    Minus = 1,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -26,7 +26,7 @@ pub(crate) struct TestNotifyMethodCapability {
     pub match_type: MatchType,
     pub notification_uri: Value,
     pub notification_capability: Value,
-    pub key_list: Vec<Value>,
+    pub key_list: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -40,16 +40,16 @@ pub(crate) struct TestNotifyMethodCapability {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestValidNotifyMethod {
-    pub notification_uris: Vec<Value>,
+    pub notification_uris: Box<[Value]>,
     pub is_not: bool,
 }
 
 impl CompilerState<'_> {
     pub(crate) fn parse_test_valid_notify_method(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::ValidNotifyMethod(TestValidNotifyMethod {
-            notification_uris: self.parse_strings(false)?,
+        Ok(Test::ValidNotifyMethod(Box::new(TestValidNotifyMethod {
+            notification_uris: self.parse_strings(false)?.into(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_notify_method_capability(&mut self) -> Result<Test, CompileError> {
@@ -102,13 +102,15 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::NotifyMethodCapability(TestNotifyMethodCapability {
-            key_list,
-            match_type,
-            comparator,
-            notification_uri: notification_uri.unwrap(),
-            notification_capability: notification_capability.unwrap(),
-            is_not: false,
-        }))
+        Ok(Test::NotifyMethodCapability(Box::new(
+            TestNotifyMethodCapability {
+                key_list: key_list.into(),
+                match_type,
+                comparator,
+                notification_uri: notification_uri.unwrap(),
+                notification_capability: notification_capability.unwrap(),
+                is_not: false,
+            },
+        )))
     }
 }

@@ -194,9 +194,9 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::Replace { find, replace } => input.replace(
-                ctx.eval_value(find).to_string().as_ref(),
-                ctx.eval_value(replace).to_string().as_ref(),
+            Modifier::Replace(replacement) => input.replace(
+                ctx.eval_value(&replacement.find).to_string().as_ref(),
+                ctx.eval_value(&replacement.replace).to_string().as_ref(),
             ),
         }
     }

@@ -23,7 +23,7 @@ use crate::compiler::{
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Keep {
-    pub flags: Vec<Value>,
+    pub flags: Box<[Value]>,
 }
 
 impl CompilerState<'_> {
@@ -38,9 +38,9 @@ impl CompilerState<'_> {
                         token_info.line_num,
                         token_info.line_pos,
                     )?;
-                    self.parse_strings(false)?
+                    self.parse_strings(false)?.into()
                 }
-                _ => Vec::new(),
+                _ => Vec::new().into(),
             },
         }));
         self.instructions.push(cmd);

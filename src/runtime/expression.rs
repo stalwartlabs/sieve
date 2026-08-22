@@ -6,7 +6,7 @@
 
 use crate::Event;
 use crate::compiler::grammar::expr::parser::ID_EXTERNAL;
-use crate::compiler::grammar::expr::{BinaryOperator, Constant, Expression, UnaryOperator};
+use crate::compiler::grammar::expr::{BinaryOperator, Expression, UnaryOperator};
 use crate::{Context, compiler::Number, runtime::Variable};
 use std::sync::Arc;
 use std::{cmp::Ordering, fmt::Display};
@@ -370,16 +370,6 @@ impl From<i32> for Number {
     #[inline(always)]
     fn from(n: i32) -> Self {
         Number::Integer(n as i64)
-    }
-}
-
-impl<'x> From<&'x Constant> for Variable {
-    fn from(value: &'x Constant) -> Self {
-        match value {
-            Constant::Integer(i) => Variable::Integer(*i),
-            Constant::Float(f) => Variable::Float(*f),
-            Constant::String(s) => Variable::String(s.clone()),
-        }
     }
 }
 

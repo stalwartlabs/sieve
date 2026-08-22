@@ -51,7 +51,7 @@ pub(crate) struct DeleteHeader {
     pub comparator: Comparator,
     pub match_type: MatchType,
     pub field_name: Value,
-    pub value_patterns: Vec<Value>,
+    pub value_patterns: Box<[Value]>,
     pub mime_anychild: bool,
 }
 
@@ -205,7 +205,7 @@ impl CompilerState<'_> {
             comparator,
             match_type,
             field_name,
-            value_patterns,
+            value_patterns: value_patterns.into(),
             mime_anychild,
         }));
         self.instructions.push(cmd);

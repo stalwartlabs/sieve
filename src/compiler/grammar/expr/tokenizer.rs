@@ -271,15 +271,22 @@ where
             self.has_number = false;
             self.has_dot = false;
 
-            if !has_number && !has_dot && [4, 5].contains(&buf.len()) {
-                if buf == "true" {
-                    return Ok(Token::Number(Number::Integer(1)));
-                } else if buf == "false" {
-                    return Ok(Token::Number(Number::Integer(0)));
-                }
+            if !has_number
+                && !has_dot
+                && let Some(value) = lookup_boolean(&buf)
+            {
+                return Ok(Token::Number(Number::Integer(value)));
             }
 
             (self.token_map)(&buf, has_dot)
         }
     }
+}
+
+fn lookup_boolean(input: &str) -> Option<i64> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "true" => 1,
+        "false" => 0,
+    )
 }

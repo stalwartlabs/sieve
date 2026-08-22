@@ -26,7 +26,7 @@ pub(crate) struct FileInto {
     pub copy: bool,
     pub create: bool,
     pub folder: Value,
-    pub flags: Vec<Value>,
+    pub flags: Box<[Value]>,
     pub mailbox_id: Option<Value>,
     pub special_use: Option<Value>,
 }
@@ -100,7 +100,7 @@ impl CompilerState<'_> {
                 folder,
                 copy,
                 create,
-                flags,
+                flags: flags.into(),
                 mailbox_id,
                 special_use,
             })));

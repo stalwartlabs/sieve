@@ -28,7 +28,7 @@ use crate::compiler::grammar::{MatchType, test::Test};
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestMailboxExists {
-    pub mailbox_names: Vec<Value>,
+    pub mailbox_names: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -43,7 +43,7 @@ pub(crate) struct TestMailboxExists {
 )]
 pub(crate) struct TestMetadataExists {
     pub mailbox: Option<Value>,
-    pub annotation_names: Vec<Value>,
+    pub annotation_names: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -68,7 +68,7 @@ pub(crate) struct TestMetadata {
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub medatata: Metadata<Value>,
-    pub key_list: Vec<Value>,
+    pub key_list: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -81,26 +81,26 @@ servermetadata [MATCH-TYPE] [COMPARATOR]
 
 impl CompilerState<'_> {
     pub(crate) fn parse_test_mailboxexists(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::MailboxExists(TestMailboxExists {
-            mailbox_names: self.parse_strings(false)?,
+        Ok(Test::MailboxExists(Box::new(TestMailboxExists {
+            mailbox_names: self.parse_strings(false)?.into(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_metadataexists(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::MetadataExists(TestMetadataExists {
+        Ok(Test::MetadataExists(Box::new(TestMetadataExists {
             mailbox: self.parse_string()?.into(),
-            annotation_names: self.parse_strings(false)?,
+            annotation_names: self.parse_strings(false)?.into(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_servermetadataexists(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::MetadataExists(TestMetadataExists {
+        Ok(Test::MetadataExists(Box::new(TestMetadataExists {
             mailbox: None,
-            annotation_names: self.parse_strings(false)?,
+            annotation_names: self.parse_strings(false)?.into(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_metadata(&mut self) -> Result<Test, CompileError> {
@@ -153,16 +153,16 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Metadata(TestMetadata {
+        Ok(Test::Metadata(Box::new(TestMetadata {
             match_type,
             comparator,
             medatata: Metadata::Mailbox {
                 name: mailbox.unwrap(),
                 annotation: annotation_name.unwrap(),
             },
-            key_list,
+            key_list: key_list.into(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_servermetadata(&mut self) -> Result<Test, CompileError> {
@@ -212,15 +212,15 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Metadata(TestMetadata {
+        Ok(Test::Metadata(Box::new(TestMetadata {
             match_type,
             comparator,
             medatata: Metadata::Server {
                 annotation: annotation_name.unwrap(),
             },
-            key_list,
+            key_list: key_list.into(),
             is_not: false,
-        }))
+        })))
     }
 }
 

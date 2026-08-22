@@ -20,15 +20,15 @@ use crate::compiler::grammar::test::Test;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestMailboxIdExists {
-    pub mailbox_ids: Vec<Value>,
+    pub mailbox_ids: Box<[Value]>,
     pub is_not: bool,
 }
 
 impl CompilerState<'_> {
     pub(crate) fn parse_test_mailboxidexists(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::MailboxIdExists(TestMailboxIdExists {
-            mailbox_ids: self.parse_strings(false)?,
+        Ok(Test::MailboxIdExists(Box::new(TestMailboxIdExists {
+            mailbox_ids: self.parse_strings(false)?.into(),
             is_not: false,
-        }))
+        })))
     }
 }

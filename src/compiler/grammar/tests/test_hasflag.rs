@@ -30,8 +30,8 @@ use crate::compiler::grammar::{MatchType, test::Test};
 pub(crate) struct TestHasFlag {
     pub comparator: Comparator,
     pub match_type: MatchType,
-    pub variable_list: Vec<VariableType>,
-    pub flags: Vec<Value>,
+    pub variable_list: Box<[VariableType]>,
+    pub flags: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -115,13 +115,13 @@ impl CompilerState<'_> {
                     let flags = self.parse_raw_strings(false)?;
                     let flags = self.validate_match(&match_type, &comparator, flags)?;
 
-                    Ok(Test::HasFlag(TestHasFlag {
+                    Ok(Test::HasFlag(Box::new(TestHasFlag {
                         comparator,
                         match_type,
-                        variable_list,
-                        flags,
+                        variable_list: variable_list.into(),
+                        flags: flags.into(),
                         is_not: false,
-                    }))
+                    })))
                 } else {
                     Err(self
                         .tokens
@@ -132,13 +132,13 @@ impl CompilerState<'_> {
             _ => {
                 let flags = self.validate_match(&match_type, &comparator, maybe_variables)?;
 
-                Ok(Test::HasFlag(TestHasFlag {
+                Ok(Test::HasFlag(Box::new(TestHasFlag {
                     comparator,
                     match_type,
-                    variable_list: Vec::new(),
-                    flags,
+                    variable_list: Vec::new().into(),
+                    flags: flags.into(),
                     is_not: false,
-                }))
+                })))
             }
         }
     }

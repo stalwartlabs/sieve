@@ -29,56 +29,57 @@ pub mod tests;
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Capability {
-    Envelope,
-    EnvelopeDsn,
-    EnvelopeDeliverBy,
-    FileInto,
-    EncodedCharacter,
-    Comparator(Comparator),
-    Other(String),
-    Body,
-    Convert,
-    Copy,
-    Relational,
-    Date,
-    Index,
-    Duplicate,
-    Variables,
-    EditHeader,
-    ForEveryPart,
-    Mime,
-    Replace,
-    Enclose,
-    ExtractText,
-    Enotify,
-    RedirectDsn,
-    RedirectDeliverBy,
-    Environment,
-    Reject,
-    Ereject,
-    ExtLists,
-    SubAddress,
-    Vacation,
-    VacationSeconds,
-    Fcc,
-    Mailbox,
-    MailboxId,
-    MboxMetadata,
-    ServerMetadata,
-    SpecialUse,
-    Imap4Flags,
-    Ihave,
-    ImapSieve,
-    Include,
-    Regex,
-    SpamTest,
-    SpamTestPlus,
-    VirusTest,
+    Envelope = 0,
+    EnvelopeDsn = 1,
+    EnvelopeDeliverBy = 2,
+    FileInto = 3,
+    EncodedCharacter = 4,
+    Comparator(Comparator) = 5,
+    Other(String) = 6,
+    Body = 7,
+    Convert = 8,
+    Copy = 9,
+    Relational = 10,
+    Date = 11,
+    Index = 12,
+    Duplicate = 13,
+    Variables = 14,
+    EditHeader = 15,
+    ForEveryPart = 16,
+    Mime = 17,
+    Replace = 18,
+    Enclose = 19,
+    ExtractText = 20,
+    Enotify = 21,
+    RedirectDsn = 22,
+    RedirectDeliverBy = 23,
+    Environment = 24,
+    Reject = 25,
+    Ereject = 26,
+    ExtLists = 27,
+    SubAddress = 28,
+    Vacation = 29,
+    VacationSeconds = 30,
+    Fcc = 31,
+    Mailbox = 32,
+    MailboxId = 33,
+    MboxMetadata = 34,
+    ServerMetadata = 35,
+    SpecialUse = 36,
+    Imap4Flags = 37,
+    Ihave = 38,
+    ImapSieve = 39,
+    Include = 40,
+    Regex = 41,
+    SpamTest = 42,
+    SpamTestPlus = 43,
+    VirusTest = 44,
 
     // Extensions
-    Expressions,
-    While,
+    Expressions = 45,
+    While = 46,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,13 +91,14 @@ pub enum Capability {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum AddressPart {
-    LocalPart,
-    Domain,
-    All,
-    User,
-    Detail,
-    Name,
+    LocalPart = 0,
+    Domain = 1,
+    All = 2,
+    User = 3,
+    Detail = 4,
+    Name = 5,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,14 +110,15 @@ pub enum AddressPart {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum MatchType {
-    Is,
-    Contains,
-    Matches(u64),
-    Regex(u64),
-    Value(RelationalMatch),
-    Count(RelationalMatch),
-    List,
+    Is = 0,
+    Contains = 1,
+    Matches(u64) = 2,
+    Regex(u64) = 3,
+    Value(RelationalMatch) = 4,
+    Count(RelationalMatch) = 5,
+    List = 6,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,13 +130,14 @@ pub(crate) enum MatchType {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum RelationalMatch {
-    Gt,
-    Ge,
-    Lt,
-    Le,
-    Eq,
-    Ne,
+    Gt = 0,
+    Ge = 1,
+    Lt = 2,
+    Le = 3,
+    Eq = 4,
+    Ne = 5,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -145,12 +149,13 @@ pub(crate) enum RelationalMatch {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Comparator {
-    Elbonia,
-    Octet,
-    AsciiCaseMap,
-    AsciiNumeric,
-    Other(String),
+    Elbonia = 0,
+    Octet = 1,
+    AsciiCaseMap = 2,
+    AsciiNumeric = 3,
+    Other(String) = 4,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -193,7 +198,7 @@ pub struct Invalid {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct While {
-    pub expr: Vec<Expression>,
+    pub expr: Box<[Expression]>,
     pub jz_pos: u32,
 }
 

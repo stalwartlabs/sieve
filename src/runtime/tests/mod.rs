@@ -103,18 +103,19 @@ impl Test {
             Test::True => TestResult::Bool(true),
             Test::False => TestResult::Bool(false),
             Test::Invalid(invalid) => {
-                TestResult::Error(RuntimeError::InvalidInstruction(invalid.clone()))
+                TestResult::Error(RuntimeError::InvalidInstruction(invalid.as_ref().clone()))
             }
             #[cfg(test)]
-            Test::TestCmd { arguments, is_not } => TestResult::Event {
+            Test::TestCmd(cmd) => TestResult::Event {
                 event: Event::Function {
                     id: u32::MAX,
-                    arguments: arguments
+                    arguments: cmd
+                        .arguments
                         .iter()
                         .map(|s| ctx.eval_value(s).to_owned())
                         .collect(),
                 },
-                is_not: *is_not,
+                is_not: cmd.is_not,
             },
         }
     }

@@ -42,9 +42,10 @@ pub(crate) struct Include {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Location {
-    Personal,
-    Global,
+    Personal = 0,
+    Global = 1,
 }
 
 impl CompilerState<'_> {

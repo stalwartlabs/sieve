@@ -23,7 +23,7 @@ use crate::compiler::grammar::{MatchType, test::Test};
 )]
 pub(crate) struct TestDate {
     pub header_name: Value,
-    pub key_list: Vec<Value>,
+    pub key_list: Box<[Value]>,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub index: Option<i32>,
@@ -47,7 +47,7 @@ pub(crate) struct TestCurrentDate {
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub date_part: DatePart,
-    pub key_list: Vec<Value>,
+    pub key_list: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -60,10 +60,11 @@ pub(crate) struct TestCurrentDate {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Zone {
-    Time(i64),
-    Original,
-    Local,
+    Time(i64) = 0,
+    Original = 1,
+    Local = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,20 +76,21 @@ pub(crate) enum Zone {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum DatePart {
-    Year,
-    Month,
-    Day,
-    Date,
-    Julian,
-    Hour,
-    Minute,
-    Second,
-    Time,
-    Iso8601,
-    Std11,
-    Zone,
-    Weekday,
+    Year = 0,
+    Month = 1,
+    Day = 2,
+    Date = 3,
+    Julian = 4,
+    Hour = 5,
+    Minute = 6,
+    Second = 7,
+    Time = 8,
+    Iso8601 = 9,
+    Std11 = 10,
+    Zone = 11,
+    Weekday = 12,
 }
 
 impl CompilerState<'_> {
@@ -213,9 +215,9 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Date(TestDate {
+        Ok(Test::Date(Box::new(TestDate {
             header_name: header_name.unwrap(),
-            key_list,
+            key_list: key_list.into(),
             date_part: date_part.unwrap(),
             match_type,
             comparator,
@@ -223,7 +225,7 @@ impl CompilerState<'_> {
             zone,
             mime_anychild,
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_currentdate(&mut self) -> Result<Test, CompileError> {
@@ -286,14 +288,14 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::CurrentDate(TestCurrentDate {
-            key_list,
+        Ok(Test::CurrentDate(Box::new(TestCurrentDate {
+            key_list: key_list.into(),
             date_part: date_part.unwrap(),
             match_type,
             comparator,
             zone,
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_timezone(&mut self) -> Result<i64, CompileError> {

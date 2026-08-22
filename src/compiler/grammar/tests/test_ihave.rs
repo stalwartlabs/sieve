@@ -21,7 +21,7 @@ use crate::compiler::grammar::test::Test;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestIhave {
-    pub capabilities: Vec<Capability>,
+    pub capabilities: Box<[Capability]>,
     pub is_not: bool,
 }
 
@@ -40,14 +40,14 @@ pub(crate) struct Error {
 
 impl CompilerState<'_> {
     pub(crate) fn parse_test_ihave(&mut self) -> Result<Test, CompileError> {
-        Ok(Test::Ihave(TestIhave {
+        Ok(Test::Ihave(Box::new(TestIhave {
             capabilities: self
                 .parse_static_strings()?
                 .into_iter()
                 .map(|n| n.into())
                 .collect(),
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_error(&mut self) -> Result<(), CompileError> {

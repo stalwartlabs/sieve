@@ -44,70 +44,83 @@ use crate::compiler::{
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Test {
-    True,
-    False,
-    Address(TestAddress),
-    Envelope(TestEnvelope),
-    Exists(TestExists),
-    Header(TestHeader),
-    Size(TestSize),
-    Invalid(Invalid),
+    True = 0,
+    False = 1,
+    Address(Box<TestAddress>) = 2,
+    Envelope(Box<TestEnvelope>) = 3,
+    Exists(Box<TestExists>) = 4,
+    Header(Box<TestHeader>) = 5,
+    Size(Box<TestSize>) = 6,
+    Invalid(Box<Invalid>) = 7,
 
     // RFC 5173
-    Body(TestBody),
+    Body(Box<TestBody>) = 8,
 
     // RFC 6558
-    Convert(Convert),
+    Convert(Box<Convert>) = 9,
 
     // RFC 5260
-    Date(TestDate),
-    CurrentDate(TestCurrentDate),
+    Date(Box<TestDate>) = 10,
+    CurrentDate(Box<TestCurrentDate>) = 11,
 
     // RFC 7352
-    Duplicate(TestDuplicate),
+    Duplicate(Box<TestDuplicate>) = 12,
 
     // RFC 5229 & RFC 5183
-    String(TestString),
-    Environment(TestString),
+    String(Box<TestString>) = 13,
+    Environment(Box<TestString>) = 14,
 
     // RFC 5435
-    NotifyMethodCapability(TestNotifyMethodCapability),
-    ValidNotifyMethod(TestValidNotifyMethod),
+    NotifyMethodCapability(Box<TestNotifyMethodCapability>) = 15,
+    ValidNotifyMethod(Box<TestValidNotifyMethod>) = 16,
 
     // RFC 6134
-    ValidExtList(TestValidExtList),
+    ValidExtList(Box<TestValidExtList>) = 17,
 
     // RFC 5463
-    Ihave(TestIhave),
+    Ihave(Box<TestIhave>) = 18,
 
     // RFC 5232
-    HasFlag(TestHasFlag),
+    HasFlag(Box<TestHasFlag>) = 19,
 
     // RFC 5490
-    MailboxExists(TestMailboxExists),
-    Metadata(TestMetadata),
-    MetadataExists(TestMetadataExists),
+    MailboxExists(Box<TestMailboxExists>) = 20,
+    Metadata(Box<TestMetadata>) = 21,
+    MetadataExists(Box<TestMetadataExists>) = 22,
 
     // RFC 9042
-    MailboxIdExists(TestMailboxIdExists),
+    MailboxIdExists(Box<TestMailboxIdExists>) = 23,
 
     // RFC 5235
-    SpamTest(TestSpamTest),
-    VirusTest(TestVirusTest),
+    SpamTest(Box<TestSpamTest>) = 24,
+    VirusTest(Box<TestVirusTest>) = 25,
 
     // RFC 8579
-    SpecialUseExists(TestSpecialUseExists),
+    SpecialUseExists(Box<TestSpecialUseExists>) = 26,
 
     // RFC 5230
-    Vacation(TestVacation),
+    Vacation(Box<TestVacation>) = 27,
 
     // Only test
     #[cfg(test)]
-    TestCmd {
-        arguments: Vec<crate::compiler::Value>,
-        is_not: bool,
-    },
+    TestCmd(Box<TestCommand>) = 0x7f,
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(test, feature = "serde"),
+    derive(serde::Serialize, serde::Deserialize)
+)]
+#[cfg_attr(
+    feature = "rkyv",
+    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
+)]
+pub(crate) struct TestCommand {
+    pub(crate) arguments: Box<[crate::compiler::Value]>,
+    pub(crate) is_not: bool,
 }
 
 #[derive(Debug)]
@@ -490,11 +503,11 @@ impl CompilerState<'_> {
                     }
                     Token::Identifier(word) => {
                         self.ignore_test()?;
-                        Test::Invalid(Invalid {
+                        Test::Invalid(Box::new(Invalid {
                             name: word.to_string(),
                             line_num: token_info.line_num as u32,
                             line_pos: (token_info.line_pos) as u32,
-                        })
+                        }))
                         .into()
                     }
                     #[cfg(test)]
@@ -527,19 +540,19 @@ impl CompilerState<'_> {
                                 other => panic!("Invalid test param {other:?}"),
                             });
                         }
-                        Test::TestCmd {
-                            arguments,
+                        Test::TestCmd(Box::new(TestCommand {
+                            arguments: arguments.into(),
                             is_not: false,
-                        }
+                        }))
                         .into()
                     }
                     Token::Unknown(name) => {
                         self.ignore_test()?;
-                        Test::Invalid(Invalid {
+                        Test::Invalid(Box::new(Invalid {
                             name,
                             line_num: token_info.line_num as u32,
                             line_pos: (token_info.line_pos) as u32,
-                        })
+                        }))
                         .into()
                     }
                     _ => return Err(token_info.expected("test name")),
@@ -684,8 +697,8 @@ impl Instruction {
                     op.is_not = true;
                 }
                 #[cfg(test)]
-                Test::TestCmd { is_not, .. } => {
-                    *is_not = true;
+                Test::TestCmd(op) => {
+                    op.is_not = true;
                 }
                 Test::Vacation(_) | Test::Invalid(_) => {}
             },

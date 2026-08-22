@@ -38,7 +38,7 @@ notify [":from" string]
 pub(crate) struct Notify {
     pub from: Option<Value>,
     pub importance: Option<Value>,
-    pub options: Vec<Value>,
+    pub options: Box<[Value]>,
     pub message: Option<Value>,
     pub fcc: Option<FileCarbonCopy<Value>>,
     pub method: Value,
@@ -154,13 +154,13 @@ impl CompilerState<'_> {
             method,
             from,
             importance,
-            options,
+            options: options.into(),
             message,
             fcc: if let Some(fcc) = fcc {
                 FileCarbonCopy {
                     mailbox: fcc,
                     create,
-                    flags,
+                    flags: flags.into(),
                     special_use,
                     mailbox_id,
                 }

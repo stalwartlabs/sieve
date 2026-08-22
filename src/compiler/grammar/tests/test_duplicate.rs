@@ -38,10 +38,11 @@ pub(crate) struct TestDuplicate {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum DupMatch {
-    Header(Value),
-    UniqueId(Value),
-    Default,
+    Header(Value) = 0,
+    UniqueId(Value) = 1,
+    Default = 2,
 }
 
 impl CompilerState<'_> {
@@ -95,13 +96,13 @@ impl CompilerState<'_> {
             }
         }
 
-        Ok(Test::Duplicate(TestDuplicate {
+        Ok(Test::Duplicate(Box::new(TestDuplicate {
             handle,
             dup_match,
             seconds,
             last,
             is_not: false,
-        }))
+        })))
     }
 }
 

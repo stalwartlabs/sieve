@@ -26,8 +26,8 @@ use crate::compiler::grammar::{MatchType, test::Test};
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestHeader {
-    pub header_list: Vec<Value>,
-    pub key_list: Vec<Value>,
+    pub header_list: Box<[Value]>,
+    pub key_list: Box<[Value]>,
     pub match_type: MatchType,
     pub comparator: Comparator,
     pub index: Option<i32>,
@@ -154,16 +154,16 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Header(TestHeader {
-            header_list: header_list.unwrap(),
-            key_list,
+        Ok(Test::Header(Box::new(TestHeader {
+            header_list: header_list.unwrap().into(),
+            key_list: key_list.into(),
             match_type,
             comparator,
             index: if index_last { index.map(|i| -i) } else { index },
             mime_opts,
             mime_anychild,
             is_not: false,
-        }))
+        })))
     }
 }
 

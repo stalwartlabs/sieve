@@ -20,6 +20,9 @@ pub mod compiler;
 pub mod runtime;
 pub(crate) mod serialize;
 
+#[cfg(feature = "rkyv")]
+pub use serialize::ArchiveError;
+
 pub(crate) const MAX_MATCH_VARIABLES: u32 = 63;
 pub(crate) const MAX_LOCAL_VARIABLES: u32 = 256;
 
@@ -33,7 +36,7 @@ pub(crate) const MAX_LOCAL_VARIABLES: u32 = 256;
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub struct Sieve {
-    instructions: Vec<Instruction>,
+    instructions: Box<[Instruction]>,
     #[cfg_attr(
         any(test, feature = "serde"),
         serde(with = "crate::serialize::as_string_vec_serde")
@@ -161,17 +164,18 @@ pub enum Script {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Envelope {
-    From,
-    To,
-    ByTimeAbsolute,
-    ByTimeRelative,
-    ByMode,
-    ByTrace,
-    Notify,
-    Orcpt,
-    Ret,
-    Envid,
+    From = 0,
+    To = 1,
+    ByTimeAbsolute = 2,
+    ByTimeRelative = 3,
+    ByMode = 4,
+    ByTrace = 5,
+    Notify = 6,
+    Orcpt = 7,
+    Ret = 8,
+    Envid = 9,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -183,9 +187,10 @@ pub enum Envelope {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Metadata<T> {
-    Server { annotation: T },
-    Mailbox { name: T, annotation: T },
+    Server { annotation: T } = 0,
+    Mailbox { name: T, annotation: T } = 1,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -270,7 +275,7 @@ pub(crate) struct FileCarbonCopy<T> {
     pub mailbox: T,
     pub mailbox_id: Option<T>,
     pub create: bool,
-    pub flags: Vec<T>,
+    pub flags: Box<[T]>,
     pub special_use: Option<T>,
 }
 
@@ -347,7 +352,7 @@ impl Sieve {
     }
 
     pub fn instruction_footprint(&self) -> usize {
-        self.instructions.capacity() * std::mem::size_of::<Instruction>()
+        self.instructions.len() * std::mem::size_of::<Instruction>()
     }
 
     pub fn instruction_size() -> usize {
@@ -1102,6 +1107,64 @@ mod tests {
         let restored = rkyv::from_bytes::<Sieve, rkyv::rancor::Error>(&bytes).unwrap();
 
         assert_eq!(script, restored);
+    }
+
+    #[test]
+    #[cfg(feature = "rkyv")]
+    fn versioned_rkyv_round_trip() {
+        use crate::ArchiveError;
+
+        let script = Compiler::new()
+            .compile(&add_crlf(ROUND_TRIP_SCRIPT.as_bytes()))
+            .unwrap();
+
+        let bytes = script.to_bytes().unwrap();
+
+        assert_eq!(
+            bytes.last().copied(),
+            Some(Compiler::VERSION as u8),
+            "the compiler version must be stamped on the serialized script"
+        );
+        assert_eq!(script, Sieve::from_bytes(&bytes).unwrap());
+        assert_eq!(
+            script,
+            unsafe { Sieve::from_bytes_unchecked(&bytes) }.unwrap()
+        );
+
+        let mut stale = bytes.clone();
+        *stale.last_mut().unwrap() = Compiler::VERSION as u8 - 1;
+
+        assert!(matches!(
+            Sieve::from_bytes(&stale),
+            Err(ArchiveError::UnsupportedVersion(_))
+        ));
+        assert!(matches!(
+            Sieve::from_bytes(&[]),
+            Err(ArchiveError::Truncated)
+        ));
+        assert!(matches!(
+            Sieve::from_bytes(&bytes[bytes.len() - 1..]),
+            Err(ArchiveError::Truncated)
+        ));
+    }
+
+    #[test]
+    #[cfg(feature = "rkyv")]
+    fn archived_variant_budget() {
+        use crate::compiler::grammar::{instruction::Instruction, test::Test};
+        use rkyv::Archive;
+        use std::mem::size_of;
+
+        assert_eq!(
+            size_of::<<Test as Archive>::Archived>(),
+            8,
+            "a Test variant grew the archived enum, box its payload instead"
+        );
+        assert_eq!(
+            size_of::<<Instruction as Archive>::Archived>(),
+            12,
+            "an Instruction variant grew the archived enum, box its payload instead"
+        );
     }
 
     fn add_crlf(bytes: &[u8]) -> Vec<u8> {

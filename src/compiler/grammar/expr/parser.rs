@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::compiler::ConstantId;
-
 use super::{BinaryOperator, Expression, Token, tokenizer::Tokenizer};
+use crate::compiler::ConstantId;
 
 pub(crate) struct ExpressionParser<'x, F>
 where
@@ -50,11 +49,11 @@ where
                 }
                 Token::Number(n) => {
                     self.inc_arg_count();
-                    self.output.push(Expression::constant(n.into()))
+                    self.output.push(Expression::number(n))
                 }
                 Token::String(s) => {
                     self.inc_arg_count();
-                    self.string_constants.push((self.output.len(), s.clone()));
+                    self.string_constants.push((self.output.len(), s));
                     self.output
                         .push(Expression::ConstantString(ConstantId::UNRESOLVED))
                 }

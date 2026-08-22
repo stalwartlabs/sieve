@@ -24,8 +24,8 @@ use crate::compiler::grammar::{MatchType, test::Test};
 pub(crate) struct TestString {
     pub match_type: MatchType,
     pub comparator: Comparator,
-    pub source: Vec<Value>,
-    pub key_list: Vec<Value>,
+    pub source: Box<[Value]>,
+    pub key_list: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -78,12 +78,12 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::String(TestString {
-            source: source.unwrap(),
-            key_list,
+        Ok(Test::String(Box::new(TestString {
+            source: source.unwrap().into(),
+            key_list: key_list.into(),
             match_type,
             comparator,
             is_not: false,
-        }))
+        })))
     }
 }

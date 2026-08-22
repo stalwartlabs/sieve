@@ -39,11 +39,11 @@ impl CompilerState<'_> {
         };
         let token_info = self.tokens.unwrap_next()?;
         if let Token::Number(limit) = token_info.token {
-            Ok(Test::Size(TestSize {
+            Ok(Test::Size(Box::new(TestSize {
                 over,
                 limit: limit as u64,
                 is_not: false,
-            }))
+            })))
         } else {
             Err(token_info.expected("number"))
         }

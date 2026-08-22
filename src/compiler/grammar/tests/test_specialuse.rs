@@ -24,7 +24,7 @@ use crate::compiler::grammar::test::Test;
 )]
 pub(crate) struct TestSpecialUseExists {
     pub mailbox: Option<Value>,
-    pub attributes: Vec<Value>,
+    pub attributes: Box<[Value]>,
     pub is_not: bool,
 }
 
@@ -35,20 +35,20 @@ impl CompilerState<'_> {
         match self.tokens.peek().map(|r| r.map(|t| &t.token)) {
             Some(Ok(Token::StringConstant(_) | Token::StringVariable(_) | Token::BracketOpen)) => {
                 if maybe_attributes.len() == 1 {
-                    Ok(Test::SpecialUseExists(TestSpecialUseExists {
+                    Ok(Test::SpecialUseExists(Box::new(TestSpecialUseExists {
                         mailbox: maybe_attributes.pop(),
-                        attributes: self.parse_strings(false)?,
+                        attributes: self.parse_strings(false)?.into(),
                         is_not: false,
-                    }))
+                    })))
                 } else {
                     Err(self.tokens.unwrap_next()?.expected("string"))
                 }
             }
-            _ => Ok(Test::SpecialUseExists(TestSpecialUseExists {
+            _ => Ok(Test::SpecialUseExists(Box::new(TestSpecialUseExists {
                 mailbox: None,
-                attributes: maybe_attributes,
+                attributes: maybe_attributes.into(),
                 is_not: false,
-            })),
+            }))),
         }
     }
 }

@@ -22,7 +22,7 @@ use crate::compiler::grammar::{MatchType, test::Test};
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestBody {
-    pub key_list: Vec<Value>,
+    pub key_list: Box<[Value]>,
     pub body_transform: BodyTransform,
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -39,10 +39,11 @@ pub(crate) struct TestBody {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum BodyTransform {
-    Raw,
-    Content(Vec<Value>),
-    Text,
+    Raw = 0,
+    Content(Box<[Value]>) = 1,
+    Text = 2,
 }
 
 impl CompilerState<'_> {
@@ -66,7 +67,7 @@ impl CompilerState<'_> {
                 }
                 Token::Tag(Word::Content) => {
                     self.validate_argument(1, None, token_info.line_num, token_info.line_pos)?;
-                    body_transform = BodyTransform::Content(self.parse_strings(false)?);
+                    body_transform = BodyTransform::Content(self.parse_strings(false)?.into());
                 }
                 Token::Tag(Word::Subject) => {
                     self.validate_argument(4, None, token_info.line_num, token_info.line_pos)?;
@@ -106,13 +107,13 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Body(TestBody {
-            key_list,
+        Ok(Test::Body(Box::new(TestBody {
+            key_list: key_list.into(),
             body_transform,
             match_type,
             comparator,
             include_subject,
             is_not: false,
-        }))
+        })))
     }
 }

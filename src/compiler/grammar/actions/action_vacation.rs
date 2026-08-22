@@ -44,7 +44,7 @@ pub(crate) struct Vacation {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestVacation {
-    pub addresses: Vec<Value>,
+    pub addresses: Box<[Value]>,
     pub period: Period,
     pub handle: Option<Value>,
     pub reason: Value,
@@ -59,10 +59,11 @@ pub(crate) struct TestVacation {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Period {
-    Days(u64),
-    Seconds(u64),
-    Default,
+    Days(u64) = 0,
+    Seconds(u64) = 1,
+    Default = 2,
 }
 
 /*
@@ -206,12 +207,14 @@ impl CompilerState<'_> {
         }
 
         self.instructions
-            .push(Instruction::Test(Box::new(Test::Vacation(TestVacation {
-                period,
-                handle,
-                reason: reason.clone(),
-                addresses,
-            }))));
+            .push(Instruction::Test(Box::new(Test::Vacation(Box::new(
+                TestVacation {
+                    period,
+                    handle,
+                    reason: reason.clone(),
+                    addresses: addresses.into(),
+                },
+            )))));
 
         self.instructions
             .push(Instruction::Jz((self.instructions.len() + 2) as u32));
@@ -226,7 +229,7 @@ impl CompilerState<'_> {
                     FileCarbonCopy {
                         mailbox: fcc,
                         create,
-                        flags,
+                        flags: flags.into(),
                         special_use,
                         mailbox_id,
                     }

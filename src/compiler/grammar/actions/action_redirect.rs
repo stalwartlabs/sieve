@@ -40,10 +40,11 @@ pub(crate) struct Redirect {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum NotifyItem {
-    Success,
-    Failure,
-    Delay,
+    Success = 0,
+    Failure = 1,
+    Delay = 2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -55,10 +56,11 @@ pub enum NotifyItem {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Notify {
-    Never,
-    Items(Vec<NotifyItem>),
-    Default,
+    Never = 0,
+    Items(Box<[NotifyItem]>) = 1,
+    Default = 2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -70,10 +72,11 @@ pub enum Notify {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Ret {
-    Full,
-    Hdrs,
-    Default,
+    Full = 0,
+    Hdrs = 1,
+    Default = 2,
 }
 
 /*
@@ -94,18 +97,19 @@ pub enum Ret {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum ByTime<T> {
     Relative {
         rlimit: u64,
         mode: ByMode,
         trace: bool,
-    },
+    } = 0,
     Absolute {
         alimit: T,
         mode: ByMode,
         trace: bool,
-    },
-    None,
+    } = 1,
+    None = 2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -117,10 +121,11 @@ pub enum ByTime<T> {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum ByMode {
-    Notify,
-    Return,
-    Default,
+    Notify = 0,
+    Return = 1,
+    Default = 2,
 }
 
 impl CompilerState<'_> {
@@ -173,10 +178,8 @@ impl CompilerState<'_> {
                         token_info.line_pos,
                     )?;
                     let by_mode_ = self.tokens.expect_static_string()?;
-                    if by_mode_.eq_ignore_ascii_case("notify") {
-                        by_mode = ByMode::Notify;
-                    } else if by_mode_.eq_ignore_ascii_case("return") {
-                        by_mode = ByMode::Return;
+                    if let Some(mode) = lookup_by_mode(&by_mode_) {
+                        by_mode = mode;
                     } else {
                         return Err(token_info.expected("\"notify\" or \"return\""));
                     }
@@ -207,10 +210,8 @@ impl CompilerState<'_> {
                         token_info.line_pos,
                     )?;
                     let ret_ = self.tokens.expect_static_string()?;
-                    if ret_.eq_ignore_ascii_case("full") {
-                        ret = Ret::Full;
-                    } else if ret_.eq_ignore_ascii_case("hdrs") {
-                        ret = Ret::Hdrs;
+                    if let Some(ret_of_content) = lookup_ret(&ret_) {
+                        ret = ret_of_content;
                     } else {
                         return Err(token_info.expected("\"FULL\" or \"HDRS\""));
                     }
@@ -228,17 +229,12 @@ impl CompilerState<'_> {
                     } else {
                         let mut items = Vec::new();
                         for item in notify_.split(',') {
-                            let item = item.trim();
-                            if item.eq_ignore_ascii_case("success") {
-                                items.push(NotifyItem::Success);
-                            } else if item.eq_ignore_ascii_case("failure") {
-                                items.push(NotifyItem::Failure);
-                            } else if item.eq_ignore_ascii_case("delay") {
-                                items.push(NotifyItem::Delay);
+                            if let Some(item) = lookup_notify_item(item.trim()) {
+                                items.push(item);
                             }
                         }
                         if !items.is_empty() {
-                            notify = Notify::Items(items);
+                            notify = Notify::Items(items.into());
                         } else {
                             return Err(
                                 token_info.expected("\"NEVER\" or \"SUCCESS, FAILURE, DELAY, ..\"")
@@ -286,4 +282,29 @@ impl MapLocalVars for ByTime<Value> {
             alimit.map_local_vars(last_id)
         }
     }
+}
+
+fn lookup_by_mode(input: &str) -> Option<ByMode> {
+    hashify::tiny_map_ignore_case!(
+        input.as_bytes(),
+        "notify" => ByMode::Notify,
+        "return" => ByMode::Return,
+    )
+}
+
+fn lookup_ret(input: &str) -> Option<Ret> {
+    hashify::tiny_map_ignore_case!(
+        input.as_bytes(),
+        "full" => Ret::Full,
+        "hdrs" => Ret::Hdrs,
+    )
+}
+
+fn lookup_notify_item(input: &str) -> Option<NotifyItem> {
+    hashify::tiny_map_ignore_case!(
+        input.as_bytes(),
+        "success" => NotifyItem::Success,
+        "failure" => NotifyItem::Failure,
+        "delay" => NotifyItem::Delay,
+    )
 }

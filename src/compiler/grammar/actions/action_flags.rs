@@ -22,7 +22,7 @@ use crate::compiler::{
 pub(crate) struct EditFlags {
     pub action: Action,
     pub name: Option<VariableType>,
-    pub flags: Vec<Value>,
+    pub flags: Box<[Value]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,10 +34,11 @@ pub(crate) struct EditFlags {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Action {
-    Set,
-    Add,
-    Remove,
+    Set = 0,
+    Add = 1,
+    Remove = 2,
 }
 
 impl CompilerState<'_> {
@@ -62,7 +63,7 @@ impl CompilerState<'_> {
                     )),
                 ) => EditFlags {
                     name: self.parse_variable_name(token_info, false)?.into(),
-                    flags: self.parse_strings(false)?,
+                    flags: self.parse_strings(false)?.into(),
                     action,
                 },
                 (Token::BracketOpen, _)
@@ -71,7 +72,7 @@ impl CompilerState<'_> {
                     Some(Ok(Token::Semicolon)),
                 ) => EditFlags {
                     name: None,
-                    flags: self.parse_strings_token(token_info)?,
+                    flags: self.parse_strings_token(token_info)?.into(),
                     action,
                 },
                 _ => {

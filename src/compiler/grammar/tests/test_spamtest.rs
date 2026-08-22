@@ -102,13 +102,13 @@ impl CompilerState<'_> {
             }
         }
 
-        Ok(Test::SpamTest(TestSpamTest {
+        Ok(Test::SpamTest(Box::new(TestSpamTest {
             value,
             percent,
             match_type,
             comparator,
             is_not: false,
-        }))
+        })))
     }
 
     pub(crate) fn parse_test_virustest(&mut self) -> Result<Test, CompileError> {
@@ -152,11 +152,11 @@ impl CompilerState<'_> {
             }
         }
 
-        Ok(Test::VirusTest(TestVirusTest {
+        Ok(Test::VirusTest(Box::new(TestVirusTest {
             value,
             match_type,
             comparator,
             is_not: false,
-        }))
+        })))
     }
 }

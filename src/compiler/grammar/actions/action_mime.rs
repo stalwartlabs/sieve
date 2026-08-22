@@ -10,7 +10,7 @@ use crate::compiler::{
     lexer::{Token, word::Word},
 };
 
-use super::action_set::Modifier;
+use super::action_set::{Modifier, Replacement};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(
@@ -21,6 +21,7 @@ use super::action_set::Modifier;
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(transparent)]
 pub(crate) struct ForEveryPart {
     pub jz_pos: u32,
 }
@@ -52,7 +53,7 @@ pub(crate) struct Replace {
 )]
 pub(crate) struct Enclose {
     pub subject: Option<Value>,
-    pub headers: Vec<Value>,
+    pub headers: Box<[Value]>,
     pub value: Value,
 }
 
@@ -66,7 +67,7 @@ pub(crate) struct Enclose {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct ExtractText {
-    pub modifiers: Vec<Modifier>,
+    pub modifiers: Box<[Modifier]>,
     pub first: Option<u32>,
     pub name: VariableType,
 }
@@ -80,12 +81,13 @@ pub(crate) struct ExtractText {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum MimeOpts<T> {
-    Type,
-    Subtype,
-    ContentType,
-    Param(Vec<T>),
-    None,
+    Type = 0,
+    Subtype = 1,
+    ContentType = 2,
+    Param(Box<[T]>) = 3,
+    None = 4,
 }
 
 impl CompilerState<'_> {
@@ -153,7 +155,7 @@ impl CompilerState<'_> {
         self.instructions
             .push(Instruction::Enclose(Box::new(Enclose {
                 subject,
-                headers,
+                headers: headers.into(),
                 value,
             })));
         Ok(())
@@ -189,10 +191,10 @@ impl CompilerState<'_> {
                 Token::Tag(Word::Replace) => {
                     let find = self.tokens.unwrap_next()?;
                     let replace = self.tokens.unwrap_next()?;
-                    modifiers.push(Modifier::Replace {
+                    modifiers.push(Modifier::Replace(Box::new(Replacement {
                         find: self.parse_string_token(find)?,
                         replace: self.parse_string_token(replace)?,
-                    });
+                    })));
                 }
                 Token::Tag(Word::Local) => {
                     is_local = true;
@@ -208,7 +210,7 @@ impl CompilerState<'_> {
 
         self.instructions
             .push(Instruction::ExtractText(Box::new(ExtractText {
-                modifiers,
+                modifiers: modifiers.into(),
                 first,
                 name,
             })));
@@ -220,7 +222,7 @@ impl CompilerState<'_> {
             Word::Type => MimeOpts::Type,
             Word::Subtype => MimeOpts::Subtype,
             Word::ContentType => MimeOpts::ContentType,
-            Word::Param => MimeOpts::Param(self.parse_strings(false)?),
+            Word::Param => MimeOpts::Param(self.parse_strings(false)?.into()),
             _ => MimeOpts::None,
         })
     }

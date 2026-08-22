@@ -240,7 +240,7 @@ impl CompilerState<'_> {
         Ok(match items.len() {
             1 => items.pop().unwrap(),
             0 => self.text(""),
-            _ => Value::List(items),
+            _ => Value::List(items.into()),
         })
     }
 
@@ -277,56 +277,57 @@ impl CompilerState<'_> {
                 Ok(None)
             }
         } else {
-            let var = match var_name.to_lowercase().split_once('.') {
-                Some(("global" | "t", var_name)) if !var_name.is_empty() => {
-                    VariableType::Global(var_name.to_string())
+            let lowercase_name = var_name.to_lowercase();
+            let var = if let Some((namespace, name)) = lowercase_name.split_once('.') {
+                if name.is_empty() {
+                    return Err(ErrorType::InvalidNamespace(var_name.to_string()));
                 }
-                Some(("env", var_name)) if !var_name.is_empty() => {
-                    VariableType::Environment(var_name.to_string())
-                }
-                Some(("envelope", var_name)) if !var_name.is_empty() => {
-                    let envelope = match var_name {
-                        "from" => Envelope::From,
-                        "to" => Envelope::To,
-                        "by_time_absolute" => Envelope::ByTimeAbsolute,
-                        "by_time_relative" => Envelope::ByTimeRelative,
-                        "by_mode" => Envelope::ByMode,
-                        "by_trace" => Envelope::ByTrace,
-                        "notify" => Envelope::Notify,
-                        "orcpt" => Envelope::Orcpt,
-                        "ret" => Envelope::Ret,
-                        "envid" => Envelope::Envid,
-                        _ => {
-                            return Err(ErrorType::InvalidEnvelope(var_name.to_string()));
-                        }
-                    };
-                    VariableType::Envelope(envelope)
-                }
-                Some(("header", var_name)) if !var_name.is_empty() => {
-                    self.parse_header_variable(var_name)?
-                }
-                Some(("body", var_name)) if !var_name.is_empty() => match var_name {
-                    "text" => VariableType::Part(MessagePart::TextBody(false)),
-                    "html" => VariableType::Part(MessagePart::HtmlBody(false)),
-                    "to_text" => VariableType::Part(MessagePart::TextBody(true)),
-                    "to_html" => VariableType::Part(MessagePart::HtmlBody(true)),
-                    _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
-                },
-                Some(("part", var_name)) if !var_name.is_empty() => match var_name {
-                    "text" => VariableType::Part(MessagePart::Contents),
-                    "raw" => VariableType::Part(MessagePart::Raw),
-                    _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
-                },
-                None => {
-                    if self.is_var_global(var_name) {
-                        VariableType::Global(var_name.to_string())
-                    } else if let Some(var_id) = self.get_local_var(var_name) {
-                        VariableType::Local(var_id)
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                _ => return Err(ErrorType::InvalidNamespace(var_name.to_string())),
+
+                let mut var = None;
+                hashify::fnc_map!(namespace.as_bytes(),
+                    "global" => {
+                        var = VariableType::Global(name.to_string()).into();
+                    },
+                    "t" => {
+                        var = VariableType::Global(name.to_string()).into();
+                    },
+                    "env" => {
+                        var = VariableType::Environment(name.to_string()).into();
+                    },
+                    "envelope" => {
+                        var = VariableType::Envelope(
+                            lookup_envelope(name)
+                                .ok_or_else(|| ErrorType::InvalidEnvelope(name.to_string()))?,
+                        )
+                        .into();
+                    },
+                    "header" => {
+                        var = self.parse_header_variable(name)?.into();
+                    },
+                    "body" => {
+                        var = VariableType::Part(
+                            lookup_body_part(name)
+                                .ok_or_else(|| ErrorType::InvalidNamespace(name.to_string()))?,
+                        )
+                        .into();
+                    },
+                    "part" => {
+                        var = VariableType::Part(
+                            lookup_message_part(name)
+                                .ok_or_else(|| ErrorType::InvalidNamespace(name.to_string()))?,
+                        )
+                        .into();
+                    },
+                    _ => {}
+                );
+
+                var.ok_or_else(|| ErrorType::InvalidNamespace(var_name.to_string()))?
+            } else if self.is_var_global(var_name) {
+                VariableType::Global(var_name.to_string())
+            } else if let Some(var_id) = self.get_local_var(var_name) {
+                VariableType::Local(var_id)
+            } else {
+                return Ok(None);
             };
 
             Ok(Some(var))
@@ -424,7 +425,7 @@ impl CompilerState<'_> {
 
         if !name.is_empty() || has_wildcard {
             Ok(VariableType::Header(HeaderVariable {
-                name,
+                name: name.into(),
                 part: HeaderPart::try_from(part.as_str())
                     .map_err(|_| ErrorType::InvalidExpression(var_name.to_string()))?,
                 index_hdr: match hdr_index.as_str() {
@@ -530,51 +531,67 @@ impl TryFrom<&str> for HeaderPart {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (value, subvalue) = value.split_once('.').unwrap_or((value, ""));
-        Ok(match value {
-            "" | "text" => HeaderPart::Text,
-            // Addresses
-            "name" => HeaderPart::Address(AddressPart::Name),
+        if value.is_empty() {
+            return Ok(HeaderPart::Text);
+        }
+
+        let mut part = None;
+        hashify::fnc_map!(value.as_bytes(),
+            "text" => {
+                part = HeaderPart::Text.into();
+            },
+            "name" => {
+                part = HeaderPart::Address(AddressPart::Name).into();
+            },
             "addr" => {
-                if !subvalue.is_empty() {
+                part = if !subvalue.is_empty() {
                     HeaderPart::Address(AddressPart::try_from(subvalue)?)
                 } else {
                     HeaderPart::Address(AddressPart::All)
                 }
-            }
-
-            // Content-type
-            "type" => HeaderPart::ContentType(ContentTypePart::Type),
-            "subtype" => HeaderPart::ContentType(ContentTypePart::Subtype),
-            "attr" if !subvalue.is_empty() => {
-                HeaderPart::ContentType(ContentTypePart::Attribute(subvalue.to_string()))
-            }
-
-            // Received
-            "rcvd" => {
+                .into();
+            },
+            "type" => {
+                part = HeaderPart::ContentType(ContentTypePart::Type).into();
+            },
+            "subtype" => {
+                part = HeaderPart::ContentType(ContentTypePart::Subtype).into();
+            },
+            "attr" => {
                 if !subvalue.is_empty() {
+                    part = HeaderPart::ContentType(ContentTypePart::Attribute(
+                        subvalue.to_string(),
+                    ))
+                    .into();
+                }
+            },
+            "rcvd" => {
+                part = if !subvalue.is_empty() {
                     HeaderPart::Received(ReceivedPart::try_from(subvalue)?)
                 } else {
                     HeaderPart::Text
                 }
-            }
+                .into();
+            },
+            "id" => {
+                part = HeaderPart::Id.into();
+            },
+            "raw" => {
+                part = HeaderPart::Raw.into();
+            },
+            "raw_name" => {
+                part = HeaderPart::RawName.into();
+            },
+            "date" => {
+                part = HeaderPart::Date.into();
+            },
+            "exists" => {
+                part = HeaderPart::Exists.into();
+            },
+            _ => {}
+        );
 
-            // Id
-            "id" => HeaderPart::Id,
-
-            // Raw
-            "raw" => HeaderPart::Raw,
-            "raw_name" => HeaderPart::RawName,
-
-            // Date
-            "date" => HeaderPart::Date,
-
-            // Exists
-            "exists" => HeaderPart::Exists,
-
-            _ => {
-                return Err(());
-            }
-        })
+        part.ok_or(())
     }
 }
 
@@ -582,26 +599,7 @@ impl TryFrom<&str> for ReceivedPart {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(match value {
-            // Received
-            "from" => ReceivedPart::From(ReceivedHostname::Any),
-            "from.name" => ReceivedPart::From(ReceivedHostname::Name),
-            "from.ip" => ReceivedPart::From(ReceivedHostname::Ip),
-            "ip" => ReceivedPart::FromIp,
-            "iprev" => ReceivedPart::FromIpRev,
-            "by" => ReceivedPart::By(ReceivedHostname::Any),
-            "by.name" => ReceivedPart::By(ReceivedHostname::Name),
-            "by.ip" => ReceivedPart::By(ReceivedHostname::Ip),
-            "for" => ReceivedPart::For,
-            "with" => ReceivedPart::With,
-            "tls" => ReceivedPart::TlsVersion,
-            "cipher" => ReceivedPart::TlsCipher,
-            "id" => ReceivedPart::Id,
-            "ident" => ReceivedPart::Ident,
-            "date" => ReceivedPart::Date,
-            "date.raw" => ReceivedPart::DateRaw,
-            _ => return Err(()),
-        })
+        lookup_received_part(value).ok_or(())
     }
 }
 
@@ -609,16 +607,77 @@ impl TryFrom<&str> for AddressPart {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(match value {
-            "name" => AddressPart::Name,
-            "addr" | "all" => AddressPart::All,
-            "addr.domain" => AddressPart::Domain,
-            "addr.local" => AddressPart::LocalPart,
-            "addr.user" => AddressPart::User,
-            "addr.detail" => AddressPart::Detail,
-            _ => return Err(()),
-        })
+        lookup_address_part(value).ok_or(())
     }
+}
+
+fn lookup_envelope(input: &str) -> Option<Envelope> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "from" => Envelope::From,
+        "to" => Envelope::To,
+        "by_time_absolute" => Envelope::ByTimeAbsolute,
+        "by_time_relative" => Envelope::ByTimeRelative,
+        "by_mode" => Envelope::ByMode,
+        "by_trace" => Envelope::ByTrace,
+        "notify" => Envelope::Notify,
+        "orcpt" => Envelope::Orcpt,
+        "ret" => Envelope::Ret,
+        "envid" => Envelope::Envid,
+    )
+}
+
+fn lookup_body_part(input: &str) -> Option<MessagePart> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "text" => MessagePart::TextBody(false),
+        "html" => MessagePart::HtmlBody(false),
+        "to_text" => MessagePart::TextBody(true),
+        "to_html" => MessagePart::HtmlBody(true),
+    )
+}
+
+fn lookup_message_part(input: &str) -> Option<MessagePart> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "text" => MessagePart::Contents,
+        "raw" => MessagePart::Raw,
+    )
+}
+
+fn lookup_received_part(input: &str) -> Option<ReceivedPart> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "from" => ReceivedPart::From(ReceivedHostname::Any),
+        "from.name" => ReceivedPart::From(ReceivedHostname::Name),
+        "from.ip" => ReceivedPart::From(ReceivedHostname::Ip),
+        "ip" => ReceivedPart::FromIp,
+        "iprev" => ReceivedPart::FromIpRev,
+        "by" => ReceivedPart::By(ReceivedHostname::Any),
+        "by.name" => ReceivedPart::By(ReceivedHostname::Name),
+        "by.ip" => ReceivedPart::By(ReceivedHostname::Ip),
+        "for" => ReceivedPart::For,
+        "with" => ReceivedPart::With,
+        "tls" => ReceivedPart::TlsVersion,
+        "cipher" => ReceivedPart::TlsCipher,
+        "id" => ReceivedPart::Id,
+        "ident" => ReceivedPart::Ident,
+        "date" => ReceivedPart::Date,
+        "date.raw" => ReceivedPart::DateRaw,
+    )
+}
+
+fn lookup_address_part(input: &str) -> Option<AddressPart> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "name" => AddressPart::Name,
+        "addr" => AddressPart::All,
+        "all" => AddressPart::All,
+        "addr.domain" => AddressPart::Domain,
+        "addr.local" => AddressPart::LocalPart,
+        "addr.user" => AddressPart::User,
+        "addr.detail" => AddressPart::Detail,
+    )
 }
 
 impl Display for VariableType {
@@ -719,13 +778,15 @@ mod tests {
         block.match_test_pos.push(0);
         let mut compiler = CompilerState {
             compiler: &c,
-            instructions: vec![Instruction::Test(Box::new(Test::String(TestString {
-                match_type: MatchType::Regex(u64::MAX),
-                comparator: Comparator::AsciiCaseMap,
-                source: vec![Value::Variable(VariableType::Local(0))],
-                key_list: vec![Value::Variable(VariableType::Local(0))],
-                is_not: false,
-            })))],
+            instructions: vec![Instruction::Test(Box::new(Test::String(Box::new(
+                TestString {
+                    match_type: MatchType::Regex(u64::MAX),
+                    comparator: Comparator::AsciiCaseMap,
+                    source: vec![Value::Variable(VariableType::Local(0))].into(),
+                    key_list: vec![Value::Variable(VariableType::Local(0))].into(),
+                    is_not: false,
+                },
+            ))))],
             block_stack: Vec::new(),
             block,
             last_block_type: Word::Not,
@@ -763,32 +824,44 @@ mod tests {
             ),
             (
                 "${BAD${global.Company}",
-                Value::List(vec![
-                    text(&mut compiler, "${BAD"),
-                    Value::Variable(VariableType::Global("company".to_string())),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, "${BAD"),
+                        Value::Variable(VariableType::Global("company".to_string())),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "${President, ${global.Company} Inc.}",
-                Value::List(vec![
-                    text(&mut compiler, "${President, "),
-                    Value::Variable(VariableType::Global("company".to_string())),
-                    text(&mut compiler, " Inc.}"),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, "${President, "),
+                        Value::Variable(VariableType::Global("company".to_string())),
+                        text(&mut compiler, " Inc.}"),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "dear${hex:20 24 7b}global.Name}",
-                Value::List(vec![
-                    text(&mut compiler, "dear "),
-                    Value::Variable(VariableType::Global("name".to_string())),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, "dear "),
+                        Value::Variable(VariableType::Global("name".to_string())),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "INBOX.lists.${2}",
-                Value::List(vec![
-                    text(&mut compiler, "INBOX.lists."),
-                    Value::Variable(VariableType::Match(2)),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, "INBOX.lists."),
+                        Value::Variable(VariableType::Match(2)),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "Ein unerh${unicode:00F6}rt gro${unicode:00DF}er Test",
@@ -798,24 +871,30 @@ mod tests {
             ("${doh!}", text(&mut compiler, "${doh!}")),
             (
                 "${hex: 20 }${global.hi}${hex: 20 }",
-                Value::List(vec![
-                    text(&mut compiler, " "),
-                    Value::Variable(VariableType::Global("hi".to_string())),
-                    text(&mut compiler, " "),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, " "),
+                        Value::Variable(VariableType::Global("hi".to_string())),
+                        text(&mut compiler, " "),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "${hex:20 24 7b z}${global.hi}${unicode:}${unicode: }${hex:20}",
-                Value::List(vec![
-                    text(&mut compiler, "${hex:20 24 7b z}"),
-                    Value::Variable(VariableType::Global("hi".to_string())),
-                    text(&mut compiler, "${unicode:}${unicode: } "),
-                ]),
+                Value::List(
+                    vec![
+                        text(&mut compiler, "${hex:20 24 7b z}"),
+                        Value::Variable(VariableType::Global("hi".to_string())),
+                        text(&mut compiler, "${unicode:}${unicode: } "),
+                    ]
+                    .into(),
+                ),
             ),
             (
                 "${header.from}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Text,
                     index_hdr: -1,
                     index_part: -1,
@@ -824,7 +903,7 @@ mod tests {
             (
                 "${header.from.addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Address(AddressPart::All),
                     index_hdr: -1,
                     index_part: -1,
@@ -833,7 +912,7 @@ mod tests {
             (
                 "${header.from[1]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Text,
                     index_hdr: 1,
                     index_part: -1,
@@ -842,7 +921,7 @@ mod tests {
             (
                 "${header.from[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Text,
                     index_hdr: 0,
                     index_part: -1,
@@ -851,7 +930,7 @@ mod tests {
             (
                 "${header.from[20].name}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Address(AddressPart::Name),
                     index_hdr: 20,
                     index_part: -1,
@@ -860,7 +939,7 @@ mod tests {
             (
                 "${header.from[*].addr}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Address(AddressPart::All),
                     index_hdr: 0,
                     index_part: -1,
@@ -869,7 +948,7 @@ mod tests {
             (
                 "${header.from[-5].name[2]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Address(AddressPart::Name),
                     index_hdr: -5,
                     index_part: 2,
@@ -878,7 +957,7 @@ mod tests {
             (
                 "${header.from[*].raw[*]}",
                 Value::Variable(VariableType::Header(HeaderVariable {
-                    name: vec![HeaderName::From],
+                    name: vec![HeaderName::From].into(),
                     part: HeaderPart::Raw,
                     index_hdr: 0,
                     index_part: 0,

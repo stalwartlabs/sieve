@@ -158,11 +158,8 @@ impl Notify {
                 self.importance
                     .as_ref()
                     .map_or(("Normal", "3 (Normal)"), |i| {
-                        match ctx.eval_value(i).to_string().as_ref() {
-                            "1" => ("High", "1 (High)"),
-                            "3" => ("Low", "5 (Low)"),
-                            _ => ("Normal", "3 (Normal)"),
-                        }
+                        lookup_importance_headers(ctx.eval_value(i).to_string().as_ref())
+                            .unwrap_or(("Normal", "3 (Normal)"))
                     });
             message.extend_from_slice(b"Importance: ");
             message.extend_from_slice(importance.as_bytes());
@@ -248,11 +245,8 @@ impl Notify {
                     .as_ref()
                     .map(|f| ctx.eval_value(f).to_string().into_owned()),
                 importance: self.importance.as_ref().map_or(Importance::Normal, |i| {
-                    match ctx.eval_value(i).to_string().as_ref() {
-                        "1" => Importance::High,
-                        "3" => Importance::Low,
-                        _ => Importance::Normal,
-                    }
+                    lookup_importance(ctx.eval_value(i).to_string().as_ref())
+                        .unwrap_or(Importance::Normal)
                 }),
                 options: ctx.eval_values_owned(&self.options),
                 message: self
@@ -572,4 +566,20 @@ fn insert_address(params: &mut MailtoMessage, name: HeaderName, value: String) {
             _ => (),
         }
     }
+}
+
+fn lookup_importance(input: &str) -> Option<Importance> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "1" => Importance::High,
+        "3" => Importance::Low,
+    )
+}
+
+fn lookup_importance_headers(input: &str) -> Option<(&'static str, &'static str)> {
+    hashify::tiny_map!(
+        input.as_bytes(),
+        "1" => ("High", "1 (High)"),
+        "3" => ("Low", "5 (Low)"),
+    )
 }

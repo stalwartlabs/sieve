@@ -105,14 +105,15 @@ impl Default for Compiler {
         )
     ))
 )]
+#[repr(u8)]
 pub(crate) enum Value {
-    Text(ConstantId),
-    Number(Number),
-    Variable(VariableType),
-    Regex(Regex),
-    Glob(Glob),
-    Header(HeaderName<'static>),
-    List(#[cfg_attr(feature = "rkyv", rkyv(omit_bounds))] Vec<Value>),
+    Text(ConstantId) = 0,
+    Number(Number) = 1,
+    Variable(VariableType) = 2,
+    Regex(Regex) = 3,
+    Glob(Glob) = 4,
+    Header(HeaderName<'static>) = 5,
+    List(#[cfg_attr(feature = "rkyv", rkyv(omit_bounds))] Box<[Value]>) = 6,
 }
 
 #[derive(Debug)]
@@ -204,14 +205,15 @@ pub struct LazyGlob(pub(crate) Arc<ArcSwap<Option<CompiledGlob>>>);
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum VariableType {
-    Local(u16),
-    Match(u8),
-    Global(String),
-    Environment(String),
-    Envelope(Envelope),
-    Header(HeaderVariable<'static>),
-    Part(MessagePart),
+    Local(u16) = 0,
+    Match(u8) = 1,
+    Global(String) = 2,
+    Environment(String) = 3,
+    Envelope(Envelope) = 4,
+    Header(HeaderVariable<'static>) = 5,
+    Part(MessagePart) = 6,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -225,7 +227,7 @@ pub enum VariableType {
 )]
 pub struct Transform {
     pub variable: Box<VariableType>,
-    pub functions: Vec<u32>,
+    pub functions: Box<[u32]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -238,7 +240,7 @@ pub struct Transform {
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub struct HeaderVariable<'x> {
-    pub name: Vec<HeaderName<'x>>,
+    pub name: Box<[HeaderName<'x>]>,
     pub part: HeaderPart,
     pub index_hdr: i32,
     pub index_part: i32,
@@ -253,11 +255,12 @@ pub struct HeaderVariable<'x> {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum MessagePart {
-    TextBody(bool),
-    HtmlBody(bool),
-    Contents,
-    Raw,
+    TextBody(bool) = 0,
+    HtmlBody(bool) = 1,
+    Contents = 2,
+    Raw = 3,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -269,16 +272,17 @@ pub enum MessagePart {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum HeaderPart {
-    Text,
-    Date,
-    Id,
-    Address(AddressPart),
-    ContentType(ContentTypePart),
-    Received(ReceivedPart),
-    Raw,
-    RawName,
-    Exists,
+    Text = 0,
+    Date = 1,
+    Id = 2,
+    Address(AddressPart) = 3,
+    ContentType(ContentTypePart) = 4,
+    Received(ReceivedPart) = 5,
+    Raw = 6,
+    RawName = 7,
+    Exists = 8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -290,10 +294,11 @@ pub enum HeaderPart {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum ContentTypePart {
-    Type,
-    Subtype,
-    Attribute(String),
+    Type = 0,
+    Subtype = 1,
+    Attribute(String) = 2,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -305,20 +310,21 @@ pub enum ContentTypePart {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum ReceivedPart {
-    From(ReceivedHostname),
-    FromIp,
-    FromIpRev,
-    By(ReceivedHostname),
-    For,
-    With,
-    TlsVersion,
-    TlsCipher,
-    Id,
-    Ident,
-    Via,
-    Date,
-    DateRaw,
+    From(ReceivedHostname) = 0,
+    FromIp = 1,
+    FromIpRev = 2,
+    By(ReceivedHostname) = 3,
+    For = 4,
+    With = 5,
+    TlsVersion = 6,
+    TlsCipher = 7,
+    Id = 8,
+    Ident = 9,
+    Via = 10,
+    Date = 11,
+    DateRaw = 12,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -330,10 +336,11 @@ pub enum ReceivedPart {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum ReceivedHostname {
-    Name,
-    Ip,
-    Any,
+    Name = 0,
+    Ip = 1,
+    Any = 2,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -345,9 +352,10 @@ pub enum ReceivedHostname {
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub enum Number {
-    Integer(i64),
-    Float(f64),
+    Integer(i64) = 0,
+    Float(f64) = 1,
 }
 
 impl Number {
@@ -726,6 +734,15 @@ mod tests {
                 tests_run += 1;
 
                 let sieve = compiler.compile(&script).unwrap();
+
+                #[cfg(feature = "rkyv")]
+                assert_eq!(
+                    crate::Sieve::from_bytes(&sieve.to_bytes().unwrap()).unwrap(),
+                    sieve,
+                    "rkyv round trip altered {}",
+                    file_name.display()
+                );
+
                 let json_sieve = serde_json::to_string_pretty(
                     &sieve
                         .instructions

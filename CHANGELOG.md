@@ -1,3 +1,8 @@
+sieve-rs 0.8.1
+================================
+- Reduce enum variants with `Box`.
+- Use of `hashify` everywhere.
+
 sieve-rs 0.8.0
 ================================
 - Serialization format improvements.

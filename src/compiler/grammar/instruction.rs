@@ -43,67 +43,68 @@ use std::sync::Arc;
     feature = "rkyv",
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
+#[repr(u8)]
 pub(crate) enum Instruction {
-    Require(Box<[Capability]>),
-    Keep(Box<Keep>),
-    FileInto(Box<FileInto>),
-    Redirect(Box<Redirect>),
-    Discard,
-    Stop,
-    Invalid(Box<Invalid>),
-    Test(Box<Test>),
-    Jmp(u32),
-    Jz(u32),
-    Jnz(u32),
+    Require(Box<[Capability]>) = 0,
+    Keep(Box<Keep>) = 1,
+    FileInto(Box<FileInto>) = 2,
+    Redirect(Box<Redirect>) = 3,
+    Discard = 4,
+    Stop = 5,
+    Invalid(Box<Invalid>) = 6,
+    Test(Box<Test>) = 7,
+    Jmp(u32) = 8,
+    Jz(u32) = 9,
+    Jnz(u32) = 10,
 
     // RFC 5703
-    ForEveryPartPush,
-    ForEveryPart(ForEveryPart),
-    ForEveryPartPop(u32),
-    Replace(Box<Replace>),
-    Enclose(Box<Enclose>),
-    ExtractText(Box<ExtractText>),
+    ForEveryPartPush = 11,
+    ForEveryPart(ForEveryPart) = 12,
+    ForEveryPartPop(u32) = 13,
+    Replace(Box<Replace>) = 14,
+    Enclose(Box<Enclose>) = 15,
+    ExtractText(Box<ExtractText>) = 16,
 
     // RFC 6558
-    Convert(Box<Convert>),
+    Convert(Box<Convert>) = 17,
 
     // RFC 5293
-    AddHeader(Box<AddHeader>),
-    DeleteHeader(Box<DeleteHeader>),
+    AddHeader(Box<AddHeader>) = 18,
+    DeleteHeader(Box<DeleteHeader>) = 19,
 
     // RFC 5229
-    Set(Box<Set>),
-    Clear(Clear),
+    Set(Box<Set>) = 20,
+    Clear(Box<Clear>) = 21,
 
     // RFC 5435
-    Notify(Box<Notify>),
+    Notify(Box<Notify>) = 22,
 
     // RFC 5429
-    Reject(Box<Reject>),
+    Reject(Box<Reject>) = 23,
 
     // RFC 5230
-    Vacation(Box<Vacation>),
+    Vacation(Box<Vacation>) = 24,
 
     // RFC 5463
-    Error(Box<Error>),
+    Error(Box<Error>) = 25,
 
     // RFC 5232
-    EditFlags(Box<EditFlags>),
+    EditFlags(Box<EditFlags>) = 26,
 
     // RFC 6609
-    Include(Box<Include>),
-    Return,
+    Include(Box<Include>) = 27,
+    Return = 28,
 
     // For every line extension
-    While(Box<While>),
+    While(Box<While>) = 29,
 
     // Expression extension
-    Eval(Box<[Expression]>),
-    Let(Box<Let>),
+    Eval(Box<[Expression]>) = 30,
+    Let(Box<Let>) = 31,
 
     // Test only
     #[cfg(test)]
-    TestCmd(Box<[Value]>),
+    TestCmd(Box<[Value]>) = 0x7f,
 }
 
 pub(crate) const MAX_PARAMS: usize = 11;
@@ -613,7 +614,7 @@ impl Compiler {
 
                             let expr = state.parse_expr()?;
                             state.instructions.push(Instruction::While(Box::new(While {
-                                expr,
+                                expr: expr.into(),
                                 jz_pos: u32::MAX,
                             })));
                         }
@@ -874,7 +875,7 @@ impl Compiler {
         state.constants.shrink_to_fit();
 
         Ok(Sieve {
-            instructions: state.instructions,
+            instructions: state.instructions.into(),
             constants: state.constants.into(),
             num_vars: num_vars as u32,
             num_match_vars: state.vars_match_max as u32,
@@ -1001,17 +1002,17 @@ impl CompilerState<'_> {
                 self.vars_num_max = self.vars_num;
             }
             self.vars_num -= vars_num_block;
-            self.instructions.push(Instruction::Clear(Clear {
+            self.instructions.push(Instruction::Clear(Box::new(Clear {
                 match_vars: self.block.match_test_vars,
                 local_vars_idx: self.vars_num as u32,
                 local_vars_num: vars_num_block as u32,
-            }));
+            })));
         } else if self.block.match_test_vars != 0 {
-            self.instructions.push(Instruction::Clear(Clear {
+            self.instructions.push(Instruction::Clear(Box::new(Clear {
                 match_vars: self.block.match_test_vars,
                 local_vars_idx: 0,
                 local_vars_num: 0,
-            }));
+            })));
         }
     }
 
@@ -1197,8 +1198,8 @@ impl MapLocalVars for Test {
                 v.reason.map_local_vars(last_id);
             }
             #[cfg(test)]
-            Test::TestCmd { arguments, .. } => {
-                arguments.map_local_vars(last_id);
+            Test::TestCmd(cmd) => {
+                cmd.arguments.map_local_vars(last_id);
             }
             _ => (),
         }

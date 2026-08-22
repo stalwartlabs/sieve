@@ -22,8 +22,8 @@ use crate::compiler::grammar::{AddressPart, MatchType};
     derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestAddress {
-    pub header_list: Vec<Value>,
-    pub key_list: Vec<Value>,
+    pub header_list: Box<[Value]>,
+    pub key_list: Box<[Value]>,
     pub address_part: AddressPart,
     pub match_type: MatchType,
     pub comparator: Comparator,
@@ -148,16 +148,16 @@ impl CompilerState<'_> {
         }
         let key_list = self.validate_match(&match_type, &comparator, key_list)?;
 
-        Ok(Test::Address(TestAddress {
-            header_list: header_list.unwrap(),
-            key_list,
+        Ok(Test::Address(Box::new(TestAddress {
+            header_list: header_list.unwrap().into(),
+            key_list: key_list.into(),
             address_part,
             match_type,
             comparator,
             index: if index_last { index.map(|i| -i) } else { index },
             mime_anychild,
             is_not: false,
-        }))
+        })))
     }
 }
 
