@@ -13,7 +13,7 @@ use crate::{
     compiler::grammar::actions::action_redirect::{ByMode, ByTime, Notify, NotifyItem, Ret},
     runtime::{
         RuntimeError,
-        handler::{Action, Recipient},
+        handler::{Action, MessageSource, Recipient},
     },
 };
 use mail_parser::{DateTime, HeaderName};
@@ -64,6 +64,7 @@ impl<'x> Context<'x> {
         self.num_out_messages += 1;
         let address = self.alloc_string(address);
         self.actions.push(Action::SendMessage {
+            source: MessageSource::Redirect,
             recipient: if !redirect.list {
                 Recipient::Address(address)
             } else {

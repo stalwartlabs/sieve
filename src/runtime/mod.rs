@@ -15,7 +15,9 @@ pub mod variable;
 pub mod variables;
 
 pub use arena::Arena;
-pub use handler::{Action, Handler, Input, Mailbox, Recipient, Reply, Script, Status};
+pub use handler::{
+    Action, Handler, Input, Mailbox, MessageSource, Recipient, Reply, Script, Status,
+};
 pub use variable::Variable;
 
 use crate::{

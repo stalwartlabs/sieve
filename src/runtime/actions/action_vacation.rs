@@ -14,7 +14,7 @@ use crate::{
     },
     runtime::{
         RuntimeError,
-        handler::{Action, Handler, Recipient},
+        handler::{Action, Handler, MessageSource, Recipient},
     },
 };
 use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
@@ -290,6 +290,7 @@ impl<'x> Context<'x> {
             message,
         });
         self.actions.push(Action::SendMessage {
+            source: MessageSource::Vacation,
             recipient: Recipient::Address(recipient),
             notify: Notify::Never,
             return_of_content: Ret::Default,

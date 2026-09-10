@@ -11,7 +11,7 @@ use crate::{
     compiler::grammar::actions::action_redirect::{ByTime, Notify, Ret},
     runtime::{
         RuntimeError, Variable,
-        handler::{Action, Recipient},
+        handler::{Action, MessageSource, Recipient},
     },
 };
 use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
@@ -93,6 +93,7 @@ impl<'x> Context<'x> {
                     })
                     .collect();
                 self.actions.push(Action::SendMessage {
+                    source: MessageSource::Notification,
                     recipient: Recipient::Group(recipients),
                     notify: Notify::Never,
                     return_of_content: Ret::Default,

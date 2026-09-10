@@ -6,11 +6,14 @@
 
 use super::{NullHandler, add_crlf, empty_message};
 use crate::{
-    Arena, Compiler, Context, FunctionMap, LoadError, Runtime, ScriptArena, Sieve,
-    compiler::{ReceivedHostname, ReceivedPart, grammar::Capability},
+    Arena, Compiler, Context, Envelope, FunctionMap, LoadError, Runtime, ScriptArena, Sieve,
+    compiler::{
+        ReceivedHostname, ReceivedPart,
+        grammar::{Capability, actions::action_redirect::Notify},
+    },
     runtime::{
         RuntimeError, Variable,
-        handler::{Action, Handler, Input, Reply, Script, Status},
+        handler::{Action, Handler, Input, MessageSource, Reply, Script, Status},
     },
 };
 use mail_parser::{HeaderName, HeaderValue, MessageParser};
@@ -32,6 +35,7 @@ struct RecordingHandler {
     keeps: usize,
     discards: usize,
     rejects: usize,
+    sends: Vec<(MessageSource, bool)>,
     fileinto_flags: Vec<Vec<String>>,
     reject_fileinto: bool,
     park_includes: bool,
@@ -56,6 +60,9 @@ impl<'x> Handler<'x> for RecordingHandler {
             Action::Keep { .. } => self.keeps += 1,
             Action::Discard => self.discards += 1,
             Action::Reject { .. } => self.rejects += 1,
+            Action::SendMessage { source, notify, .. } => {
+                self.sends.push((source, matches!(notify, Notify::Never)));
+            }
             Action::FileInto { .. } if self.reject_fileinto => {
                 return Reply::Error(RuntimeError::CapabilityNotAllowed(Capability::FileInto));
             }
@@ -432,4 +439,34 @@ fn received_part_from_a_registered_function() {
     assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
     assert_eq!((handler.keeps, handler.discards), (1, 0));
     let _ = crate::Script::Personal("root-export");
+}
+
+#[test]
+fn send_message_carries_its_source() {
+    let raw = b"From: sender@example.org\r\nTo: john@example.org\r\nSubject: hi\r\n\r\nbody\r\n";
+    let message = MessageParser::default().parse(&raw[..]).unwrap();
+    let script = compile(
+        "require [\"vacation\", \"enotify\"];\n\
+         vacation \"I am away\";\n\
+         notify :message \"hello\" \"mailto:ops@example.org\";\n\
+         redirect \"other@example.org\";\n",
+    );
+    let runtime = runtime()
+        .with_valid_notification_uri("mailto")
+        .with_max_out_messages(10);
+    let mut arena = Arena::new();
+    let mut ctx = Context::new(&runtime, message, &script, &mut arena);
+    ctx.set_user_address("john@example.org");
+    ctx.set_envelope(Envelope::From, "sender@example.org");
+    ctx.set_envelope(Envelope::To, "john@example.org");
+    let mut handler = RecordingHandler::default();
+    assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
+    assert_eq!(
+        handler.sends,
+        [
+            (MessageSource::Vacation, true),
+            (MessageSource::Notification, true),
+            (MessageSource::Redirect, false),
+        ]
+    );
 }

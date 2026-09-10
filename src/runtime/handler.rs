@@ -42,6 +42,13 @@ pub enum Recipient<'a> {
     Group(Vec<&'a str>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MessageSource {
+    Redirect,
+    Vacation,
+    Notification,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Action<'a> {
     Keep {
@@ -62,6 +69,7 @@ pub enum Action<'a> {
         message_id: usize,
     },
     SendMessage {
+        source: MessageSource,
         recipient: Recipient<'a>,
         notify: Notify,
         return_of_content: Ret,

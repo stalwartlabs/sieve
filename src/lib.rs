@@ -22,7 +22,8 @@ pub mod runtime;
 pub mod sieve;
 
 pub use runtime::{
-    Action as SieveAction, Arena, Handler, Input, Mailbox, Recipient, Reply, Script, Status,
+    Action as SieveAction, Arena, Handler, Input, Mailbox, MessageSource, Recipient, Reply, Script,
+    Status,
 };
 pub use sieve::{LoadError, ScriptArena, Sieve};
 
