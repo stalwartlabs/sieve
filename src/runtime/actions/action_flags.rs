@@ -4,61 +4,77 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::sync::Arc;
-
 use crate::{
-    Context,
-    compiler::{
-        Value, VariableType,
-        grammar::actions::action_flags::{Action, EditFlags},
+    Context, Sieve,
+    bytecode::{
+        ops,
+        rec::{Range, tag},
     },
+    runtime::{RuntimeError, eval::ValueRef},
 };
 
-impl EditFlags {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        match &self.name {
-            Some(var_name) => self.exec_variable(ctx, var_name),
-            None => self.exec_implicit(ctx),
+const ACTION_SET: u8 = 0;
+const ACTION_ADD: u8 = 1;
+
+impl<'x> Context<'x> {
+    pub(crate) fn exec_editflags(
+        &mut self,
+        script: &'x Sieve<'x>,
+        edit: &ops::EditFlags,
+    ) -> Result<(), RuntimeError> {
+        if edit.name.tag == tag::NONE || edit.name.tag == tag::VARIABLE_NONE {
+            self.exec_editflags_implicit(script, edit)
+        } else {
+            self.exec_editflags_variable(script, edit)
         }
     }
 
-    fn exec_implicit(&self, ctx: &mut Context) {
-        let mut flags = std::mem::take(&mut ctx.flags);
+    fn exec_editflags_implicit(
+        &mut self,
+        script: &'x Sieve<'x>,
+        edit: &ops::EditFlags,
+    ) -> Result<(), RuntimeError> {
+        let mut flags = std::mem::take(&mut self.flags);
 
-        match &self.action {
-            Action::Set | Action::Add => {
-                if matches!(&self.action, Action::Set) {
+        match edit.action {
+            ACTION_SET | ACTION_ADD => {
+                if edit.action == ACTION_SET {
                     flags.clear();
                 }
-                ctx.tokenize_flags(&self.flags, |flag| {
+                self.tokenize_flags(script, edit.flags, |flag| {
                     for flag in flag.split_ascii_whitespace() {
                         if !flags.iter().any(|f| f.eq_ignore_ascii_case(flag)) {
-                            flags.push(flag.into());
+                            flags.push(flag);
                         }
                     }
                     false
-                });
+                })?;
             }
-            Action::Remove => {
-                ctx.tokenize_flags(&self.flags, |flag| {
+            _ => {
+                self.tokenize_flags(script, edit.flags, |flag| {
                     for flag in flag.split_ascii_whitespace() {
                         if let Some(pos) = flags.iter().position(|f| f.eq_ignore_ascii_case(flag)) {
                             flags.swap_remove(pos);
                         }
                     }
                     false
-                });
+                })?;
             }
         }
 
-        ctx.flags = flags;
+        self.flags = flags;
+        Ok(())
     }
 
-    fn exec_variable(&self, ctx: &mut Context, var_name: &VariableType) {
-        match &self.action {
-            Action::Set => {
+    fn exec_editflags_variable(
+        &mut self,
+        script: &'x Sieve<'x>,
+        edit: &ops::EditFlags,
+    ) -> Result<(), RuntimeError> {
+        let value = match edit.action {
+            ACTION_SET => {
                 let mut flags = String::new();
-                ctx.tokenize_flags(&self.flags, |flag| {
+                self.tokenize_flags(script, edit.flags, |flag| {
                     if !contains_flag(&flags, flag) {
                         if !flags.is_empty() {
                             flags.push(' ');
@@ -66,17 +82,16 @@ impl EditFlags {
                         flags.push_str(flag);
                     }
                     false
-                });
-                ctx.set_variable(var_name, flags.into());
+                })?;
+                flags
             }
-            Action::Add => {
-                let mut new_flags = ctx
-                    .get_variable(var_name)
-                    .map(|v| v.to_string())
-                    .unwrap_or_default()
-                    .into_owned();
+            ACTION_ADD => {
+                let mut new_flags = self
+                    .get_variable(script, edit.name)?
+                    .map(|v| v.to_string().into_owned())
+                    .unwrap_or_default();
 
-                ctx.tokenize_flags(&self.flags, |flag| {
+                self.tokenize_flags(script, edit.flags, |flag| {
                     if !contains_flag(&new_flags, flag) {
                         if !new_flags.is_empty() {
                             new_flags.push(' ');
@@ -84,20 +99,16 @@ impl EditFlags {
                         new_flags.push_str(flag);
                     }
                     false
-                });
-                ctx.set_variable(var_name, new_flags.into());
+                })?;
+                new_flags
             }
-            Action::Remove => {
-                let mut current_flags = Vec::new();
-                let flags = ctx
-                    .get_variable(var_name)
+            _ => {
+                let flags = self
+                    .get_variable(script, edit.name)?
                     .map(|v| v.to_string().into_owned())
                     .unwrap_or_default();
-
-                for flag in flags.split(' ') {
-                    current_flags.push(flag);
-                }
-                ctx.tokenize_flags(&self.flags, |flag| {
+                let mut current_flags: Vec<&str> = flags.split(' ').collect();
+                self.tokenize_flags(script, edit.flags, |flag| {
                     if let Some(pos) = current_flags
                         .iter()
                         .position(|lflag| lflag.eq_ignore_ascii_case(flag))
@@ -105,63 +116,76 @@ impl EditFlags {
                         current_flags.swap_remove(pos);
                     }
                     false
-                });
-                ctx.set_variable(var_name, current_flags.join(" ").into());
+                })?;
+                current_flags.join(" ")
             }
+        };
+        self.set_variable(script, edit.name, value.into())
+    }
+
+    pub(crate) fn tokenize_flags(
+        &self,
+        script: &'x Sieve<'x>,
+        strings: Range,
+        mut cb: impl FnMut(&'x str) -> bool,
+    ) -> Result<bool, RuntimeError> {
+        let mut iter = script.recs(strings)?;
+        let mut pos = 0;
+        while let Some(rec) = iter.next() {
+            let value = ValueRef::decode(script, rec, &mut iter)?;
+            let is_single = pos == 0 && iter.len() == 0;
+            let flag = self.eval_value_ref(script, value)?;
+            let flag = self.intern_cow(flag.into_string());
+            if !flag.is_empty() {
+                if is_single {
+                    for flag in flag.split_ascii_whitespace() {
+                        if !flag.is_empty() && cb(flag) {
+                            return Ok(true);
+                        }
+                    }
+                } else if cb(flag.trim()) {
+                    return Ok(true);
+                }
+            }
+            pos += 1;
+        }
+        Ok(false)
+    }
+
+    pub(crate) fn get_local_flags(
+        &self,
+        script: &'x Sieve<'x>,
+        strings: Range,
+    ) -> Result<&'x [&'x str], RuntimeError> {
+        let mut flags: smallvec::SmallVec<[&'x str; 8]> = smallvec::SmallVec::new();
+        self.tokenize_flags(script, strings, |flag| {
+            flags.push(flag);
+            false
+        })?;
+        Ok(self.alloc_strs(&flags))
+    }
+
+    pub(crate) fn get_global_flags(&self) -> &'x [&'x str] {
+        self.alloc_strs(&self.flags)
+    }
+
+    pub(crate) fn global_flags(&self) -> &[&'x str] {
+        &self.flags
+    }
+
+    pub(crate) fn get_local_or_global_flags(
+        &self,
+        script: &'x Sieve<'x>,
+        strings: Range,
+    ) -> Result<&'x [&'x str], RuntimeError> {
+        if strings.is_empty() {
+            Ok(self.get_global_flags())
+        } else {
+            self.get_local_flags(script, strings)
         }
     }
 }
 
 fn contains_flag(flags: &str, flag: &str) -> bool {
     flags.split(' ').any(|kept| kept.eq_ignore_ascii_case(flag))
-}
-
-impl Context<'_> {
-    pub(crate) fn tokenize_flags(
-        &self,
-        strings: &[Value],
-        mut cb: impl FnMut(&str) -> bool,
-    ) -> bool {
-        for (pos, string) in strings.iter().enumerate() {
-            let flag_ = self.eval_value(string);
-            let flag = flag_.to_string();
-            if !flag.is_empty() {
-                if pos == 0 && strings.len() == 1 {
-                    for flag in flag.split_ascii_whitespace() {
-                        if !flag.is_empty() && cb(flag) {
-                            return true;
-                        }
-                    }
-                } else if cb(flag.trim()) {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    pub(crate) fn get_local_flags(&self, strings: &[Value]) -> Vec<String> {
-        let mut flags = Vec::new();
-        self.tokenize_flags(strings, |flag| {
-            flags.push(flag.to_string());
-            false
-        });
-        flags
-    }
-
-    pub(crate) fn get_global_flags(&self) -> Vec<String> {
-        self.flags.iter().map(|flag| flag.to_string()).collect()
-    }
-
-    pub(crate) fn global_flags(&self) -> &[Arc<str>] {
-        &self.flags
-    }
-
-    pub(crate) fn get_local_or_global_flags(&self, strings: &[Value]) -> Vec<String> {
-        if strings.is_empty() {
-            self.get_global_flags()
-        } else {
-            self.get_local_flags(strings)
-        }
-    }
 }

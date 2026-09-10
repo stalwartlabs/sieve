@@ -1,0 +1,58 @@
+require ["variables", "relational", "editheader", "vacation", "vnd.stalwart.expressions", "vnd.stalwart.testsuite"];
+
+test_set "message" text:
+From: sender@example.org
+To: recipient@example.org
+Subject: HELLO
+X-A: This is a TEST header
+
+Body.
+.
+;
+
+test "Unknown comparators fold case" {
+	if not header :is :comparator "i;unicode-casemap" "subject" "hello" {
+		test_fail "is did not fold case";
+	}
+	if not header :contains :comparator "i;unicode-casemap" "x-a" "test" {
+		test_fail "contains did not fold case";
+	}
+	if not header :value "eq" :comparator "i;unicode-casemap" "subject" "hello" {
+		test_fail "value did not fold case";
+	}
+	if header :is :comparator "i;octet" "subject" "hello" {
+		test_fail "octet folded case";
+	}
+}
+
+test "Negating the minimum integer saturates" {
+	let "m" "-(0 - 9223372036854775807 - 1)";
+	if not eval "m == 9223372036854775807" {
+		test_fail "unexpected value ${m}";
+	}
+}
+
+test "Raw name of an inserted header" {
+	addheader "X-Foo" "bar";
+	set "v" "${header.x-foo.raw_name}";
+	if not string :is "${v}" "" {
+		test_fail "unexpected raw name ${v}";
+	}
+}
+
+test "Vacation with a huge day count" {
+	test_result_reset;
+	vacation :days 18446744073709551614 "away";
+	if not test_result_action "send_message" {
+		test_fail "vacation did not send a reply";
+	}
+}
+
+test "Glob with more wildcards than match variables" {
+	if header :matches "subject" "**********************************************************************" {
+		set "v" "${1}";
+	}
+	if not header :matches "subject" "H*O" {
+		test_fail "glob did not match";
+	}
+}

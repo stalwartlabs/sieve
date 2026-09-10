@@ -22,10 +22,6 @@ include [LOCATION] [":once"] [":optional"] <value: string>
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct Include {
     pub location: Location,
     pub once: bool,
@@ -33,14 +29,10 @@ pub(crate) struct Include {
     pub value: Value,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum Location {

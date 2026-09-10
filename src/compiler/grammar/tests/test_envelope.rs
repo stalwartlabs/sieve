@@ -20,10 +20,6 @@ use crate::compiler::grammar::{AddressPart, MatchType, test::Test};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestEnvelope {
     pub envelope_list: Box<[Envelope]>,
     pub key_list: Box<[Value]>,

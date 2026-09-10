@@ -6,114 +6,99 @@
 
 use super::TestResult;
 use crate::{
-    Context, Metadata,
+    Context, Metadata, Sieve,
+    bytecode::ops,
     compiler::{
         Number,
-        grammar::{
-            MatchType,
-            tests::test_mailbox::{TestMetadata, TestMetadataExists},
-        },
+        grammar::{Comparator, MatchType},
     },
+    runtime::RuntimeError,
 };
 
-impl TestMetadata {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let metadata = match &self.medatata {
-            Metadata::Server { annotation } => Metadata::Server {
-                annotation: ctx.eval_value(annotation).to_string().into_owned(),
-            },
-            Metadata::Mailbox { name, annotation } => Metadata::Mailbox {
-                name: ctx.eval_value(name).to_string().into_owned(),
-                annotation: ctx.eval_value(annotation).to_string().into_owned(),
-            },
+impl<'x> Context<'x> {
+    pub(crate) fn test_metadata(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestMetadata,
+    ) -> Result<TestResult, RuntimeError> {
+        let mailbox = if test.metadata.kind == 1 {
+            Some(self.eval_value(script, test.metadata.name)?.into_string())
+        } else {
+            None
         };
+        let annotation = self
+            .eval_value(script, test.metadata.annotation)?
+            .into_string();
 
-        let value = if let Some((_, value)) = [&ctx.metadata, &ctx.runtime.metadata]
+        let Some((_, value)) = [&self.metadata, &self.runtime.metadata]
             .into_iter()
             .flatten()
-            .find(|(m, _)| match (m, &metadata) {
-                (Metadata::Server { annotation: a }, Metadata::Server { annotation: b }) => {
-                    a.eq_ignore_ascii_case(b)
-                }
+            .find(|(m, _)| match (m, &mailbox) {
+                (Metadata::Server { annotation: a }, None) => a.eq_ignore_ascii_case(&annotation),
                 (
                     Metadata::Mailbox {
                         name: a,
                         annotation: c,
                     },
-                    Metadata::Mailbox {
-                        name: b,
-                        annotation: d,
-                    },
-                ) => a.eq(b) && c.eq_ignore_ascii_case(d),
+                    Some(b),
+                ) => a.eq(b) && c.eq_ignore_ascii_case(&annotation),
                 _ => false,
-            }) {
-            value.as_ref()
-        } else {
-            return TestResult::Bool(false ^ self.is_not);
+            })
+        else {
+            return Ok(TestResult::Bool(false ^ test.is_not));
         };
+        let value = value.as_ref();
 
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
         let mut result = false;
-        if let MatchType::Count(match_type) = &self.match_type {
-            for key in &self.key_list {
-                if match_type.cmp(&Number::Float(1.0), &ctx.eval_value(key).to_number()) {
-                    result = true;
-                    break;
-                }
-            }
+
+        if let MatchType::Count(rel_match) = &match_type {
+            result = self
+                .eval_values(script, test.key_list)?
+                .iter()
+                .any(|key| rel_match.cmp(&Number::Float(1.0), &key.to_number()));
         } else {
+            let keys = self.eval_keys(script, test.key_list)?;
             let mut captured_values = Vec::new();
 
-            for pattern in &self.key_list {
-                let key = ctx.eval_value(pattern);
-                result = match &self.match_type {
-                    MatchType::Is => self.comparator.is(&value, &key),
-                    MatchType::Contains => {
-                        self.comparator.contains(value, key.to_string().as_ref())
-                    }
-                    MatchType::Value(relation) => {
-                        self.comparator.relational(relation, &value, &key)
-                    }
-                    MatchType::Matches(capture_positions) => self.comparator.matches(
-                        Some(pattern),
-                        key.to_string().as_ref(),
-                        value,
-                        *capture_positions,
-                        &mut captured_values,
-                    ),
-                    MatchType::Regex(capture_positions) => self.comparator.regex(
-                        pattern,
-                        &key,
-                        value,
-                        *capture_positions,
-                        &mut captured_values,
-                    ),
-                    _ => false,
-                };
-
-                if result {
+            for key in &keys {
+                if self.key_matches(
+                    script,
+                    &comparator,
+                    &match_type,
+                    key,
+                    value,
+                    &mut captured_values,
+                )? {
+                    result = true;
                     break;
                 }
             }
 
             if !captured_values.is_empty() {
-                ctx.set_match_variables(captured_values);
+                self.set_match_variables(captured_values);
             }
         }
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
-}
 
-impl TestMetadataExists {
-    pub(crate) fn exec(&self, ctx: &Context) -> TestResult {
+    pub(crate) fn test_metadata_exists(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestMetadataExists,
+    ) -> Result<TestResult, RuntimeError> {
         let mailbox = self
-            .mailbox
-            .as_ref()
-            .map(|s| ctx.eval_value(s).to_string().into_owned());
-        let mut annotations = ctx.eval_values(&self.annotation_names);
+            .eval_opt(script, test.mailbox)?
+            .map(|mailbox| mailbox.into_string());
+        let mut annotations = self.eval_values(script, test.annotation_names)?;
 
-        for (metadata, _) in [&ctx.metadata, &ctx.runtime.metadata].into_iter().flatten() {
-            match (metadata, mailbox.as_ref()) {
+        for (metadata, _) in [&self.metadata, &self.runtime.metadata]
+            .into_iter()
+            .flatten()
+        {
+            match (metadata, mailbox.as_deref()) {
                 (Metadata::Server { annotation }, None) => {
                     annotations.retain(|a| !a.to_string().eq_ignore_ascii_case(annotation))
                 }
@@ -123,10 +108,10 @@ impl TestMetadataExists {
                 _ => (),
             }
             if annotations.is_empty() {
-                return TestResult::Bool(true ^ self.is_not);
+                return Ok(TestResult::Bool(true ^ test.is_not));
             }
         }
 
-        TestResult::Bool(false ^ self.is_not)
+        Ok(TestResult::Bool(false ^ test.is_not))
     }
 }

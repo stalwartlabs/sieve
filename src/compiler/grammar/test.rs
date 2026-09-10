@@ -40,10 +40,6 @@ use crate::compiler::{
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum Test {
     True = 0,
@@ -113,10 +109,6 @@ pub(crate) enum Test {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestCommand {
     pub(crate) arguments: Box<[crate::compiler::Value]>,

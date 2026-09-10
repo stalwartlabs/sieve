@@ -11,20 +11,20 @@ use std::slice::Iter;
 const FIRST_PART: [u32; 1] = [0];
 
 #[derive(Debug)]
-pub(crate) enum ContentTypeFilter {
-    Type(String),
-    TypeSubtype((String, String)),
+pub(crate) enum ContentTypeFilter<'x> {
+    Type(&'x str),
+    TypeSubtype((&'x str, &'x str)),
 }
 
-pub(crate) struct SubpartIterator<'x> {
-    ctx: &'x Context<'x>,
-    iter: Iter<'x, u32>,
-    iter_stack: Vec<Iter<'x, u32>>,
+pub(crate) struct SubpartIterator<'x, 'y, 'p> {
+    ctx: &'y Context<'x>,
+    iter: Iter<'p, u32>,
+    iter_stack: Vec<Iter<'p, u32>>,
     anychild: bool,
 }
 
-impl<'x> SubpartIterator<'x> {
-    pub(crate) fn new(ctx: &'x Context<'x>, parts: &'x [u32], anychild: bool) -> Self {
+impl<'x, 'y: 'p, 'p> SubpartIterator<'x, 'y, 'p> {
+    pub(crate) fn new(ctx: &'y Context<'x>, parts: &'p [u32], anychild: bool) -> Self {
         SubpartIterator {
             ctx,
             iter: parts.iter(),
@@ -34,7 +34,7 @@ impl<'x> SubpartIterator<'x> {
     }
 
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Option<(u32, &MessagePart<'x>)> {
+    pub fn next(&mut self) -> Option<(u32, &'y MessagePart<'x>)> {
         loop {
             if let Some(&part_id) = self.iter.next() {
                 let subpart = self.ctx.message.parts.get(part_id as usize)?;
@@ -56,11 +56,11 @@ impl<'x> SubpartIterator<'x> {
 }
 
 impl<'x> Context<'x> {
-    pub(crate) fn find_nested_parts<'z: 'x>(
-        &'z self,
-        mut message: &'x Message<'x>,
-        ct_filter: &[ContentTypeFilter],
-        visitor_fnc: &mut impl FnMut(&MessagePart, &[u8]) -> bool,
+    pub(crate) fn find_nested_parts<'y>(
+        &'y self,
+        mut message: &'y Message<'x>,
+        ct_filter: &[ContentTypeFilter<'_>],
+        visitor_fnc: &mut impl FnMut(&'y MessagePart<'x>, &'y [u8]) -> bool,
     ) -> bool {
         let mut iter_stack = Vec::new();
         let root = [self.part];
@@ -179,21 +179,18 @@ impl<'x> Context<'x> {
     }
 }
 
-impl ContentTypeFilter {
-    pub(crate) fn parse(ct: &str) -> Option<ContentTypeFilter> {
+impl<'x> ContentTypeFilter<'x> {
+    pub(crate) fn parse(ct: &'x str) -> Option<ContentTypeFilter<'x>> {
         let mut iter = ct.split('/');
         let name = iter.next()?;
         if let Some(sub_name) = iter.next() {
             if !name.is_empty() && !sub_name.is_empty() && iter.next().is_none() {
-                Some(ContentTypeFilter::TypeSubtype((
-                    name.to_string(),
-                    sub_name.to_string(),
-                )))
+                Some(ContentTypeFilter::TypeSubtype((name, sub_name)))
             } else {
                 None
             }
         } else if !name.is_empty() {
-            Some(ContentTypeFilter::Type(name.to_string()))
+            Some(ContentTypeFilter::Type(name))
         } else {
             None
         }

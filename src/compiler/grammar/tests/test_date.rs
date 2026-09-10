@@ -17,10 +17,6 @@ use crate::compiler::grammar::{MatchType, test::Test};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestDate {
     pub header_name: Value,
     pub key_list: Box<[Value]>,
@@ -38,10 +34,6 @@ pub(crate) struct TestDate {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestCurrentDate {
     pub zone: Option<i64>,
     pub match_type: MatchType,
@@ -56,10 +48,6 @@ pub(crate) struct TestCurrentDate {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum Zone {
     Time(i64) = 0,
@@ -71,10 +59,6 @@ pub(crate) enum Zone {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum DatePart {
@@ -365,4 +349,24 @@ fn lookup_date_part(input: &str) -> Option<DatePart> {
         "zone" => DatePart::Zone,
         "weekday" => DatePart::Weekday,
     )
+}
+
+impl DatePart {
+    pub(crate) fn from_code(code: u8) -> DatePart {
+        match code {
+            0 => DatePart::Year,
+            1 => DatePart::Month,
+            2 => DatePart::Day,
+            3 => DatePart::Date,
+            4 => DatePart::Julian,
+            5 => DatePart::Hour,
+            6 => DatePart::Minute,
+            7 => DatePart::Second,
+            8 => DatePart::Time,
+            9 => DatePart::Iso8601,
+            10 => DatePart::Std11,
+            11 => DatePart::Zone,
+            _ => DatePart::Weekday,
+        }
+    }
 }

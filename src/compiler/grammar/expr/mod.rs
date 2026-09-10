@@ -14,10 +14,6 @@ pub mod tokenizer;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum Expression {
     VariableLocal(u16) = 0,
@@ -58,10 +54,6 @@ impl Expression {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum BinaryOperator {
     Add = 0,
@@ -85,10 +77,6 @@ pub(crate) enum BinaryOperator {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum UnaryOperator {

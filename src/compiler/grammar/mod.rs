@@ -25,10 +25,6 @@ pub mod tests;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub enum Capability {
     Envelope = 0,
@@ -87,10 +83,6 @@ pub enum Capability {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub enum AddressPart {
     LocalPart = 0,
@@ -105,10 +97,6 @@ pub enum AddressPart {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum MatchType {
@@ -126,10 +114,6 @@ pub(crate) enum MatchType {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum RelationalMatch {
     Gt = 0,
@@ -145,10 +129,6 @@ pub(crate) enum RelationalMatch {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub enum Comparator {
     Elbonia = 0,
@@ -163,10 +143,6 @@ pub enum Comparator {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub struct Clear {
     pub(crate) local_vars_idx: u32,
     pub(crate) local_vars_num: u32,
@@ -178,10 +154,6 @@ pub struct Clear {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub struct Invalid {
     pub(crate) name: String,
     pub(crate) line_num: u32,
@@ -192,10 +164,6 @@ pub struct Invalid {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct While {
     pub expr: Box<[Expression]>,
@@ -567,7 +535,7 @@ impl CompilerState<'_> {
                         }
                     };
                     match fancy_regex::Regex::new(&expr) {
-                        Ok(regex) => keys.push(Value::Regex(Regex::new(expr, regex))),
+                        Ok(_) => keys.push(Value::Regex(Regex::new(expr))),
                         Err(err) => {
                             return Err(self
                                 .tokens
@@ -602,7 +570,124 @@ impl CompilerState<'_> {
     }
 }
 
+impl AddressPart {
+    #[inline(always)]
+    pub(crate) fn from_code(code: u8) -> AddressPart {
+        match code {
+            0 => AddressPart::LocalPart,
+            1 => AddressPart::Domain,
+            2 => AddressPart::All,
+            3 => AddressPart::User,
+            4 => AddressPart::Detail,
+            _ => AddressPart::Name,
+        }
+    }
+}
+
 impl Capability {
+    pub(crate) fn id(&self) -> u8 {
+        match self {
+            Capability::Envelope => 0,
+            Capability::EnvelopeDsn => 1,
+            Capability::EnvelopeDeliverBy => 2,
+            Capability::FileInto => 3,
+            Capability::EncodedCharacter => 4,
+            Capability::Body => 7,
+            Capability::Convert => 8,
+            Capability::Copy => 9,
+            Capability::Relational => 10,
+            Capability::Date => 11,
+            Capability::Index => 12,
+            Capability::Duplicate => 13,
+            Capability::Variables => 14,
+            Capability::EditHeader => 15,
+            Capability::ForEveryPart => 16,
+            Capability::Mime => 17,
+            Capability::Replace => 18,
+            Capability::Enclose => 19,
+            Capability::ExtractText => 20,
+            Capability::Enotify => 21,
+            Capability::RedirectDsn => 22,
+            Capability::RedirectDeliverBy => 23,
+            Capability::Environment => 24,
+            Capability::Reject => 25,
+            Capability::Ereject => 26,
+            Capability::ExtLists => 27,
+            Capability::SubAddress => 28,
+            Capability::Vacation => 29,
+            Capability::VacationSeconds => 30,
+            Capability::Fcc => 31,
+            Capability::Mailbox => 32,
+            Capability::MailboxId => 33,
+            Capability::MboxMetadata => 34,
+            Capability::ServerMetadata => 35,
+            Capability::SpecialUse => 36,
+            Capability::Imap4Flags => 37,
+            Capability::Ihave => 38,
+            Capability::ImapSieve => 39,
+            Capability::Include => 40,
+            Capability::Regex => 41,
+            Capability::SpamTest => 42,
+            Capability::SpamTestPlus => 43,
+            Capability::VirusTest => 44,
+            Capability::Expressions => 45,
+            Capability::While => 46,
+            Capability::Comparator(_) => 5,
+            Capability::Other(_) => 6,
+        }
+    }
+
+    pub(crate) fn from_id(id: u8) -> Capability {
+        match id {
+            0 => Capability::Envelope,
+            1 => Capability::EnvelopeDsn,
+            2 => Capability::EnvelopeDeliverBy,
+            3 => Capability::FileInto,
+            4 => Capability::EncodedCharacter,
+            7 => Capability::Body,
+            8 => Capability::Convert,
+            9 => Capability::Copy,
+            10 => Capability::Relational,
+            11 => Capability::Date,
+            12 => Capability::Index,
+            13 => Capability::Duplicate,
+            14 => Capability::Variables,
+            15 => Capability::EditHeader,
+            16 => Capability::ForEveryPart,
+            17 => Capability::Mime,
+            18 => Capability::Replace,
+            19 => Capability::Enclose,
+            20 => Capability::ExtractText,
+            21 => Capability::Enotify,
+            22 => Capability::RedirectDsn,
+            23 => Capability::RedirectDeliverBy,
+            24 => Capability::Environment,
+            25 => Capability::Reject,
+            26 => Capability::Ereject,
+            27 => Capability::ExtLists,
+            28 => Capability::SubAddress,
+            29 => Capability::Vacation,
+            30 => Capability::VacationSeconds,
+            31 => Capability::Fcc,
+            32 => Capability::Mailbox,
+            33 => Capability::MailboxId,
+            34 => Capability::MboxMetadata,
+            35 => Capability::ServerMetadata,
+            36 => Capability::SpecialUse,
+            37 => Capability::Imap4Flags,
+            38 => Capability::Ihave,
+            39 => Capability::ImapSieve,
+            40 => Capability::Include,
+            41 => Capability::Regex,
+            42 => Capability::SpamTest,
+            43 => Capability::SpamTestPlus,
+            44 => Capability::VirusTest,
+            45 => Capability::Expressions,
+            46 => Capability::While,
+            _ => Capability::Other(String::new()),
+        }
+    }
+
     pub fn parse(capability: &str) -> Capability {
         if let Some(capability) = lookup_capabilities(capability) {
             capability

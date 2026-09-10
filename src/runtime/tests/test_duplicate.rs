@@ -4,67 +4,81 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::TestResult;
+use crate::{
+    Context, Sieve,
+    bytecode::{ops, rec::Rec},
+    runtime::{RuntimeError, handler::Handler},
+};
+use mail_parser::{HeaderValue, parsers::MessageStream};
 use std::borrow::Cow;
 
-use mail_parser::{HeaderValue, parsers::MessageStream};
-
-use crate::{
-    Context, Event,
-    compiler::grammar::tests::test_duplicate::{DupMatch, TestDuplicate},
-};
-
-use super::TestResult;
-
-impl TestDuplicate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let id: Cow<str> = match &self.dup_match {
-            DupMatch::Header(header_name) => {
-                let mut value = String::new();
-                if let Some(header_name) = ctx.parse_header_name(header_name) {
-                    ctx.find_headers(&[header_name], None, true, |header, _, _| {
-                        if header.offset_end > 0 {
-                            if let Some(bytes) = ctx
-                                .message
-                                .raw_message
-                                .get(header.offset_start as usize..header.offset_end as usize)
-                                && let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
-                                && !id.is_empty()
-                            {
-                                value = id.to_string();
-                                return true;
-                            }
-                        } else if let HeaderValue::Text(text) = &header.value {
-                            // Inserted header
-                            let bytes = format!("{text}\n").into_bytes();
-                            if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id()
-                                && !id.is_empty()
-                            {
-                                value = id.to_string();
-                                return true;
-                            }
-                        }
-                        false
-                    });
-                }
-                value.into()
-            }
-            DupMatch::UniqueId(s) => ctx.eval_value(s).to_string().into_owned().into(),
-            DupMatch::Default => ctx.message.message_id().unwrap_or("").into(),
+impl<'x> Context<'x> {
+    pub(crate) fn test_duplicate<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestDuplicate,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let id = match test.dup_match.kind {
+            0 => self.duplicate_header_id(script, test.dup_match.value)?,
+            1 => self.eval_value(script, test.dup_match.value)?.into_string(),
+            _ => self.message.message_id().unwrap_or("").into(),
         };
 
-        TestResult::Event {
-            event: Event::DuplicateId {
-                id: if id.is_empty() {
-                    return TestResult::Bool(false ^ self.is_not);
-                } else if let Some(handle) = &self.handle {
-                    format!("{}{}", ctx.eval_value(handle).to_string(), id)
-                } else {
-                    id.into_owned()
-                },
-                expiry: self.seconds.unwrap_or(ctx.runtime.default_duplicate_expiry),
-                last: self.last,
-            },
-            is_not: self.is_not,
+        if id.is_empty() {
+            return Ok(TestResult::Bool(false ^ test.is_not));
         }
+
+        let id = match self.eval_opt(script, test.handle)? {
+            Some(handle) => {
+                let mut prefixed = handle.to_string().into_owned();
+                prefixed.push_str(&id);
+                Cow::Owned(prefixed)
+            }
+            None => id,
+        };
+        let expiry = test
+            .seconds
+            .unwrap_or(self.runtime.default_duplicate_expiry);
+
+        TestResult::from_reply(
+            handler.duplicate_id(self, &id, expiry, test.last),
+            test.is_not,
+        )
+    }
+
+    fn duplicate_header_id(
+        &self,
+        script: &'x Sieve<'x>,
+        header_name: Rec,
+    ) -> Result<Cow<'_, str>, RuntimeError> {
+        let mut value = Cow::Borrowed("");
+        if let Some(header_name) = self.parse_header_name(script, header_name)? {
+            self.find_headers(&[header_name], None, true, |header, _, _| {
+                if header.offset_end > 0 {
+                    if let Some(bytes) = self
+                        .message
+                        .raw_message
+                        .get(header.offset_start as usize..header.offset_end as usize)
+                        && let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
+                        && !id.is_empty()
+                    {
+                        value = id;
+                        return true;
+                    }
+                } else if let HeaderValue::Text(text) = &header.value {
+                    let bytes = format!("{text}\n").into_bytes();
+                    if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id()
+                        && !id.is_empty()
+                    {
+                        value = Cow::Owned(id.into_owned());
+                        return true;
+                    }
+                }
+                false
+            });
+        }
+        Ok(value)
     }
 }

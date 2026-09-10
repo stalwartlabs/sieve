@@ -4,279 +4,286 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
-use mail_parser::{HeaderName, decoders::quoted_printable::HEX_MAP};
-
+use super::action_vacation::MAX_SUBJECT_LEN;
 use crate::{
-    Context, Event, Importance, Recipient,
-    compiler::grammar::actions::{
-        action_notify::Notify,
-        action_redirect::{ByTime, Ret},
+    Context, Importance, Sieve,
+    bytecode::ops,
+    compiler::grammar::actions::action_redirect::{ByTime, Notify, Ret},
+    runtime::{
+        RuntimeError, Variable,
+        handler::{Action, Recipient},
     },
 };
+use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
+use mail_parser::{HeaderName, HeaderValue, decoders::quoted_printable::HEX_MAP};
+use std::borrow::Cow;
 
-use super::action_vacation::MAX_SUBJECT_LEN;
+const DEFAULT_IMPORTANCE_HEADERS: (&str, &str) = ("Normal", "3 (Normal)");
 
-impl Notify {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        // Do not notify on Auto-Submitted messages
-        for header in &ctx.message.parts[0].headers {
+impl<'x> Context<'x> {
+    pub(crate) fn exec_notify(
+        &mut self,
+        script: &'x Sieve<'x>,
+        notify: &ops::Notify,
+    ) -> Result<(), RuntimeError> {
+        for header in &self.message.root_part().headers {
             if header.name.as_str().eq_ignore_ascii_case("Auto-Submitted")
                 && header
                     .value
                     .as_text()
                     .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
             {
-                return;
+                return Ok(());
             }
         }
 
-        let uri = ctx.eval_value(&self.method).to_string().into_owned();
-        let (scheme, params) = if let Some(parts) = parse_uri(&uri) {
-            parts
-        } else {
-            return;
+        let uri = self.eval_str(script, notify.method)?;
+        let Some((scheme, params)) = parse_uri(uri) else {
+            return Ok(());
         };
 
-        let has_fcc = self.fcc.is_some();
+        let has_fcc = notify.fcc.present;
         let is_mailto = scheme.eq_ignore_ascii_case("mailto")
-            && ctx.num_out_messages < ctx.runtime.max_out_messages;
-        let mut events = Vec::with_capacity(3);
+            && self.num_out_messages < self.runtime.max_out_messages;
+        let from = self.eval_opt(script, notify.from)?;
+        let importance = self.eval_opt(script, notify.importance)?;
+        let notify_message = self
+            .eval_opt(script, notify.message)?
+            .map(|m| m.into_string());
 
         if is_mailto || has_fcc {
             let params = if is_mailto {
-                if let Some(params) = parse_mailto(params) {
-                    params
-                } else {
-                    return;
-                }
+                let Some(params) = parse_mailto(params) else {
+                    return Ok(());
+                };
+                params
             } else {
-                MailtoMessage {
-                    to: Vec::new(),
-                    cc: Vec::new(),
-                    bcc: Vec::new(),
-                    body: None,
-                    headers: Vec::new(),
-                }
+                MailtoMessage::default()
             };
-            let from = if let Some(from) = &self.from {
-                let from = ctx.eval_value(from).to_string().into_owned();
-                if from
-                    .to_ascii_lowercase()
-                    .contains(&ctx.user_address.to_ascii_lowercase())
-                {
-                    from
-                } else {
-                    ctx.user_from_field()
-                }
-            } else {
-                ctx.user_from_field()
-            };
-            let notify_message = self
-                .message
-                .as_ref()
-                .map(|m| ctx.eval_value(m).to_string().into_owned());
-            let message_len = params
-                .to
-                .iter()
-                .chain(params.cc.iter())
-                .map(|a| a.len() + 4)
-                .sum::<usize>()
-                + params
-                    .headers
-                    .iter()
-                    .map(|(h, v)| h.len() + v.len() + 4)
-                    .sum::<usize>()
-                + params.body.as_ref().map_or(0, |b| b.len())
-                + notify_message.as_ref().map_or(0, |b| b.len())
-                + from.len()
-                + 200;
+            let from = self.notify_from(from.as_ref());
+            let importance_headers = importance.as_ref().map_or(DEFAULT_IMPORTANCE_HEADERS, |i| {
+                lookup_importance_headers(i.to_string().as_ref())
+                    .unwrap_or(DEFAULT_IMPORTANCE_HEADERS)
+            });
+            let message = self.build_notify_message(
+                &params,
+                &from,
+                notify_message.as_deref(),
+                importance_headers,
+            );
 
-            let mut message = Vec::with_capacity(message_len);
-            message.extend_from_slice(b"From: ");
-            message.extend_from_slice(from.as_bytes());
-            message.extend_from_slice(b"\r\n");
-
-            for (header, addresses) in [("To: ", &params.to), ("Cc: ", &params.cc)] {
-                if !addresses.is_empty() {
-                    message.extend_from_slice(header.as_bytes());
-                    for (pos, address) in addresses.iter().enumerate() {
-                        if pos > 0 {
-                            message.extend_from_slice(b", ");
-                        }
-                        if !address.contains('<') {
-                            message.push(b'<');
-                        }
-                        message.extend_from_slice(address.as_bytes());
-                        if !address.contains('<') {
-                            message.push(b'>');
-                        }
-                    }
-                    message.extend_from_slice(b"\r\n");
-                }
-            }
-
-            let mut has_subject = None;
-            let mut has_date = false;
-            let mut has_message_id = false;
-            for (header, value) in &params.headers {
-                match header {
-                    HeaderName::Subject => {
-                        has_subject = value.into();
-                        continue;
-                    }
-                    HeaderName::Date => {
-                        has_date = true;
-                    }
-                    HeaderName::MessageId => {
-                        has_message_id = true;
-                    }
-                    HeaderName::From => {
-                        continue;
-                    }
-                    _ => (),
-                }
-                message.extend_from_slice(header.as_str().as_bytes());
-                message.extend_from_slice(b": ");
-                message.extend_from_slice(value.as_bytes());
-                message.extend_from_slice(b"\r\n");
-            }
-
-            if !has_date {
-                message.extend_from_slice(b"Date: ");
-                message.extend_from_slice(Date::now().to_rfc822().as_bytes());
-                message.extend_from_slice(b"\r\n");
-            }
-
-            if !has_message_id {
-                message.extend_from_slice(b"Message-ID: ");
-                generate_message_id_header(&mut message, &ctx.runtime.local_hostname).unwrap();
-                message.extend_from_slice(b"\r\n");
-            }
-
-            let (importance, priority) =
-                self.importance
-                    .as_ref()
-                    .map_or(("Normal", "3 (Normal)"), |i| {
-                        lookup_importance_headers(ctx.eval_value(i).to_string().as_ref())
-                            .unwrap_or(("Normal", "3 (Normal)"))
-                    });
-            message.extend_from_slice(b"Importance: ");
-            message.extend_from_slice(importance.as_bytes());
-            message.extend_from_slice(b"\r\n");
-
-            message.extend_from_slice(b"X-Priority: ");
-            message.extend_from_slice(priority.as_bytes());
-            message.extend_from_slice(b"\r\n");
-
-            message.extend_from_slice(b"Subject: ");
-            let subject = if let Some(subject) = has_subject {
-                subject.as_str()
-            } else if let Some(subject) = &notify_message {
-                subject.as_ref()
-            } else {
-                ctx.message.subject().unwrap_or_default()
-            };
-            let mut iter = subject.chars().enumerate();
-            let mut buf = [0; 4];
-            #[allow(clippy::while_let_on_iterator)]
-            while let Some((pos, char)) = iter.next() {
-                if pos < MAX_SUBJECT_LEN {
-                    message.extend_from_slice(char.encode_utf8(&mut buf).as_bytes());
-                } else {
-                    break;
-                }
-            }
-            if iter.next().is_some() {
-                message.extend_from_slice('…'.encode_utf8(&mut buf).as_bytes());
-            }
-            message.extend_from_slice(b"\r\n");
-
-            message.extend_from_slice(b"Auto-Submitted: auto-notified\r\n");
-            message.extend_from_slice(b"X-Sieve: yes\r\n");
-            message.extend_from_slice(b"Content-type: text/plain; charset=utf-8\r\n\r\n");
-            if let Some(body) = params.body {
-                message.extend_from_slice(body.as_bytes());
-            } else if let Some(subject) = &notify_message {
-                message.extend_from_slice(subject.as_bytes());
-            } else if let Some(subject) = ctx.message.subject() {
-                message.extend_from_slice(subject.as_bytes());
-            }
-
-            ctx.last_message_id += 1;
-            events.push(Event::CreatedMessage {
-                message_id: ctx.last_message_id,
+            self.last_message_id += 1;
+            self.actions.push(Action::CreatedMessage {
+                message_id: self.last_message_id,
                 message,
             });
 
             if is_mailto {
-                events.push(Event::SendMessage {
-                    recipient: Recipient::Group(
-                        params
-                            .to
-                            .into_iter()
-                            .chain(params.cc)
-                            .chain(params.bcc)
-                            .map(|addr| {
-                                if let Some((addr, _)) = addr
-                                    .rsplit_once('<')
-                                    .and_then(|(_, addr)| addr.rsplit_once('>'))
-                                {
-                                    addr.to_string()
-                                } else {
-                                    addr
-                                }
-                            })
-                            .collect(),
-                    ),
-                    notify: crate::compiler::grammar::actions::action_redirect::Notify::Never,
+                let recipients = params
+                    .to
+                    .iter()
+                    .chain(params.cc.iter())
+                    .chain(params.bcc.iter())
+                    .map(|addr| {
+                        self.alloc_str(
+                            addr.rsplit_once('<')
+                                .and_then(|(_, addr)| addr.rsplit_once('>'))
+                                .map_or(addr.as_str(), |(addr, _)| addr),
+                        )
+                    })
+                    .collect();
+                self.actions.push(Action::SendMessage {
+                    recipient: Recipient::Group(recipients),
+                    notify: Notify::Never,
                     return_of_content: Ret::Default,
                     by_time: ByTime::None,
-                    message_id: ctx.last_message_id,
+                    message_id: self.last_message_id,
                 });
             }
         }
 
         if !is_mailto {
-            events.push(Event::Notify {
-                method: uri,
-                from: self
-                    .from
-                    .as_ref()
-                    .map(|f| ctx.eval_value(f).to_string().into_owned()),
-                importance: self.importance.as_ref().map_or(Importance::Normal, |i| {
-                    lookup_importance(ctx.eval_value(i).to_string().as_ref())
-                        .unwrap_or(Importance::Normal)
+            let options = self.eval_strings(script, notify.options)?;
+            let action = Action::Notify {
+                from: from.map(|f| self.intern_cow(f.into_string())),
+                importance: importance.map_or(Importance::Normal, |i| {
+                    lookup_importance(i.to_string().as_ref()).unwrap_or(Importance::Normal)
                 }),
-                options: ctx.eval_values_owned(&self.options),
-                message: self
-                    .message
-                    .as_ref()
-                    .map(|m| ctx.eval_value(m).to_string().into_owned())
-                    .or_else(|| ctx.message.subject().map(|s| s.to_string()))
-                    .unwrap_or_default(),
-            });
-            ctx.num_out_messages += 1;
+                options: self.alloc_strs(&options),
+                message: match notify_message {
+                    Some(message) => self.intern_cow(message),
+                    None => self.subject_str().unwrap_or_default(),
+                },
+                method: uri,
+            };
+            self.actions.push(action);
+            self.num_out_messages += 1;
         }
 
-        if let Some(fcc) = &self.fcc {
-            // File carbon copy
-            events.push(Event::FileInto {
-                folder: ctx.eval_value(&fcc.mailbox).to_string().into_owned(),
-                flags: ctx.get_local_flags(&fcc.flags),
-                mailbox_id: fcc
-                    .mailbox_id
-                    .as_ref()
-                    .map(|m| ctx.eval_value(m).to_string().into_owned()),
-                special_use: fcc
-                    .special_use
-                    .as_ref()
-                    .map(|s| ctx.eval_value(s).to_string().into_owned()),
+        if has_fcc {
+            let fcc = &notify.fcc;
+            let action = Action::FileInto {
+                folder: self.eval_str(script, fcc.mailbox)?,
+                flags: self.get_local_flags(script, fcc.flags)?,
+                mailbox_id: self.eval_opt_str(script, fcc.mailbox_id)?,
+                special_use: self.eval_opt_str(script, fcc.special_use)?,
                 create: fcc.create,
-                message_id: ctx.last_message_id,
-            });
+                message_id: self.last_message_id,
+            };
+            self.actions.push(action);
         }
-        ctx.queued_events = events.into_iter();
+        Ok(())
+    }
+
+    fn subject_str(&self) -> Option<&'x str> {
+        match self.message.header(HeaderName::Subject)? {
+            HeaderValue::Text(text) => Some(self.cow_str(text)),
+            HeaderValue::TextList(list) => list.last().map(|text| self.cow_str(text)),
+            _ => None,
+        }
+    }
+
+    fn notify_from<'a>(&self, from: Option<&'a Variable<'x>>) -> Cow<'a, str> {
+        if let Some(from) = from {
+            let from = from.to_string();
+            if from
+                .to_ascii_lowercase()
+                .contains(&self.user_address.to_ascii_lowercase())
+            {
+                return from;
+            }
+        }
+        self.user_from_field().into()
+    }
+
+    fn build_notify_message(
+        &self,
+        params: &MailtoMessage,
+        from: &str,
+        notify_message: Option<&str>,
+        (importance, priority): (&str, &str),
+    ) -> Vec<u8> {
+        let message_len = params
+            .to
+            .iter()
+            .chain(params.cc.iter())
+            .map(|a| a.len() + 4)
+            .sum::<usize>()
+            + params
+                .headers
+                .iter()
+                .map(|(h, v)| h.len() + v.len() + 4)
+                .sum::<usize>()
+            + params.body.as_ref().map_or(0, |b| b.len())
+            + notify_message.map_or(0, |b| b.len())
+            + from.len()
+            + 200;
+
+        let mut message = Vec::with_capacity(message_len);
+        message.extend_from_slice(b"From: ");
+        message.extend_from_slice(from.as_bytes());
+        message.extend_from_slice(b"\r\n");
+
+        for (header, addresses) in [("To: ", &params.to), ("Cc: ", &params.cc)] {
+            if !addresses.is_empty() {
+                message.extend_from_slice(header.as_bytes());
+                for (pos, address) in addresses.iter().enumerate() {
+                    if pos > 0 {
+                        message.extend_from_slice(b", ");
+                    }
+                    if !address.contains('<') {
+                        message.push(b'<');
+                    }
+                    message.extend_from_slice(address.as_bytes());
+                    if !address.contains('<') {
+                        message.push(b'>');
+                    }
+                }
+                message.extend_from_slice(b"\r\n");
+            }
+        }
+
+        let mut has_subject = None;
+        let mut has_date = false;
+        let mut has_message_id = false;
+        for (header, value) in &params.headers {
+            match header {
+                HeaderName::Subject => {
+                    has_subject = value.into();
+                    continue;
+                }
+                HeaderName::Date => {
+                    has_date = true;
+                }
+                HeaderName::MessageId => {
+                    has_message_id = true;
+                }
+                HeaderName::From => {
+                    continue;
+                }
+                _ => (),
+            }
+            message.extend_from_slice(header.as_str().as_bytes());
+            message.extend_from_slice(b": ");
+            message.extend_from_slice(value.as_bytes());
+            message.extend_from_slice(b"\r\n");
+        }
+
+        if !has_date {
+            message.extend_from_slice(b"Date: ");
+            message.extend_from_slice(Date::now().to_rfc822().as_bytes());
+            message.extend_from_slice(b"\r\n");
+        }
+
+        if !has_message_id {
+            message.extend_from_slice(b"Message-ID: ");
+            generate_message_id_header(&mut message, &self.runtime.local_hostname)
+                .expect("writing to a Vec cannot fail");
+            message.extend_from_slice(b"\r\n");
+        }
+
+        message.extend_from_slice(b"Importance: ");
+        message.extend_from_slice(importance.as_bytes());
+        message.extend_from_slice(b"\r\n");
+
+        message.extend_from_slice(b"X-Priority: ");
+        message.extend_from_slice(priority.as_bytes());
+        message.extend_from_slice(b"\r\n");
+
+        message.extend_from_slice(b"Subject: ");
+        let subject = if let Some(subject) = has_subject {
+            subject.as_str()
+        } else if let Some(subject) = notify_message {
+            subject
+        } else {
+            self.message.subject().unwrap_or_default()
+        };
+        let mut iter = subject.chars().enumerate();
+        let mut buf = [0; 4];
+        #[allow(clippy::while_let_on_iterator)]
+        while let Some((pos, char)) = iter.next() {
+            if pos < MAX_SUBJECT_LEN {
+                message.extend_from_slice(char.encode_utf8(&mut buf).as_bytes());
+            } else {
+                break;
+            }
+        }
+        if iter.next().is_some() {
+            message.extend_from_slice('…'.encode_utf8(&mut buf).as_bytes());
+        }
+        message.extend_from_slice(b"\r\n");
+
+        message.extend_from_slice(b"Auto-Submitted: auto-notified\r\n");
+        message.extend_from_slice(b"X-Sieve: yes\r\n");
+        message.extend_from_slice(b"Content-type: text/plain; charset=utf-8\r\n\r\n");
+        if let Some(body) = &params.body {
+            message.extend_from_slice(body.as_bytes());
+        } else if let Some(subject) = notify_message {
+            message.extend_from_slice(subject.as_bytes());
+        } else if let Some(subject) = self.message.subject() {
+            message.extend_from_slice(subject.as_bytes());
+        }
+        message
     }
 }
 

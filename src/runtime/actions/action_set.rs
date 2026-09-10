@@ -5,99 +5,67 @@
  */
 
 use crate::{
-    Context, Envelope, Event,
-    compiler::{
-        VariableType,
-        grammar::actions::action_set::{Modifier, Set},
+    Context, Sieve,
+    bytecode::{
+        ops,
+        rec::{Range, tag},
     },
-    runtime::Variable,
+    compiler::grammar::actions::action_set::{
+        MODIFIER_ENCODE_URL, MODIFIER_LENGTH, MODIFIER_LOWER, MODIFIER_LOWER_FIRST,
+        MODIFIER_QUOTE_REGEX, MODIFIER_QUOTE_WILDCARD, MODIFIER_REPLACE, MODIFIER_UPPER,
+        MODIFIER_UPPER_FIRST,
+    },
+    runtime::{RuntimeError, Variable},
 };
-use std::fmt::Write;
+use std::{borrow::Cow, fmt::Write};
 
-impl Set {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        let mut value = ctx.eval_value(&self.value);
-        for modifier in &self.modifiers {
-            value = modifier.apply(value.to_string().as_ref(), ctx).into();
+impl<'x> Context<'x> {
+    pub(crate) fn exec_set(
+        &mut self,
+        script: &'x Sieve<'x>,
+        set: &ops::Set,
+    ) -> Result<(), RuntimeError> {
+        let mut value = self.eval_value(script, set.value)?;
+        if !set.modifiers.is_empty() {
+            value = self.apply_modifiers(script, set.modifiers, value)?;
         }
-
-        ctx.set_variable(&self.name, value);
+        self.set_variable(script, set.name, value)
     }
-}
 
-impl Context<'_> {
-    pub(crate) fn set_variable(&mut self, var_name: &VariableType, mut variable: Variable) {
-        if variable.len() > self.runtime.max_variable_size {
-            let mut new_variable = String::with_capacity(self.runtime.max_variable_size);
-            for ch in variable.to_string().chars() {
-                if ch.len_utf8() + new_variable.len() <= self.runtime.max_variable_size {
-                    new_variable.push(ch);
-                } else {
-                    break;
+    pub(crate) fn apply_modifiers(
+        &self,
+        script: &'x Sieve<'x>,
+        modifiers: Range,
+        mut value: Variable<'x>,
+    ) -> Result<Variable<'x>, RuntimeError> {
+        let mut iter = script.recs(modifiers)?;
+        while let Some(modifier) = iter.next() {
+            if modifier.tag != tag::MODIFIER {
+                return Err(RuntimeError::InvalidBytecode);
+            }
+            let input = value.to_string();
+            let output = match modifier.b {
+                MODIFIER_REPLACE => {
+                    let find = iter.next().ok_or(RuntimeError::InvalidBytecode)?;
+                    let replace = iter.next().ok_or(RuntimeError::InvalidBytecode)?;
+                    input.replace(
+                        self.eval_value(script, find)?.to_string().as_ref(),
+                        self.eval_value(script, replace)?.to_string().as_ref(),
+                    )
                 }
-            }
-            variable = new_variable.into();
+                kind => self.apply_modifier(kind, input.as_ref()),
+            };
+            value = Variable::String(Cow::Owned(output));
         }
-
-        match var_name {
-            VariableType::Local(var_id) => {
-                if let Some(var) = self.vars_local.get_mut(*var_id as usize) {
-                    *var = variable.clone();
-                } else {
-                    debug_assert!(false, "Non-existent local variable {var_id}");
-                }
-            }
-            VariableType::Global(var_name) => {
-                if let Some(value) = self.vars_global.get_mut(var_name.as_str()) {
-                    *value = variable.clone();
-                } else {
-                    self.vars_global
-                        .insert(var_name.to_string().into(), variable.clone());
-                }
-            }
-            VariableType::Envelope(env) => {
-                self.add_set_envelope_event(*env, variable.to_string().into_owned());
-            }
-            _ => (),
-        }
+        Ok(value)
     }
 
-    pub(crate) fn add_set_envelope_event(&mut self, envelope: Envelope, value: String) {
-        let mut did_find = false;
-        for (name, val) in self.envelope.iter_mut() {
-            if *name == envelope {
-                *val = Variable::String(value.clone().into());
-                did_find = true;
-                break;
-            }
-        }
-        if !did_find {
-            self.envelope
-                .push((envelope, Variable::String(value.clone().into())));
-        }
-        self.queued_events = vec![Event::SetEnvelope { envelope, value }].into_iter();
-    }
-
-    pub(crate) fn get_variable(&self, var_name: &VariableType) -> Option<&Variable> {
-        match var_name {
-            VariableType::Local(var_id) => self.vars_local.get(*var_id as usize),
-            VariableType::Global(var_name) => self.vars_global.get(var_name.as_str()),
-            VariableType::Envelope(env) => self
-                .envelope
-                .iter()
-                .find_map(|(name, val)| if name == env { Some(val) } else { None }),
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl Modifier {
-    pub(crate) fn apply(&self, input: &str, ctx: &Context) -> String {
-        let max_len = ctx.runtime.max_variable_size;
-        match self {
-            Modifier::Lower => input.to_lowercase(),
-            Modifier::Upper => input.to_uppercase(),
-            Modifier::LowerFirst => {
+    pub(crate) fn apply_modifier(&self, kind: u8, input: &str) -> String {
+        let max_len = self.runtime.max_variable_size;
+        match kind {
+            MODIFIER_LOWER => input.to_lowercase(),
+            MODIFIER_UPPER => input.to_uppercase(),
+            MODIFIER_LOWER_FIRST => {
                 let mut result = String::with_capacity(input.len());
                 for (pos, char) in input.chars().enumerate() {
                     if result.len() + char.len_utf8() <= max_len {
@@ -114,7 +82,7 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::UpperFirst => {
+            MODIFIER_UPPER_FIRST => {
                 let mut result = String::with_capacity(input.len());
                 for (pos, char) in input.chars().enumerate() {
                     if result.len() + char.len_utf8() <= max_len {
@@ -131,7 +99,7 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::QuoteWildcard => {
+            MODIFIER_QUOTE_WILDCARD => {
                 let mut result = String::with_capacity(input.len());
                 for char in input.chars() {
                     if ['*', '\\', '?'].contains(&char) {
@@ -149,7 +117,7 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::QuoteRegex => {
+            MODIFIER_QUOTE_REGEX => {
                 let mut result = String::with_capacity(input.len());
                 for char in input.chars() {
                     if [
@@ -172,8 +140,8 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::Length => input.chars().count().to_string(),
-            Modifier::EncodeUrl => {
+            MODIFIER_LENGTH => input.chars().count().to_string(),
+            MODIFIER_ENCODE_URL => {
                 let mut buf = [0; 4];
                 let mut result = String::with_capacity(input.len());
 
@@ -194,10 +162,7 @@ impl Modifier {
                 }
                 result
             }
-            Modifier::Replace(replacement) => input.replace(
-                ctx.eval_value(&replacement.find).to_string().as_ref(),
-                ctx.eval_value(&replacement.replace).to_string().as_ref(),
-            ),
+            _ => input.to_string(),
         }
     }
 }

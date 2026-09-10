@@ -17,10 +17,6 @@ use crate::compiler::grammar::{MatchType, test::Test};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestNotifyMethodCapability {
     pub comparator: Comparator,
     pub match_type: MatchType,
@@ -34,10 +30,6 @@ pub(crate) struct TestNotifyMethodCapability {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestValidNotifyMethod {
     pub notification_uris: Box<[Value]>,

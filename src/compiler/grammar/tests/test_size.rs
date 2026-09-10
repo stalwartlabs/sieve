@@ -17,10 +17,6 @@ use crate::compiler::grammar::test::Test;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestSize {
     pub over: bool,
     pub limit: u64,

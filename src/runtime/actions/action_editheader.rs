@@ -5,22 +5,22 @@
  */
 
 use crate::{
-    Context,
-    compiler::grammar::{
-        MatchType,
-        actions::{
-            action_editheader::{AddHeader, DeleteHeader},
-            action_mime::MimeOpts,
-        },
-    },
+    Context, Sieve,
+    bytecode::ops,
+    compiler::grammar::Comparator,
+    runtime::{RuntimeError, tests::test_header::MimeOptsRef},
 };
 use mail_parser::{Header, HeaderName, HeaderValue};
 use std::borrow::Cow;
 
-impl AddHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        let header_name__ = ctx.eval_value(&self.field_name);
-        let header_name_ = header_name__.to_string();
+impl<'x> Context<'x> {
+    pub(crate) fn exec_addheader(
+        &mut self,
+        script: &'x Sieve<'x>,
+        add: &ops::AddHeader,
+    ) -> Result<(), RuntimeError> {
+        let header_name_ = self.eval_value(script, add.field_name)?;
+        let header_name_ = header_name_.to_string();
         let mut header_name = String::with_capacity(header_name_.len());
 
         for ch in header_name_.chars() {
@@ -31,80 +31,71 @@ impl AddHeader {
 
         if !header_name.is_empty()
             && let Some(header_name) = HeaderName::parse(header_name)
-            && !ctx.runtime.protected_headers.contains(&header_name)
+            && !self.runtime.protected_headers.contains(&header_name)
         {
-            ctx.has_changes = true;
-            ctx.insert_header(
-                ctx.part,
-                header_name,
-                ctx.eval_value(&self.value)
-                    .to_string()
-                    .as_ref()
-                    .remove_crlf(ctx.runtime.max_header_size),
-                self.last,
-            )
+            let header_value = self
+                .eval_value(script, add.value)?
+                .to_string()
+                .as_ref()
+                .remove_crlf(self.runtime.max_header_size);
+            self.has_changes = true;
+            self.insert_header(self.part, header_name, header_value, add.last);
         }
-    }
-}
 
-impl DeleteHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        let header_name__ = ctx.eval_value(&self.field_name);
-        let header_name_ = header_name__.to_string();
-        let header_name = if let Some(header_name) = HeaderName::parse(header_name_.as_ref()) {
-            header_name
-        } else {
-            return;
+        Ok(())
+    }
+
+    pub(crate) fn exec_deleteheader(
+        &mut self,
+        script: &'x Sieve<'x>,
+        delete: &ops::DeleteHeader,
+    ) -> Result<(), RuntimeError> {
+        let header_name_ = self.eval_value(script, delete.field_name)?;
+        let header_name_ = header_name_.to_string();
+        let Some(header_name) = HeaderName::parse(header_name_.as_ref()) else {
+            return Ok(());
         };
-        let value_patterns = ctx.eval_values(&self.value_patterns);
+        let value_patterns = self.eval_keys(script, delete.value_patterns)?;
+        let comparator = Comparator::from_code(delete.comparator);
+        let match_type = delete.match_type.match_type();
         let mut deleted_headers = Vec::new();
         let mut deleted_bytes = 0;
+        let mut error = None;
 
-        if ctx.runtime.protected_headers.contains(&header_name) {
-            return;
+        if self.runtime.protected_headers.contains(&header_name) {
+            return Ok(());
         }
 
-        ctx.find_headers(
+        self.find_headers(
             &[header_name],
-            self.index,
-            self.mime_anychild,
+            delete.index,
+            delete.mime_anychild,
             |header, part_id, header_pos| {
                 if !value_patterns.is_empty() {
-                    let did_match = ctx.find_header_values(header, &MimeOpts::None, |value| {
-                        for (pattern_expr, pattern) in
-                            value_patterns.iter().zip(self.value_patterns.iter())
-                        {
-                            if match &self.match_type {
-                                MatchType::Is => self.comparator.is(&value, pattern_expr),
-                                MatchType::Contains => self
-                                    .comparator
-                                    .contains(value, pattern_expr.to_string().as_ref()),
-                                MatchType::Value(rel_match) => {
-                                    self.comparator.relational(rel_match, &value, pattern_expr)
+                    let did_match = self.find_header_values(header, &MimeOptsRef::None, |value| {
+                        for key in &value_patterns {
+                            match self.key_matches(
+                                script,
+                                &comparator,
+                                &match_type,
+                                key,
+                                value,
+                                &mut Vec::new(),
+                            ) {
+                                Ok(true) => return true,
+                                Ok(false) => (),
+                                Err(err) => {
+                                    error = Some(err);
+                                    return true;
                                 }
-                                MatchType::Matches(_) => self.comparator.matches(
-                                    Some(pattern),
-                                    pattern_expr.to_string().as_ref(),
-                                    value,
-                                    0,
-                                    &mut Vec::new(),
-                                ),
-                                MatchType::Regex(_) => self.comparator.regex(
-                                    pattern,
-                                    pattern_expr,
-                                    value,
-                                    0,
-                                    &mut Vec::new(),
-                                ),
-                                MatchType::Count(_) => false,
-                                MatchType::List => false,
-                            } {
-                                return true;
                             }
                         }
                         false
                     });
 
+                    if error.is_some() {
+                        return true;
+                    }
                     if !did_match {
                         return false;
                     }
@@ -121,40 +112,23 @@ impl DeleteHeader {
             },
         );
 
+        if let Some(err) = error {
+            return Err(err);
+        }
+
         if !deleted_headers.is_empty() {
-            ctx.has_changes = true;
+            self.has_changes = true;
             for (part_id, header_pos) in deleted_headers.iter().rev() {
-                ctx.message.parts[*part_id as usize]
+                self.message.parts[*part_id as usize]
                     .headers
                     .remove(*header_pos);
             }
         }
 
-        ctx.message_size -= deleted_bytes;
+        self.message_size -= deleted_bytes;
+        Ok(())
     }
-}
 
-pub(crate) trait RemoveCrLf {
-    fn remove_crlf(&self, max_len: usize) -> String;
-}
-
-impl RemoveCrLf for &str {
-    fn remove_crlf(&self, max_len: usize) -> String {
-        let mut header_value = String::with_capacity(self.len());
-        for ch in self.chars() {
-            if !['\n', '\r'].contains(&ch) {
-                if header_value.len() + ch.len_utf8() <= max_len {
-                    header_value.push(ch);
-                } else {
-                    return header_value;
-                }
-            }
-        }
-        header_value
-    }
-}
-
-impl<'x> Context<'x> {
     pub(crate) fn insert_header(
         &mut self,
         part_id: u32,
@@ -179,5 +153,25 @@ impl<'x> Context<'x> {
         } else {
             self.message.parts[part_id as usize].headers.push(header);
         }
+    }
+}
+
+pub(crate) trait RemoveCrLf {
+    fn remove_crlf(&self, max_len: usize) -> String;
+}
+
+impl RemoveCrLf for &str {
+    fn remove_crlf(&self, max_len: usize) -> String {
+        let mut header_value = String::with_capacity(self.len());
+        for ch in self.chars() {
+            if !['\n', '\r'].contains(&ch) {
+                if header_value.len() + ch.len_utf8() <= max_len {
+                    header_value.push(ch);
+                } else {
+                    return header_value;
+                }
+            }
+        }
+        header_value
     }
 }

@@ -4,8 +4,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use super::comparator::casemap_eq;
-use crate::MAX_MATCH_VARIABLES;
+use super::comparator::{
+    casemap_eq, contains_ignore_ascii_case, ends_with_ignore_ascii_case,
+    starts_with_ignore_ascii_case,
+};
+use crate::{
+    MAX_MATCH_VARIABLES, Sieve,
+    bytecode::{Corrupt, Decoded, rec::Str},
+};
 use std::char::REPLACEMENT_CHARACTER;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +42,142 @@ pub(crate) enum PatternChar {
     Char(char),
 }
 
+const SHAPE_NONE: u8 = 0;
+const SHAPE_LITERAL: u8 = 1;
+const SHAPE_PREFIX: u8 = 2;
+const SHAPE_SUFFIX: u8 = 3;
+const SHAPE_CONTAINS: u8 = 4;
+
+const ENC_MANY: u32 = 1 << 31;
+const ENC_SINGLE: u32 = 1 << 30;
+
+impl PatternChar {
+    fn encode(self) -> u32 {
+        match self {
+            PatternChar::WildcardMany(n) => ENC_MANY | (n & (ENC_SINGLE - 1)),
+            PatternChar::WildcardSingle => ENC_SINGLE,
+            PatternChar::Char(c) => c as u32,
+        }
+    }
+
+    #[inline(always)]
+    fn decode(v: u32) -> PatternChar {
+        if v & ENC_MANY != 0 {
+            PatternChar::WildcardMany(v & (ENC_SINGLE - 1))
+        } else if v & ENC_SINGLE != 0 {
+            PatternChar::WildcardSingle
+        } else {
+            PatternChar::Char(char::from_u32(v).unwrap_or(REPLACEMENT_CHARACTER))
+        }
+    }
+}
+
+pub(crate) trait Pattern {
+    fn len(&self) -> usize;
+    fn at(&self, index: usize) -> Option<PatternChar>;
+    fn to_lower(&self) -> bool;
+    fn is_ascii(&self) -> bool;
+}
+
+impl Pattern for GlobPattern {
+    #[inline(always)]
+    fn len(&self) -> usize {
+        self.pattern.len()
+    }
+
+    #[inline(always)]
+    fn at(&self, index: usize) -> Option<PatternChar> {
+        self.pattern.get(index).copied()
+    }
+
+    #[inline(always)]
+    fn to_lower(&self) -> bool {
+        self.to_lower
+    }
+
+    #[inline(always)]
+    fn is_ascii(&self) -> bool {
+        self.is_ascii
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct GlobView<'a> {
+    to_lower: bool,
+    is_ascii: bool,
+    shape: u8,
+    literal: &'a str,
+    chars: &'a [u8],
+}
+
+impl<'a> GlobView<'a> {
+    pub(crate) fn parse(bytes: &'a [u8], sieve: &'a Sieve<'a>) -> Decoded<Self> {
+        let (head, rest) = bytes.split_first_chunk::<15>().ok_or(Corrupt)?;
+        let literal = sieve.str(Str {
+            off: u32::from_le_bytes([head[3], head[4], head[5], head[6]]),
+            len: u32::from_le_bytes([head[7], head[8], head[9], head[10]]),
+        })?;
+        let nchars = u32::from_le_bytes([head[11], head[12], head[13], head[14]]) as usize;
+        let chars = rest
+            .get(..nchars.checked_mul(4).ok_or(Corrupt)?)
+            .ok_or(Corrupt)?;
+        Ok(GlobView {
+            to_lower: head[0] != 0,
+            is_ascii: head[1] != 0,
+            shape: head[2],
+            literal,
+            chars,
+        })
+    }
+
+    pub(crate) fn matches(&self, value: &str) -> bool {
+        match self.shape {
+            SHAPE_NONE => matches_value(self, value),
+            shape => shape_matches(shape, self.literal, value, self.to_lower),
+        }
+    }
+
+    pub(crate) fn capture(
+        &self,
+        value: &str,
+        capture_positions: u64,
+        captured_values: &mut Vec<(usize, String)>,
+    ) -> bool {
+        capture_value(self, value, capture_positions, captured_values)
+    }
+}
+
+impl Pattern for GlobView<'_> {
+    #[inline(always)]
+    fn len(&self) -> usize {
+        self.chars.len() / 4
+    }
+
+    #[inline(always)]
+    fn at(&self, index: usize) -> Option<PatternChar> {
+        self.chars
+            .get(index * 4..index * 4 + 4)
+            .and_then(|b| b.try_into().ok())
+            .map(|b| PatternChar::decode(u32::from_le_bytes(b)))
+    }
+
+    #[inline(always)]
+    fn to_lower(&self) -> bool {
+        self.to_lower
+    }
+
+    #[inline(always)]
+    fn is_ascii(&self) -> bool {
+        self.is_ascii
+    }
+}
+
+impl Default for CompiledGlob {
+    fn default() -> Self {
+        CompiledGlob::compile("", false)
+    }
+}
+
 impl CompiledGlob {
     pub fn compile(pattern: &str, to_lower: bool) -> Self {
         let pattern = GlobPattern::compile(pattern, to_lower);
@@ -62,45 +204,69 @@ impl CompiledGlob {
         self.pattern
             .capture(value, capture_positions, captured_values)
     }
+
+    pub(crate) fn shape(&self) -> Option<(u8, &str)> {
+        self.shape.as_ref().map(|shape| match shape {
+            GlobShape::Literal(s) => (SHAPE_LITERAL, s.as_str()),
+            GlobShape::Prefix(s) => (SHAPE_PREFIX, s.as_str()),
+            GlobShape::Suffix(s) => (SHAPE_SUFFIX, s.as_str()),
+            GlobShape::Contains(s) => (SHAPE_CONTAINS, s.as_str()),
+        })
+    }
+
+    pub(crate) fn to_lower(&self) -> bool {
+        self.pattern.to_lower
+    }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        self.pattern.is_ascii
+    }
+
+    pub(crate) fn encoded_chars(&self) -> impl Iterator<Item = u32> + '_ {
+        self.pattern.pattern.iter().map(|c| c.encode())
+    }
 }
 
 impl GlobShape {
     fn matches(&self, value: &str, to_lower: bool) -> bool {
-        match self {
-            GlobShape::Literal(literal) => {
-                if to_lower {
-                    casemap_eq(value, literal)
-                } else {
-                    value == literal
-                }
+        let (shape, literal) = match self {
+            GlobShape::Literal(literal) => (SHAPE_LITERAL, literal),
+            GlobShape::Prefix(literal) => (SHAPE_PREFIX, literal),
+            GlobShape::Suffix(literal) => (SHAPE_SUFFIX, literal),
+            GlobShape::Contains(literal) => (SHAPE_CONTAINS, literal),
+        };
+        shape_matches(shape, literal, value, to_lower)
+    }
+}
+
+fn shape_matches(shape: u8, literal: &str, value: &str, to_lower: bool) -> bool {
+    match shape {
+        SHAPE_LITERAL => {
+            if to_lower {
+                casemap_eq(value, literal)
+            } else {
+                value == literal
             }
-            GlobShape::Prefix(prefix) => {
-                if !to_lower {
-                    value.starts_with(prefix.as_str())
-                } else if value.is_ascii() && prefix.is_ascii() {
-                    value.len() >= prefix.len()
-                        && value.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
-                } else {
-                    value.to_lowercase().starts_with(prefix.as_str())
-                }
+        }
+        SHAPE_PREFIX => {
+            if !to_lower {
+                value.starts_with(literal)
+            } else {
+                starts_with_ignore_ascii_case(value, literal)
             }
-            GlobShape::Suffix(suffix) => {
-                if !to_lower {
-                    value.ends_with(suffix.as_str())
-                } else if value.is_ascii() && suffix.is_ascii() {
-                    value.len() >= suffix.len()
-                        && value.as_bytes()[value.len() - suffix.len()..]
-                            .eq_ignore_ascii_case(suffix.as_bytes())
-                } else {
-                    value.to_lowercase().ends_with(suffix.as_str())
-                }
+        }
+        SHAPE_SUFFIX => {
+            if !to_lower {
+                value.ends_with(literal)
+            } else {
+                ends_with_ignore_ascii_case(value, literal)
             }
-            GlobShape::Contains(needle) => {
-                if !to_lower {
-                    value.contains(needle.as_str())
-                } else {
-                    value.to_lowercase().contains(needle.as_str())
-                }
+        }
+        _ => {
+            if !to_lower {
+                value.contains(literal)
+            } else {
+                contains_ignore_ascii_case(value, literal)
             }
         }
     }
@@ -183,246 +349,263 @@ impl GlobPattern {
         })
     }
 
-    // Credits: Algorithm ported from https://research.swtch.com/glob
     pub fn matches(&self, value: &str) -> bool {
-        if self.is_ascii && value.is_ascii() {
-            self.matches_ascii(value.as_bytes())
-        } else {
-            self.matches_chars(&self.fold(value))
-        }
-    }
-
-    fn fold(&self, value: &str) -> Vec<char> {
-        if self.to_lower {
-            value.to_lowercase().chars().collect::<Vec<_>>()
-        } else {
-            value.chars().collect::<Vec<_>>()
-        }
-    }
-
-    fn matches_ascii(&self, value: &[u8]) -> bool {
-        let mut px = 0;
-        let mut nx = 0;
-        let mut next_px = 0;
-        let mut next_nx = 0;
-
-        while px < self.pattern.len() || nx < value.len() {
-            match self.pattern.get(px) {
-                Some(PatternChar::Char(char)) => {
-                    let char = *char as u8;
-                    let matched = if self.to_lower {
-                        matches!(value.get(nx), Some(nc) if nc.to_ascii_lowercase() == char)
-                    } else {
-                        matches!(value.get(nx), Some(nc) if *nc == char)
-                    };
-                    if matched {
-                        px += 1;
-                        nx += 1;
-                        continue;
-                    }
-                }
-                Some(PatternChar::WildcardSingle) if nx < value.len() => {
-                    px += 1;
-                    nx += 1;
-                    continue;
-                }
-                Some(PatternChar::WildcardMany(_)) => {
-                    next_px = px;
-                    next_nx = nx + 1;
-                    px += 1;
-                    continue;
-                }
-                _ => (),
-            }
-            if 0 < next_nx && next_nx <= value.len() {
-                px = next_px;
-                nx = next_nx;
-                continue;
-            }
-            return false;
-        }
-        true
-    }
-
-    fn matches_chars(&self, value: &[char]) -> bool {
-        let mut px = 0;
-        let mut nx = 0;
-        let mut next_px = 0;
-        let mut next_nx = 0;
-
-        while px < self.pattern.len() || nx < value.len() {
-            match self.pattern.get(px) {
-                Some(PatternChar::Char(char)) => {
-                    if matches!(value.get(nx), Some(nc) if nc == char) {
-                        px += 1;
-                        nx += 1;
-                        continue;
-                    }
-                }
-                Some(PatternChar::WildcardSingle) if nx < value.len() => {
-                    px += 1;
-                    nx += 1;
-                    continue;
-                }
-                Some(PatternChar::WildcardMany(_)) => {
-                    next_px = px;
-                    next_nx = nx + 1;
-                    px += 1;
-                    continue;
-                }
-                _ => (),
-            }
-            if 0 < next_nx && next_nx <= value.len() {
-                px = next_px;
-                nx = next_nx;
-                continue;
-            }
-            return false;
-        }
-        true
+        matches_value(self, value)
     }
 
     pub fn capture(
         &self,
-        value_: &str,
+        value: &str,
         capture_positions: u64,
         captured_values: &mut Vec<(usize, String)>,
     ) -> bool {
-        let value = if self.to_lower {
-            let mut value = Vec::with_capacity(value_.len());
-            for char in value_.chars() {
-                if char.is_uppercase() {
-                    for (pos, lowerchar) in char.to_lowercase().enumerate() {
-                        value.push((
-                            lowerchar,
-                            if pos == 0 {
-                                char
-                            } else {
-                                REPLACEMENT_CHARACTER
-                            },
-                        ));
-                    }
+        capture_value(self, value, capture_positions, captured_values)
+    }
+}
+
+fn matches_value(pattern: &impl Pattern, value: &str) -> bool {
+    if pattern.is_ascii() && value.is_ascii() {
+        matches_ascii(pattern, value.as_bytes())
+    } else if pattern.to_lower() {
+        matches_chars(pattern, &value.to_lowercase().chars().collect::<Vec<_>>())
+    } else {
+        matches_chars(pattern, &value.chars().collect::<Vec<_>>())
+    }
+}
+
+fn matches_ascii(pattern: &impl Pattern, value: &[u8]) -> bool {
+    let mut px = 0;
+    let mut nx = 0;
+    let mut next_px = 0;
+    let mut next_nx = 0;
+    let len = pattern.len();
+    let to_lower = pattern.to_lower();
+
+    while px < len || nx < value.len() {
+        match pattern.at(px) {
+            Some(PatternChar::Char(char)) => {
+                let char = char as u8;
+                let matched = if to_lower {
+                    matches!(value.get(nx), Some(nc) if nc.to_ascii_lowercase() == char)
                 } else {
-                    value.push((char, char));
+                    matches!(value.get(nx), Some(nc) if *nc == char)
+                };
+                if matched {
+                    px += 1;
+                    nx += 1;
+                    continue;
                 }
             }
-            value
-        } else {
-            value_.chars().map(|char| (char, char)).collect::<Vec<_>>()
-        };
+            Some(PatternChar::WildcardSingle) if nx < value.len() => {
+                px += 1;
+                nx += 1;
+                continue;
+            }
+            Some(PatternChar::WildcardMany(_)) => {
+                next_px = px;
+                next_nx = nx + 1;
+                px += 1;
+                continue;
+            }
+            _ => (),
+        }
+        if 0 < next_nx && next_nx <= value.len() {
+            px = next_px;
+            nx = next_nx;
+            continue;
+        }
+        return false;
+    }
+    true
+}
 
-        let mut match_pos = vec![0usize; self.pattern.len()];
+fn matches_chars(pattern: &impl Pattern, value: &[char]) -> bool {
+    let mut px = 0;
+    let mut nx = 0;
+    let mut next_px = 0;
+    let mut next_nx = 0;
+    let len = pattern.len();
 
-        let mut px = 0;
-        let mut nx = 0;
-        let mut next_px = 0;
-        let mut next_nx = 0;
-
-        while px < self.pattern.len() || nx < value.len() {
-            match self.pattern.get(px) {
-                Some(PatternChar::Char(char)) => {
-                    if matches!(value.get(nx), Some(nc) if &nc.0 == char) {
-                        match_pos[px] = nx;
-                        px += 1;
-                        nx += 1;
-                        continue;
-                    }
+    while px < len || nx < value.len() {
+        match pattern.at(px) {
+            Some(PatternChar::Char(char)) => {
+                if matches!(value.get(nx), Some(nc) if *nc == char) {
+                    px += 1;
+                    nx += 1;
+                    continue;
                 }
-                Some(PatternChar::WildcardSingle) if nx < value.len() => {
+            }
+            Some(PatternChar::WildcardSingle) if nx < value.len() => {
+                px += 1;
+                nx += 1;
+                continue;
+            }
+            Some(PatternChar::WildcardMany(_)) => {
+                next_px = px;
+                next_nx = nx + 1;
+                px += 1;
+                continue;
+            }
+            _ => (),
+        }
+        if 0 < next_nx && next_nx <= value.len() {
+            px = next_px;
+            nx = next_nx;
+            continue;
+        }
+        return false;
+    }
+    true
+}
+
+fn capture_value(
+    pattern: &impl Pattern,
+    value_: &str,
+    capture_positions: u64,
+    captured_values: &mut Vec<(usize, String)>,
+) -> bool {
+    let value = if pattern.to_lower() {
+        let mut value = Vec::with_capacity(value_.len());
+        for char in value_.chars() {
+            if char.is_uppercase() {
+                for (pos, lowerchar) in char.to_lowercase().enumerate() {
+                    value.push((
+                        lowerchar,
+                        if pos == 0 {
+                            char
+                        } else {
+                            REPLACEMENT_CHARACTER
+                        },
+                    ));
+                }
+            } else {
+                value.push((char, char));
+            }
+        }
+        value
+    } else {
+        value_.chars().map(|char| (char, char)).collect::<Vec<_>>()
+    };
+
+    let len = pattern.len();
+    let mut match_pos = vec![0usize; len];
+
+    let mut px = 0;
+    let mut nx = 0;
+    let mut next_px = 0;
+    let mut next_nx = 0;
+
+    while px < len || nx < value.len() {
+        match pattern.at(px) {
+            Some(PatternChar::Char(char)) => {
+                if matches!(value.get(nx), Some(nc) if nc.0 == char) {
                     match_pos[px] = nx;
                     px += 1;
                     nx += 1;
                     continue;
                 }
-                Some(PatternChar::WildcardMany(_)) => {
-                    match_pos[px] = nx;
-                    next_px = px;
-                    next_nx = nx + 1;
-                    px += 1;
-                    continue;
-                }
-                _ => (),
             }
-            if 0 < next_nx && next_nx <= value.len() {
-                px = next_px;
-                nx = next_nx;
+            Some(PatternChar::WildcardSingle) if nx < value.len() => {
+                match_pos[px] = nx;
+                px += 1;
+                nx += 1;
                 continue;
             }
-            return false;
-        }
-
-        let mut last_pos = 0;
-
-        captured_values.clear();
-        if capture_positions & 1 != 0 {
-            captured_values.push((0usize, value_.to_string()));
-        }
-
-        let mut wildcard_pos: usize = 1;
-        for (px, item) in self.pattern.iter().enumerate() {
-            if wildcard_pos > MAX_MATCH_VARIABLES as usize {
-                break;
+            Some(PatternChar::WildcardMany(_)) => {
+                match_pos[px] = nx;
+                next_px = px;
+                next_nx = nx + 1;
+                px += 1;
+                continue;
             }
-            let match_pos = match_pos[px];
-            last_pos = match item {
-                PatternChar::WildcardMany(num) => {
-                    let mut num = *num;
-                    while num > 1 {
-                        if capture_positions & (1 << wildcard_pos) != 0 {
-                            captured_values.push((wildcard_pos, String::with_capacity(0)));
-                        }
-                        wildcard_pos += 1;
-                        num -= 1;
-                    }
-
-                    if capture_positions & (1 << wildcard_pos) != 0 {
-                        if let Some(range) = value.get(last_pos..match_pos) {
-                            captured_values.push((
-                                wildcard_pos,
-                                range
-                                    .iter()
-                                    .filter_map(|(_, char)| {
-                                        if char != &REPLACEMENT_CHARACTER {
-                                            Some(char)
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .collect::<String>(),
-                            ));
-                        } else {
-                            debug_assert!(false, "Glob pattern failure.");
-                            return false;
-                        }
-                    }
-                    wildcard_pos += 1;
-                    match_pos
-                }
-                PatternChar::WildcardSingle => {
-                    if capture_positions & (1 << wildcard_pos) != 0 {
-                        if let Some((char, orig_char)) = value.get(match_pos) {
-                            captured_values.push((
-                                wildcard_pos,
-                                (if orig_char != &REPLACEMENT_CHARACTER {
-                                    orig_char
-                                } else {
-                                    char
-                                })
-                                .to_string(),
-                            ));
-                        } else {
-                            debug_assert!(false, "Glob pattern failure.");
-                            return false;
-                        }
-                    }
-                    wildcard_pos += 1;
-                    match_pos
-                }
-                PatternChar::Char(_) => match_pos,
-            } + 1;
+            _ => (),
         }
-        true
+        if 0 < next_nx && next_nx <= value.len() {
+            px = next_px;
+            nx = next_nx;
+            continue;
+        }
+        return false;
     }
+
+    let mut last_pos = 0;
+
+    captured_values.clear();
+    if capture_positions & 1 != 0 {
+        captured_values.push((0usize, value_.to_string()));
+    }
+
+    let mut wildcard_pos: usize = 1;
+    for px in 0..len {
+        if wildcard_pos > MAX_MATCH_VARIABLES as usize {
+            break;
+        }
+        let Some(item) = pattern.at(px) else {
+            break;
+        };
+        let match_pos = match_pos[px];
+        last_pos = match item {
+            PatternChar::WildcardMany(num) => {
+                let mut num = num;
+                while num > 1 {
+                    if is_captured(capture_positions, wildcard_pos) {
+                        captured_values.push((wildcard_pos, String::with_capacity(0)));
+                    }
+                    wildcard_pos += 1;
+                    num -= 1;
+                }
+
+                if is_captured(capture_positions, wildcard_pos) {
+                    if let Some(range) = value.get(last_pos..match_pos) {
+                        captured_values.push((
+                            wildcard_pos,
+                            range
+                                .iter()
+                                .filter_map(|(_, char)| {
+                                    if char != &REPLACEMENT_CHARACTER {
+                                        Some(char)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<String>(),
+                        ));
+                    } else {
+                        debug_assert!(false, "Glob pattern failure.");
+                        return false;
+                    }
+                }
+                wildcard_pos += 1;
+                match_pos
+            }
+            PatternChar::WildcardSingle => {
+                if is_captured(capture_positions, wildcard_pos) {
+                    if let Some((char, orig_char)) = value.get(match_pos) {
+                        captured_values.push((
+                            wildcard_pos,
+                            (if orig_char != &REPLACEMENT_CHARACTER {
+                                orig_char
+                            } else {
+                                char
+                            })
+                            .to_string(),
+                        ));
+                    } else {
+                        debug_assert!(false, "Glob pattern failure.");
+                        return false;
+                    }
+                }
+                wildcard_pos += 1;
+                match_pos
+            }
+            PatternChar::Char(_) => match_pos,
+        } + 1;
+    }
+    true
+}
+#[inline(always)]
+fn is_captured(capture_positions: u64, wildcard_pos: usize) -> bool {
+    wildcard_pos <= MAX_MATCH_VARIABLES as usize && capture_positions & (1 << wildcard_pos) != 0
 }
 
 #[cfg(test)]

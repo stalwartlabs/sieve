@@ -4,7 +4,79 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use sieve::{Compiler, Event, Input, Runtime, runtime::RuntimeError};
+use sieve::{Arena, Compiler, Context, Handler, Reply, Runtime, SieveAction, Status};
+
+struct Printer {
+    messages: Vec<String>,
+    raw_message: &'static str,
+}
+
+impl<'x> Handler<'x> for Printer {
+    fn action(&mut self, _: &Context<'x>, action: SieveAction<'_>) -> Reply<()> {
+        match action {
+            SieveAction::Keep { flags, message_id } => {
+                println!(
+                    "Keep message '{}' with flags {:?}.",
+                    self.message(message_id),
+                    flags
+                );
+            }
+            SieveAction::Discard => {
+                println!("Discard message.");
+            }
+            SieveAction::Reject { reason, .. } => {
+                println!("Reject message with reason {reason:?}.");
+            }
+            SieveAction::FileInto {
+                folder,
+                flags,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "File message '{}' in folder {:?} with flags {:?}.",
+                    self.message(message_id),
+                    folder,
+                    flags
+                );
+            }
+            SieveAction::SendMessage {
+                recipient,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "Send message '{}' to {:?}.",
+                    self.message(message_id),
+                    recipient
+                );
+            }
+            SieveAction::Notify {
+                message, method, ..
+            } => {
+                println!("Notify URI {method:?} with message {message:?}");
+            }
+            SieveAction::SetEnvelope { envelope, value } => {
+                println!("Set envelope {envelope:?} to {value:?}");
+            }
+            SieveAction::CreatedMessage { message, .. } => {
+                self.messages
+                    .push(String::from_utf8_lossy(&message).into_owned());
+            }
+        }
+        Reply::Ready(())
+    }
+}
+
+impl Printer {
+    fn message(&self, message_id: usize) -> &str {
+        if message_id > 0 {
+            self.messages[message_id - 1].as_str()
+        } else {
+            self.raw_message
+        }
+    }
+}
 
 fn main() {
     let text_script = br#"
@@ -27,154 +99,25 @@ We're putting new coversheets on all the TPS reports before they go out now.
 So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
 "#;
 
-    // Compile
     let compiler = Compiler::new();
     let script = compiler.compile(text_script).unwrap();
 
-    // Build runtime
     let runtime = Runtime::new();
 
-    // Create filter instance
-    let mut instance = runtime.filter(raw_message.as_bytes());
-    let mut input = Input::script("my-script", script);
-    let mut messages: Vec<String> = Vec::new();
+    let mut arena = Arena::new();
+    let mut instance = runtime.filter(raw_message.as_bytes(), &script, &mut arena);
+    let mut handler = Printer {
+        messages: Vec::new(),
+        raw_message,
+    };
 
-    // Start event loop
-    while let Some(result) = instance.run(input) {
-        match result {
-            Ok(event) => match event {
-                Event::IncludeScript { name, optional } => {
-                    // NOTE: Just for demonstration purposes, script name needs to be validated first.
-                    if let Ok(bytes) = std::fs::read(name.as_str()) {
-                        let script = compiler.compile(&bytes).unwrap();
-                        input = Input::script(name, script);
-                    } else if optional {
-                        input = Input::False;
-                    } else {
-                        panic!("Script {name} not found.");
-                    }
-                }
-                Event::MailboxExists { .. } => {
-                    // Set to true if the mailbox exists
-                    input = false.into();
-                }
-                Event::ListContains { .. } => {
-                    // Set to true if the list(s) contains an entry
-                    input = false.into();
-                }
-                Event::DuplicateId { .. } => {
-                    // Set to true if the ID is duplicate
-                    input = false.into();
-                }
-                Event::SetEnvelope { envelope, value } => {
-                    println!("Set envelope {envelope:?} to {value:?}");
-                    input = true.into();
-                }
-
-                Event::Keep { flags, message_id } => {
-                    println!(
-                        "Keep message '{}' with flags {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        flags
-                    );
-                    input = true.into();
-                }
-                Event::Discard => {
-                    println!("Discard message.");
-                    input = true.into();
-                }
-                Event::Reject { reason, .. } => {
-                    println!("Reject message with reason {reason:?}.");
-                    input = true.into();
-                }
-                Event::FileInto {
-                    folder,
-                    flags,
-                    message_id,
-                    ..
-                } => {
-                    println!(
-                        "File message '{}' in folder {:?} with flags {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        folder,
-                        flags
-                    );
-                    input = true.into();
-                }
-                Event::SendMessage {
-                    recipient,
-                    message_id,
-                    ..
-                } => {
-                    println!(
-                        "Send message '{}' to {:?}.",
-                        if message_id > 0 {
-                            messages[message_id - 1].as_str()
-                        } else {
-                            raw_message
-                        },
-                        recipient
-                    );
-                    input = true.into();
-                }
-                Event::Notify {
-                    message, method, ..
-                } => {
-                    println!("Notify URI {method:?} with message {message:?}");
-                    input = true.into();
-                }
-                Event::CreatedMessage { message, .. } => {
-                    messages.push(String::from_utf8(message).unwrap());
-                    input = true.into();
-                }
-                Event::Function { id, arguments } => {
-                    println!(
-                        "Script executed external function {id} with parameters {arguments:?}"
-                    );
-                    // Return variable result back to interpreter
-                    input = Input::result("hello world".into());
-                }
-
-                #[cfg(test)]
-                _ => unreachable!(),
-            },
+    loop {
+        match instance.run(&mut handler) {
+            Ok(Status::Finished) => break,
+            Ok(Status::Pending) => instance.resume(true),
             Err(error) => {
-                match error {
-                    RuntimeError::TooManyIncludes => {
-                        eprintln!("Too many included scripts.");
-                    }
-                    RuntimeError::InvalidInstruction(instruction) => {
-                        eprintln!(
-                            "Invalid instruction {:?} found at {}:{}.",
-                            instruction.name(),
-                            instruction.line_num(),
-                            instruction.line_pos()
-                        );
-                    }
-                    RuntimeError::ScriptErrorMessage(message) => {
-                        eprintln!("Script called the 'error' function with {message:?}");
-                    }
-                    RuntimeError::CapabilityNotAllowed(capability) => {
-                        eprintln!(
-                            "Capability {capability:?} has been disabled by the administrator.",
-                        );
-                    }
-                    RuntimeError::CapabilityNotSupported(capability) => {
-                        eprintln!("Capability {capability:?} not supported.");
-                    }
-                    RuntimeError::CPULimitReached => {
-                        eprintln!("Script exceeded the configured CPU limit.");
-                    }
-                }
-                input = true.into();
+                println!("Runtime error {error}");
+                break;
             }
         }
     }

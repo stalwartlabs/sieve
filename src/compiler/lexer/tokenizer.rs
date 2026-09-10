@@ -10,11 +10,11 @@ use crate::{
     compiler::{CompileError, ErrorType, Number},
     runtime::eval::IntoString,
 };
-use std::{iter::Peekable, slice::Iter};
 
 pub(crate) struct Tokenizer<'x> {
     pub compiler: &'x Compiler,
-    pub iter: Peekable<Iter<'x, u8>>,
+    bytes: &'x [u8],
+    cursor: usize,
     pub buf: Vec<u8>,
     pub next_token: Vec<TokenInfo>,
 
@@ -57,12 +57,39 @@ pub(crate) struct StringType {
     has_dots: bool,
 }
 
+impl StringType {
+    fn classify(self, buf: &[u8]) -> StringType {
+        let mut result = self;
+        let mut dots = 0;
+        let mut last = 0;
+        for &ch in buf {
+            match ch {
+                b'0'..=b'9' => result.has_digits = true,
+                b'.' => dots += 1,
+                b'-' => (),
+                b'{' if last == b'$' || last == b'%' => {
+                    result.maybe_variable = true;
+                    result.has_other = true;
+                }
+                _ => result.has_other = true,
+            }
+            last = ch;
+        }
+        if dots > 1 {
+            result.has_other = true;
+        }
+        result.has_dots = dots > 0;
+        result
+    }
+}
+
 impl<'x> Tokenizer<'x> {
     pub fn new(compiler: &'x Compiler, bytes: &'x [u8]) -> Self {
         Tokenizer {
             compiler,
-            iter: bytes.iter().peekable(),
-            buf: Vec::with_capacity(bytes.len() / 2),
+            bytes,
+            cursor: 0,
+            buf: Vec::with_capacity(256),
             pos: usize::MAX,
             line_num: 1,
             line_start: 0,
@@ -153,6 +180,7 @@ impl<'x> Tokenizer<'x> {
 
     pub fn get_string(&mut self, str_type: StringType) -> Result<TokenInfo, CompileError> {
         if self.buf.len() < self.compiler.max_string_size {
+            let str_type = str_type.classify(&self.buf);
             let token = if str_type.maybe_variable {
                 Token::StringVariable(self.buf.to_vec())
             } else {
@@ -231,7 +259,8 @@ impl<'x> Tokenizer<'x> {
 
     #[inline(always)]
     pub fn next_byte(&mut self) -> Option<(u8, u8)> {
-        self.iter.next().map(|&ch| {
+        self.bytes.get(self.cursor).map(|&ch| {
+            self.cursor += 1;
             let last_ch = self.last_ch;
             self.pos = self.pos.wrapping_add(1);
             self.last_ch = ch;
@@ -241,7 +270,63 @@ impl<'x> Tokenizer<'x> {
 
     #[inline(always)]
     pub fn peek_byte(&mut self) -> Option<u8> {
-        self.iter.peek().map(|ch| **ch)
+        self.bytes.get(self.cursor).copied()
+    }
+
+    #[inline(always)]
+    fn skip_word_chunk(&mut self) {
+        let rest = &self.bytes[self.cursor..];
+        let len = rest
+            .iter()
+            .position(|b| !matches!(b, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'$'))
+            .unwrap_or(rest.len());
+        if len > 0 {
+            self.buf.extend_from_slice(&rest[..len]);
+            self.cursor += len;
+            self.pos = self.pos.wrapping_add(len);
+            self.last_ch = rest[len - 1];
+        }
+    }
+
+    #[inline(always)]
+    fn skip_blank_chunk(&mut self) {
+        let rest = &self.bytes[self.cursor..];
+        let len = rest
+            .iter()
+            .position(|b| !matches!(b, b' ' | b'\t' | b'\r'))
+            .unwrap_or(rest.len());
+        if len > 0 {
+            self.cursor += len;
+            self.pos = self.pos.wrapping_add(len);
+            self.last_ch = rest[len - 1];
+        }
+    }
+
+    #[inline(always)]
+    fn skip_comment_chunk(&mut self) {
+        let rest = &self.bytes[self.cursor..];
+        let len = memchr::memchr(b'\n', rest).unwrap_or(rest.len());
+        if len > 0 {
+            self.cursor += len;
+            self.pos = self.pos.wrapping_add(len);
+            self.last_ch = rest[len - 1];
+        }
+    }
+
+    #[inline(always)]
+    fn skip_string_chunk(&mut self) {
+        let rest = &self.bytes[self.cursor..];
+        let len = memchr::memchr3(b'"', b'\\', b'\n', rest).unwrap_or(rest.len());
+        if len > 0 {
+            if self.buf.is_empty() {
+                self.token_line_num = self.line_num;
+                self.token_line_pos = self.pos - self.line_start;
+            }
+            self.buf.extend_from_slice(&rest[..len]);
+            self.cursor += len;
+            self.pos = self.pos.wrapping_add(len);
+            self.last_ch = rest[len - 1];
+        }
     }
 
     pub fn unwrap_next(&mut self) -> Result<TokenInfo, CompileError> {
@@ -332,6 +417,7 @@ impl Iterator for Tokenizer<'_> {
                 State::None => match ch {
                     b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'$' => {
                         self.push_byte(ch);
+                        self.skip_word_chunk();
                     }
                     b'A'..=b'Z' => {
                         self.push_byte(ch.to_ascii_lowercase());
@@ -412,6 +498,7 @@ impl Iterator for Tokenizer<'_> {
                         }
                     }
                     b' ' | b'\t' | b'\r' => {
+                        self.skip_blank_chunk();
                         if let Some(token) = self.get_current_token() {
                             return Some(Ok(token));
                         }
@@ -433,9 +520,11 @@ impl Iterator for Tokenizer<'_> {
                     if ch == b'\n' {
                         self.state = State::None;
                         self.new_line();
+                    } else {
+                        self.skip_comment_chunk();
                     }
                 }
-                State::QuotedString(mut str_type) => match ch {
+                State::QuotedString(str_type) => match ch {
                     b'"' if last_ch != b'\\' => {
                         self.state = State::None;
                         return Some(self.get_string(str_type));
@@ -443,34 +532,13 @@ impl Iterator for Tokenizer<'_> {
                     b'\n' => {
                         self.new_line();
                         self.push_byte(b'\n');
-                        str_type.has_other = true;
-                        self.state = State::QuotedString(str_type);
-                    }
-                    b'{' if (last_ch == b'$' || last_ch == b'%') => {
-                        str_type.maybe_variable = true;
-                        self.state = State::QuotedString(str_type);
-                        self.push_byte(ch);
+                        self.skip_string_chunk();
                     }
                     b'\\' => {
                         if last_ch == b'\\' {
                             self.push_byte(ch);
+                            self.skip_string_chunk();
                         }
-                    }
-                    b'0'..=b'9' => {
-                        if !str_type.has_digits {
-                            str_type.has_digits = true;
-                            self.state = State::QuotedString(str_type);
-                        }
-                        self.push_byte(ch);
-                    }
-                    b'.' => {
-                        if !str_type.has_dots {
-                            str_type.has_dots = true;
-                        } else {
-                            str_type.has_other = true;
-                        }
-                        self.state = State::QuotedString(str_type);
-                        self.push_byte(ch);
                     }
                     _ => {
                         let ch = if last_ch == b'\\' {
@@ -483,11 +551,8 @@ impl Iterator for Tokenizer<'_> {
                         } else {
                             ch
                         };
-                        if !str_type.has_other && ch != b'-' {
-                            str_type.has_other = true;
-                            self.state = State::QuotedString(str_type);
-                        }
                         self.push_byte(ch);
+                        self.skip_string_chunk();
                     }
                 },
                 State::MultiLine(mut str_type) => match ch {

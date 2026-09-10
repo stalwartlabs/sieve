@@ -8,7 +8,7 @@ license = "AGPL-3.0-only"
 keywords = ["sieve", "interpreter", "compiler", "email", "mail"]
 categories = ["email", "compilers"]
 readme = "README.md"
-version = "0.8.1"
+version = "1.0.0"
 edition = "2024"
 
 [lib]
@@ -17,21 +17,22 @@ doctest = false
 
 [dependencies]
 mail-parser = { version = "0.11", features = ["full_encoding"] }
-mail-builder = { version = "0.5" } 
+mail-builder = { version = "0.5" }
 hashify = { version = "0.2" }
 ahash = { version = "0.8.0" }
 fancy-regex = "0.19.0"
-arc-swap = "1.7.1"
-rkyv = { version = "0.8", optional = true }
+bumpalo = { version = "3.20", features = ["collections"] }
+memchr = "2.7"
+smallvec = "1.15"
+hashbrown = "0.17.1"
 serde = { version = "1.0", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
-mail-parser = { version = "0.11", features = ["full_encoding", "serde", "rkyv"] }
+mail-parser = { version = "0.11", features = ["full_encoding", "serde"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 evalexpr = "13.1.0"
 
 [features]
 default = []
-rkyv = ["dep:rkyv", "mail-parser/rkyv"]
 serde = ["dep:serde", "mail-parser/serde"]

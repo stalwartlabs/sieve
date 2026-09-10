@@ -4,66 +4,90 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{borrow::Cow, sync::Arc, time::SystemTime};
-
-use ahash::AHashMap;
-use mail_parser::Message;
-
-use crate::{
-    Context, Envelope, Event, Input, MAX_LOCAL_VARIABLES, MAX_MATCH_VARIABLES, Metadata, Runtime,
-    Sieve, SpamStatus, VirusStatus,
-    compiler::grammar::{Capability, instruction::Instruction},
-};
-
+use super::Arena;
 use super::{
     RuntimeError, Variable,
-    actions::action_include::IncludeResult,
+    handler::{Action, Handler, Input, Reply, Script, Status},
     tests::{TestResult, test_envelope::parse_envelope_address},
+    variable::Array,
 };
+use crate::{
+    Context, Envelope, Metadata, Runtime, Sieve, SpamStatus, VirusStatus,
+    bytecode::{
+        cursor::Cursor,
+        ops,
+        rec::{Rec, tag},
+    },
+    compiler::grammar::Capability,
+};
+use ahash::AHashMap;
+use mail_parser::Message;
+use std::{borrow::Cow, cell::Cell, time::SystemTime};
 
-#[derive(Clone, Debug)]
-pub(crate) struct ScriptStack {
-    pub(crate) script: Arc<Sieve>,
-    pub(crate) prev_constants: Arc<[Arc<str>]>,
+#[derive(Clone, Copy)]
+pub(crate) struct Frame<'x> {
+    pub(crate) script: &'x Sieve<'x>,
     pub(crate) prev_pos: usize,
-    pub(crate) prev_vars_local: Vec<Variable>,
-    pub(crate) prev_vars_match: Vec<Variable>,
+    pub(crate) local_base: usize,
+    pub(crate) match_base: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Pending<'x> {
+    Idle,
+    Test { is_not: bool },
+    Function,
+    Include { name: Script<'x>, optional: bool },
+    Action,
+    Finished,
+    Aborted,
 }
 
 impl<'x> Context<'x> {
-    #[cfg(not(test))]
-    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
+    pub fn new(
+        runtime: &'x Runtime,
+        message: Message<'x>,
+        script: &'x Sieve<'x>,
+        arena: &'x mut Arena,
+    ) -> Self {
+        arena.reset();
+        arena.bump.set_allocation_limit(Some(runtime.memory_limit));
+        let message_size = message.raw_message.len();
         Context {
-            #[cfg(test)]
-            runtime: runtime.clone(),
-            #[cfg(not(test))]
             runtime,
             message,
+            script,
+            frames: Vec::with_capacity(2),
+            local_base: 0,
+            match_base: 0,
             part: 0,
-            part_iter: Vec::new().into_iter(),
+            part_iter: Vec::new(),
+            part_iter_pos: 0,
             part_iter_stack: Vec::new(),
-            pos: usize::MAX,
+            pos: 0,
             test_result: false,
-            script_cache: AHashMap::new(),
-            script_stack: Vec::with_capacity(0),
+            pending: Pending::Idle,
+            error: None,
+            rejected: false,
+            included: Vec::new(),
             vars_global: AHashMap::new(),
             vars_env: AHashMap::new(),
-            vars_local: Vec::with_capacity(0),
-            vars_match: Vec::with_capacity(0),
+            vars_local: Vec::with_capacity(script.num_vars()),
+            vars_match: Vec::with_capacity(script.num_match_vars()),
             expr_stack: Vec::with_capacity(16),
             expr_pos: 0,
             envelope: Vec::new(),
             metadata: Vec::new(),
-            message_size: usize::MAX,
-            final_event: Event::Keep {
-                flags: Vec::with_capacity(0),
+            message_size,
+            final_action: Some(Action::Keep {
+                flags: &[],
                 message_id: 0,
-            }
-            .into(),
-            constants: Arc::from([]),
+            }),
             flags: Vec::new(),
-            queued_events: vec![].into_iter(),
+            actions: Vec::new(),
             has_changes: false,
+            oom: Cell::new(false),
+            raw_message_copy: Cell::new(None),
             user_address: "".into(),
             user_full_name: "".into(),
             current_time: SystemTime::now()
@@ -77,420 +101,920 @@ impl<'x> Context<'x> {
             main_message_id: 0,
             virus_status: VirusStatus::Unknown,
             spam_status: SpamStatus::Unknown,
+            arena,
         }
     }
 
-    #[allow(clippy::while_let_on_iterator)]
-    pub fn run(&mut self, input: Input) -> Option<Result<Event, RuntimeError>> {
-        match input {
-            Input::True => self.test_result ^= true,
-            Input::False => self.test_result ^= false,
-            Input::FncResult(result) => {
-                self.expr_stack.push(result);
-            }
-            Input::Script { name, script } => {
-                let num_vars = script.num_vars;
-                let num_match_vars = script.num_match_vars;
-
-                if num_match_vars <= MAX_MATCH_VARIABLES && num_vars <= MAX_LOCAL_VARIABLES {
-                    if self.message_size == usize::MAX {
-                        self.message_size = self.message.raw_message.len();
-                    }
-
-                    self.script_cache.insert(name, script.clone());
-                    self.script_stack.push(ScriptStack {
-                        prev_constants: std::mem::replace(&mut self.constants, script.constants()),
-                        script,
-                        prev_pos: self.pos,
-                        prev_vars_local: std::mem::replace(
-                            &mut self.vars_local,
-                            vec![Variable::default(); num_vars as usize],
-                        ),
-                        prev_vars_match: std::mem::replace(
-                            &mut self.vars_match,
-                            vec![Variable::default(); num_match_vars as usize],
-                        ),
-                    });
-                    self.pos = 0;
-                    self.test_result = false;
-                }
+    #[inline(always)]
+    pub(crate) fn alloc_str(&self, s: &str) -> &'x str {
+        if s.is_empty() {
+            return "";
+        }
+        match self.arena.bump.try_alloc_slice_copy(s.as_bytes()) {
+            Ok(bytes) => unsafe { std::str::from_utf8_unchecked(extend(bytes)) },
+            Err(_) => {
+                self.note_oom();
+                ""
             }
         }
+    }
 
-        // Return any queued events
-        if let Some(event) = self.queued_events.next() {
-            return Some(Ok(event));
+    #[inline(always)]
+    pub(crate) fn alloc_string(&self, s: String) -> &'x str {
+        self.alloc_str(&s)
+    }
+
+    pub(crate) fn alloc_strs(&self, items: &[&'x str]) -> &'x [&'x str] {
+        if items.is_empty() {
+            return &[];
+        }
+        match self.arena.bump.try_alloc_slice_copy(items) {
+            Ok(slice) => unsafe { extend(slice) },
+            Err(_) => {
+                self.note_oom();
+                &[]
+            }
+        }
+    }
+
+    pub(crate) fn alloc_variables(&self, items: Vec<Variable<'x>>) -> &'x [Variable<'x>] {
+        match self.try_alloc_variables(items) {
+            Ok(slice) => slice,
+            Err(_) => {
+                self.note_oom();
+                &[]
+            }
+        }
+    }
+
+    pub(crate) fn try_alloc_variables<I>(
+        &self,
+        items: I,
+    ) -> Result<&'x [Variable<'x>], RuntimeError>
+    where
+        I: IntoIterator<Item = Variable<'x>>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let items = items.into_iter();
+        if items.len() == 0 {
+            return Ok(&[]);
+        }
+        self.arena
+            .bump
+            .try_alloc_slice_fill_iter(items.map(|v| self.intern(v)))
+            .map(|slice| unsafe { extend(slice) })
+            .map_err(|_| RuntimeError::MemoryLimitReached)
+    }
+
+    #[inline(always)]
+    pub(crate) fn intern(&self, value: Variable<'x>) -> Variable<'x> {
+        match value {
+            Variable::String(Cow::Owned(s)) => Variable::String(Cow::Borrowed(self.alloc_str(&s))),
+            Variable::Array(Array::Owned(items)) => {
+                Variable::Array(Array::Borrowed(self.alloc_variables(items)))
+            }
+            value => value,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn intern_cow(&self, value: Cow<'x, str>) -> &'x str {
+        match value {
+            Cow::Borrowed(s) => s,
+            Cow::Owned(s) => self.alloc_str(&s),
+        }
+    }
+
+    #[cold]
+    pub(crate) fn note_oom(&self) {
+        self.oom.set(true);
+    }
+
+    pub fn run<H: Handler<'x>>(&mut self, handler: &mut H) -> Result<Status, RuntimeError> {
+        match self.pending {
+            Pending::Idle => {
+                self.pending = Pending::Action;
+                self.push_frame(self.script);
+            }
+            Pending::Finished => return Ok(Status::Finished),
+            Pending::Aborted => {
+                return match self.error.take() {
+                    Some(err) => Err(err),
+                    None => self.finish(handler),
+                };
+            }
+            Pending::Action => (),
+            _ => return Err(RuntimeError::AwaitingInput),
         }
 
-        let mut current_script = self.script_stack.last()?.script.clone();
+        match self.flush_actions(handler) {
+            Ok(true) => (),
+            Ok(false) => return Ok(Status::Pending),
+            Err(err) => return Err(self.abort(err)),
+        }
+
+        if self.frames.is_empty() {
+            return self.finish(handler);
+        }
+
         let cpu_limit = self.runtime.cpu_limit;
 
-        let mut iter = current_script.instructions_from(self.pos);
-
         'outer: loop {
-            while let Some(instruction) = iter.next() {
+            if self.frames.is_empty() {
+                return self.finish(handler);
+            }
+            let script = self.script;
+            let mut cur = Cursor::new(script.code(), self.pos);
+
+            while !cur.at_end() {
                 self.num_instructions += 1;
                 if self.num_instructions > cpu_limit {
-                    self.finish_loop();
-                    return Some(Err(RuntimeError::CPULimitReached));
+                    return Err(self.abort(RuntimeError::CPULimitReached));
                 }
-                self.pos += 1;
+                if self.oom.get() {
+                    return Err(self.abort(RuntimeError::MemoryLimitReached));
+                }
+                let start = cur.pos;
+                let op = cur.u8()?;
 
-                match instruction {
-                    Instruction::Jz(jmp_pos) => {
+                match op {
+                    ops::Jz::OP => {
+                        let jump = ops::Jz::decode(&mut cur)?;
                         if !self.test_result {
-                            debug_assert!(*jmp_pos as usize > self.pos - 1);
-                            self.pos = *jmp_pos as usize;
-                            iter = current_script.instructions_from(self.pos);
-                            continue;
+                            cur.pos = jump.target.0 as usize;
                         }
-                    }
-                    Instruction::Jnz(jmp_pos) => {
-                        if self.test_result {
-                            debug_assert!(*jmp_pos as usize > self.pos - 1);
-                            self.pos = *jmp_pos as usize;
-                            iter = current_script.instructions_from(self.pos);
-                            continue;
-                        }
-                    }
-                    Instruction::Jmp(jmp_pos) => {
-                        debug_assert_ne!(*jmp_pos as usize, self.pos - 1);
-                        self.pos = *jmp_pos as usize;
-                        iter = current_script.instructions_from(self.pos);
                         continue;
                     }
-                    Instruction::Test(test) => match test.exec(self) {
-                        TestResult::Bool(result) => {
-                            self.test_result = result;
+                    ops::Jnz::OP => {
+                        let jump = ops::Jnz::decode(&mut cur)?;
+                        if self.test_result {
+                            cur.pos = jump.target.0 as usize;
                         }
-                        TestResult::Event { event, is_not } => {
-                            self.test_result = is_not;
-                            return Some(Ok(event));
-                        }
-                        TestResult::Error(err) => {
-                            self.finish_loop();
-                            return Some(Err(err));
-                        }
-                    },
-                    Instruction::Eval(expr) => match self.eval_expression(expr) {
-                        Ok(result) => {
-                            self.test_result = result.to_bool();
-                        }
-                        Err(event) => {
-                            return Some(Ok(event));
-                        }
-                    },
-                    Instruction::Clear(clear) => {
-                        if clear.local_vars_num > 0 {
-                            if let Some(local_vars) = self.vars_local.get_mut(
-                                clear.local_vars_idx as usize
-                                    ..(clear.local_vars_idx + clear.local_vars_num) as usize,
-                            ) {
-                                for local_var in local_vars.iter_mut() {
-                                    if !local_var.is_empty() {
-                                        *local_var = Variable::default();
-                                    }
-                                }
-                            } else {
-                                debug_assert!(false, "Failed to clear local variables: {clear:?}");
-                            }
-                        }
-                        if clear.match_vars != 0 {
-                            self.clear_match_variables(clear.match_vars);
-                        }
+                        continue;
                     }
-                    Instruction::Keep(keep) => {
-                        let next_event = self.build_message_id();
-                        self.final_event = Event::Keep {
-                            flags: self.get_local_or_global_flags(&keep.flags),
-                            message_id: self.main_message_id,
-                        }
-                        .into();
-                        if let Some(next_event) = next_event {
-                            return Some(Ok(next_event));
-                        }
+                    ops::Jmp::OP => {
+                        let jump = ops::Jmp::decode(&mut cur)?;
+                        cur.pos = jump.target.0 as usize;
+                        continue;
                     }
-                    Instruction::FileInto(fi) => {
-                        fi.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
-                        }
+                    ops::Clear::OP => {
+                        let clear = ops::Clear::decode(&mut cur)?;
+                        self.exec_clear(&clear);
+                        continue;
                     }
-                    Instruction::Redirect(redirect) => {
-                        redirect.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
-                        }
+                    ops::Discard::OP => {
+                        self.final_action = Some(Action::Discard);
+                        continue;
                     }
-                    Instruction::Discard => {
-                        self.final_event = Event::Discard.into();
+                    ops::Stop::OP => {
+                        self.pos = cur.pos;
+                        self.frames.clear();
+                        return self.finish(handler);
                     }
-                    Instruction::Stop => {
-                        self.clear_script_stack();
-                        break 'outer;
+                    ops::Return::OP => {
+                        self.pos = cur.pos;
+                        self.pop_frame();
+                        continue 'outer;
                     }
-                    Instruction::Reject(reject) => {
-                        self.final_event = None;
-                        return Some(Ok(Event::Reject {
-                            extended: reject.ereject,
-                            reason: self.eval_value(&reject.reason).to_string().into_owned(),
-                        }));
-                    }
-                    Instruction::ForEveryPart(fep) => {
-                        if let Some(next_part) = self.part_iter.next() {
-                            self.part = next_part;
-                        } else if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop()
-                        {
-                            debug_assert!(fep.jz_pos as usize > self.pos - 1);
-                            self.part_iter = prev_part_iter;
-                            self.part = prev_part;
-                            self.pos = fep.jz_pos as usize;
-                            iter = current_script.instructions_from(self.pos);
-                            continue;
-                        } else {
-                            self.part = 0;
-                            #[cfg(test)]
-                            panic!("ForEveryPart executed without items on stack.");
-                        }
-                    }
-                    Instruction::ForEveryPartPush => {
-                        let part_iter = self
-                            .find_nested_parts_ids(self.part_iter_stack.is_empty())
-                            .into_iter();
-                        self.part_iter_stack
-                            .push((self.part, std::mem::replace(&mut self.part_iter, part_iter)));
-                    }
-                    Instruction::ForEveryPartPop(num_pops) => {
-                        debug_assert!(
-                            *num_pops > 0 && *num_pops as usize <= self.part_iter_stack.len(),
-                            "Pop out of range: {} with {} items.",
-                            num_pops,
-                            self.part_iter_stack.len()
-                        );
-                        for _ in 0..*num_pops {
-                            if let Some((prev_part, prev_part_iter)) = self.part_iter_stack.pop() {
-                                self.part_iter = prev_part_iter;
-                                self.part = prev_part;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                    Instruction::While(while_) => match self.eval_expression(&while_.expr) {
-                        Ok(result) => {
-                            if !result.to_bool() {
-                                debug_assert!(while_.jz_pos as usize > self.pos - 1);
-                                self.pos = while_.jz_pos as usize;
-                                iter = current_script.instructions_from(self.pos);
-                                continue;
-                            }
-                        }
-                        Err(event) => {
-                            return Some(Ok(event));
-                        }
-                    },
-                    Instruction::Let(let_) => match self.eval_expression(&let_.expr) {
-                        Ok(result) => {
-                            self.set_variable(&let_.name, result);
-                        }
-                        Err(event) => {
-                            return Some(Ok(event));
-                        }
-                    },
+                    _ => (),
+                }
 
-                    Instruction::Replace(replace) => replace.exec(self),
-                    Instruction::Enclose(enclose) => enclose.exec(self),
-                    Instruction::ExtractText(extract) => {
-                        extract.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
+                match self.exec_op(op, start, &mut cur, handler) {
+                    Ok(Flow::Continue) => (),
+                    Ok(Flow::Jump(target)) => {
+                        cur.pos = target;
+                    }
+                    Ok(Flow::Switch) => {
+                        continue 'outer;
+                    }
+                    Ok(Flow::Pending) => {
+                        return Ok(Status::Pending);
+                    }
+                    Err(err) => {
+                        return Err(self.abort(err));
+                    }
+                }
+            }
+
+            self.pos = cur.pos;
+            self.pop_frame();
+        }
+    }
+
+    #[inline(always)]
+    fn exec_op<H: Handler<'x>>(
+        &mut self,
+        op: u8,
+        start: usize,
+        cur: &mut Cursor<'x>,
+        handler: &mut H,
+    ) -> Result<Flow, RuntimeError> {
+        let script = self.script;
+        let flow = match op {
+            ops::TestHeader::OP => {
+                let test = ops::TestHeader::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_header(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestString::OP => {
+                let test = ops::TestString::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_string(script, &test, false, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestEnvironment::OP => {
+                let test = ops::TestEnvironment::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_environment(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestAddress::OP => {
+                let test = ops::TestAddress::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_address(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestEnvelope::OP => {
+                let test = ops::TestEnvelope::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_envelope(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestExists::OP => {
+                let test = ops::TestExists::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_exists(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestSize::OP => {
+                let test = ops::TestSize::decode(cur)?;
+                self.pos = cur.pos;
+                self.test_outcome(self.test_size(&test))
+            }
+            ops::TestBody::OP => {
+                let test = ops::TestBody::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_body(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestDate::OP => {
+                let test = ops::TestDate::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_date(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestCurrentDate::OP => {
+                let test = ops::TestCurrentDate::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_current_date(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestDuplicate::OP => {
+                let test = ops::TestDuplicate::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_duplicate(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestHasFlag::OP => {
+                let test = ops::TestHasFlag::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_hasflag(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestNotifyMethodCapability::OP => {
+                let test = ops::TestNotifyMethodCapability::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_notify_method_capability(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestValidNotifyMethod::OP => {
+                let test = ops::TestValidNotifyMethod::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_valid_notify_method(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestValidExtList::OP => {
+                let test = ops::TestValidExtList::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_valid_ext_list(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestIhave::OP => {
+                let test = ops::TestIhave::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_ihave(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestMailboxExists::OP => {
+                let test = ops::TestMailboxExists::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_mailbox_exists(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestMailboxIdExists::OP => {
+                let test = ops::TestMailboxIdExists::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_mailbox_id_exists(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestSpecialUseExists::OP => {
+                let test = ops::TestSpecialUseExists::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_special_use_exists(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestMetadata::OP => {
+                let test = ops::TestMetadata::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_metadata(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestMetadataExists::OP => {
+                let test = ops::TestMetadataExists::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_metadata_exists(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestSpamTest::OP => {
+                let test = ops::TestSpamTest::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_spamtest(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestVirusTest::OP => {
+                let test = ops::TestVirusTest::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_virustest(script, &test)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestVacation::OP => {
+                let test = ops::TestVacation::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.test_vacation(script, &test, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestConvert::OP => {
+                let test = ops::TestConvert::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.exec_convert(script, &test.into())?;
+                    self.test_outcome(result)
+                }
+            }
+            ops::TestTrue::OP => {
+                self.pos = cur.pos;
+                self.test_result = true;
+                Flow::Continue
+            }
+            ops::TestFalse::OP => {
+                self.pos = cur.pos;
+                self.test_result = false;
+                Flow::Continue
+            }
+            ops::TestInvalid::OP => {
+                let test = ops::TestInvalid::decode(cur)?;
+                return Err(RuntimeError::InvalidInstruction {
+                    name: script.str(test.name)?.to_string(),
+                    line_num: test.line_num,
+                    line_pos: test.line_pos,
+                });
+            }
+            ops::Eval::OP => {
+                let eval = ops::Eval::decode(cur)?;
+                self.pos = cur.pos;
+                match self.eval_expression(script, eval.expr, handler)? {
+                    Some(result) => {
+                        self.test_result = result.to_bool();
+                        Flow::Continue
+                    }
+                    None => {
+                        self.pos = start;
+                        Flow::Pending
+                    }
+                }
+            }
+            ops::Let::OP => {
+                let let_ = ops::Let::decode(cur)?;
+                self.pos = cur.pos;
+                match self.eval_expression(script, let_.expr, handler)? {
+                    Some(result) => {
+                        self.set_variable(script, let_.name, result)?;
+                        Flow::Continue
+                    }
+                    None => {
+                        self.pos = start;
+                        Flow::Pending
+                    }
+                }
+            }
+            ops::While::OP => {
+                let while_ = ops::While::decode(cur)?;
+                self.pos = cur.pos;
+                match self.eval_expression(script, while_.expr, handler)? {
+                    Some(result) => {
+                        if result.to_bool() {
+                            Flow::Continue
+                        } else {
+                            Flow::Jump(while_.jz_pos.0 as usize)
                         }
                     }
-                    Instruction::AddHeader(add_header) => add_header.exec(self),
-                    Instruction::DeleteHeader(delete_header) => delete_header.exec(self),
-                    Instruction::Set(set) => {
-                        set.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
-                        }
+                    None => {
+                        self.pos = start;
+                        Flow::Pending
                     }
-                    Instruction::Notify(notify) => {
-                        notify.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
-                        }
-                    }
-                    Instruction::Vacation(vacation) => {
-                        vacation.exec(self);
-                        if let Some(event) = self.queued_events.next() {
-                            return Some(Ok(event));
-                        }
-                    }
-                    Instruction::EditFlags(flags) => flags.exec(self),
-                    Instruction::Include(include) => match include.exec(self) {
-                        IncludeResult::Cached(script) => {
-                            self.script_stack.push(ScriptStack {
-                                prev_constants: std::mem::replace(
-                                    &mut self.constants,
-                                    script.constants(),
-                                ),
-                                script: script.clone(),
-                                prev_pos: self.pos,
-                                prev_vars_local: std::mem::replace(
-                                    &mut self.vars_local,
-                                    vec![Variable::default(); script.num_vars as usize],
-                                ),
-                                prev_vars_match: std::mem::replace(
-                                    &mut self.vars_match,
-                                    vec![Variable::default(); script.num_match_vars as usize],
-                                ),
-                            });
-                            self.pos = 0;
-                            current_script = script;
-                            iter = current_script.instructions_from(0);
-                            continue;
-                        }
-                        IncludeResult::Event(event) => {
-                            return Some(Ok(event));
-                        }
-                        IncludeResult::Error(err) => {
-                            self.finish_loop();
-                            return Some(Err(err));
-                        }
-                        IncludeResult::None => (),
-                    },
-                    Instruction::Convert(convert) => {
-                        convert.exec(self);
-                    }
-                    Instruction::Return => {
+                }
+            }
+            ops::Set::OP => {
+                let set = ops::Set::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_set(script, &set)?;
+                self.flush(handler)?
+            }
+            ops::Keep::OP => {
+                let keep = ops::Keep::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_keep(script, &keep)?;
+                self.flush(handler)?
+            }
+            ops::FileInto::OP => {
+                let fileinto = ops::FileInto::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_fileinto(script, &fileinto)?;
+                self.flush(handler)?
+            }
+            ops::Redirect::OP => {
+                let redirect = ops::Redirect::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_redirect(script, &redirect)?;
+                self.flush(handler)?
+            }
+            ops::Reject::OP => {
+                let reject = ops::Reject::decode(cur)?;
+                self.pos = cur.pos;
+                let reason = self.eval_value(script, reject.reason)?.into_string();
+                self.final_action = None;
+                self.rejected = true;
+                let reason = self.intern_cow(reason);
+                self.actions.push(Action::Reject {
+                    extended: reject.ereject,
+                    reason,
+                });
+                self.flush(handler)?
+            }
+            ops::ForEveryPart::OP => {
+                let fep = ops::ForEveryPart::decode(cur)?;
+                self.pos = cur.pos;
+                if let Some(next_part) = self.next_part() {
+                    self.part = next_part;
+                    Flow::Continue
+                } else if let Some((prev_part, prev_iter, prev_pos)) = self.part_iter_stack.pop() {
+                    self.part_iter = prev_iter;
+                    self.part_iter_pos = prev_pos;
+                    self.part = prev_part;
+                    Flow::Jump(fep.jz_pos.0 as usize)
+                } else {
+                    self.part = 0;
+                    Flow::Continue
+                }
+            }
+            ops::ForEveryPartPush::OP => {
+                self.pos = cur.pos;
+                let part_iter = self.find_nested_parts_ids(self.part_iter_stack.is_empty());
+                let prev_iter = std::mem::replace(&mut self.part_iter, part_iter);
+                self.part_iter_stack
+                    .push((self.part, prev_iter, self.part_iter_pos));
+                self.part_iter_pos = 0;
+                Flow::Continue
+            }
+            ops::ForEveryPartPop::OP => {
+                let pop = ops::ForEveryPartPop::decode(cur)?;
+                self.pos = cur.pos;
+                debug_assert!(
+                    pop.num_pops > 0 && pop.num_pops as usize <= self.part_iter_stack.len(),
+                    "Pop out of range: {} with {} items.",
+                    pop.num_pops,
+                    self.part_iter_stack.len()
+                );
+                for _ in 0..pop.num_pops {
+                    if let Some((prev_part, prev_iter, prev_pos)) = self.part_iter_stack.pop() {
+                        self.part_iter = prev_iter;
+                        self.part_iter_pos = prev_pos;
+                        self.part = prev_part;
+                    } else {
                         break;
                     }
-                    Instruction::Require(capabilities) => {
-                        for capability in capabilities {
-                            if !self.runtime.allowed_capabilities.contains(capability) {
-                                self.finish_loop();
-                                return Some(Err(
-                                    if let Capability::Other(not_supported) = capability {
-                                        RuntimeError::CapabilityNotSupported(not_supported.clone())
-                                    } else {
-                                        RuntimeError::CapabilityNotAllowed(capability.clone())
-                                    },
-                                ));
-                            }
-                        }
-                    }
-                    Instruction::Error(err) => {
-                        self.finish_loop();
-                        return Some(Err(RuntimeError::ScriptErrorMessage(
-                            self.eval_value(&err.message).to_string().into_owned(),
-                        )));
-                    }
-                    Instruction::Invalid(invalid) => {
-                        self.finish_loop();
-                        return Some(Err(RuntimeError::InvalidInstruction(
-                            invalid.as_ref().clone(),
-                        )));
-                    }
-                    #[cfg(test)]
-                    Instruction::TestCmd(arguments) => {
-                        return Some(Ok(Event::Function {
-                            id: u32::MAX,
-                            arguments: arguments
-                                .iter()
-                                .map(|s| self.eval_value(s).to_owned())
-                                .collect(),
-                        }));
+                }
+                Flow::Continue
+            }
+            ops::Replace::OP => {
+                let replace = ops::Replace::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_replace(script, &replace)?;
+                Flow::Continue
+            }
+            ops::Enclose::OP => {
+                let enclose = ops::Enclose::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_enclose(script, &enclose)?;
+                Flow::Continue
+            }
+            ops::ExtractText::OP => {
+                let extract = ops::ExtractText::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_extracttext(script, &extract)?;
+                self.flush(handler)?
+            }
+            ops::AddHeader::OP => {
+                let add = ops::AddHeader::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_addheader(script, &add)?;
+                Flow::Continue
+            }
+            ops::DeleteHeader::OP => {
+                let delete = ops::DeleteHeader::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_deleteheader(script, &delete)?;
+                Flow::Continue
+            }
+            ops::Notify::OP => {
+                let notify = ops::Notify::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_notify(script, &notify)?;
+                self.flush(handler)?
+            }
+            ops::Vacation::OP => {
+                let vacation = ops::Vacation::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_vacation(script, &vacation)?;
+                self.flush(handler)?
+            }
+            ops::EditFlags::OP => {
+                let flags = ops::EditFlags::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_editflags(script, &flags)?;
+                Flow::Continue
+            }
+            ops::Convert::OP => {
+                let convert = ops::Convert::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_convert(script, &convert)?;
+                Flow::Continue
+            }
+            ops::Include::OP => {
+                let include = ops::Include::decode(cur)?;
+                self.pos = cur.pos;
+                self.exec_include(script, &include, handler)?
+            }
+            ops::Require::OP => {
+                let require = ops::Require::decode(cur)?;
+                self.pos = cur.pos;
+                for rec in script.recs(require.capabilities)? {
+                    let capability = Capability::from_rec(script, rec)?;
+                    if !self.runtime.allowed_capabilities.contains(&capability) {
+                        return Err(if let Capability::Other(not_supported) = capability {
+                            RuntimeError::CapabilityNotSupported(not_supported)
+                        } else {
+                            RuntimeError::CapabilityNotAllowed(capability)
+                        });
                     }
                 }
+                Flow::Continue
             }
-
-            if let Some(prev_script) = self.script_stack.pop() {
-                self.constants = prev_script.prev_constants;
-                self.pos = prev_script.prev_pos;
-                self.vars_local = prev_script.prev_vars_local;
-                self.vars_match = prev_script.prev_vars_match;
+            ops::Error::OP => {
+                let error = ops::Error::decode(cur)?;
+                self.pos = cur.pos;
+                let message = self.eval_value(script, error.message)?;
+                return Err(RuntimeError::ScriptErrorMessage(
+                    message.to_string().into_owned(),
+                ));
             }
+            ops::Invalid::OP => {
+                let invalid = ops::Invalid::decode(cur)?;
+                return Err(RuntimeError::InvalidInstruction {
+                    name: script.str(invalid.name)?.to_string(),
+                    line_num: invalid.line_num,
+                    line_pos: invalid.line_pos,
+                });
+            }
+            #[cfg(test)]
+            ops::TestCmd::OP => {
+                let cmd = ops::TestCmd::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.exec_test_cmd(script, cmd.arguments, false, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            #[cfg(test)]
+            ops::TestCmdTest::OP => {
+                let cmd = ops::TestCmdTest::decode(cur)?;
+                self.pos = cur.pos;
+                {
+                    let result = self.exec_test_cmd(script, cmd.arguments, cmd.is_not, handler)?;
+                    self.test_outcome(result)
+                }
+            }
+            _ => return Err(RuntimeError::InvalidBytecode),
+        };
+        Ok(flow)
+    }
 
-            if let Some(script_stack) = self.script_stack.last() {
-                current_script = script_stack.script.clone();
-                iter = current_script.instructions_from(self.pos);
-            } else {
-                break;
+    #[inline(always)]
+    fn test_outcome(&mut self, result: TestResult) -> Flow {
+        match result {
+            TestResult::Bool(value) => {
+                self.test_result = value;
+                Flow::Continue
+            }
+            TestResult::Pending { is_not } => {
+                self.pending = Pending::Test { is_not };
+                Flow::Pending
             }
         }
+    }
 
-        match self.final_event.take() {
-            Some(Event::Keep {
-                mut flags,
-                message_id,
-            }) => {
-                let create_event = if self.has_changes {
-                    self.build_message_id()
-                } else {
-                    None
-                };
+    #[inline(always)]
+    fn flush<H: Handler<'x>>(&mut self, handler: &mut H) -> Result<Flow, RuntimeError> {
+        if self.actions.is_empty() || self.flush_actions(handler)? {
+            Ok(Flow::Continue)
+        } else {
+            Ok(Flow::Pending)
+        }
+    }
 
-                let global_flags = self.get_global_flags();
-                if flags.is_empty() && !global_flags.is_empty() {
-                    flags = global_flags;
+    fn flush_actions<H: Handler<'x>>(&mut self, handler: &mut H) -> Result<bool, RuntimeError> {
+        let mut actions = std::mem::take(&mut self.actions).into_iter();
+        while let Some(action) = actions.next() {
+            match handler.action(self, action) {
+                Reply::Ready(()) => (),
+                Reply::Pending => {
+                    let remaining: Vec<Action<'x>> = actions.collect();
+                    self.actions = remaining;
+                    self.pending = Pending::Action;
+                    return Ok(false);
                 }
-                if let Some(create_event) = create_event {
-                    self.queued_events = vec![
-                        create_event,
-                        Event::Keep {
+                Reply::Error(err) => return Err(err),
+            }
+        }
+        Ok(true)
+    }
+
+    fn finish<H: Handler<'x>>(&mut self, handler: &mut H) -> Result<Status, RuntimeError> {
+        self.frames.clear();
+        if let Some(action) = self.final_action.take() {
+            match action {
+                Action::Keep { flags, message_id } => {
+                    let create_message = if self.has_changes {
+                        self.build_message_id()
+                    } else {
+                        None
+                    };
+                    let flags = if flags.is_empty() && !self.flags.is_empty() {
+                        let flags = std::mem::take(&mut self.flags);
+                        let flags = self.alloc_strs(&flags);
+                        if self.oom.get() {
+                            return Err(self.abort(RuntimeError::MemoryLimitReached));
+                        }
+                        flags
+                    } else {
+                        flags
+                    };
+                    if let Some(create_message) = create_message {
+                        self.actions.push(create_message);
+                        self.actions.push(Action::Keep {
                             flags,
                             message_id: self.main_message_id,
-                        },
-                    ]
-                    .into_iter();
-                    self.queued_events.next().map(Ok)
-                } else {
-                    Some(Ok(Event::Keep { flags, message_id }))
+                        });
+                    } else {
+                        self.actions.push(Action::Keep { flags, message_id });
+                    }
                 }
+                action => self.actions.push(action),
             }
-            Some(event) => Some(Ok(event)),
-            _ => None,
+        }
+        match self.flush_actions(handler) {
+            Ok(true) => {
+                self.pending = Pending::Finished;
+                Ok(Status::Finished)
+            }
+            Ok(false) => Ok(Status::Pending),
+            Err(err) => Err(self.abort(err)),
         }
     }
 
-    pub(crate) fn clear_script_stack(&mut self) {
-        self.script_stack.clear();
-        self.constants = Arc::from([]);
+    fn abort(&mut self, err: RuntimeError) -> RuntimeError {
+        self.frames.clear();
+        self.actions.clear();
+        if self.pending != Pending::Aborted && !self.rejected {
+            self.final_action = Some(Action::Keep {
+                flags: &[],
+                message_id: 0,
+            });
+        }
+        self.pending = Pending::Aborted;
+        err
     }
 
-    pub(crate) fn finish_loop(&mut self) {
-        self.clear_script_stack();
-        if let Some(event) = self.final_event.take() {
-            self.queued_events = if let Event::Keep {
-                mut flags,
-                message_id,
-            } = event
-            {
-                let global_flags = self.get_global_flags();
-                if flags.is_empty() && !global_flags.is_empty() {
-                    flags = global_flags;
+    pub fn resume(&mut self, input: impl Into<Input<'x>>) {
+        let input = input.into();
+        match std::mem::replace(&mut self.pending, Pending::Action) {
+            Pending::Test { is_not } => {
+                self.test_result = matches!(input, Input::Bool(true)) ^ is_not;
+            }
+            Pending::Function => {
+                let value = match input {
+                    Input::Value(value) => self.intern(value),
+                    Input::Bool(value) => Variable::from(value),
+                    _ => Variable::default(),
+                };
+                self.expr_stack.push(value);
+            }
+            Pending::Include { name, optional } => match input {
+                Input::Script(Some(script)) => self.push_included(name, script),
+                _ if optional => (),
+                _ => {
+                    let err = RuntimeError::ScriptNotFound(name.name().to_string());
+                    self.error = Some(self.abort(err));
                 }
+            },
+            Pending::Action => (),
+            Pending::Idle => {
+                self.pending = Pending::Idle;
+            }
+            Pending::Finished => {
+                self.pending = Pending::Finished;
+            }
+            Pending::Aborted => {
+                self.pending = Pending::Aborted;
+            }
+        }
+    }
 
-                if self.has_changes {
-                    if let Some(event) = self.build_message_id() {
-                        vec![
-                            event,
-                            Event::Keep {
-                                flags,
-                                message_id: self.main_message_id,
-                            },
-                        ]
-                    } else {
-                        vec![Event::Keep { flags, message_id }]
+    fn push_included(&mut self, name: Script<'x>, script: &'x Sieve<'x>) {
+        if !self.included.contains(&name) {
+            self.included.push(name);
+        }
+        self.push_frame(script);
+    }
+
+    pub(crate) fn push_frame(&mut self, script: &'x Sieve<'x>) {
+        self.frames.push(Frame {
+            script: self.script,
+            prev_pos: self.pos,
+            local_base: self.vars_local.len(),
+            match_base: self.vars_match.len(),
+        });
+        self.local_base = self.vars_local.len();
+        self.match_base = self.vars_match.len();
+        self.vars_local
+            .resize_with(self.vars_local.len() + script.num_vars(), Variable::default);
+        self.vars_match.resize_with(
+            self.vars_match.len() + script.num_match_vars(),
+            Variable::default,
+        );
+        self.script = script;
+        self.pos = 0;
+        self.test_result = false;
+    }
+
+    pub(crate) fn pop_frame(&mut self) {
+        if let Some(frame) = self.frames.pop() {
+            self.vars_local.truncate(frame.local_base);
+            self.vars_match.truncate(frame.match_base);
+            self.script = frame.script;
+            self.pos = frame.prev_pos;
+            self.local_base = self.frames.last().map_or(0, |f| f.local_base);
+            self.match_base = self.frames.last().map_or(0, |f| f.match_base);
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn local_base(&self) -> usize {
+        self.local_base
+    }
+
+    #[inline(always)]
+    pub(crate) fn match_base(&self) -> usize {
+        self.match_base
+    }
+
+    fn exec_clear(&mut self, clear: &ops::Clear) {
+        if clear.local_vars_num > 0 {
+            let base = self.local_base() + clear.local_vars_idx as usize;
+            if let Some(local_vars) = self
+                .vars_local
+                .get_mut(base..base + clear.local_vars_num as usize)
+            {
+                for local_var in local_vars.iter_mut() {
+                    if !local_var.is_empty() {
+                        *local_var = Variable::default();
                     }
-                } else {
-                    vec![Event::Keep { flags, message_id }]
                 }
             } else {
-                vec![event]
+                debug_assert!(false, "Failed to clear local variables: {clear:?}");
             }
-            .into_iter();
         }
+        if clear.match_vars != 0 {
+            self.clear_match_variables(clear.match_vars);
+        }
+    }
+
+    fn exec_include<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        include: &ops::Include,
+        handler: &mut H,
+    ) -> Result<Flow, RuntimeError> {
+        let name = self.eval_value(script, include.value)?.into_string();
+        if name.is_empty() {
+            return Ok(Flow::Continue);
+        }
+        let name = self.intern_cow(name);
+        let script_name = if include.global {
+            Script::Global(name)
+        } else {
+            Script::Personal(name)
+        };
+        if include.once && self.included.contains(&script_name) {
+            return Ok(Flow::Continue);
+        }
+        if self.frames.len() >= self.runtime.max_nested_includes {
+            return Err(RuntimeError::TooManyIncludes);
+        }
+        if let Some(cached) = self.runtime.include_scripts.get(name) {
+            self.push_included(script_name, cached);
+            return Ok(Flow::Switch);
+        }
+        match handler.include_script(self, script_name, include.optional) {
+            Reply::Ready(Some(included)) => {
+                self.push_included(script_name, included);
+                Ok(Flow::Switch)
+            }
+            Reply::Ready(None) if include.optional => Ok(Flow::Continue),
+            Reply::Ready(None) => Err(RuntimeError::ScriptNotFound(name.to_string())),
+            Reply::Error(err) => Err(err),
+            Reply::Pending => {
+                self.pending = Pending::Include {
+                    name: script_name,
+                    optional: include.optional,
+                };
+                Ok(Flow::Pending)
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn next_part(&mut self) -> Option<u32> {
+        let part = self.part_iter.get(self.part_iter_pos).copied()?;
+        self.part_iter_pos += 1;
+        Some(part)
     }
 
     pub fn set_envelope(
@@ -502,7 +1026,8 @@ impl<'x> Context<'x> {
             if matches!(&envelope, Envelope::From | Envelope::To) {
                 let value: Cow<str> = value.into();
                 if let Some(value) = parse_envelope_address(value.as_ref()) {
-                    self.envelope.push((envelope, value.to_string().into()));
+                    let value = self.alloc_str(value);
+                    self.envelope.push((envelope, Variable::borrowed(value)));
                 }
             } else {
                 self.envelope.push((envelope, Variable::from(value.into())));
@@ -510,12 +1035,12 @@ impl<'x> Context<'x> {
         }
     }
 
-    pub fn with_vars_env(mut self, vars_env: AHashMap<Cow<'static, str>, Variable>) -> Self {
+    pub fn with_vars_env(mut self, vars_env: AHashMap<Cow<'static, str>, Variable<'x>>) -> Self {
         self.vars_env = vars_env;
         self
     }
 
-    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Variable)>) -> Self {
+    pub fn with_envelope_list(mut self, envelope: Vec<(Envelope, Variable<'x>)>) -> Self {
         self.envelope = envelope;
         self
     }
@@ -561,7 +1086,7 @@ impl<'x> Context<'x> {
     pub fn set_env_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable>,
+        value: impl Into<Variable<'x>>,
     ) {
         self.vars_env.insert(name.into(), value.into());
     }
@@ -569,7 +1094,7 @@ impl<'x> Context<'x> {
     pub fn with_env_variable(
         mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable>,
+        value: impl Into<Variable<'x>>,
     ) -> Self {
         self.set_env_variable(name, value);
         self
@@ -578,7 +1103,7 @@ impl<'x> Context<'x> {
     pub fn set_global_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable>,
+        value: impl Into<Variable<'x>>,
     ) {
         self.vars_global.insert(name.into(), value.into());
     }
@@ -586,7 +1111,7 @@ impl<'x> Context<'x> {
     pub fn with_global_variable(
         mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable>,
+        value: impl Into<Variable<'x>>,
     ) -> Self {
         self.set_global_variable(name, value);
         self
@@ -627,7 +1152,17 @@ impl<'x> Context<'x> {
         self
     }
 
+    pub fn set_current_time(&mut self, time: i64) {
+        self.current_time = time;
+    }
+
+    pub fn with_current_time(mut self, time: i64) -> Self {
+        self.current_time = time;
+        self
+    }
+
     pub fn take_message(&mut self) -> Message<'x> {
+        self.raw_message_copy.set(None);
         std::mem::take(&mut self.message)
     }
 
@@ -647,7 +1182,7 @@ impl<'x> Context<'x> {
         self.vars_global.keys().map(|k| k.as_ref())
     }
 
-    pub fn global_variable(&self, name: &str) -> Option<&Variable> {
+    pub fn global_variable(&self, name: &str) -> Option<&Variable<'_>> {
         self.vars_global.get(name)
     }
 
@@ -658,52 +1193,69 @@ impl<'x> Context<'x> {
     pub fn part(&self) -> u32 {
         self.part
     }
+
+    pub fn runtime(&self) -> &'x Runtime {
+        self.runtime
+    }
+
+    pub fn instructions_executed(&self) -> usize {
+        self.num_instructions
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Flow {
+    Continue,
+    Jump(usize),
+    Switch,
+    Pending,
+}
+
+#[inline(always)]
+pub(crate) unsafe fn extend<'x, T: ?Sized>(value: &T) -> &'x T {
+    unsafe { &*(value as *const T) }
+}
+
+impl Capability {
+    pub(crate) fn from_rec(script: &Sieve<'_>, rec: Rec) -> Result<Capability, RuntimeError> {
+        if rec.tag != tag::CAPABILITY {
+            return Err(RuntimeError::InvalidBytecode);
+        }
+        Ok(match rec.b {
+            5 => {
+                Capability::Comparator(crate::compiler::grammar::Comparator::from_code(rec.c as u8))
+            }
+            6 => Capability::Other(script.str(rec.str())?.to_string()),
+            id => Capability::from_id(id),
+        })
+    }
 }
 
 #[cfg(test)]
 impl<'x> Context<'x> {
-    pub(crate) fn new(runtime: &'x Runtime, message: Message<'x>) -> Self {
-        Context {
-            runtime: runtime.clone(),
-            message,
-            part: 0,
-            part_iter: Vec::new().into_iter(),
-            part_iter_stack: Vec::new(),
-            pos: usize::MAX,
-            test_result: false,
-            script_cache: AHashMap::new(),
-            script_stack: Vec::with_capacity(0),
-            vars_global: AHashMap::new(),
-            vars_env: AHashMap::new(),
-            vars_local: Vec::with_capacity(0),
-            vars_match: Vec::with_capacity(0),
-            expr_stack: Vec::with_capacity(16),
-            expr_pos: 0,
-            envelope: Vec::new(),
-            metadata: Vec::new(),
-            message_size: usize::MAX,
-            final_event: Event::Keep {
-                flags: Vec::with_capacity(0),
-                message_id: 0,
-            }
-            .into(),
-            constants: Arc::from([]),
-            flags: Vec::new(),
-            queued_events: vec![].into_iter(),
-            has_changes: false,
-            user_address: "".into(),
-            user_full_name: "".into(),
-            current_time: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0) as i64,
-            num_redirects: 0,
-            num_instructions: 0,
-            num_out_messages: 0,
-            last_message_id: 0,
-            main_message_id: 0,
-            virus_status: VirusStatus::Unknown,
-            spam_status: SpamStatus::Unknown,
+    pub(crate) fn with_runtime(self, runtime: &'x Runtime) -> Context<'x> {
+        Context { runtime, ..self }
+    }
+
+    pub(crate) fn set_message(&mut self, message: Message<'x>, size: usize) {
+        self.raw_message_copy.set(None);
+        self.message = message;
+        self.message_size = size;
+        self.part = 0;
+    }
+
+    pub(crate) fn exec_test_cmd<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        arguments: crate::bytecode::rec::Range,
+        is_not: bool,
+        handler: &mut H,
+    ) -> Result<super::tests::TestResult, RuntimeError> {
+        let arguments = self.eval_values(script, arguments)?;
+        match handler.function(self, u32::MAX, &arguments) {
+            Reply::Ready(value) => Ok(super::tests::TestResult::Bool(value.to_bool() ^ is_not)),
+            Reply::Pending => Ok(super::tests::TestResult::Pending { is_not }),
+            Reply::Error(err) => Err(err),
         }
     }
 }

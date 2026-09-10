@@ -13,10 +13,10 @@ use crate::{
     runtime::{RuntimeError, tests::glob::CompiledGlob},
 };
 use ahash::AHashMap;
-use arc_swap::ArcSwap;
 use mail_parser::HeaderName;
-use std::{borrow::Cow, fmt::Display, sync::Arc};
+use std::{borrow::Cow, fmt::Display};
 
+pub(crate) mod emit;
 pub mod grammar;
 pub mod lexer;
 
@@ -82,29 +82,6 @@ impl Default for Compiler {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    rkyv(serialize_bounds(
-        __S: rkyv::ser::Writer + rkyv::ser::Allocator,
-        __S::Error: rkyv::rancor::Source,
-    ))
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    rkyv(bytecheck(
-        bounds(
-            __C: rkyv::validation::ArchiveContext,
-        )
-    ))
-)]
 #[repr(u8)]
 pub(crate) enum Value {
     Text(ConstantId) = 0,
@@ -113,7 +90,7 @@ pub(crate) enum Value {
     Regex(Regex) = 3,
     Glob(Glob) = 4,
     Header(HeaderName<'static>) = 5,
-    List(#[cfg_attr(feature = "rkyv", rkyv(omit_bounds))] Box<[Value]>) = 6,
+    List(Box<[Value]>) = 6,
 }
 
 #[derive(Debug)]
@@ -137,10 +114,6 @@ impl From<StringConstant> for RawValue {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(transparent)]
 pub struct ConstantId(u32);
 
@@ -160,50 +133,28 @@ impl ConstantId {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
-#[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
 pub struct Regex {
-    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
-    #[cfg_attr(any(test, feature = "serde"), serde(skip, default))]
-    pub regex: LazyRegex,
     pub expr: String,
 }
 
 #[derive(Debug, Clone)]
-pub struct LazyRegex(pub Arc<ArcSwap<Option<fancy_regex::Regex>>>);
-
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
 pub struct Glob {
-    #[cfg_attr(feature = "rkyv", rkyv(with = rkyv::with::Skip))]
     #[cfg_attr(any(test, feature = "serde"), serde(skip, default))]
-    pub glob: LazyGlob,
+    pub(crate) glob: CompiledGlob,
     pub expr: String,
 }
-
-#[derive(Debug, Clone)]
-pub struct LazyGlob(pub(crate) Arc<ArcSwap<Option<CompiledGlob>>>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub enum VariableType {
@@ -221,10 +172,6 @@ pub enum VariableType {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub struct Transform {
     pub variable: Box<VariableType>,
     pub functions: Box<[u32]>,
@@ -235,10 +182,6 @@ pub struct Transform {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub struct HeaderVariable<'x> {
     pub name: Box<[HeaderName<'x>]>,
     pub part: HeaderPart,
@@ -246,14 +189,10 @@ pub struct HeaderVariable<'x> {
     pub index_part: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub enum MessagePart {
@@ -267,10 +206,6 @@ pub enum MessagePart {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub enum HeaderPart {
@@ -290,10 +225,6 @@ pub enum HeaderPart {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub enum ContentTypePart {
     Type = 0,
@@ -301,14 +232,10 @@ pub enum ContentTypePart {
     Attribute(String) = 2,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub enum ReceivedPart {
@@ -327,14 +254,10 @@ pub enum ReceivedPart {
     DateRaw = 12,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub enum ReceivedHostname {
@@ -348,14 +271,54 @@ pub enum ReceivedHostname {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub enum Number {
     Integer(i64) = 0,
     Float(f64) = 1,
+}
+
+impl ReceivedPart {
+    pub(crate) fn code(&self) -> u16 {
+        let (part, hostname): (u16, u16) = match self {
+            ReceivedPart::From(host) => (0, *host as u16),
+            ReceivedPart::FromIp => (1, 0),
+            ReceivedPart::FromIpRev => (2, 0),
+            ReceivedPart::By(host) => (3, *host as u16),
+            ReceivedPart::For => (4, 0),
+            ReceivedPart::With => (5, 0),
+            ReceivedPart::TlsVersion => (6, 0),
+            ReceivedPart::TlsCipher => (7, 0),
+            ReceivedPart::Id => (8, 0),
+            ReceivedPart::Ident => (9, 0),
+            ReceivedPart::Via => (10, 0),
+            ReceivedPart::Date => (11, 0),
+            ReceivedPart::DateRaw => (12, 0),
+        };
+        part | (hostname << 8)
+    }
+
+    pub(crate) fn from_code(part: u8, hostname: u8) -> ReceivedPart {
+        let hostname = match hostname {
+            0 => ReceivedHostname::Name,
+            1 => ReceivedHostname::Ip,
+            _ => ReceivedHostname::Any,
+        };
+        match part {
+            0 => ReceivedPart::From(hostname),
+            1 => ReceivedPart::FromIp,
+            2 => ReceivedPart::FromIpRev,
+            3 => ReceivedPart::By(hostname),
+            4 => ReceivedPart::For,
+            5 => ReceivedPart::With,
+            6 => ReceivedPart::TlsVersion,
+            7 => ReceivedPart::TlsCipher,
+            8 => ReceivedPart::Id,
+            9 => ReceivedPart::Ident,
+            10 => ReceivedPart::Via,
+            11 => ReceivedPart::Date,
+            _ => ReceivedPart::DateRaw,
+        }
+    }
 }
 
 impl Number {
@@ -387,7 +350,7 @@ impl Display for Number {
 }
 
 impl Compiler {
-    pub const VERSION: u32 = 3;
+    pub const VERSION: u32 = crate::bytecode::FORMAT_VERSION as u32;
 
     pub fn new() -> Self {
         Compiler {
@@ -562,25 +525,10 @@ impl TokenInfo {
     }
 }
 
-impl Default for LazyRegex {
-    fn default() -> Self {
-        Self(Arc::new(ArcSwap::new(Arc::new(None))))
-    }
-}
-
-impl Default for LazyGlob {
-    fn default() -> Self {
-        Self(Arc::new(ArcSwap::new(Arc::new(None))))
-    }
-}
-
 impl Glob {
     pub fn new(expr: String, to_lower: bool) -> Self {
-        let compiled = CompiledGlob::compile(&expr, to_lower);
-        Self {
-            expr,
-            glob: LazyGlob(Arc::new(ArcSwap::new(Arc::new(Some(compiled))))),
-        }
+        let glob = CompiledGlob::compile(&expr, to_lower);
+        Self { expr, glob }
     }
 }
 
@@ -593,11 +541,8 @@ impl PartialEq for Glob {
 impl Eq for Glob {}
 
 impl Regex {
-    pub fn new(expr: String, regex: fancy_regex::Regex) -> Self {
-        Self {
-            expr,
-            regex: LazyRegex(Arc::new(ArcSwap::new(Arc::new(Some(regex))))),
-        }
+    pub fn new(expr: String) -> Self {
+        Self { expr }
     }
 }
 
@@ -671,13 +616,15 @@ impl Display for CompileError {
 impl Display for RuntimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RuntimeError::TooManyIncludes => write!(f, ""),
-            RuntimeError::InvalidInstruction(value) => write!(
+            RuntimeError::TooManyIncludes => f.write_str("Too many nested includes"),
+            RuntimeError::ScriptNotFound(name) => write!(f, "Included script {name:?} not found."),
+            RuntimeError::InvalidInstruction {
+                name,
+                line_num,
+                line_pos,
+            } => write!(
                 f,
-                "Script executed invalid instruction {:?} at line {}, column {}.",
-                value.name(),
-                value.line_pos(),
-                value.line_num()
+                "Script executed invalid instruction {name:?} at line {line_num}, column {line_pos}."
             ),
             RuntimeError::ScriptErrorMessage(value) => {
                 write!(f, "Script reported error {value:?}.")
@@ -692,6 +639,11 @@ impl Display for RuntimeError {
                 f,
                 "Script exceeded the maximum number of instructions allowed to execute."
             ),
+            RuntimeError::MemoryLimitReached => {
+                write!(f, "Script exceeded the maximum amount of memory allowed.")
+            }
+            RuntimeError::InvalidBytecode => write!(f, "Compiled script is corrupted."),
+            RuntimeError::AwaitingInput => f.write_str("Script is waiting for a pending result"),
         }
     }
 }
@@ -733,18 +685,17 @@ mod tests {
 
                 tests_run += 1;
 
-                let sieve = compiler.compile(&script).unwrap();
-
-                #[cfg(feature = "rkyv")]
+                let program = compiler.compile_ast(&script).unwrap();
+                let sieve = program.emit().unwrap();
                 assert_eq!(
-                    crate::Sieve::from_bytes(&sieve.to_bytes().unwrap()).unwrap(),
+                    crate::Sieve::from_bytes(&sieve.to_bytes()).unwrap(),
                     sieve,
-                    "rkyv round trip altered {}",
+                    "bytecode round trip altered {}",
                     file_name.display()
                 );
 
                 let json_sieve = serde_json::to_string_pretty(
-                    &sieve
+                    &program
                         .instructions
                         .into_iter()
                         .enumerate()

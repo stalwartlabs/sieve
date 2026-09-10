@@ -15,7 +15,6 @@ use crate::{
             instruction::CompilerState,
         },
     },
-    runtime::eval::IntoString,
 };
 use mail_parser::HeaderName;
 use std::fmt::Display;
@@ -277,7 +276,11 @@ impl CompilerState<'_> {
                 Ok(None)
             }
         } else {
-            let lowercase_name = var_name.to_lowercase();
+            let lowercase_name = if var_name.is_ascii() {
+                super::super::grammar::instruction::lowercase(var_name)
+            } else {
+                std::borrow::Cow::Owned(var_name.to_lowercase())
+            };
             let var = if let Some((namespace, name)) = lowercase_name.split_once('.') {
                 if name.is_empty() {
                     return Err(ErrorType::InvalidNamespace(var_name.to_string()));
@@ -500,7 +503,7 @@ impl CompilerState<'_> {
                         .and_then(|v| (v, v.parse::<f64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Float(n)),
-                        _ => self.text(buf.to_vec().into_string()),
+                        _ => self.text(String::from_utf8_lossy(buf)),
                     }
                 } else {
                     match std::str::from_utf8(buf)
@@ -508,11 +511,11 @@ impl CompilerState<'_> {
                         .and_then(|v| (v, v.parse::<i64>().ok()?).into())
                     {
                         Some((v, n)) if n.to_string() == v => Value::Number(Number::Integer(n)),
-                        _ => self.text(buf.to_vec().into_string()),
+                        _ => self.text(String::from_utf8_lossy(buf)),
                     }
                 }
             } else {
-                self.text(buf.to_vec().into_string())
+                self.text(String::from_utf8_lossy(buf))
             };
             items.push(value);
         } else {
@@ -765,7 +768,6 @@ mod tests {
     use crate::compiler::lexer::word::Word;
     use crate::compiler::{AddressPart, HeaderPart, HeaderVariable, VariableType};
     use crate::{AHashSet, Compiler};
-    use ahash::AHashMap;
 
     fn text(state: &mut CompilerState, value: &str) -> Value {
         Value::Text(state.intern(value))
@@ -799,7 +801,8 @@ mod tests {
             param_check: [false; MAX_PARAMS],
             includes_num: 0,
             constants: Vec::new(),
-            constants_map: AHashMap::new(),
+            constants_map: hashbrown::HashTable::new(),
+            hasher: ahash::RandomState::new(),
         };
 
         for (input, expected_result) in [

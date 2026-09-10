@@ -6,227 +6,195 @@
 
 use super::TestResult;
 use crate::{
-    Context, Event,
+    Context, Sieve,
+    bytecode::ops,
     compiler::{
         Number,
-        grammar::{
-            MatchType,
-            tests::test_date::{DatePart, TestCurrentDate, TestDate, Zone},
-        },
+        grammar::{Comparator, MatchType, tests::test_date::DatePart},
     },
+    runtime::{RuntimeError, handler::Handler},
 };
 use mail_parser::{DateTime, Header, HeaderValue, parsers::MessageStream};
+use smallvec::SmallVec;
 use std::borrow::Cow;
 
-impl TestDate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let header_name = if let Some(header_name) = ctx.parse_header_name(&self.header_name) {
-            header_name
-        } else {
-            return TestResult::Bool(false ^ self.is_not);
+impl<'x> Context<'x> {
+    pub(crate) fn test_date<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestDate,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let Some(header_name) = self.parse_header_name(script, test.header_name)? else {
+            return Ok(TestResult::Bool(false ^ test.is_not));
         };
+        let header_names = [header_name];
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
+        let date_part = DatePart::from_code(test.date_part);
+        let zone = test.zone;
 
-        let result = match &self.match_type {
+        let result = match &match_type {
             MatchType::Count(rel_match) => {
                 let mut date_count = 0;
-                ctx.find_headers(
-                    &[header_name],
-                    self.index,
-                    self.mime_anychild,
+                self.find_headers(
+                    &header_names,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        if ctx.find_dates(header).is_some() {
+                        if self.find_dates(header).is_some() {
                             date_count += 1;
                         }
                         false
                     },
                 );
 
-                let mut result = false;
-                for key in &self.key_list {
-                    if rel_match.cmp(&Number::from(date_count), &ctx.eval_value(key).to_number()) {
-                        result = true;
-                        break;
-                    }
-                }
-                result
+                self.eval_values(script, test.key_list)?
+                    .iter()
+                    .any(|key| rel_match.cmp(&Number::from(date_count), &key.to_number()))
             }
             MatchType::List => {
-                let mut values = Vec::new();
-                ctx.find_headers(
-                    &[header_name],
-                    self.index,
-                    self.mime_anychild,
+                let mut values: SmallVec<[&'x str; 4]> = SmallVec::new();
+                self.find_headers(
+                    &header_names,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        if let Some(dt) = ctx.find_dates(header) {
-                            let value = self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
-                            if !value.is_empty() && !values.iter().any(|v: &String| v.eq(&value)) {
-                                values.push(value);
+                        if let Some(dt) = self.find_dates(header) {
+                            let value = date_part.eval(zone.eval(dt.as_ref()).as_ref());
+                            if !value.is_empty() && !values.iter().any(|v| *v == value) {
+                                values.push(self.alloc_string(value));
                             }
                         }
-
                         false
                     },
                 );
                 if !values.is_empty() {
-                    return TestResult::Event {
-                        event: Event::ListContains {
-                            lists: ctx.eval_values_owned(&self.key_list),
-                            values,
-                            match_as: self.comparator.as_match(),
-                        },
-                        is_not: self.is_not,
-                    };
+                    let lists = self.eval_strings(script, test.key_list)?;
+                    return TestResult::from_reply(
+                        handler.list_contains(self, &lists, &values, comparator.as_match()),
+                        test.is_not,
+                    );
                 }
                 false
             }
             _ => {
-                let key_list = ctx.eval_values(&self.key_list);
+                let key_list = self.eval_keys(script, test.key_list)?;
                 let mut captured_values = Vec::new();
+                let mut error = None;
 
-                let result = ctx.find_headers(
-                    &[header_name],
-                    self.index,
-                    self.mime_anychild,
+                let result = self.find_headers(
+                    &header_names,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        if let Some(dt) = ctx.find_dates(header) {
-                            let date_part =
-                                self.date_part.eval(self.zone.eval(dt.as_ref()).as_ref());
-                            for (key, pattern) in key_list.iter().zip(self.key_list.iter()) {
-                                if match &self.match_type {
-                                    MatchType::Is => self.comparator.is(&date_part.as_str(), key),
-                                    MatchType::Contains => self
-                                        .comparator
-                                        .contains(&date_part, key.to_string().as_ref()),
-                                    MatchType::Value(rel_match) => self.comparator.relational(
-                                        rel_match,
-                                        &date_part.as_str(),
-                                        key,
-                                    ),
-                                    MatchType::Matches(capture_positions) => {
-                                        self.comparator.matches(
-                                            Some(pattern),
-                                            key.to_string().as_ref(),
-                                            &date_part,
-                                            *capture_positions,
-                                            &mut captured_values,
-                                        )
-                                    }
-                                    MatchType::Regex(capture_positions) => self.comparator.matches(
-                                        Some(pattern),
-                                        key.to_string().as_ref(),
-                                        &date_part,
-                                        *capture_positions,
-                                        &mut captured_values,
-                                    ),
-                                    MatchType::Count(_) | MatchType::List => false,
-                                } {
+                        let Some(dt) = self.find_dates(header) else {
+                            return false;
+                        };
+                        let value = date_part.eval(zone.eval(dt.as_ref()).as_ref());
+                        for key in &key_list {
+                            match self.key_matches(
+                                script,
+                                &comparator,
+                                &match_type,
+                                key,
+                                &value,
+                                &mut captured_values,
+                            ) {
+                                Ok(true) => return true,
+                                Ok(false) => (),
+                                Err(err) => {
+                                    error = Some(err);
                                     return true;
                                 }
                             }
                         }
-
                         false
                     },
                 );
+                if let Some(err) = error {
+                    return Err(err);
+                }
                 if !captured_values.is_empty() {
-                    ctx.set_match_variables(captured_values);
+                    self.set_match_variables(captured_values);
                 }
                 result
             }
         };
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
-}
 
-impl TestCurrentDate {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
+    pub(crate) fn test_current_date<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestCurrentDate,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
+        let date_part = DatePart::from_code(test.date_part);
         let mut result = false;
 
-        match &self.match_type {
+        match &match_type {
             MatchType::Count(rel_match) => {
-                for key in &self.key_list {
-                    if rel_match.cmp(&Number::from(1.0), &ctx.eval_value(key).to_number()) {
-                        result = true;
-                        break;
-                    }
-                }
+                result = self
+                    .eval_values(script, test.key_list)?
+                    .iter()
+                    .any(|key| rel_match.cmp(&Number::from(1.0), &key.to_number()));
             }
             MatchType::List => {
-                let value = self.date_part.eval(
-                    &(if let Some(zone) = self.zone {
-                        DateTime::from_timestamp(ctx.current_time).to_timezone(zone)
-                    } else {
-                        DateTime::from_timestamp(ctx.current_time)
-                    }),
-                );
+                let value = date_part.eval(&self.current_date_time(test.zone));
                 if !value.is_empty() {
-                    return TestResult::Event {
-                        event: Event::ListContains {
-                            lists: ctx.eval_values_owned(&self.key_list),
-                            values: vec![value],
-                            match_as: self.comparator.as_match(),
-                        },
-                        is_not: self.is_not,
-                    };
+                    let lists = self.eval_strings(script, test.key_list)?;
+                    return TestResult::from_reply(
+                        handler.list_contains(
+                            self,
+                            &lists,
+                            &[value.as_str()],
+                            comparator.as_match(),
+                        ),
+                        test.is_not,
+                    );
                 }
             }
             _ => {
+                let value = date_part.eval(&self.current_date_time(test.zone));
+                let keys = self.eval_keys(script, test.key_list)?;
                 let mut captured_values = Vec::new();
-                let date_part = self.date_part.eval(
-                    &(if let Some(zone) = self.zone {
-                        DateTime::from_timestamp(ctx.current_time).to_timezone(zone)
-                    } else {
-                        DateTime::from_timestamp(ctx.current_time)
-                    }),
-                );
 
-                for pattern in &self.key_list {
-                    let key = ctx.eval_value(pattern);
-
-                    if match &self.match_type {
-                        MatchType::Is => self.comparator.is(&date_part.as_str(), &key),
-                        MatchType::Contains => self
-                            .comparator
-                            .contains(&date_part, key.to_string().as_ref()),
-                        MatchType::Value(rel_match) => {
-                            self.comparator
-                                .relational(rel_match, &date_part.as_str(), &key)
-                        }
-                        MatchType::Matches(capture_positions) => self.comparator.matches(
-                            Some(pattern),
-                            key.to_string().as_ref(),
-                            &date_part,
-                            *capture_positions,
-                            &mut captured_values,
-                        ),
-                        MatchType::Regex(capture_positions) => self.comparator.matches(
-                            Some(pattern),
-                            key.to_string().as_ref(),
-                            &date_part,
-                            *capture_positions,
-                            &mut captured_values,
-                        ),
-                        MatchType::Count(_) | MatchType::List => false,
-                    } {
+                for key in &keys {
+                    if self.key_matches(
+                        script,
+                        &comparator,
+                        &match_type,
+                        key,
+                        &value,
+                        &mut captured_values,
+                    )? {
                         result = true;
                         break;
                     }
                 }
 
                 if !captured_values.is_empty() {
-                    ctx.set_match_variables(captured_values);
+                    self.set_match_variables(captured_values);
                 }
             }
         }
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
-}
 
-impl<'x> Context<'x> {
-    #[allow(unused_assignments)]
-    pub(crate) fn find_dates(&self, header: &'x Header) -> Option<Cow<'x, DateTime>> {
+    fn current_date_time(&self, zone: Option<i64>) -> DateTime {
+        let dt = DateTime::from_timestamp(self.current_time);
+        match zone {
+            Some(zone) => dt.to_timezone(zone),
+            None => dt,
+        }
+    }
+
+    pub(crate) fn find_dates<'y>(&self, header: &'y Header<'_>) -> Option<Cow<'y, DateTime>> {
         if let HeaderValue::DateTime(dt) = &header.value {
             if dt.is_valid() {
                 return Some(Cow::Borrowed(dt));
@@ -242,7 +210,6 @@ impl<'x> Context<'x> {
                 return Some(Cow::Owned(dt));
             }
         } else if let HeaderValue::Text(text) = &header.value {
-            // Inserted header
             let bytes = format!("{text}\n").into_bytes();
             if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date()
                 && dt.is_valid()
@@ -283,12 +250,12 @@ impl DatePart {
     }
 }
 
-impl Zone {
-    pub(crate) fn eval<'x>(&self, dt: &'x DateTime) -> Cow<'x, DateTime> {
-        match self {
-            Zone::Time(tz) => Cow::Owned(dt.to_timezone(*tz)),
-            Zone::Original => Cow::Borrowed(dt),
-            Zone::Local => Cow::Owned(DateTime::from_timestamp(dt.to_timestamp())),
+impl ops::Zone {
+    pub(crate) fn eval<'y>(&self, dt: &'y DateTime) -> Cow<'y, DateTime> {
+        match self.kind {
+            0 => Cow::Owned(dt.to_timezone(self.time)),
+            1 => Cow::Borrowed(dt),
+            _ => Cow::Owned(DateTime::from_timestamp(dt.to_timestamp())),
         }
     }
 }

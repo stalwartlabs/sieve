@@ -1,3 +1,12 @@
+sieve-rs 1.0.0
+================================
+- Scripts compile to a flat bytecode; `Sieve::from_bytes` is a zero-copy borrow of the stored bytes instead of a full deserialization.
+- The event loop was replaced by the `Handler` trait: synchronous callbacks with `Reply::Pending` to suspend for asynchronous work, resumed with `Context::resume`.
+- Scripts are passed by reference (`&Sieve`), included scripts live in the caller or in `Runtime::with_include_script`.
+- `Context::new`, `Runtime::filter` and `Runtime::filter_parsed` take a caller-owned `Arena`.
+- Regular expressions compile lazily per loaded script; glob patterns are precompiled into the bytecode.
+- Removed the `rkyv` feature and the `arc-swap` dependency; added `bumpalo`, `memchr` and `smallvec`.
+
 sieve-rs 0.8.1
 ================================
 - Reduce enum variants with `Box`.

@@ -18,10 +18,6 @@ use crate::compiler::grammar::test::Test;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestSpecialUseExists {
     pub mailbox: Option<Value>,
     pub attributes: Box<[Value]>,

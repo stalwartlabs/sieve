@@ -23,10 +23,6 @@ use crate::compiler::grammar::{MatchType, test::Test};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestHasFlag {
     pub comparator: Comparator,
     pub match_type: MatchType,

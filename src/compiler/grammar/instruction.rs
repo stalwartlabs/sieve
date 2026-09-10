@@ -32,16 +32,12 @@ use crate::{
     },
 };
 use ahash::{AHashMap, AHashSet};
-use std::sync::Arc;
+use hashbrown::HashTable;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum Instruction {
@@ -139,22 +135,51 @@ pub(crate) struct CompilerState<'x> {
     pub(crate) vars_local: usize,
     pub(crate) param_check: [bool; MAX_PARAMS],
     pub(crate) includes_num: usize,
-    pub(crate) constants: Vec<Arc<str>>,
-    pub(crate) constants_map: AHashMap<Arc<str>, ConstantId>,
+    pub(crate) constants: Vec<String>,
+    pub(crate) constants_map: HashTable<ConstantId>,
+    pub(crate) hasher: ahash::RandomState,
 }
 
 impl CompilerState<'_> {
     pub(crate) fn intern(&mut self, text: impl AsRef<str>) -> ConstantId {
         let text = text.as_ref();
-        if let Some(id) = self.constants_map.get(text) {
-            return *id;
+        match self.lookup_constant(text) {
+            Ok(id) => id,
+            Err(id) => {
+                self.constants.push(text.to_string());
+                id
+            }
         }
+    }
 
-        let id = ConstantId::new(self.constants.len());
-        let text: Arc<str> = Arc::from(text);
-        self.constants.push(text.clone());
-        self.constants_map.insert(text, id);
-        id
+    pub(crate) fn intern_string(&mut self, text: String) -> ConstantId {
+        match self.lookup_constant(&text) {
+            Ok(id) => id,
+            Err(id) => {
+                self.constants.push(text);
+                id
+            }
+        }
+    }
+
+    fn lookup_constant(&mut self, text: &str) -> Result<ConstantId, ConstantId> {
+        let hash = self.hasher.hash_one(text);
+        let constants = &self.constants;
+        match self.constants_map.entry(
+            hash,
+            |id| constants.get(id.index()).is_some_and(|c| c == text),
+            |id| {
+                self.hasher
+                    .hash_one(constants.get(id.index()).map_or("", |c| c.as_str()))
+            },
+        ) {
+            hashbrown::hash_table::Entry::Occupied(entry) => Ok(*entry.get()),
+            hashbrown::hash_table::Entry::Vacant(entry) => {
+                let id = ConstantId::new(constants.len());
+                entry.insert(id);
+                Err(id)
+            }
+        }
     }
 
     pub(crate) fn constant(&self, id: ConstantId) -> &str {
@@ -167,7 +192,7 @@ impl CompilerState<'_> {
 
     pub(crate) fn intern_raw(&mut self, value: RawValue) -> Value {
         match value {
-            RawValue::Text(text) => self.text(text),
+            RawValue::Text(text) => Value::Text(self.intern_string(text)),
             RawValue::Number(number) => Value::Number(number),
             RawValue::Value(value) => value,
         }
@@ -183,8 +208,36 @@ impl CompilerState<'_> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Program {
+    pub(crate) instructions: Vec<Instruction>,
+    pub(crate) constants: Vec<String>,
+    pub(crate) num_vars: u32,
+    pub(crate) num_match_vars: u32,
+}
+
+impl Program {
+    pub(crate) fn emit(&self) -> Result<Sieve<'static>, crate::sieve::LoadError> {
+        crate::compiler::emit::emit(
+            &self.instructions,
+            &self.constants,
+            self.num_vars,
+            self.num_match_vars,
+        )
+    }
+}
+
 impl Compiler {
-    pub fn compile(&self, script: &[u8]) -> Result<Sieve, CompileError> {
+    pub fn compile(&self, script: &[u8]) -> Result<Sieve<'static>, CompileError> {
+        let program = self.compile_ast(script)?;
+        program.emit().map_err(|_| CompileError {
+            line_num: 0,
+            line_pos: 0,
+            error_type: ErrorType::ScriptTooLong,
+        })
+    }
+
+    pub(crate) fn compile_ast(&self, script: &[u8]) -> Result<Program, CompileError> {
         if script.len() > self.max_script_size {
             return Err(CompileError {
                 line_num: 0,
@@ -208,7 +261,8 @@ impl Compiler {
             param_check: [false; MAX_PARAMS],
             includes_num: 0,
             constants: Vec::new(),
-            constants_map: AHashMap::new(),
+            constants_map: HashTable::new(),
+            hasher: ahash::RandomState::new(),
         };
 
         while let Some(token_info) = state.tokens.next() {
@@ -871,12 +925,9 @@ impl Compiler {
             num_vars += state.vars_local;
         }
 
-        state.instructions.shrink_to_fit();
-        state.constants.shrink_to_fit();
-
-        Ok(Sieve {
-            instructions: state.instructions.into(),
-            constants: state.constants.into(),
+        Ok(Program {
+            instructions: state.instructions,
+            constants: state.constants,
             num_vars: num_vars as u32,
             num_match_vars: state.vars_match_max as u32,
         })
@@ -885,12 +936,13 @@ impl Compiler {
 
 impl CompilerState<'_> {
     pub(crate) fn is_var_local(&self, name: &str) -> bool {
-        let name = name.to_ascii_lowercase();
-        if self.block.vars_local.contains_key(&name) {
+        let name = lowercase(name);
+        let name = name.as_ref();
+        if self.block.vars_local.contains_key(name) {
             true
         } else {
             for block in self.block_stack.iter().rev() {
-                if block.vars_local.contains_key(&name) {
+                if block.vars_local.contains_key(name) {
                     return true;
                 }
             }
@@ -899,8 +951,7 @@ impl CompilerState<'_> {
     }
 
     pub(crate) fn is_var_global(&self, name: &str) -> bool {
-        let name = name.to_ascii_lowercase();
-        self.vars_global.contains(&name)
+        self.vars_global.contains(lowercase(name).as_ref())
     }
 
     pub(crate) fn register_local_var(&mut self, name: String, register_as_local: bool) -> u16 {
@@ -928,12 +979,13 @@ impl CompilerState<'_> {
     }
 
     pub(crate) fn get_local_var(&self, name: &str) -> Option<u16> {
-        let name = name.to_ascii_lowercase();
-        if let Some(var_id) = self.block.vars_local.get(&name) {
+        let name = lowercase(name);
+        let name = name.as_ref();
+        if let Some(var_id) = self.block.vars_local.get(name) {
             Some(*var_id)
         } else {
             for block in self.block_stack.iter().rev() {
-                if let Some(var_id) = block.vars_local.get(&name) {
+                if let Some(var_id) = block.vars_local.get(name) {
                     return Some(*var_id);
                 }
             }
@@ -1101,6 +1153,14 @@ impl CompilerState<'_> {
                 _ => {}
             }
         }
+    }
+}
+
+pub(crate) fn lowercase(name: &str) -> std::borrow::Cow<'_, str> {
+    if name.bytes().any(|b| b.is_ascii_uppercase()) {
+        std::borrow::Cow::Owned(name.to_ascii_lowercase())
+    } else {
+        std::borrow::Cow::Borrowed(name)
     }
 }
 

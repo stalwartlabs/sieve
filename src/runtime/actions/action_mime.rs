@@ -6,11 +6,9 @@
 
 use super::action_editheader::RemoveCrLf;
 use crate::{
-    Context, Event,
-    compiler::{
-        VariableType,
-        grammar::actions::action_mime::{Enclose, ExtractText, Replace},
-    },
+    Context, Sieve,
+    bytecode::{ops, rec::tag},
+    runtime::{RuntimeError, eval::ValueRef, handler::Action},
 };
 use mail_parser::{
     Encoding, HeaderName, Message, MessagePart, PartType, decoders::html::html_to_text,
@@ -20,30 +18,37 @@ use std::cmp::Reverse;
 #[cfg(not(test))]
 use mail_builder::headers::message_id::generate_message_id_header;
 
-impl Replace {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        // Delete children parts
-        let mut part_ids = ctx.find_nested_parts_ids(false);
+impl<'x> Context<'x> {
+    pub(crate) fn exec_replace(
+        &mut self,
+        script: &'x Sieve<'x>,
+        replace: &ops::Replace,
+    ) -> Result<(), RuntimeError> {
+        let mut part_ids = self.find_nested_parts_ids(false);
         part_ids.sort_unstable_by_key(|a| Reverse(*a));
         for part_id in part_ids {
-            ctx.message.parts.remove(part_id as usize);
+            self.message.parts.remove(part_id as usize);
         }
-        ctx.has_changes = true;
+        self.has_changes = true;
 
-        // Update part
-        let body = ctx.eval_value(&self.replacement).to_string().into_owned();
+        let body = self
+            .eval_value(script, replace.replacement)?
+            .into_string()
+            .into_owned();
         let body_len = body.len();
+        let has_subject = replace.subject.tag != tag::NONE;
+        let has_from = replace.from.tag != tag::NONE;
 
-        let part = &mut ctx.message.parts[ctx.part as usize];
+        let part = &mut self.message.parts[self.part as usize];
 
-        ctx.message_size = ctx.message_size + body_len
+        self.message_size = self.message_size + body_len
             - (if part.offset_body != 0 {
                 (part.offset_end - part.offset_header) as usize
             } else {
                 part.body.len()
             });
         part.body = PartType::Text(body.into());
-        part.encoding = if !self.mime {
+        part.encoding = if !replace.mime {
             Encoding::QuotedPrintable
         } else {
             Encoding::None
@@ -53,19 +58,19 @@ impl Replace {
         let mut add_date = true;
         let mut has_original_from = false;
 
-        if ctx.part == 0 {
+        if self.part == 0 {
             for mut header in prev_headers {
                 let mut size = (header.offset_end - header.offset_field) as usize;
                 match &header.name {
                     HeaderName::Subject => {
-                        if self.subject.is_some() {
+                        if has_subject {
                             header.name = HeaderName::Other("Original-Subject".into());
                             header.offset_field = header.offset_start;
                             size += "Original-".len();
                         }
                     }
                     HeaderName::From => {
-                        if self.from.is_some() {
+                        if has_from {
                             header.name = HeaderName::Other("Original-From".into());
                             header.offset_field = header.offset_start;
                             size += "Original-".len();
@@ -80,115 +85,97 @@ impl Replace {
                     }
                     _ => continue,
                 }
-                ctx.message_size += size;
+                self.message_size += size;
                 part.headers.push(header);
             }
 
-            // Add From
             let mut add_from = true;
-            if let Some(from) = self.from.as_ref().map(|f| ctx.eval_value(f))
+            if let Some(from) = self.eval_opt(script, replace.from)?
                 && !from.is_empty()
             {
-                ctx.insert_header(
-                    0,
-                    HeaderName::Other("From".into()),
-                    from.to_string()
-                        .as_ref()
-                        .remove_crlf(ctx.runtime.max_header_size),
-                    true,
-                );
+                let from = from
+                    .to_string()
+                    .as_ref()
+                    .remove_crlf(self.runtime.max_header_size);
+                self.insert_header(0, HeaderName::Other("From".into()), from, true);
                 add_from = false;
             }
             if add_from && !has_original_from {
-                ctx.insert_header(
-                    0,
-                    HeaderName::Other("From".to_string().into()),
-                    ctx.user_from_field(),
-                    true,
-                );
+                let from = self.user_from_field();
+                self.insert_header(0, HeaderName::Other("From".into()), from, true);
             }
 
-            // Add Subject
-            if let Some(subject) = self.subject.as_ref().map(|f| ctx.eval_value(f))
+            if let Some(subject) = self.eval_opt(script, replace.subject)?
                 && !subject.is_empty()
             {
-                ctx.insert_header(
-                    0,
-                    HeaderName::Other("Subject".into()),
-                    subject
-                        .to_string()
-                        .as_ref()
-                        .remove_crlf(ctx.runtime.max_header_size),
-                    true,
-                );
+                let subject = subject
+                    .to_string()
+                    .as_ref()
+                    .remove_crlf(self.runtime.max_header_size);
+                self.insert_header(0, HeaderName::Other("Subject".into()), subject, true);
             }
 
-            // Add Date
             if add_date {
                 #[cfg(not(test))]
                 let header_value = mail_builder::headers::date::Date::now().to_rfc822();
                 #[cfg(test)]
                 let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
-                ctx.insert_header(
-                    0,
-                    HeaderName::Other("Date".to_string().into()),
-                    header_value,
-                    true,
-                );
+                self.insert_header(0, HeaderName::Other("Date".into()), header_value, true);
             }
 
-            // Add Message-ID
-            let mut header_value = Vec::with_capacity(20);
-            #[cfg(not(test))]
-            generate_message_id_header(&mut header_value, &ctx.runtime.local_hostname).unwrap();
-            #[cfg(test)]
-            header_value.extend_from_slice(b"<auto-generated@message-id>");
-
-            ctx.insert_header(
+            let header_value = self.generate_message_id();
+            self.insert_header(
                 0,
-                HeaderName::Other("Message-ID".to_string().into()),
-                String::from_utf8(header_value).unwrap(),
+                HeaderName::Other("Message-ID".into()),
+                header_value,
                 true,
             );
         }
 
-        if !self.mime {
-            ctx.insert_header(
-                ctx.part,
+        if !replace.mime {
+            self.insert_header(
+                self.part,
                 HeaderName::Other("Content-Type".into()),
-                "text/plain; charset=utf-8".to_string(),
+                "text/plain; charset=utf-8",
                 true,
             );
         }
+
+        Ok(())
     }
-}
 
-impl Enclose {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
-        let body = ctx.eval_value(&self.value).to_string().into_owned();
-        let subject = self
-            .subject
-            .as_ref()
-            .map(|s| {
-                ctx.eval_value(s)
-                    .to_string()
-                    .as_ref()
-                    .remove_crlf(ctx.runtime.max_header_size)
-            })
-            .or_else(|| ctx.message.subject().map(|s| s.to_string()))
-            .unwrap_or_default();
+    pub(crate) fn exec_enclose(
+        &mut self,
+        script: &'x Sieve<'x>,
+        enclose: &ops::Enclose,
+    ) -> Result<(), RuntimeError> {
+        let body = self
+            .eval_value(script, enclose.value)?
+            .into_string()
+            .into_owned();
+        let subject = match self.eval_opt(script, enclose.subject)? {
+            Some(subject) => subject
+                .to_string()
+                .as_ref()
+                .remove_crlf(self.runtime.max_header_size),
+            None => self
+                .message
+                .subject()
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+        };
 
-        let message = std::mem::take(&mut ctx.message);
+        let message = std::mem::take(&mut self.message);
         #[cfg(test)]
         let boundary = make_test_boundary();
         #[cfg(not(test))]
         let boundary = mail_builder::mime::make_boundary(".");
 
-        ctx.message_size += ((boundary.len() + 6) * 3) + body.len() + 2;
-        ctx.part = 0;
-        ctx.has_changes = true;
-        ctx.message = Message {
+        self.message_size += ((boundary.len() + 6) * 3) + body.len() + 2;
+        self.part = 0;
+        self.has_changes = true;
+        self.message = Message {
             html_body: Vec::with_capacity(0),
             text_body: Vec::with_capacity(0),
             attachments: Vec::with_capacity(0),
@@ -206,7 +193,7 @@ impl Enclose {
                     headers: vec![],
                     is_encoding_problem: false,
                     body: PartType::Text(body.into()),
-                    encoding: Encoding::QuotedPrintable, // Flag non-mime part
+                    encoding: Encoding::QuotedPrintable,
                     offset_header: 0,
                     offset_body: 0,
                     offset_end: 0,
@@ -215,7 +202,7 @@ impl Enclose {
                     headers: vec![],
                     is_encoding_problem: false,
                     body: PartType::Message(message),
-                    encoding: Encoding::QuotedPrintable, // Flag non-mime part
+                    encoding: Encoding::QuotedPrintable,
                     offset_header: 0,
                     offset_body: 0,
                     offset_end: 0,
@@ -224,20 +211,20 @@ impl Enclose {
             raw_message: b""[..].into(),
         };
 
-        ctx.insert_header(
+        self.insert_header(
             0,
             HeaderName::Other("Content-Type".into()),
             format!("multipart/mixed; boundary=\"{boundary}\""),
             true,
         );
-        ctx.insert_header(0, HeaderName::Other("Subject".into()), subject, true);
-        ctx.insert_header(
+        self.insert_header(0, HeaderName::Other("Subject".into()), subject, true);
+        self.insert_header(
             1,
             HeaderName::Other("Content-Type".into()),
             "text/plain; charset=utf-8",
             true,
         );
-        ctx.insert_header(
+        self.insert_header(
             2,
             HeaderName::Other("Content-Type".into()),
             "message/rfc822",
@@ -248,8 +235,10 @@ impl Enclose {
         let mut add_message_id = true;
         let mut add_from = true;
 
-        for header in &self.headers {
-            let header = ctx.eval_value(header);
+        let mut iter = script.recs(enclose.headers)?;
+        while let Some(rec) = iter.next() {
+            let header = ValueRef::decode(script, rec, &mut iter)?;
+            let header = self.eval_value_ref(script, header)?;
             if let Some((mut header_name, mut header_value)) =
                 header.to_string().as_ref().split_once(':')
             {
@@ -257,7 +246,7 @@ impl Enclose {
                 header_value = header_value.trim();
                 if !header_value.is_empty()
                     && let Some(name) = HeaderName::parse(header_name)
-                    && !ctx.runtime.protected_headers.contains(&name)
+                    && !self.runtime.protected_headers.contains(&name)
                 {
                     match &name {
                         HeaderName::Date => {
@@ -272,10 +261,11 @@ impl Enclose {
                         _ => (),
                     }
 
-                    ctx.insert_header(
+                    let header_value = header_value.remove_crlf(self.runtime.max_header_size);
+                    self.insert_header(
                         0,
                         HeaderName::Other(header_name.to_string().into()),
-                        header_value.remove_crlf(ctx.runtime.max_header_size),
+                        header_value,
                         true,
                     );
                 }
@@ -283,12 +273,8 @@ impl Enclose {
         }
 
         if add_from {
-            ctx.insert_header(
-                0,
-                HeaderName::Other("From".to_string().into()),
-                ctx.user_from_field(),
-                true,
-            );
+            let from = self.user_from_field();
+            self.insert_header(0, HeaderName::Other("From".into()), from, true);
         }
 
         if add_date {
@@ -297,49 +283,43 @@ impl Enclose {
             #[cfg(test)]
             let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
-            ctx.insert_header(
+            self.insert_header(0, HeaderName::Other("Date".into()), header_value, true);
+        }
+
+        if add_message_id {
+            let header_value = self.generate_message_id();
+            self.insert_header(
                 0,
-                HeaderName::Other("Date".to_string().into()),
+                HeaderName::Other("Message-ID".into()),
                 header_value,
                 true,
             );
         }
 
-        if add_message_id {
-            let mut header_value = Vec::with_capacity(20);
-            #[cfg(not(test))]
-            generate_message_id_header(&mut header_value, &ctx.runtime.local_hostname).unwrap();
-            #[cfg(test)]
-            header_value.extend_from_slice(b"<auto-generated@message-id>");
-
-            ctx.insert_header(
-                0,
-                HeaderName::Other("Message-ID".to_string().into()),
-                String::from_utf8(header_value).unwrap(),
-                true,
-            );
-        }
+        Ok(())
     }
-}
 
-impl ExtractText {
-    pub(crate) fn exec(&self, ctx: &mut Context) {
+    pub(crate) fn exec_extracttext(
+        &mut self,
+        script: &'x Sieve<'x>,
+        extract: &ops::ExtractText,
+    ) -> Result<(), RuntimeError> {
         let mut value = String::new();
 
-        if !ctx.part_iter_stack.is_empty() {
-            match ctx.message.parts.get(ctx.part as usize).map(|p| &p.body) {
+        if !self.part_iter_stack.is_empty() {
+            match self.message.parts.get(self.part as usize).map(|p| &p.body) {
                 Some(PartType::Text(text)) => {
-                    value = if let Some(first) = &self.first {
-                        text.chars().take(*first as usize).collect()
+                    value = if let Some(first) = extract.first {
+                        text.chars().take(first as usize).collect()
                     } else {
                         text.as_ref().to_string()
                     };
                 }
                 Some(PartType::Html(html)) => {
-                    value = if let Some(first) = &self.first {
+                    value = if let Some(first) = extract.first {
                         html_to_text(html.as_ref())
                             .chars()
-                            .take(*first as usize)
+                            .take(first as usize)
                             .collect()
                     } else {
                         html_to_text(html.as_ref())
@@ -348,47 +328,37 @@ impl ExtractText {
                 _ => (),
             }
 
-            if !self.modifiers.is_empty() && !value.is_empty() {
-                for modifier in &self.modifiers {
-                    value = modifier.apply(&value, ctx);
-                }
+            if !extract.modifiers.is_empty() && !value.is_empty() {
+                let modified = self.apply_modifiers(script, extract.modifiers, value.into())?;
+                return self.assign_variable(script, extract.name, modified);
             }
         }
 
-        match &self.name {
-            VariableType::Local(var_id) => {
-                if let Some(var) = ctx.vars_local.get_mut(*var_id as usize) {
-                    *var = value.into();
-                } else {
-                    debug_assert!(false, "Non-existent local variable {var_id}");
-                }
+        self.assign_variable(script, extract.name, value.into())
+    }
+
+    fn generate_message_id(&self) -> String {
+        #[cfg(not(test))]
+        {
+            let mut header_value = Vec::with_capacity(20);
+            match generate_message_id_header(&mut header_value, &self.runtime.local_hostname) {
+                Ok(()) => String::from_utf8(header_value).unwrap_or_default(),
+                Err(_) => String::new(),
             }
-            VariableType::Global(var_name) => {
-                ctx.vars_global
-                    .insert(var_name.to_string().into(), value.into());
-            }
-            VariableType::Envelope(env) => {
-                ctx.add_set_envelope_event(*env, value);
-            }
-            _ => (),
+        }
+        #[cfg(test)]
+        {
+            "<auto-generated@message-id>".to_string()
         }
     }
-}
 
-enum StackItem<'x> {
-    Message(&'x Message<'x>),
-    Boundary(&'x str),
-    None,
-}
-
-impl Context<'_> {
-    pub(crate) fn build_message_id(&mut self) -> Option<Event> {
+    pub(crate) fn build_message_id(&mut self) -> Option<Action<'x>> {
         if self.has_changes {
             self.last_message_id += 1;
             self.main_message_id = self.last_message_id;
             self.has_changes = false;
             let message = self.build_message();
-            Some(Event::CreatedMessage {
+            Some(Action::CreatedMessage {
                 message_id: self.main_message_id,
                 message,
             })
@@ -434,7 +404,6 @@ impl Context<'_> {
                                     [header.offset_field as usize..header.offset_end as usize],
                             );
                         } else {
-                            // Renamed header
                             message.extend_from_slice(header.name.as_str().as_bytes());
                             message.extend_from_slice(b":");
                             message.extend_from_slice(
@@ -455,15 +424,11 @@ impl Context<'_> {
                 }
 
                 if part.offset_body != 0 || part.encoding != Encoding::None {
-                    // Add CRLF unless this is a :mime replaced part
                     message.extend_from_slice(b"\r\n");
                 }
 
                 if part.offset_body != 0 {
-                    // Original message part
-
                     if let PartType::Multipart(subparts) = &part.body {
-                        // Multiparts contain offsets of the entire part, do not add.
                         iter_stack.push((
                             StackItem::None,
                             part,
@@ -480,7 +445,6 @@ impl Context<'_> {
                 } else {
                     match &part.body {
                         PartType::Message(nested_message) => {
-                            // Enclosed message
                             iter_stack.push((
                                 StackItem::Message(current_message),
                                 part,
@@ -490,7 +454,6 @@ impl Context<'_> {
                             continue 'outer;
                         }
                         PartType::Multipart(subparts) => {
-                            // Multipart enclosing nested message, obtain MIME boundary
                             let prev_boundary = std::mem::replace(
                                 &mut current_boundary,
                                 if ct_pos != usize::MAX {
@@ -506,7 +469,6 @@ impl Context<'_> {
                                 .unwrap_or("invalid-boundary"),
                             );
 
-                            // Enclose multipart
                             iter_stack.push((
                                 StackItem::Boundary(prev_boundary),
                                 part,
@@ -515,7 +477,6 @@ impl Context<'_> {
                             continue 'outer;
                         }
                         _ => {
-                            // Replaced part
                             message.extend_from_slice(part.contents());
                         }
                     }
@@ -566,6 +527,12 @@ impl Context<'_> {
 
         message
     }
+}
+
+enum StackItem<'x> {
+    Message(&'x Message<'x>),
+    Boundary(&'x str),
+    None,
 }
 
 #[cfg(test)]

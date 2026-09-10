@@ -17,10 +17,6 @@ use crate::compiler::{
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct Convert {
     pub from_media_type: Value,
     pub to_media_type: Value,

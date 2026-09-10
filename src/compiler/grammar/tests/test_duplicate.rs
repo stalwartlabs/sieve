@@ -17,10 +17,6 @@ use crate::compiler::grammar::test::Test;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestDuplicate {
     pub handle: Option<Value>,
     pub dup_match: DupMatch,
@@ -33,10 +29,6 @@ pub(crate) struct TestDuplicate {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum DupMatch {

@@ -10,23 +10,93 @@ _sieve_ is a fast and secure Sieve filter interpreter for Rust that supports all
 ## Usage Example
 
 ```rust
-use sieve::{runtime::RuntimeError, Action, Compiler, Event, Input, Runtime};
+use sieve::{Arena, Compiler, Context, Handler, Reply, Runtime, SieveAction, Status};
 
-// Sieve script to execute
-let text_script = br#"
-require ["fileinto", "body", "imap4flags"];
-
-if body :contains "tps" {
-    setflag "$tps_reports";
+struct Printer {
+    messages: Vec<String>,
+    raw_message: &'static str,
 }
 
-if header :matches "List-ID" "*<*@*" {
-    fileinto "INBOX.lists.${2}"; stop;
+impl<'x> Handler<'x> for Printer {
+    fn action(&mut self, _: &Context<'x>, action: SieveAction<'_>) -> Reply<()> {
+        match action {
+            SieveAction::Keep { flags, message_id } => {
+                println!(
+                    "Keep message '{}' with flags {:?}.",
+                    self.message(message_id),
+                    flags
+                );
+            }
+            SieveAction::Discard => {
+                println!("Discard message.");
+            }
+            SieveAction::Reject { reason, .. } => {
+                println!("Reject message with reason {reason:?}.");
+            }
+            SieveAction::FileInto {
+                folder,
+                flags,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "File message '{}' in folder {:?} with flags {:?}.",
+                    self.message(message_id),
+                    folder,
+                    flags
+                );
+            }
+            SieveAction::SendMessage {
+                recipient,
+                message_id,
+                ..
+            } => {
+                println!(
+                    "Send message '{}' to {:?}.",
+                    self.message(message_id),
+                    recipient
+                );
+            }
+            SieveAction::Notify {
+                message, method, ..
+            } => {
+                println!("Notify URI {method:?} with message {message:?}");
+            }
+            SieveAction::SetEnvelope { envelope, value } => {
+                println!("Set envelope {envelope:?} to {value:?}");
+            }
+            SieveAction::CreatedMessage { message, .. } => {
+                self.messages
+                    .push(String::from_utf8_lossy(&message).into_owned());
+            }
+        }
+        Reply::Ready(())
+    }
 }
-"#;
 
-// Message to filter
-let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
+impl Printer {
+    fn message(&self, message_id: usize) -> &str {
+        if message_id > 0 {
+            self.messages[message_id - 1].as_str()
+        } else {
+            self.raw_message
+        }
+    }
+}
+
+fn main() {
+    let text_script = br#"
+    require ["fileinto", "body", "imap4flags"];
+    
+    if body :contains "tps" {
+        setflag "$tps_reports";
+    }
+
+    if header :matches "List-ID" "*<*@*" {
+        fileinto "INBOX.lists.${2}"; stop;
+    }
+    "#;
+    let raw_message = r#"From: Sales Mailing List <list-sales@example.org>
 To: John Doe <jdoe@example.org>
 List-ID: <sales@example.org>
 Subject: TPS Reports
@@ -35,156 +105,40 @@ We're putting new coversheets on all the TPS reports before they go out now.
 So if you could go ahead and try to remember to do that from now on, that'd be great. All right! 
 "#;
 
-// Compile
-let compiler = Compiler::new();
-let script = compiler.compile(text_script).unwrap();
+    let compiler = Compiler::new();
+    let script = compiler.compile(text_script).unwrap();
 
-// Build runtime
-let runtime = Runtime::new();
+    let runtime = Runtime::new();
 
-// Create filter instance
-let mut instance = runtime.filter(raw_message.as_bytes());
-let mut input = Input::script("my-script", script);
-let mut messages: Vec<String> = Vec::new();
+    let mut arena = Arena::new();
+    let mut instance = runtime.filter(raw_message.as_bytes(), &script, &mut arena);
+    let mut handler = Printer {
+        messages: Vec::new(),
+        raw_message,
+    };
 
-// Start event loop
-while let Some(result) = instance.run(input) {
-    match result {
-        Ok(event) => match event {
-            Event::IncludeScript { name, optional } => {
-                // NOTE: Just for demonstration purposes, script name needs to be validated first.
-                if let Ok(bytes) = std::fs::read(name.as_str()) {
-                    let script = compiler.compile(&bytes).unwrap();
-                    input = Input::script(name, script);
-                } else if optional {
-                    input = Input::False;
-                } else {
-                    panic!("Script {} not found.", name);
-                }
+    loop {
+        match instance.run(&mut handler) {
+            Ok(Status::Finished) => break,
+            Ok(Status::Pending) => instance.resume(true),
+            Err(error) => {
+                println!("Runtime error {error}");
+                break;
             }
-            Event::MailboxExists { .. } => {
-                // Set to true if the mailbox exists
-                input = false.into();
-            }
-            Event::ListContains { .. } => {
-                // Set to true if the list(s) contains an entry
-                input = false.into();
-            }
-            Event::DuplicateId { .. } => {
-                // Set to true if the ID is duplicate
-                input = false.into();
-            }
-            Event::Execute { command, arguments } => {
-                println!(
-                    "Script executed command {:?} with parameters {:?}",
-                    command, arguments
-                );
-                // Set to true if the script succeeded
-                input = false.into();
-            }
-
-            Event::Keep { flags, message_id } => {
-                println!(
-                    "Keep message '{}' with flags {:?}.",
-                    if message_id > 0 {
-                        messages[message_id - 1].as_str()
-                    } else {
-                        raw_message
-                    },
-                    flags
-                );
-                input = true.into();
-            }
-            Event::Discard => {
-                println!("Discard message.");
-                input = true.into();
-            }
-            Event::Reject { reason, .. } => {
-                println!("Reject message with reason {:?}.", reason);
-                input = true.into();
-            }
-            Event::FileInto {
-                folder,
-                flags,
-                message_id,
-                ..
-            } => {
-                println!(
-                    "File message '{}' in folder {:?} with flags {:?}.",
-                    if message_id > 0 {
-                        messages[message_id - 1].as_str()
-                    } else {
-                        raw_message
-                    },
-                    folder,
-                    flags
-                );
-                input = true.into();
-            }
-            Event::SendMessage {
-                recipient,
-                message_id,
-                ..
-            } => {
-                println!(
-                    "Send message '{}' to {:?}.",
-                    if message_id > 0 {
-                        messages[message_id - 1].as_str()
-                    } else {
-                        raw_message
-                    },
-                    recipient
-                );
-                input = true.into();
-            }
-            Event::Notify {
-                message, method, ..
-            } => {
-                println!("Notify URI {:?} with message {:?}", method, message);
-                input = true.into();
-            }
-            Event::CreatedMessage { message, .. } => {
-                messages.push(String::from_utf8(message).unwrap());
-                input = true.into();
-            }
-
-            #[cfg(test)]
-            _ => unreachable!(),
-        },
-        Err(error) => {
-            match error {
-                RuntimeError::TooManyIncludes => {
-                    eprintln!("Too many included scripts.");
-                }
-                RuntimeError::InvalidInstruction(instruction) => {
-                    eprintln!(
-                        "Invalid instruction {:?} found at {}:{}.",
-                        instruction.name(),
-                        instruction.line_num(),
-                        instruction.line_pos()
-                    );
-                }
-                RuntimeError::ScriptErrorMessage(message) => {
-                    eprintln!("Script called the 'error' function with {:?}", message);
-                }
-                RuntimeError::CapabilityNotAllowed(capability) => {
-                    eprintln!(
-                        "Capability {:?} has been disabled by the administrator.",
-                        capability
-                    );
-                }
-                RuntimeError::CapabilityNotSupported(capability) => {
-                    eprintln!("Capability {:?} not supported.", capability);
-                }
-                RuntimeError::CPULimitReached => {
-                    eprintln!("Script exceeded the configured CPU limit.");
-                }
-            }
-            input = true.into();
         }
     }
 }
 ```
+
+Scripts compile to a compact bytecode. Store `script.to_bytes()` and load it again
+with `Sieve::from_bytes(&bytes)`, which borrows the buffer instead of copying it, so a
+script can be loaded on every delivery at almost no cost. Operations that need an
+asynchronous answer (list lookups, duplicate tracking, mailbox checks, external
+functions, scripts loaded on demand) return `Reply::Pending` from the handler; the
+interpreter then returns `Status::Pending` and continues after `resume(input)`.
+Scripts loaded while a run is in progress (`include` of a user script) must outlive
+the `Context`; push them into a `ScriptArena` declared before the context and hand
+the interpreter the reference it returns.
 
 ## Testing & Fuzzing
 

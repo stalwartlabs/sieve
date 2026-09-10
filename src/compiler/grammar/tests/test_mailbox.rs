@@ -23,10 +23,6 @@ use crate::compiler::grammar::{MatchType, test::Test};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestMailboxExists {
     pub mailbox_names: Box<[Value]>,
     pub is_not: bool,
@@ -36,10 +32,6 @@ pub(crate) struct TestMailboxExists {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestMetadataExists {
     pub mailbox: Option<Value>,
@@ -59,10 +51,6 @@ metadata [MATCH-TYPE] [COMPARATOR]
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct TestMetadata {
     pub match_type: MatchType,

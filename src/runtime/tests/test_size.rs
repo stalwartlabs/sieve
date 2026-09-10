@@ -4,18 +4,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{Context, compiler::grammar::tests::test_size::TestSize};
-
 use super::TestResult;
+use crate::{Context, bytecode::ops};
 
-impl TestSize {
-    pub(crate) fn exec(&self, ctx: &Context) -> TestResult {
-        TestResult::Bool(
-            (if self.over {
-                ctx.message_size as u64 > self.limit
-            } else {
-                (ctx.message_size as u64) < self.limit
-            }) ^ self.is_not,
-        )
+impl Context<'_> {
+    pub(crate) fn test_size(&self, test: &ops::TestSize) -> TestResult {
+        let size = self.message_size as u64;
+        let result = if test.over {
+            size > test.limit
+        } else {
+            size < test.limit
+        };
+        TestResult::Bool(result ^ test.is_not)
     }
 }

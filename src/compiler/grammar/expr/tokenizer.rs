@@ -9,7 +9,7 @@ use std::{
     slice::Iter,
 };
 
-use crate::{compiler::Number, runtime::eval::IntoString};
+use crate::compiler::Number;
 
 use super::{BinaryOperator, Token, UnaryOperator};
 
@@ -249,7 +249,14 @@ where
     }
 
     fn parse_buf(&mut self) -> Result<Token, String> {
-        let buf = std::mem::take(&mut self.buf).into_string();
+        let bytes = std::mem::take(&mut self.buf);
+        let result = self.parse_word(&String::from_utf8_lossy(&bytes));
+        self.buf = bytes;
+        self.buf.clear();
+        result
+    }
+
+    fn parse_word(&mut self, buf: &str) -> Result<Token, String> {
         if self.has_number && !self.has_alpha {
             self.has_number = false;
             if self.has_dot {
@@ -273,12 +280,12 @@ where
 
             if !has_number
                 && !has_dot
-                && let Some(value) = lookup_boolean(&buf)
+                && let Some(value) = lookup_boolean(buf)
             {
                 return Ok(Token::Number(Number::Integer(value)));
             }
 
-            (self.token_map)(&buf, has_dot)
+            (self.token_map)(buf, has_dot)
         }
     }
 }

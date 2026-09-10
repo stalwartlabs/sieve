@@ -16,10 +16,6 @@ use crate::compiler::grammar::test::Test;
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct TestIhave {
     pub capabilities: Box<[Capability]>,
     pub is_not: bool,
@@ -29,10 +25,6 @@ pub(crate) struct TestIhave {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Error {
     pub message: Value,

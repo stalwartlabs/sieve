@@ -4,32 +4,53 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::TestResult;
 use crate::{
-    Context, Event,
+    Context, Sieve,
+    bytecode::ops,
     compiler::{
         Number,
-        grammar::{MatchType, tests::test_string::TestString},
+        grammar::{Comparator, MatchType},
     },
+    runtime::{RuntimeError, handler::Handler},
 };
+use smallvec::SmallVec;
 
-use super::TestResult;
+impl<'x> Context<'x> {
+    pub(crate) fn test_environment<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestEnvironment,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let test = ops::TestString {
+            match_type: test.match_type,
+            comparator: test.comparator,
+            source: test.source,
+            key_list: test.key_list,
+            is_not: test.is_not,
+        };
+        self.test_string(script, &test, true, handler)
+    }
 
-impl TestString {
-    pub(crate) fn exec(&self, ctx: &mut Context, empty_is_null: bool) -> TestResult {
+    pub(crate) fn test_string<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestString,
+        empty_is_null: bool,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
         let mut result = false;
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
 
-        match &self.match_type {
-            MatchType::Count(match_type) => {
-                let num_items = self
-                    .source
-                    .iter()
-                    .filter(|x| !ctx.eval_value(x).is_empty())
-                    .count() as i64;
+        match &match_type {
+            MatchType::Count(rel) => {
+                let sources = self.eval_values(script, test.source)?;
+                let num_items = sources.iter().filter(|x| !x.is_empty()).count() as i64;
                 if !empty_is_null || num_items > 0 {
-                    for key in &self.key_list {
-                        if match_type
-                            .cmp(&Number::from(num_items), &ctx.eval_value(key).to_number())
-                        {
+                    for key in self.eval_values(script, test.key_list)? {
+                        if rel.cmp(&Number::from(num_items), &key.to_number()) {
                             result = true;
                             break;
                         }
@@ -37,71 +58,70 @@ impl TestString {
                 }
             }
             MatchType::List => {
-                let mut values = Vec::with_capacity(self.source.len());
-                for source in &self.source {
-                    let value = ctx.eval_value(source).to_string().into_owned();
-                    if !value.is_empty() && !values.iter().any(|v: &String| v.eq(&value)) {
+                let sources = self.eval_values(script, test.source)?;
+                let mut values: SmallVec<[&str; 4]> = SmallVec::with_capacity(sources.len());
+                for source in &sources {
+                    let value = self.intern_cow(source.clone().into_string());
+                    if !value.is_empty() && !values.contains(&value) {
                         values.push(value);
                     }
                 }
                 if !values.is_empty() {
-                    return TestResult::Event {
-                        event: Event::ListContains {
-                            lists: ctx.eval_values_owned(&self.key_list),
-                            values,
-                            match_as: self.comparator.as_match(),
-                        },
-                        is_not: self.is_not,
-                    };
+                    let lists = self.eval_strings(script, test.key_list)?;
+                    return TestResult::from_reply(
+                        handler.list_contains(self, &lists, &values, comparator.as_match()),
+                        test.is_not,
+                    );
                 }
             }
             _ => {
                 let mut captured_values = Vec::new();
-                let sources = ctx.eval_values(&self.source);
+                let sources = self.eval_values(script, test.source)?;
+                let keys = self.eval_keys(script, test.key_list)?;
 
-                for pattern in &self.key_list {
-                    let key = ctx.eval_value(pattern);
+                'outer: for key in &keys {
                     for source in &sources {
                         if !empty_is_null || !source.is_empty() {
-                            result = match &self.match_type {
-                                MatchType::Is => self.comparator.is(source, &key),
-                                MatchType::Contains => self.comparator.contains(
+                            result = match &match_type {
+                                MatchType::Is => comparator.is(source, &key.value),
+                                MatchType::Contains => comparator.contains(
                                     source.to_string().as_ref(),
-                                    key.to_string().as_ref(),
+                                    key.value.to_string().as_ref(),
                                 ),
                                 MatchType::Value(relation) => {
-                                    self.comparator.relational(relation, source, &key)
+                                    comparator.relational(relation, source, &key.value)
                                 }
-                                MatchType::Matches(capture_positions) => self.comparator.matches(
-                                    Some(pattern),
-                                    key.to_string().as_ref(),
+                                MatchType::Matches(capture_positions) => self.glob_matches(
+                                    script,
+                                    comparator.is_casemap(),
+                                    key,
                                     source.to_string().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
-                                ),
-                                MatchType::Regex(capture_positions) => self.comparator.regex(
-                                    pattern,
-                                    &key,
+                                )?,
+                                MatchType::Regex(capture_positions) => self.regex_matches(
+                                    script,
+                                    key,
                                     source.to_string().as_ref(),
                                     *capture_positions,
                                     &mut captured_values,
-                                ),
+                                )?,
                                 _ => false,
                             };
 
                             if result {
-                                break;
+                                break 'outer;
                             }
                         }
                     }
                 }
 
                 if !captured_values.is_empty() {
-                    ctx.set_match_variables(captured_values);
+                    self.set_match_variables(captured_values);
                 }
             }
         }
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
 }

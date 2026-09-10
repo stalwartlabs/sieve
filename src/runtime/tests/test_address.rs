@@ -4,6 +4,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::TestResult;
+use crate::{
+    Context, Sieve,
+    bytecode::ops,
+    compiler::{
+        Number,
+        grammar::{AddressPart, Comparator, MatchType},
+    },
+    runtime::{RuntimeError, handler::Handler},
+};
 use mail_parser::{
     Addr, Address, Header, HeaderValue,
     parsers::{
@@ -14,109 +24,100 @@ use mail_parser::{
         },
     },
 };
+use smallvec::SmallVec;
 
-use crate::{
-    Context, Event,
-    compiler::{
-        Number,
-        grammar::{AddressPart, MatchType, tests::test_address::TestAddress},
-    },
-};
+impl<'x> Context<'x> {
+    pub(crate) fn test_address<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestAddress,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let key_list = self.eval_keys(script, test.key_list)?;
+        let header_list = self.parse_header_names(script, test.header_list)?;
+        let address_part = AddressPart::from_code(test.address_part);
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
 
-use super::TestResult;
-
-impl TestAddress {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let key_list = ctx.eval_values(&self.key_list);
-        let header_list = ctx.parse_header_names(&self.header_list);
-
-        let result = match &self.match_type {
-            MatchType::Is | MatchType::Contains => {
-                let is_is = matches!(&self.match_type, MatchType::Is);
-                ctx.find_headers(
-                    &header_list,
-                    self.index,
-                    self.mime_anychild,
-                    |header, _, _| {
-                        ctx.find_addresses(header, &self.address_part, |value| {
-                            for key in &key_list {
-                                if is_is {
-                                    if self.comparator.is(&value, key) {
-                                        return true;
-                                    }
-                                } else if self.comparator.contains(value, key.to_string().as_ref())
-                                {
-                                    return true;
-                                }
-                            }
-                            false
-                        })
-                    },
-                )
-            }
-            MatchType::Value(rel_match) => ctx.find_headers(
+        let result = match &match_type {
+            MatchType::Is | MatchType::Contains | MatchType::Value(_) => self.find_headers(
                 &header_list,
-                self.index,
-                self.mime_anychild,
+                test.index,
+                test.mime_anychild,
                 |header, _, _| {
-                    ctx.find_addresses(header, &self.address_part, |value| {
-                        for key in &key_list {
-                            if self.comparator.relational(rel_match, &value, key) {
-                                return true;
+                    self.find_addresses(header, &address_part, |value| {
+                        key_list.iter().any(|key| match &match_type {
+                            MatchType::Is => comparator.is(&value, &key.value),
+                            MatchType::Contains => {
+                                comparator.contains(value, key.value.to_string().as_ref())
                             }
-                        }
-                        false
+                            MatchType::Value(rel_match) => {
+                                comparator.relational(rel_match, &value, &key.value)
+                            }
+                            _ => false,
+                        })
                     })
                 },
             ),
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
-                let mut captured_positions = Vec::new();
-                let is_matches = matches!(&self.match_type, MatchType::Matches(_));
-                let result = ctx.find_headers(
+                let mut captured_values = Vec::new();
+                let is_matches = matches!(&match_type, MatchType::Matches(_));
+                let to_lower = comparator.is_casemap();
+                let mut error = None;
+                let result = self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        ctx.find_addresses(header, &self.address_part, |value| {
-                            for (pattern_expr, pattern) in key_list.iter().zip(self.key_list.iter())
-                            {
-                                if is_matches {
-                                    if self.comparator.matches(
-                                        Some(pattern),
-                                        pattern_expr.to_string().as_ref(),
+                        self.find_addresses(header, &address_part, |value| {
+                            for key in &key_list {
+                                let matched = if is_matches {
+                                    self.glob_matches(
+                                        script,
+                                        to_lower,
+                                        key,
                                         value,
                                         *capture_positions,
-                                        &mut captured_positions,
-                                    ) {
+                                        &mut captured_values,
+                                    )
+                                } else {
+                                    self.regex_matches(
+                                        script,
+                                        key,
+                                        value,
+                                        *capture_positions,
+                                        &mut captured_values,
+                                    )
+                                };
+                                match matched {
+                                    Ok(true) => return true,
+                                    Ok(false) => (),
+                                    Err(err) => {
+                                        error = Some(err);
                                         return true;
                                     }
-                                } else if self.comparator.regex(
-                                    pattern,
-                                    pattern_expr,
-                                    value,
-                                    *capture_positions,
-                                    &mut captured_positions,
-                                ) {
-                                    return true;
                                 }
                             }
                             false
                         })
                     },
                 );
-                if !captured_positions.is_empty() {
-                    ctx.set_match_variables(captured_positions);
+                if let Some(err) = error {
+                    return Err(err);
+                }
+                if !captured_values.is_empty() {
+                    self.set_match_variables(captured_values);
                 }
                 result
             }
             MatchType::Count(rel_match) => {
                 let mut count: i64 = 0;
-                ctx.find_headers(
+                self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        ctx.find_addresses(header, &self.address_part, |value| {
+                        self.find_addresses(header, &address_part, |value| {
                             if !value.is_empty() {
                                 count += 1;
                             }
@@ -125,26 +126,20 @@ impl TestAddress {
                     },
                 );
 
-                let mut result = false;
-                for key in &key_list {
-                    if rel_match.cmp(&Number::from(count), &key.to_number()) {
-                        result = true;
-                        break;
-                    }
-                }
-                result
+                key_list
+                    .iter()
+                    .any(|key| rel_match.cmp(&Number::from(count), &key.value.to_number()))
             }
             MatchType::List => {
-                let mut values: Vec<String> = Vec::new();
-
-                ctx.find_headers(
+                let mut values: Vec<&str> = Vec::new();
+                self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        ctx.find_addresses(header, &self.address_part, |value| {
-                            if !value.is_empty() && !values.iter().any(|v| v.eq(value)) {
-                                values.push(value.to_string());
+                        self.find_addresses(header, &address_part, |value| {
+                            if !value.is_empty() && !values.contains(&value) {
+                                values.push(self.alloc_str(value));
                             }
                             false
                         })
@@ -152,66 +147,41 @@ impl TestAddress {
                 );
 
                 if !values.is_empty() {
-                    return TestResult::Event {
-                        event: Event::ListContains {
-                            lists: ctx.eval_values_owned(&self.key_list),
-                            values,
-                            match_as: self.comparator.as_match(),
-                        },
-                        is_not: self.is_not,
-                    };
+                    let lists: SmallVec<[&str; 4]> = key_list
+                        .iter()
+                        .map(|key| self.intern_cow(key.value.clone().into_string()))
+                        .collect();
+                    return TestResult::from_reply(
+                        handler.list_contains(self, &lists, &values, comparator.as_match()),
+                        test.is_not,
+                    );
                 }
 
                 false
             }
         };
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
-}
 
-impl Context<'_> {
-    #[allow(unused_assignments)]
     pub(crate) fn find_addresses(
         &self,
-        header: &Header,
+        header: &Header<'_>,
         part: &AddressPart,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
         match &header.value {
-            HeaderValue::Address(Address::List(addr_list)) => {
-                for addr in addr_list {
-                    if let Some(addr) = part.eval(addr)
-                        && visitor_fnc(addr)
-                    {
-                        return true;
-                    }
-                }
-                false
-            }
-            HeaderValue::Address(Address::Group(group_list)) => {
-                for group in group_list {
-                    for addr in &group.addresses {
-                        if let Some(addr) = part.eval(addr)
-                            && visitor_fnc(addr)
-                        {
-                            return true;
-                        }
-                    }
-                }
-                false
-            }
+            HeaderValue::Address(address) => visit_addresses(address, part, &mut visitor_fnc),
             _ => {
-                let mut raw_header = None;
-                let bytes = if header.offset_end > 0 {
+                let inserted_header;
+                let bytes: &[u8] = if header.offset_end > 0 {
                     self.message
                         .raw_message
                         .get(header.offset_start as usize..header.offset_end as usize)
                         .unwrap_or(b"")
                 } else if let HeaderValue::Text(text) = &header.value {
-                    // Inserted header
-                    raw_header = format!("{text}\n").into_bytes().into();
-                    raw_header.as_deref().unwrap()
+                    inserted_header = format!("{text}\n").into_bytes();
+                    &inserted_header
                 } else {
                     b""
                 };
@@ -233,28 +203,15 @@ fn visit_addresses(
     visitor_fnc: &mut impl FnMut(&str) -> bool,
 ) -> bool {
     match address {
-        Address::List(addr_list) => {
-            for addr in addr_list {
-                if let Some(addr) = part.eval(addr)
-                    && visitor_fnc(addr)
-                {
-                    return true;
-                }
-            }
-            false
-        }
-        Address::Group(group_list) => {
-            for group in group_list {
-                for addr in &group.addresses {
-                    if let Some(addr) = part.eval(addr)
-                        && visitor_fnc(addr)
-                    {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
+        Address::List(addr_list) => addr_list
+            .iter()
+            .any(|addr| part.eval(addr).is_some_and(&mut *visitor_fnc)),
+        Address::Group(group_list) => group_list.iter().any(|group| {
+            group
+                .addresses
+                .iter()
+                .any(|addr| part.eval(addr).is_some_and(&mut *visitor_fnc))
+        }),
     }
 }
 

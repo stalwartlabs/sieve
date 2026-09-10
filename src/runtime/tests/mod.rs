@@ -4,15 +4,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{
-    Context, Event, Mailbox,
-    compiler::grammar::{Capability, test::Test},
+use super::{
+    RuntimeError,
+    handler::{Handler, Mailbox, Reply},
 };
-
-use super::RuntimeError;
+use crate::{Context, Sieve, bytecode::ops, compiler::grammar::Capability};
+use smallvec::SmallVec;
 
 pub mod comparator;
 pub mod glob;
+pub mod matching;
 pub mod mime;
 pub mod test_address;
 pub mod test_body;
@@ -29,94 +30,78 @@ pub mod test_size;
 pub mod test_spamtest;
 pub mod test_string;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TestResult {
     Bool(bool),
-    Event { event: Event, is_not: bool },
-    Error(RuntimeError),
+    Pending { is_not: bool },
 }
 
-impl Test {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        match &self {
-            Test::Header(test) => test.exec(ctx),
-            Test::Address(test) => test.exec(ctx),
-            Test::Envelope(test) => test.exec(ctx),
-            Test::Exists(test) => test.exec(ctx),
-            Test::Size(test) => test.exec(ctx),
-            Test::Body(test) => test.exec(ctx),
-            Test::String(test) => test.exec(ctx, false),
-            Test::HasFlag(test) => test.exec(ctx),
-            Test::Date(test) => test.exec(ctx),
-            Test::CurrentDate(test) => test.exec(ctx),
-            Test::Duplicate(test) => test.exec(ctx),
-            Test::NotifyMethodCapability(test) => test.exec(ctx),
-            Test::ValidNotifyMethod(test) => test.exec(ctx),
-            Test::Environment(test) => test.exec(ctx, true),
-            Test::ValidExtList(test) => test.exec(ctx),
-            Test::Ihave(test) => TestResult::Bool(
-                test.capabilities.iter().all(|c| {
-                    ![Capability::Variables, Capability::EncodedCharacter].contains(c)
-                        && ctx.runtime.allowed_capabilities.contains(c)
-                }) ^ test.is_not,
-            ),
-            Test::MailboxExists(test) => TestResult::Event {
-                event: Event::MailboxExists {
-                    mailboxes: test
-                        .mailbox_names
-                        .iter()
-                        .map(|m| Mailbox::Name(ctx.eval_value(m).to_string().into_owned()))
-                        .collect(),
-                    special_use: Vec::new(),
-                },
-                is_not: test.is_not,
-            },
-            Test::Vacation(test) => test.exec(ctx),
-            Test::Metadata(test) => test.exec(ctx),
-            Test::MetadataExists(test) => test.exec(ctx),
-            Test::MailboxIdExists(test) => TestResult::Event {
-                event: Event::MailboxExists {
-                    mailboxes: test
-                        .mailbox_ids
-                        .iter()
-                        .map(|m| Mailbox::Id(ctx.eval_value(m).to_string().into_owned()))
-                        .collect(),
-                    special_use: Vec::new(),
-                },
-                is_not: test.is_not,
-            },
-            Test::SpamTest(test) => test.exec(ctx),
-            Test::VirusTest(test) => test.exec(ctx),
-            Test::SpecialUseExists(test) => TestResult::Event {
-                event: Event::MailboxExists {
-                    mailboxes: if let Some(mailbox) = &test.mailbox {
-                        vec![Mailbox::Name(
-                            ctx.eval_value(mailbox).to_string().into_owned(),
-                        )]
-                    } else {
-                        Vec::new()
-                    },
-                    special_use: ctx.eval_values_owned(&test.attributes),
-                },
-                is_not: test.is_not,
-            },
-            Test::Convert(test) => test.exec(ctx),
-            Test::True => TestResult::Bool(true),
-            Test::False => TestResult::Bool(false),
-            Test::Invalid(invalid) => {
-                TestResult::Error(RuntimeError::InvalidInstruction(invalid.as_ref().clone()))
-            }
-            #[cfg(test)]
-            Test::TestCmd(cmd) => TestResult::Event {
-                event: Event::Function {
-                    id: u32::MAX,
-                    arguments: cmd
-                        .arguments
-                        .iter()
-                        .map(|s| ctx.eval_value(s).to_owned())
-                        .collect(),
-                },
-                is_not: cmd.is_not,
-            },
+impl TestResult {
+    #[inline(always)]
+    pub(crate) fn from_reply(reply: Reply<bool>, is_not: bool) -> Result<TestResult, RuntimeError> {
+        match reply {
+            Reply::Ready(result) => Ok(TestResult::Bool(result ^ is_not)),
+            Reply::Pending => Ok(TestResult::Pending { is_not }),
+            Reply::Error(err) => Err(err),
         }
+    }
+}
+
+impl<'x> Context<'x> {
+    pub(crate) fn test_ihave(
+        &self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestIhave,
+    ) -> Result<TestResult, RuntimeError> {
+        let mut result = true;
+        for rec in script.recs(test.capabilities)? {
+            let capability = Capability::from_rec(script, rec)?;
+            if [Capability::Variables, Capability::EncodedCharacter].contains(&capability)
+                || !self.runtime.allowed_capabilities.contains(&capability)
+            {
+                result = false;
+                break;
+            }
+        }
+        Ok(TestResult::Bool(result ^ test.is_not))
+    }
+
+    pub(crate) fn test_mailbox_exists<H: Handler<'x>>(
+        &self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestMailboxExists,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let names = self.eval_strings(script, test.mailbox_names)?;
+        let mailboxes: SmallVec<[Mailbox<'_>; 4]> =
+            names.iter().map(|name| Mailbox::Name(name)).collect();
+        TestResult::from_reply(handler.mailbox_exists(self, &mailboxes, &[]), test.is_not)
+    }
+
+    pub(crate) fn test_mailbox_id_exists<H: Handler<'x>>(
+        &self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestMailboxIdExists,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let ids = self.eval_strings(script, test.mailbox_ids)?;
+        let mailboxes: SmallVec<[Mailbox<'_>; 4]> = ids.iter().map(|id| Mailbox::Id(id)).collect();
+        TestResult::from_reply(handler.mailbox_exists(self, &mailboxes, &[]), test.is_not)
+    }
+
+    pub(crate) fn test_special_use_exists<H: Handler<'x>>(
+        &self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestSpecialUseExists,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let mailbox = self.eval_opt_str(script, test.mailbox)?;
+        let attributes = self.eval_strings(script, test.attributes)?;
+        let mailboxes: SmallVec<[Mailbox<'_>; 1]> =
+            mailbox.map(Mailbox::Name).into_iter().collect();
+        TestResult::from_reply(
+            handler.mailbox_exists(self, &mailboxes, &attributes),
+            test.is_not,
+        )
     }
 }

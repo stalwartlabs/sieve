@@ -4,18 +4,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{borrow::Cow, cmp::Ordering, sync::Arc};
-
 use crate::{
     MatchAs,
     compiler::{
-        Number, Value,
+        Number,
         grammar::{Comparator, RelationalMatch},
     },
     runtime::Variable,
 };
-
-use super::glob::CompiledGlob;
+use std::{borrow::Cow, cmp::Ordering};
 
 pub(crate) trait Comparable {
     fn to_str(&'_ self) -> Cow<'_, str>;
@@ -23,6 +20,31 @@ pub(crate) trait Comparable {
 }
 
 impl Comparator {
+    #[inline(always)]
+    pub(crate) fn from_code(code: u8) -> Comparator {
+        match code {
+            0 => Comparator::Elbonia,
+            2 => Comparator::AsciiCaseMap,
+            3 => Comparator::AsciiNumeric,
+            _ => Comparator::Octet,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn code(&self) -> u8 {
+        match self {
+            Comparator::Elbonia | Comparator::Other(_) => 0,
+            Comparator::Octet => 1,
+            Comparator::AsciiCaseMap => 2,
+            Comparator::AsciiNumeric => 3,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn is_casemap(&self) -> bool {
+        matches!(self, Comparator::AsciiCaseMap)
+    }
+
     pub(crate) fn is(&self, a: &impl Comparable, b: &impl Comparable) -> bool {
         match self {
             Comparator::Octet => a.to_str() == b.to_str(),
@@ -35,7 +57,7 @@ impl Comparator {
         needle.is_empty()
             || match self {
                 Comparator::Octet => haystack.contains(needle),
-                _ => haystack.to_lowercase().contains(&needle.to_lowercase()),
+                _ => contains_ignore_ascii_case(haystack, needle),
             }
     }
 
@@ -52,88 +74,12 @@ impl Comparator {
         }
     }
 
-    pub(crate) fn matches(
-        &self,
-        pattern: Option<&Value>,
-        pattern_expr: &str,
-        value: &str,
-        capture_positions: u64,
-        captured_values: &mut Vec<(usize, String)>,
-    ) -> bool {
-        let to_lower = matches!(self, Comparator::AsciiCaseMap);
-
-        if let Some(Value::Glob(glob)) = pattern {
-            let cached = glob.glob.0.load();
-            if let Some(compiled) = cached.as_ref() {
-                eval_glob(compiled, value, capture_positions, captured_values)
-            } else {
-                let compiled = CompiledGlob::compile(&glob.expr, to_lower);
-                let result = eval_glob(&compiled, value, capture_positions, captured_values);
-                glob.glob.0.store(Arc::new(Some(compiled)));
-                result
-            }
-        } else {
-            let compiled = CompiledGlob::compile(pattern_expr, to_lower);
-            eval_glob(&compiled, value, capture_positions, captured_values)
-        }
-    }
-
-    pub(crate) fn regex(
-        &self,
-        pattern: &Value,
-        pattern_expr: &Variable,
-        value: &str,
-        capture_positions: u64,
-        captured_values: &mut Vec<(usize, String)>,
-    ) -> bool {
-        if let Value::Regex(regex) = pattern {
-            let lazy_regex = regex.regex.0.load();
-            if let Some(regex) = lazy_regex.as_ref() {
-                eval_regex(regex, value, capture_positions, captured_values)
-            } else {
-                match fancy_regex::Regex::new(&regex.expr) {
-                    Ok(fancy_regex) => {
-                        let result =
-                            eval_regex(&fancy_regex, value, capture_positions, captured_values);
-                        regex.regex.0.store(Arc::new(Some(fancy_regex)));
-                        result
-                    }
-                    Err(err) => {
-                        debug_assert!(false, "Failed to compile regex: {err:?}");
-                        false
-                    }
-                }
-            }
-        } else {
-            match fancy_regex::Regex::new(pattern_expr.to_string().as_ref()) {
-                Ok(regex) => eval_regex(&regex, value, capture_positions, captured_values),
-                Err(err) => {
-                    debug_assert!(false, "Failed to compile regex: {err:?}");
-                    false
-                }
-            }
-        }
-    }
-
     pub(crate) fn as_match(&self) -> MatchAs {
         match self {
             Comparator::AsciiCaseMap => MatchAs::Lowercase,
             Comparator::AsciiNumeric => MatchAs::Number,
             _ => MatchAs::Octet,
         }
-    }
-}
-
-fn eval_glob(
-    compiled: &CompiledGlob,
-    value: &str,
-    capture_positions: u64,
-    captured_values: &mut Vec<(usize, String)>,
-) -> bool {
-    if capture_positions == 0 {
-        compiled.matches(value)
-    } else {
-        compiled.capture(value, capture_positions, captured_values)
     }
 }
 
@@ -155,30 +101,62 @@ pub(crate) fn casemap_cmp(a: &str, b: &str) -> Ordering {
     }
 }
 
-fn eval_regex(
-    regex: &fancy_regex::Regex,
-    value: &str,
-    mut capture_positions: u64,
-    captured_values: &mut Vec<(usize, String)>,
-) -> bool {
-    if capture_positions == 0 {
-        regex.is_match(value).unwrap_or_default()
-    } else if let Ok(Some(captures)) = regex.captures(value) {
-        captured_values.clear();
-        while capture_positions != 0 {
-            let index = 63 - capture_positions.leading_zeros();
-            capture_positions ^= 1 << index;
-            if let Some(match_var) = captures.get(index as usize) {
-                captured_values.push((index as usize, match_var.as_str().to_string()));
-            }
+pub(crate) fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    if !needle.is_ascii() || !haystack.is_ascii() {
+        return haystack.to_lowercase().contains(&needle.to_lowercase());
+    }
+    let haystack = haystack.as_bytes();
+    let needle = needle.as_bytes();
+    if needle.len() > haystack.len() {
+        return false;
+    }
+    let first = needle[0];
+    let lower = first.to_ascii_lowercase();
+    let upper = first.to_ascii_uppercase();
+    let last_start = haystack.len() - needle.len();
+    let mut offset = 0;
+    while offset <= last_start {
+        let window = &haystack[offset..=last_start];
+        let found = if lower != upper {
+            memchr::memchr2(lower, upper, window)
+        } else {
+            memchr::memchr(first, window)
+        };
+        let Some(at) = found else {
+            return false;
+        };
+        let start = offset + at;
+        if haystack[start..start + needle.len()].eq_ignore_ascii_case(needle) {
+            return true;
         }
-        true
+        offset = start + 1;
+    }
+    false
+}
+
+pub(crate) fn starts_with_ignore_ascii_case(value: &str, prefix: &str) -> bool {
+    if value.is_ascii() && prefix.is_ascii() {
+        value.len() >= prefix.len()
+            && value.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
     } else {
-        false
+        value.to_lowercase().starts_with(&prefix.to_lowercase())
     }
 }
 
-impl Comparable for Variable {
+pub(crate) fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
+    if value.is_ascii() && suffix.is_ascii() {
+        value.len() >= suffix.len()
+            && value.as_bytes()[value.len() - suffix.len()..]
+                .eq_ignore_ascii_case(suffix.as_bytes())
+    } else {
+        value.to_lowercase().ends_with(&suffix.to_lowercase())
+    }
+}
+
+impl Comparable for Variable<'_> {
     fn to_str(&'_ self) -> Cow<'_, str> {
         self.to_string()
     }
@@ -200,7 +178,43 @@ impl Comparable for &str {
     }
 }
 
+impl Comparable for str {
+    fn to_str(&'_ self) -> Cow<'_, str> {
+        self.into()
+    }
+
+    fn to_number(&self) -> Number {
+        self.parse::<f64>()
+            .map(Number::Float)
+            .unwrap_or(Number::Float(0.0))
+    }
+}
+
 impl RelationalMatch {
+    #[inline(always)]
+    pub(crate) fn from_code(code: u64) -> RelationalMatch {
+        match code {
+            0 => RelationalMatch::Gt,
+            1 => RelationalMatch::Ge,
+            2 => RelationalMatch::Lt,
+            3 => RelationalMatch::Le,
+            4 => RelationalMatch::Eq,
+            _ => RelationalMatch::Ne,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn code(&self) -> u64 {
+        match self {
+            RelationalMatch::Gt => 0,
+            RelationalMatch::Ge => 1,
+            RelationalMatch::Lt => 2,
+            RelationalMatch::Le => 3,
+            RelationalMatch::Eq => 4,
+            RelationalMatch::Ne => 5,
+        }
+    }
+
     pub fn matches(&self, ordering: Ordering) -> bool {
         match self {
             RelationalMatch::Gt => ordering == Ordering::Greater,
@@ -223,6 +237,52 @@ impl RelationalMatch {
             RelationalMatch::Le => a.le(b),
             RelationalMatch::Eq => a.eq(b),
             RelationalMatch::Ne => a.ne(b),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unknown_comparators_fold_case() {
+        let other = Comparator::from_code(Comparator::Other("i;unicode-casemap".into()).code());
+        assert!(other.is(&"HELLO", &"hello"));
+        assert!(other.contains("This is a TEST header", "test"));
+        assert!(other.relational(&RelationalMatch::Eq, &"HELLO", &"hello"));
+        assert!(!other.is_casemap());
+        let octet = Comparator::from_code(Comparator::Octet.code());
+        assert!(!octet.is(&"HELLO", &"hello"));
+        assert!(!octet.contains("This is a TEST header", "test"));
+    }
+
+    #[test]
+    fn ascii_case_insensitive_search() {
+        for (haystack, needle, expected) in [
+            ("Hello World", "world", true),
+            ("Hello World", "WORLD", true),
+            ("Hello World", "o w", true),
+            ("Hello World", "xyz", false),
+            ("Hello World", "", true),
+            ("", "a", false),
+            ("aaa", "aaaa", false),
+            ("aAaAb", "aab", true),
+            ("...", ".", true),
+            ("Grüße", "grüsse", false),
+            ("Grüße", "ÜSSE", false),
+            ("Grüße", "grüß", true),
+        ] {
+            assert_eq!(
+                contains_ignore_ascii_case(haystack, needle),
+                expected,
+                "{haystack:?} contains {needle:?}"
+            );
+            assert_eq!(
+                haystack.to_lowercase().contains(&needle.to_lowercase()),
+                expected,
+                "reference {haystack:?} contains {needle:?}"
+            );
         }
     }
 }

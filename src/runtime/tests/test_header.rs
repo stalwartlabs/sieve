@@ -6,137 +6,137 @@
 
 use super::{TestResult, mime::SubpartIterator};
 use crate::{
-    Context, Event,
-    compiler::{
-        Number, Value,
-        grammar::{MatchType, actions::action_mime::MimeOpts, tests::test_header::TestHeader},
+    Context, Sieve,
+    bytecode::{
+        ops::{self, MimeOpts},
+        rec::{Range, Rec, tag},
     },
-    runtime::Variable,
+    compiler::{
+        Number,
+        grammar::{Comparator, MatchType},
+    },
+    runtime::{RuntimeError, eval::ValueRef, handler::Handler},
 };
 use mail_parser::{Header, HeaderName, HeaderValue, parsers::MessageStream};
+use smallvec::SmallVec;
 
-pub(crate) fn borrow_header_name<'y>(name: &'y HeaderName<'static>) -> HeaderName<'y> {
-    match name {
-        HeaderName::Other(name) => HeaderName::Other(std::borrow::Cow::Borrowed(name.as_ref())),
-        other => other.clone(),
-    }
+pub(crate) type HeaderNames<'x> = SmallVec<[HeaderName<'x>; 4]>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum MimeOptsRef<'x> {
+    None,
+    Type,
+    Subtype,
+    ContentType,
+    Param(SmallVec<[&'x str; 2]>),
 }
 
-impl TestHeader {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let key_list = ctx.eval_values(&self.key_list);
-        let header_list = ctx.parse_header_names(&self.header_list);
-        let mime_opts = match &self.mime_opts {
-            MimeOpts::Type => MimeOpts::Type,
-            MimeOpts::Subtype => MimeOpts::Subtype,
-            MimeOpts::ContentType => MimeOpts::ContentType,
-            MimeOpts::Param(params) => MimeOpts::Param(ctx.eval_values(params).into()),
-            MimeOpts::None => MimeOpts::None,
-        };
+impl<'x> Context<'x> {
+    pub(crate) fn test_header<H: Handler<'x>>(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestHeader,
+        handler: &mut H,
+    ) -> Result<TestResult, RuntimeError> {
+        let key_list = self.eval_keys(script, test.key_list)?;
+        let header_list = self.parse_header_names(script, test.header_list)?;
+        let mime_opts = self.mime_opts(script, &test.mime_opts)?;
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
 
-        let result = match &self.match_type {
-            MatchType::Is | MatchType::Contains => {
-                let is_is = matches!(&self.match_type, MatchType::Is);
-                ctx.find_headers(
-                    &header_list,
-                    self.index,
-                    self.mime_anychild,
-                    |header, _, _| {
-                        ctx.find_header_values(header, &mime_opts, |value| {
-                            for key in &key_list {
-                                if is_is {
-                                    if self.comparator.is(&value, key) {
-                                        return true;
-                                    }
-                                } else if self.comparator.contains(value, key.to_string().as_ref())
-                                {
-                                    return true;
-                                }
-                            }
-                            false
-                        })
-                    },
-                )
-            }
-            MatchType::Value(rel_match) => ctx.find_headers(
+        let result = match &match_type {
+            MatchType::Is | MatchType::Contains | MatchType::Value(_) => self.find_headers(
                 &header_list,
-                self.index,
-                self.mime_anychild,
+                test.index,
+                test.mime_anychild,
                 |header, _, _| {
-                    ctx.find_header_values(header, &mime_opts, |value| {
-                        for key in &key_list {
-                            if self.comparator.relational(rel_match, &value, key) {
-                                return true;
+                    self.find_header_values(header, &mime_opts, |value| {
+                        key_list.iter().any(|key| match &match_type {
+                            MatchType::Is => comparator.is(&value, &key.value),
+                            MatchType::Contains => {
+                                comparator.contains(value, key.value.to_string().as_ref())
                             }
-                        }
-                        false
+                            MatchType::Value(rel_match) => {
+                                comparator.relational(rel_match, &value, &key.value)
+                            }
+                            _ => false,
+                        })
                     })
                 },
             ),
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
                 let mut captured_values = Vec::new();
-                let is_matches = matches!(&self.match_type, MatchType::Matches(_));
-                let result = ctx.find_headers(
+                let is_matches = matches!(&match_type, MatchType::Matches(_));
+                let to_lower = comparator.is_casemap();
+                let mut error = None;
+                let result = self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        ctx.find_header_values(header, &mime_opts, |value| {
-                            for (pattern_expr, pattern) in key_list.iter().zip(self.key_list.iter())
-                            {
-                                if is_matches {
-                                    if self.comparator.matches(
-                                        Some(pattern),
-                                        pattern_expr.to_string().as_ref(),
+                        self.find_header_values(header, &mime_opts, |value| {
+                            for key in &key_list {
+                                let matched = if is_matches {
+                                    self.glob_matches(
+                                        script,
+                                        to_lower,
+                                        key,
                                         value,
                                         *capture_positions,
                                         &mut captured_values,
-                                    ) {
+                                    )
+                                } else {
+                                    self.regex_matches(
+                                        script,
+                                        key,
+                                        value,
+                                        *capture_positions,
+                                        &mut captured_values,
+                                    )
+                                };
+                                match matched {
+                                    Ok(true) => return true,
+                                    Ok(false) => (),
+                                    Err(err) => {
+                                        error = Some(err);
                                         return true;
                                     }
-                                } else if self.comparator.regex(
-                                    pattern,
-                                    pattern_expr,
-                                    value,
-                                    *capture_positions,
-                                    &mut captured_values,
-                                ) {
-                                    return true;
                                 }
                             }
                             false
                         })
                     },
                 );
+                if let Some(err) = error {
+                    return Err(err);
+                }
                 if !captured_values.is_empty() {
-                    ctx.set_match_variables(captured_values);
+                    self.set_match_variables(captured_values);
                 }
                 result
             }
             MatchType::Count(rel_match) => {
                 let mut count = 0;
-                ctx.find_headers(
+                self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
                         match &mime_opts {
-                            MimeOpts::None => {
+                            MimeOptsRef::None => {
                                 count += 1;
                             }
-                            MimeOpts::Type | MimeOpts::Subtype | MimeOpts::ContentType => {
+                            MimeOptsRef::Type | MimeOptsRef::Subtype | MimeOptsRef::ContentType => {
                                 if let HeaderValue::ContentType(_) = &header.value {
                                     count += 1;
                                 }
                             }
-                            MimeOpts::Param(params) => {
+                            MimeOptsRef::Param(params) => {
                                 if let HeaderValue::ContentType(ct) = &header.value
                                     && let Some(attributes) = &ct.attributes
                                 {
                                     for attr in attributes {
-                                        if params
-                                            .iter()
-                                            .any(|p| p.to_string().eq_ignore_ascii_case(&attr.name))
+                                        if params.iter().any(|p| p.eq_ignore_ascii_case(&attr.name))
                                         {
                                             count += 1;
                                         }
@@ -149,25 +149,20 @@ impl TestHeader {
                     },
                 );
 
-                let mut result = false;
-                for key in &key_list {
-                    if rel_match.cmp(&Number::from(count), &key.to_number()) {
-                        result = true;
-                        break;
-                    }
-                }
-                result
+                key_list
+                    .iter()
+                    .any(|key| rel_match.cmp(&Number::from(count), &key.value.to_number()))
             }
             MatchType::List => {
-                let mut values: Vec<String> = Vec::new();
-                ctx.find_headers(
+                let mut values: Vec<&str> = Vec::new();
+                self.find_headers(
                     &header_list,
-                    self.index,
-                    self.mime_anychild,
+                    test.index,
+                    test.mime_anychild,
                     |header, _, _| {
-                        ctx.find_header_values(header, &mime_opts, |value| {
-                            if !value.is_empty() && !values.iter().any(|v| v.eq(value)) {
-                                values.push(value.to_string());
+                        self.find_header_values(header, &mime_opts, |value| {
+                            if !value.is_empty() && !values.contains(&value) {
+                                values.push(self.alloc_str(value));
                             }
                             false
                         })
@@ -175,62 +170,88 @@ impl TestHeader {
                 );
 
                 if !values.is_empty() {
-                    return TestResult::Event {
-                        event: Event::ListContains {
-                            lists: ctx.eval_values_owned(&self.key_list),
-                            values,
-                            match_as: self.comparator.as_match(),
-                        },
-                        is_not: self.is_not,
-                    };
+                    let lists: SmallVec<[&str; 4]> = key_list
+                        .iter()
+                        .map(|key| self.intern_cow(key.value.clone().into_string()))
+                        .collect();
+                    return TestResult::from_reply(
+                        handler.list_contains(self, &lists, &values, comparator.as_match()),
+                        test.is_not,
+                    );
                 }
 
                 false
             }
         };
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
-}
 
-impl Context<'_> {
-    pub(crate) fn parse_header_names<'z: 'y, 'y>(
-        &'z self,
-        header_names: &'y [Value],
-    ) -> Vec<HeaderName<'y>> {
-        let mut result = Vec::with_capacity(header_names.len());
-        for header_name in header_names {
-            if let Value::Header(header_name) = header_name {
-                result.push(borrow_header_name(header_name));
-            } else if let Some(header_name) = self.parse_header_name(header_name) {
-                result.push(header_name);
+    pub(crate) fn mime_opts(
+        &self,
+        script: &'x Sieve<'x>,
+        opts: &MimeOpts,
+    ) -> Result<MimeOptsRef<'x>, RuntimeError> {
+        Ok(match opts.kind {
+            0 => MimeOptsRef::Type,
+            1 => MimeOptsRef::Subtype,
+            2 => MimeOptsRef::ContentType,
+            3 => MimeOptsRef::Param(
+                self.eval_strings(script, opts.params)?
+                    .into_iter()
+                    .collect(),
+            ),
+            _ => MimeOptsRef::None,
+        })
+    }
+
+    pub(crate) fn parse_header_names(
+        &self,
+        script: &'x Sieve<'x>,
+        header_names: Range,
+    ) -> Result<HeaderNames<'x>, RuntimeError> {
+        let mut result = HeaderNames::with_capacity(header_names.len as usize);
+        let mut iter = script.recs(header_names)?;
+        while let Some(rec) = iter.next() {
+            if rec.tag == tag::HEADER {
+                result.push(borrow_header_name(script.header_name(rec.c)?));
+            } else {
+                let value = ValueRef::decode(script, rec, &mut iter)?;
+                let value = self.eval_value_ref(script, value)?;
+                if let Some(header_name) =
+                    self.parse_header_name_str(self.intern_cow(value.into_string()))
+                {
+                    result.push(header_name);
+                }
             }
         }
-        result
+        Ok(result)
     }
 
     #[inline(always)]
-    pub(crate) fn parse_header_name(&self, header_name: &Value) -> Option<HeaderName<'static>> {
-        if let Value::Header(header_name) = header_name {
-            return Some(header_name.clone());
+    pub(crate) fn parse_header_name(
+        &self,
+        script: &'x Sieve<'x>,
+        header_name: Rec,
+    ) -> Result<Option<HeaderName<'x>>, RuntimeError> {
+        if header_name.tag == tag::HEADER {
+            return Ok(Some(borrow_header_name(script.header_name(header_name.c)?)));
         }
-
-        let h_ = self.eval_value(header_name);
-        let h = h_.to_string();
-
-        match HeaderName::parse(h.as_ref())? {
-            HeaderName::Other(_) => HeaderName::Other(h.into_owned().into()),
-            hn => hn.into_owned(),
-        }
-        .into()
+        let name = self.eval_str(script, header_name)?;
+        Ok(self.parse_header_name_str(name))
     }
 
-    pub(crate) fn find_headers(
-        &self,
-        header_names: &[HeaderName],
+    #[inline(always)]
+    pub(crate) fn parse_header_name_str(&self, name: &'x str) -> Option<HeaderName<'x>> {
+        HeaderName::parse(name)
+    }
+
+    pub(crate) fn find_headers<'y>(
+        &'y self,
+        header_names: &[HeaderName<'_>],
         index: Option<i32>,
         any_child: bool,
-        mut visitor_fnc: impl FnMut(&Header, u32, usize) -> bool,
+        mut visitor_fnc: impl FnMut(&'y Header<'x>, u32, usize) -> bool,
     ) -> bool {
         let parts = [self.part];
         let mut part_iter = SubpartIterator::new(self, &parts, any_child);
@@ -290,8 +311,8 @@ impl Context<'_> {
     #[allow(unused_assignments)]
     pub(crate) fn find_header_values(
         &self,
-        header: &Header,
-        mime_opts: &MimeOpts<Variable>,
+        header: &Header<'_>,
+        mime_opts: &MimeOptsRef<'_>,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
         let mut raw_header = None;
@@ -307,7 +328,7 @@ impl Context<'_> {
                 #[cfg(not(test))]
                 return false;
             };
-            if mime_opts == &MimeOpts::None {
+            if mime_opts == &MimeOptsRef::None {
                 return visitor_fnc(value);
             } else {
                 raw_header = format!("{value}\n").into_bytes().into();
@@ -319,7 +340,7 @@ impl Context<'_> {
         };
 
         match (mime_opts, header_value) {
-            (MimeOpts::None, HeaderValue::Text(text))
+            (MimeOptsRef::None, HeaderValue::Text(text))
                 if matches!(
                     &header.name,
                     HeaderName::Subject
@@ -331,7 +352,7 @@ impl Context<'_> {
             {
                 visitor_fnc(text.as_ref())
             }
-            (MimeOpts::None, _) => {
+            (MimeOptsRef::None, _) => {
                 let decoded = MessageStream::new(
                     self.message
                         .raw_message
@@ -345,22 +366,22 @@ impl Context<'_> {
                     _ => visitor_fnc(""),
                 }
             }
-            (MimeOpts::Type, HeaderValue::ContentType(ct)) => visitor_fnc(ct.c_type.as_ref()),
-            (MimeOpts::Subtype, HeaderValue::ContentType(ct)) => {
+            (MimeOptsRef::Type, HeaderValue::ContentType(ct)) => visitor_fnc(ct.c_type.as_ref()),
+            (MimeOptsRef::Subtype, HeaderValue::ContentType(ct)) => {
                 visitor_fnc(ct.c_subtype.as_deref().unwrap_or(""))
             }
-            (MimeOpts::ContentType, HeaderValue::ContentType(ct)) => {
+            (MimeOptsRef::ContentType, HeaderValue::ContentType(ct)) => {
                 if let Some(sub_type) = &ct.c_subtype {
                     visitor_fnc(&format!("{}/{}", ct.c_type, sub_type))
                 } else {
                     visitor_fnc(ct.c_type.as_ref())
                 }
             }
-            (MimeOpts::Param(params), HeaderValue::ContentType(ct)) => {
+            (MimeOptsRef::Param(params), HeaderValue::ContentType(ct)) => {
                 if let Some(attributes) = &ct.attributes {
                     for param in params {
                         for attr in attributes {
-                            if param.to_string().eq_ignore_ascii_case(&attr.name)
+                            if param.eq_ignore_ascii_case(&attr.name)
                                 && visitor_fnc(attr.value.as_ref())
                             {
                                 return true;
@@ -372,5 +393,12 @@ impl Context<'_> {
             }
             _ => visitor_fnc(""),
         }
+    }
+}
+
+pub(crate) fn borrow_header_name<'y>(name: &'y HeaderName<'static>) -> HeaderName<'y> {
+    match name {
+        HeaderName::Other(name) => HeaderName::Other(std::borrow::Cow::Borrowed(name.as_ref())),
+        other => other.clone(),
     }
 }

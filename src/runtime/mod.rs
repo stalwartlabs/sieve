@@ -5,258 +5,98 @@
  */
 
 pub mod actions;
+mod arena;
 pub mod context;
 pub mod eval;
 pub mod expression;
+pub mod handler;
 pub mod tests;
+pub mod variable;
 pub mod variables;
 
-use self::eval::ToString;
+pub use arena::Arena;
+pub use handler::{Action, Handler, Input, Mailbox, Recipient, Reply, Script, Status};
+pub use variable::Variable;
+
 use crate::{
-    ExternalId, Function, FunctionMap, Input, Metadata, Runtime, Script, Sieve,
+    ExternalId, Function, FunctionMap, Metadata, Runtime, Sieve,
+    bytecode::Corrupt,
     compiler::{
         Number,
-        grammar::{Capability, Invalid, expr::parser::ID_EXTERNAL},
+        grammar::{Capability, expr::parser::ID_EXTERNAL},
     },
 };
 use ahash::{AHashMap, AHashSet};
 use mail_parser::HeaderName;
-#[cfg(not(test))]
 use mail_parser::{Encoding, Message, MessageParser, MessagePart, PartType};
-use std::{
-    borrow::Cow,
-    fmt::Display,
-    hash::Hash,
-    ops::Deref,
-    sync::{Arc, OnceLock},
-};
+use std::borrow::Cow;
 
-#[cfg(not(test))]
 use crate::Context;
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    any(test, feature = "serde"),
-    derive(serde::Serialize, serde::Deserialize)
-)]
-pub enum Variable {
-    String(Arc<str>),
-    Integer(i64),
-    Float(f64),
-    Array(Arc<[Variable]>),
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RuntimeError {
     TooManyIncludes,
-    InvalidInstruction(Invalid),
+    ScriptNotFound(String),
+    InvalidInstruction {
+        name: String,
+        line_num: u32,
+        line_pos: u32,
+    },
     ScriptErrorMessage(String),
     CapabilityNotAllowed(Capability),
     CapabilityNotSupported(String),
     CPULimitReached,
+    MemoryLimitReached,
+    InvalidBytecode,
+    AwaitingInput,
 }
 
-static EMPTY_STRING: OnceLock<Arc<str>> = OnceLock::new();
-static EMPTY_ARRAY: OnceLock<Arc<[Variable]>> = OnceLock::new();
-
-pub(crate) fn empty_string() -> Arc<str> {
-    EMPTY_STRING.get_or_init(|| Arc::from("")).clone()
+impl From<Corrupt> for RuntimeError {
+    fn from(_: Corrupt) -> Self {
+        RuntimeError::InvalidBytecode
+    }
 }
 
-fn empty_array() -> Arc<[Variable]> {
-    EMPTY_ARRAY.get_or_init(|| Arc::from([])).clone()
+impl Number {
+    pub fn is_non_zero(&self) -> bool {
+        match self {
+            Number::Integer(n) => *n != 0,
+            Number::Float(n) => *n != 0.0,
+        }
+    }
 }
 
-impl Default for Variable {
+impl Default for Number {
     fn default() -> Self {
-        Variable::String(empty_string())
+        Number::Integer(0)
     }
 }
 
-impl Variable {
-    pub fn to_string(&self) -> Cow<'_, str> {
-        match self {
-            Variable::String(s) => Cow::Borrowed(s.as_ref()),
-            Variable::Integer(n) => Cow::Owned(n.to_string()),
-            Variable::Float(n) => Cow::Owned(n.to_string()),
-            Variable::Array(l) => Cow::Owned(l.to_string()),
-        }
-    }
-
-    pub fn to_number(&self) -> Number {
-        self.to_number_checked()
-            .unwrap_or(Number::Float(f64::INFINITY))
-    }
-
-    pub fn to_number_checked(&self) -> Option<Number> {
-        let s = match self {
-            Variable::Integer(n) => return Number::Integer(*n).into(),
-            Variable::Float(n) => return Number::Float(*n).into(),
-            Variable::String(s) if !s.is_empty() => s.as_ref(),
-            _ => return None,
-        };
-
-        if !s.contains('.') {
-            s.parse::<i64>().map(Number::Integer).ok()
-        } else {
-            s.parse::<f64>().map(Number::Float).ok()
-        }
-    }
-
-    pub fn to_integer(&self) -> i64 {
-        match self {
-            Variable::Integer(n) => *n,
-            Variable::Float(n) => *n as i64,
-            Variable::String(s) if !s.is_empty() => s.parse::<i64>().unwrap_or(0),
-            _ => 0,
-        }
-    }
-
-    pub fn to_usize(&self) -> usize {
-        match self {
-            Variable::Integer(n) => *n as usize,
-            Variable::Float(n) => *n as usize,
-            Variable::String(s) if !s.is_empty() => s.parse::<usize>().unwrap_or(0),
-            _ => 0,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            Variable::String(s) => s.len(),
-            Variable::Integer(_) | Variable::Float(_) => 2,
-            Variable::Array(l) => l.iter().map(|v| v.len() + 2).sum(),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Variable::String(s) => s.is_empty(),
-            _ => false,
-        }
-    }
-
-    pub fn as_array(&self) -> Option<&[Variable]> {
-        match self {
-            Variable::Array(l) => Some(l),
-            _ => None,
-        }
-    }
-
-    pub fn into_array(self) -> Arc<[Variable]> {
-        match self {
-            Variable::Array(l) => l,
-            v if !v.is_empty() => Arc::from([v]),
-            _ => empty_array(),
-        }
-    }
-
-    pub fn to_array(&self) -> Arc<[Variable]> {
-        match self {
-            Variable::Array(l) => l.clone(),
-            v if !v.is_empty() => Arc::from([v.clone()]),
-            _ => empty_array(),
-        }
-    }
-
-    pub fn into_string_array(self) -> Vec<String> {
-        match self {
-            Variable::Array(l) => l.iter().map(|i| i.to_string().into_owned()).collect(),
-            v if !v.is_empty() => vec![v.to_string().into_owned()],
-            _ => vec![],
-        }
-    }
-
-    pub fn to_string_array(&self) -> Vec<Cow<'_, str>> {
-        match self {
-            Variable::Array(l) => l.iter().map(|i| i.to_string()).collect(),
-            v if !v.is_empty() => vec![v.to_string()],
-            _ => vec![],
-        }
-    }
-}
-
-impl From<String> for Variable {
-    fn from(s: String) -> Self {
-        Variable::String(s.into())
-    }
-}
-
-impl<'x> From<&'x String> for Variable {
-    fn from(s: &'x String) -> Self {
-        Variable::String(s.as_str().into())
-    }
-}
-
-impl<'x> From<&'x str> for Variable {
-    fn from(s: &'x str) -> Self {
-        Variable::String(s.into())
-    }
-}
-
-impl<'x> From<Cow<'x, str>> for Variable {
-    fn from(s: Cow<'x, str>) -> Self {
-        match s {
-            Cow::Borrowed(s) => Variable::String(s.into()),
-            Cow::Owned(s) => Variable::String(s.into()),
-        }
-    }
-}
-
-impl From<Vec<Variable>> for Variable {
-    fn from(l: Vec<Variable>) -> Self {
-        Variable::Array(l.into())
-    }
-}
-
-impl From<Number> for Variable {
-    fn from(n: Number) -> Self {
-        match n {
-            Number::Integer(n) => Variable::Integer(n),
-            Number::Float(n) => Variable::Float(n),
-        }
-    }
-}
-
-impl From<usize> for Variable {
-    fn from(n: usize) -> Self {
-        Variable::Integer(n as i64)
-    }
-}
-
-impl From<i64> for Variable {
-    fn from(n: i64) -> Self {
-        Variable::Integer(n)
-    }
-}
-
-impl From<u64> for Variable {
-    fn from(n: u64) -> Self {
-        Variable::Integer(n as i64)
-    }
-}
-
-impl From<f64> for Variable {
-    fn from(n: f64) -> Self {
-        Variable::Float(n)
-    }
-}
-
-impl From<i32> for Variable {
-    fn from(n: i32) -> Self {
-        Variable::Integer(n as i64)
-    }
-}
-
-impl From<u32> for Variable {
-    fn from(n: u32) -> Self {
-        Variable::Integer(n as i64)
-    }
-}
-
-impl From<bool> for Variable {
+impl From<bool> for Number {
+    #[inline(always)]
     fn from(b: bool) -> Self {
-        Variable::Integer(i64::from(b))
+        Number::Integer(i64::from(b))
+    }
+}
+
+impl From<i64> for Number {
+    #[inline(always)]
+    fn from(n: i64) -> Self {
+        Number::Integer(n)
+    }
+}
+
+impl From<f64> for Number {
+    #[inline(always)]
+    fn from(n: f64) -> Self {
+        Number::Float(n)
+    }
+}
+
+impl From<i32> for Number {
+    #[inline(always)]
+    fn from(n: i32) -> Self {
+        Number::Integer(n as i64)
     }
 }
 
@@ -285,38 +125,13 @@ impl PartialOrd for Number {
     }
 }
 
-impl self::eval::ToString for [Variable] {
-    fn to_string(&self) -> String {
-        let mut result = String::with_capacity(self.len() * 10);
-        for item in self {
-            if !result.is_empty() {
-                result.push_str("\r\n");
-            }
-            match item {
-                Variable::String(v) => result.push_str(v),
-                Variable::Integer(v) => result.push_str(&v.to_string()),
-                Variable::Float(v) => result.push_str(&v.to_string()),
-                Variable::Array(_) => {}
-            }
-        }
-        result
-    }
-}
-
-impl Hash for Variable {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            Variable::String(s) => s.hash(state),
-            Variable::Integer(n) => n.hash(state),
-            Variable::Float(n) => n.to_bits().hash(state),
-            Variable::Array(l) => l.hash(state),
-        }
-    }
-}
-
-#[cfg(not(test))]
 impl Runtime {
-    pub fn filter<'z: 'x, 'x>(&'z self, raw_message: &'x [u8]) -> Context<'x> {
+    pub fn filter<'z: 'x, 'x>(
+        &'z self,
+        raw_message: &'x [u8],
+        script: &'x Sieve<'x>,
+        arena: &'x mut Arena,
+    ) -> Context<'x> {
         Context::new(
             self,
             MessageParser::new()
@@ -334,11 +149,18 @@ impl Runtime {
                     raw_message: b""[..].into(),
                     ..Default::default()
                 }),
+            script,
+            arena,
         )
     }
 
-    pub fn filter_parsed<'z: 'x, 'x>(&'z self, message: Message<'x>) -> Context<'x> {
-        Context::new(self, message)
+    pub fn filter_parsed<'z: 'x, 'x>(
+        &'z self,
+        message: Message<'x>,
+        script: &'x Sieve<'x>,
+        arena: &'x mut Arena,
+    ) -> Context<'x> {
+        Context::new(self, message, script, arena)
     }
 }
 
@@ -366,6 +188,7 @@ impl Runtime {
             include_scripts: AHashMap::new(),
             max_nested_includes: 3,
             cpu_limit: 5000,
+            memory_limit: 32 * 1024 * 1024,
             max_variable_size: 4096,
             max_redirects: 1,
             max_received_headers: 10,
@@ -393,6 +216,15 @@ impl Runtime {
 
     pub fn with_cpu_limit(mut self, size: usize) -> Self {
         self.cpu_limit = size;
+        self
+    }
+
+    pub fn set_memory_limit(&mut self, size: usize) {
+        self.memory_limit = size;
+    }
+
+    pub fn with_memory_limit(mut self, size: usize) -> Self {
+        self.memory_limit = size;
         self
     }
 
@@ -521,7 +353,7 @@ impl Runtime {
     pub fn set_env_variable(
         &mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Variable>,
+        value: impl Into<Variable<'static>>,
     ) {
         self.environment.insert(name.into(), value.into());
     }
@@ -529,9 +361,9 @@ impl Runtime {
     pub fn with_env_variable(
         mut self,
         name: impl Into<Cow<'static, str>>,
-        value: impl Into<Cow<'static, str>>,
+        value: impl Into<Variable<'static>>,
     ) -> Self {
-        self.set_env_variable(name.into(), value.into());
+        self.set_env_variable(name, value);
         self
     }
 
@@ -630,6 +462,19 @@ impl Runtime {
     pub fn set_functions(&mut self, fnc_map: &mut FunctionMap) {
         self.functions = std::mem::take(&mut fnc_map.functions);
     }
+
+    pub fn set_include_script(&mut self, name: impl Into<String>, script: Sieve<'static>) {
+        self.include_scripts.insert(name.into(), script);
+    }
+
+    pub fn with_include_script(mut self, name: impl Into<String>, script: Sieve<'static>) -> Self {
+        self.set_include_script(name, script);
+        self
+    }
+
+    pub fn include_script(&self, name: &str) -> Option<&Sieve<'static>> {
+        self.include_scripts.get(name)
+    }
 }
 
 impl FunctionMap {
@@ -677,97 +522,6 @@ impl FunctionMap {
         num_args: u32,
     ) {
         self.map.insert(name.into(), (ID_EXTERNAL - id, num_args));
-    }
-}
-
-impl Input {
-    pub fn script(name: impl Into<Script>, script: impl Into<Arc<Sieve>>) -> Self {
-        Input::Script {
-            name: name.into(),
-            script: script.into(),
-        }
-    }
-
-    pub fn success() -> Self {
-        Input::True
-    }
-
-    pub fn fail() -> Self {
-        Input::False
-    }
-
-    pub fn result(result: Variable) -> Self {
-        Input::FncResult(result)
-    }
-}
-
-impl From<bool> for Input {
-    fn from(value: bool) -> Self {
-        if value { Input::True } else { Input::False }
-    }
-}
-
-impl From<Variable> for Input {
-    fn from(value: Variable) -> Self {
-        Input::FncResult(value)
-    }
-}
-
-impl Deref for Script {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Script::Personal(name) | Script::Global(name) => name,
-        }
-    }
-}
-
-impl AsRef<str> for Script {
-    fn as_ref(&self) -> &str {
-        match self {
-            Script::Personal(name) | Script::Global(name) => name.as_str(),
-        }
-    }
-}
-
-impl AsRef<String> for Script {
-    fn as_ref(&self) -> &String {
-        match self {
-            Script::Personal(name) | Script::Global(name) => name,
-        }
-    }
-}
-
-impl Script {
-    pub fn into_string(self) -> String {
-        match self {
-            Script::Personal(name) | Script::Global(name) => name,
-        }
-    }
-
-    pub fn as_str(&self) -> &String {
-        match self {
-            Script::Personal(name) | Script::Global(name) => name,
-        }
-    }
-}
-
-impl Display for Script {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl From<String> for Script {
-    fn from(name: String) -> Self {
-        Script::Personal(name)
-    }
-}
-
-impl From<&str> for Script {
-    fn from(name: &str) -> Self {
-        Script::Personal(name.to_string())
     }
 }
 

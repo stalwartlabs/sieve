@@ -4,24 +4,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{Context, compiler::grammar::tests::test_extlists::TestValidExtList};
-
 use super::TestResult;
+use crate::{Context, Sieve, bytecode::ops, runtime::RuntimeError};
 
-impl TestValidExtList {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let mut num_valid = 0;
+impl<'x> Context<'x> {
+    pub(crate) fn test_valid_ext_list(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestValidExtList,
+    ) -> Result<TestResult, RuntimeError> {
+        let all_valid = self
+            .eval_values(script, test.list_names)?
+            .iter()
+            .all(|list| {
+                self.runtime
+                    .valid_ext_lists
+                    .contains(list.to_string().as_ref())
+            });
 
-        for list in &self.list_names {
-            if ctx
-                .runtime
-                .valid_ext_lists
-                .contains(&ctx.eval_value(list).to_string())
-            {
-                num_valid += 1;
-            }
-        }
-
-        TestResult::Bool((num_valid == self.list_names.len()) ^ self.is_not)
+        Ok(TestResult::Bool(all_valid ^ test.is_not))
     }
 }

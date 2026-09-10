@@ -4,111 +4,107 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::{
+    TestResult,
+    matching::{Key, Pattern},
+};
 use crate::{
-    Context, SpamStatus, VirusStatus,
+    Context, Sieve, SpamStatus, VirusStatus,
+    bytecode::{
+        ops,
+        rec::{Rec, tag},
+    },
     compiler::{
         Number,
-        grammar::{
-            MatchType,
-            tests::test_spamtest::{TestSpamTest, TestVirusTest},
-        },
+        grammar::{Comparator, MatchType},
     },
-    runtime::Variable,
+    runtime::{RuntimeError, Variable},
 };
 
-use super::TestResult;
-
-impl TestSpamTest {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let status = if self.percent {
-            ctx.spam_status.as_percentage()
+impl<'x> Context<'x> {
+    pub(crate) fn test_spamtest(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestSpamTest,
+    ) -> Result<TestResult, RuntimeError> {
+        let status = if test.percent {
+            self.spam_status.as_percentage()
         } else {
-            ctx.spam_status.as_number()
+            self.spam_status.as_number()
         };
-        let value = ctx.eval_value(&self.value);
-        let mut captured_values = Vec::new();
-
-        let result = match &self.match_type {
-            MatchType::Is => self.comparator.is(&status, &value),
-            MatchType::Contains => self
-                .comparator
-                .contains(status.to_string().as_ref(), value.to_string().as_ref()),
-            MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
-            MatchType::Matches(capture_positions) => self.comparator.matches(
-                Some(&self.value),
-                value.to_string().as_ref(),
-                status.to_string().as_ref(),
-                *capture_positions,
-                &mut captured_values,
-            ),
-            MatchType::Regex(capture_positions) => self.comparator.regex(
-                &self.value,
-                &value,
-                status.to_string().as_ref(),
-                *capture_positions,
-                &mut captured_values,
-            ),
-            MatchType::Count(rel_match) => rel_match.cmp(
-                &Number::from(if matches!(&ctx.spam_status, SpamStatus::Unknown) {
-                    0.0
-                } else {
-                    1.1
-                }),
-                &value.to_number(),
-            ),
-            MatchType::List => false,
+        let count = if matches!(self.spam_status, SpamStatus::Unknown) {
+            0.0
+        } else {
+            1.1
         };
-
-        if !captured_values.is_empty() {
-            ctx.set_match_variables(captured_values);
-        }
-
-        TestResult::Bool(result ^ self.is_not)
+        self.test_status(script, test, status, count)
     }
-}
 
-impl TestVirusTest {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let status = ctx.virus_status.as_number();
-        let value = ctx.eval_value(&self.value);
+    pub(crate) fn test_virustest(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestVirusTest,
+    ) -> Result<TestResult, RuntimeError> {
+        let status = self.virus_status.as_number();
+        let count = if matches!(self.virus_status, VirusStatus::Unknown) {
+            0.0
+        } else {
+            1.1
+        };
+        let test = ops::TestSpamTest {
+            value: test.value,
+            match_type: test.match_type,
+            comparator: test.comparator,
+            percent: false,
+            is_not: test.is_not,
+        };
+        self.test_status(script, &test, status, count)
+    }
+
+    fn test_status(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestSpamTest,
+        status: Variable<'static>,
+        count: f64,
+    ) -> Result<TestResult, RuntimeError> {
+        let comparator = Comparator::from_code(test.comparator);
+        let match_type = test.match_type.match_type();
+        let key = self.eval_key(script, test.value)?;
         let mut captured_values = Vec::new();
 
-        let result = match &self.match_type {
-            MatchType::Is => self.comparator.is(&status, &value),
-            MatchType::Contains => self
-                .comparator
-                .contains(status.to_string().as_ref(), value.to_string().as_ref()),
-            MatchType::Value(rel_match) => self.comparator.relational(rel_match, &status, &value),
-            MatchType::Matches(capture_positions) => self.comparator.matches(
-                Some(&self.value),
-                value.to_string().as_ref(),
-                status.to_string().as_ref(),
-                *capture_positions,
-                &mut captured_values,
-            ),
-            MatchType::Regex(capture_positions) => self.comparator.regex(
-                &self.value,
-                &value,
-                status.to_string().as_ref(),
-                *capture_positions,
-                &mut captured_values,
-            ),
-            MatchType::Count(rel_match) => rel_match.cmp(
-                &Number::from(if matches!(&ctx.virus_status, VirusStatus::Unknown) {
-                    0.0
-                } else {
-                    1.1
-                }),
-                &value.to_number(),
-            ),
+        let result = match &match_type {
+            MatchType::Count(rel_match) => {
+                rel_match.cmp(&Number::from(count), &key.value.to_number())
+            }
             MatchType::List => false,
+            _ => self.key_matches(
+                script,
+                &comparator,
+                &match_type,
+                &key,
+                status.to_string().as_ref(),
+                &mut captured_values,
+            )?,
         };
 
         if !captured_values.is_empty() {
-            ctx.set_match_variables(captured_values);
+            self.set_match_variables(captured_values);
         }
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
+    }
+
+    fn eval_key(&self, script: &'x Sieve<'x>, rec: Rec) -> Result<Key<'x>, RuntimeError> {
+        let pattern = match rec.tag {
+            tag::GLOB => Pattern::Glob(rec.c),
+            tag::REGEX => Pattern::Regex(rec.c),
+            _ => Pattern::Dynamic,
+        };
+        Ok(Key {
+            value: self.eval_value(script, rec)?,
+            pattern,
+        })
     }
 }
 
@@ -122,7 +118,7 @@ impl SpamStatus {
         }
     }
 
-    pub(crate) fn as_number(&self) -> Variable {
+    pub(crate) fn as_number(&self) -> Variable<'static> {
         Variable::Integer(match self {
             SpamStatus::Unknown => 0,
             SpamStatus::Ham => 1,
@@ -131,7 +127,7 @@ impl SpamStatus {
         })
     }
 
-    pub(crate) fn as_percentage(&self) -> Variable {
+    pub(crate) fn as_percentage(&self) -> Variable<'static> {
         Variable::Integer(match self {
             SpamStatus::Unknown | SpamStatus::Ham => 0,
             SpamStatus::MaybeSpam(pct) => ((pct * 100.0).ceil() as i64).clamp(1, 100),
@@ -152,7 +148,7 @@ impl VirusStatus {
         }
     }
 
-    pub(crate) fn as_number(&self) -> Variable {
+    pub(crate) fn as_number(&self) -> Variable<'static> {
         Variable::Integer(match self {
             VirusStatus::Unknown => 0,
             VirusStatus::Clean => 1,

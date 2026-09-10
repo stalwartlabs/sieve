@@ -17,10 +17,6 @@ use super::action_set::{Modifier, Replacement};
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(transparent)]
 pub(crate) struct ForEveryPart {
     pub jz_pos: u32,
@@ -30,10 +26,6 @@ pub(crate) struct ForEveryPart {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Replace {
     pub subject: Option<Value>,
@@ -47,10 +39,6 @@ pub(crate) struct Replace {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct Enclose {
     pub subject: Option<Value>,
     pub headers: Box<[Value]>,
@@ -62,10 +50,6 @@ pub(crate) struct Enclose {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct ExtractText {
     pub modifiers: Box<[Modifier]>,
     pub first: Option<u32>,
@@ -76,10 +60,6 @@ pub(crate) struct ExtractText {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 #[repr(u8)]
 pub(crate) enum MimeOpts<T> {

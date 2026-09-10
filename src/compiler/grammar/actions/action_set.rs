@@ -21,10 +21,6 @@ use crate::{
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 #[repr(u8)]
 pub(crate) enum Modifier {
     Lower = 0,
@@ -42,10 +38,6 @@ pub(crate) enum Modifier {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Replacement {
     pub find: Value,
@@ -73,10 +65,6 @@ impl Modifier {
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
 )]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
-)]
 pub(crate) struct Set {
     pub modifiers: Box<[Modifier]>,
     pub name: VariableType,
@@ -87,10 +75,6 @@ pub(crate) struct Set {
 #[cfg_attr(
     any(test, feature = "serde"),
     derive(serde::Serialize, serde::Deserialize)
-)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Serialize, rkyv::Deserialize, rkyv::Archive)
 )]
 pub(crate) struct Let {
     pub name: VariableType,
@@ -227,6 +211,32 @@ impl From<Word> for Modifier {
             Word::Length => Modifier::Length,
             Word::EncodeUrl => Modifier::EncodeUrl,
             _ => unreachable!(),
+        }
+    }
+}
+
+pub(crate) const MODIFIER_LOWER: u8 = 0;
+pub(crate) const MODIFIER_UPPER: u8 = 1;
+pub(crate) const MODIFIER_LOWER_FIRST: u8 = 2;
+pub(crate) const MODIFIER_UPPER_FIRST: u8 = 3;
+pub(crate) const MODIFIER_QUOTE_WILDCARD: u8 = 4;
+pub(crate) const MODIFIER_QUOTE_REGEX: u8 = 5;
+pub(crate) const MODIFIER_ENCODE_URL: u8 = 6;
+pub(crate) const MODIFIER_LENGTH: u8 = 7;
+pub(crate) const MODIFIER_REPLACE: u8 = 8;
+
+impl Modifier {
+    pub(crate) fn code(&self) -> u8 {
+        match self {
+            Modifier::Lower => MODIFIER_LOWER,
+            Modifier::Upper => MODIFIER_UPPER,
+            Modifier::LowerFirst => MODIFIER_LOWER_FIRST,
+            Modifier::UpperFirst => MODIFIER_UPPER_FIRST,
+            Modifier::QuoteWildcard => MODIFIER_QUOTE_WILDCARD,
+            Modifier::QuoteRegex => MODIFIER_QUOTE_REGEX,
+            Modifier::EncodeUrl => MODIFIER_ENCODE_URL,
+            Modifier::Length => MODIFIER_LENGTH,
+            Modifier::Replace(_) => MODIFIER_REPLACE,
         }
     }
 }

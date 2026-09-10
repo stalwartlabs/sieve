@@ -4,24 +4,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{Context, compiler::grammar::tests::test_exists::TestExists};
-
 use super::{TestResult, mime::SubpartIterator};
+use crate::{Context, Sieve, bytecode::ops, runtime::RuntimeError};
+use smallvec::{SmallVec, smallvec};
 
-impl TestExists {
-    pub(crate) fn exec(&self, ctx: &mut Context) -> TestResult {
-        let header_names = ctx.parse_header_names(&self.header_names);
-        let mut header_exists = vec![false; header_names.len()];
-        let parts = [ctx.part];
-        let mut part_iter = SubpartIterator::new(ctx, &parts, self.mime_anychild);
+impl<'x> Context<'x> {
+    pub(crate) fn test_exists(
+        &mut self,
+        script: &'x Sieve<'x>,
+        test: &ops::TestExists,
+    ) -> Result<TestResult, RuntimeError> {
+        let header_names = self.parse_header_names(script, test.header_names)?;
+        let mut header_exists: SmallVec<[bool; 8]> = smallvec![false; header_names.len()];
+        let parts = [self.part];
+        let mut part_iter = SubpartIterator::new(self, &parts, test.mime_anychild);
         let mut result = false;
 
         while let Some((_, message_part)) = part_iter.next() {
-            for (pos, header_name) in header_names.iter().enumerate() {
-                if !header_exists[pos]
-                    && message_part.headers.iter().any(|h| &h.name == header_name)
-                {
-                    header_exists[pos] = true;
+            for (exists, header_name) in header_exists.iter_mut().zip(header_names.iter()) {
+                if !*exists && message_part.headers.iter().any(|h| &h.name == header_name) {
+                    *exists = true;
                 }
             }
 
@@ -31,6 +33,6 @@ impl TestExists {
             }
         }
 
-        TestResult::Bool(result ^ self.is_not)
+        Ok(TestResult::Bool(result ^ test.is_not))
     }
 }
