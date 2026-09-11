@@ -4,3 +4,4 @@ Cargo.lock
 *.failed
 .DS_Store
 .ignore
+.claude
