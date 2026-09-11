@@ -79,6 +79,10 @@ impl Match {
     }
 }
 
+const DYNAMIC_REGEX_CACHE: usize = 32;
+
+use std::borrow::Cow;
+
 impl<'x> Context<'x> {
     pub(crate) fn eval_keys(
         &self,
@@ -171,16 +175,36 @@ impl<'x> Context<'x> {
             Ok(regex
                 .is_some_and(|regex| eval_regex(regex, value, capture_positions, captured_values)))
         } else {
-            Ok(
-                match fancy_regex::Regex::new(key.value.to_string().as_ref()) {
-                    Ok(regex) => eval_regex(&regex, value, capture_positions, captured_values),
-                    Err(err) => {
-                        debug_assert!(false, "Failed to compile regex: {err:?}");
-                        false
-                    }
-                },
-            )
+            Ok(self.dynamic_regex_matches(
+                key.value.clone().into_string(),
+                value,
+                capture_positions,
+                captured_values,
+            ))
         }
+    }
+
+    fn dynamic_regex_matches(
+        &self,
+        pattern: Cow<'x, str>,
+        value: &str,
+        capture_positions: u64,
+        captured_values: &mut Vec<(usize, String)>,
+    ) -> bool {
+        let mut cache = self.dynamic_regexes.borrow_mut();
+        if let Some(regex) = cache.get(pattern.as_ref()) {
+            return regex
+                .as_ref()
+                .is_some_and(|regex| eval_regex(regex, value, capture_positions, captured_values));
+        }
+        let regex = crate::regex::compile(&pattern);
+        let matched = regex
+            .as_ref()
+            .is_some_and(|regex| eval_regex(regex, value, capture_positions, captured_values));
+        if cache.len() < DYNAMIC_REGEX_CACHE {
+            cache.insert(self.intern_cow(pattern), regex);
+        }
+        matched
     }
 }
 

@@ -22,7 +22,11 @@ use crate::{
 };
 use ahash::AHashMap;
 use mail_parser::Message;
-use std::{borrow::Cow, cell::Cell, time::SystemTime};
+use std::{
+    borrow::Cow,
+    cell::{Cell, RefCell},
+    time::SystemTime,
+};
 
 #[derive(Clone, Copy)]
 pub(crate) struct Frame<'x> {
@@ -50,8 +54,7 @@ impl<'x> Context<'x> {
         script: &'x Sieve<'x>,
         arena: &'x mut Arena,
     ) -> Self {
-        arena.reset();
-        arena.bump.set_allocation_limit(Some(runtime.memory_limit));
+        arena.prepare(runtime.memory_limit);
         let message_size = message.raw_message.len();
         Context {
             runtime,
@@ -88,6 +91,7 @@ impl<'x> Context<'x> {
             has_changes: false,
             oom: Cell::new(false),
             raw_message_copy: Cell::new(None),
+            dynamic_regexes: RefCell::new(AHashMap::new()),
             user_address: "".into(),
             user_full_name: "".into(),
             current_time: SystemTime::now()
@@ -782,6 +786,9 @@ impl<'x> Context<'x> {
 
     #[inline(always)]
     fn flush<H: Handler<'x>>(&mut self, handler: &mut H) -> Result<Flow, RuntimeError> {
+        if self.oom.get() {
+            return Err(RuntimeError::MemoryLimitReached);
+        }
         if self.actions.is_empty() || self.flush_actions(handler)? {
             Ok(Flow::Continue)
         } else {

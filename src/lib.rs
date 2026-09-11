@@ -14,10 +14,14 @@ use runtime::{
     context::{Frame, Pending},
     handler::Action,
 };
-use std::{borrow::Cow, cell::Cell};
+use std::{
+    borrow::Cow,
+    cell::{Cell, RefCell},
+};
 
 pub mod bytecode;
 pub mod compiler;
+mod regex;
 pub mod runtime;
 pub mod sieve;
 
@@ -127,6 +131,7 @@ pub struct Context<'x> {
     pub(crate) has_changes: bool,
     pub(crate) oom: Cell<bool>,
     pub(crate) raw_message_copy: Cell<Option<&'x [u8]>>,
+    pub(crate) dynamic_regexes: RefCell<AHashMap<&'x str, Option<fancy_regex::Regex>>>,
     pub(crate) num_redirects: usize,
     pub(crate) num_instructions: usize,
     pub(crate) num_out_messages: usize,

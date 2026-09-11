@@ -13,7 +13,7 @@ use crate::{
     },
     runtime::{
         RuntimeError, Variable,
-        handler::{Action, Handler, Input, MessageSource, Reply, Script, Status},
+        handler::{Action, Handler, Input, MessageSource, Recipient, Reply, Script, Status},
     },
 };
 use mail_parser::{HeaderName, HeaderValue, MessageParser};
@@ -36,6 +36,7 @@ struct RecordingHandler {
     discards: usize,
     rejects: usize,
     sends: Vec<(MessageSource, bool)>,
+    empty_recipients: usize,
     fileinto_flags: Vec<Vec<String>>,
     reject_fileinto: bool,
     park_includes: bool,
@@ -60,7 +61,15 @@ impl<'x> Handler<'x> for RecordingHandler {
             Action::Keep { .. } => self.keeps += 1,
             Action::Discard => self.discards += 1,
             Action::Reject { .. } => self.rejects += 1,
-            Action::SendMessage { source, notify, .. } => {
+            Action::SendMessage {
+                source,
+                notify,
+                recipient,
+                ..
+            } => {
+                if matches!(recipient, Recipient::Address("")) {
+                    self.empty_recipients += 1;
+                }
                 self.sends.push((source, matches!(notify, Notify::Never)));
             }
             Action::FileInto { .. } if self.reject_fileinto => {
@@ -116,14 +125,18 @@ impl<'x> Handler<'x> for IncludeHandler<'x> {
     }
 }
 
-#[test]
-fn arena_exhaustion_returns_error() {
-    let script = compile(
+fn exhausting_script(iterations: usize) -> Sieve<'static> {
+    compile(&format!(
         "require [\"variables\", \"vnd.stalwart.expressions\", \"vnd.stalwart.while\"];\n\
          set \"a\" \"x\";\n\
          let \"i\" \"0\";\n\
-         while \"i < 4000\" { set \"a\" \"${a}${a}\"; let \"i\" \"i + 1\"; }\n",
-    );
+         while \"i < {iterations}\" {{ set \"a\" \"${{a}}${{a}}\"; let \"i\" \"i + 1\"; }}\n"
+    ))
+}
+
+#[test]
+fn arena_exhaustion_returns_error() {
+    let script = exhausting_script(4000);
     let runtime = runtime()
         .with_cpu_limit(1_000_000)
         .with_memory_limit(1 << 20);
@@ -133,6 +146,100 @@ fn arena_exhaustion_returns_error() {
         ctx.run(&mut NullHandler),
         Err(RuntimeError::MemoryLimitReached)
     ));
+}
+
+#[test]
+fn arena_limit_applies_to_presized_arena() {
+    let script = exhausting_script(4000);
+    let runtime = runtime()
+        .with_cpu_limit(1_000_000)
+        .with_memory_limit(1 << 20);
+    let mut arena = Arena::with_capacity(4 << 20);
+    let mut ctx = Context::new(&runtime, empty_message(), &script, &mut arena);
+    assert_eq!(
+        ctx.run(&mut NullHandler),
+        Err(RuntimeError::MemoryLimitReached)
+    );
+}
+
+#[test]
+fn arena_limit_applies_after_reuse() {
+    let mut arena = Arena::new();
+    let generous = runtime()
+        .with_cpu_limit(1_000_000)
+        .with_memory_limit(64 << 20);
+    let script = exhausting_script(600);
+    {
+        let mut ctx = Context::new(&generous, empty_message(), &script, &mut arena);
+        assert!(matches!(ctx.run(&mut NullHandler), Ok(Status::Finished)));
+    }
+    assert!(arena.allocated_bytes() > 1 << 20);
+    let strict = runtime()
+        .with_cpu_limit(1_000_000)
+        .with_memory_limit(1 << 20);
+    let script = exhausting_script(4000);
+    let mut ctx = Context::new(&strict, empty_message(), &script, &mut arena);
+    assert_eq!(
+        ctx.run(&mut NullHandler),
+        Err(RuntimeError::MemoryLimitReached)
+    );
+}
+
+#[test]
+fn failed_allocation_never_reaches_handler() {
+    let address = format!("{}@example.org", "a".repeat(900));
+    let script = compile(&format!(
+        "require [\"vnd.stalwart.expressions\", \"vnd.stalwart.while\"];\n\
+         let \"i\" \"0\";\n\
+         while \"i < 500\" {{ redirect \"{address}\"; let \"i\" \"i + 1\"; }}\n"
+    ));
+    let runtime = runtime()
+        .with_cpu_limit(100_000)
+        .with_memory_limit(32 << 10)
+        .with_max_redirects(1000)
+        .with_max_out_messages(1000);
+    let mut arena = Arena::new();
+    let mut ctx = Context::new(&runtime, empty_message(), &script, &mut arena);
+    let mut handler = RecordingHandler::default();
+    assert_eq!(ctx.run(&mut handler), Err(RuntimeError::MemoryLimitReached));
+    assert!(!handler.sends.is_empty());
+    assert_eq!(handler.empty_recipients, 0);
+}
+
+#[test]
+fn dynamic_regexes_are_bounded_and_cached() {
+    let script = compile(
+        "require [\"variables\", \"regex\", \"vnd.stalwart.expressions\", \"vnd.stalwart.while\"];\n\
+         set \"huge\" \"((a{100}){100}){100}\";\n\
+         if string :regex \"aaa\" \"${huge}\" { discard; }\n\
+         set \"ok\" \"^h.*o$\";\n\
+         let \"i\" \"0\";\n\
+         let \"n\" \"0\";\n\
+         while \"i < 50\" {\n\
+             if string :regex \"hello\" \"${ok}\" { let \"n\" \"n + 1\"; }\n\
+             let \"i\" \"i + 1\";\n\
+         }\n\
+         if not eval \"n == 50\" { discard; }\n",
+    );
+    let runtime = runtime().with_cpu_limit(100_000);
+    let mut arena = Arena::new();
+    let mut ctx = Context::new(&runtime, empty_message(), &script, &mut arena);
+    let mut handler = RecordingHandler::default();
+    assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
+    assert_eq!((handler.keeps, handler.discards), (1, 0));
+}
+
+#[test]
+fn compiler_rejects_oversized_regex() {
+    let result = Compiler::new().compile(
+        b"require \"regex\";\r\nif header :regex \"subject\" \"((a{100}){100}){100}\" { keep; }\r\n",
+    );
+    assert!(result.is_err());
+    assert!(
+        Compiler::new()
+            .compile(b"require \"regex\";\r\nif header :regex \"subject\" \"^h.*o$\" { keep; }\r\n")
+            .is_ok()
+    );
 }
 
 #[test]

@@ -296,7 +296,7 @@ impl<'a> Sieve<'a> {
     pub(crate) fn regex(&self, slot: u16, pattern: &str) -> Option<&fancy_regex::Regex> {
         self.regexes
             .get(slot as usize)?
-            .get_or_init(|| fancy_regex::Regex::new(pattern).ok())
+            .get_or_init(|| crate::regex::compile(pattern))
             .as_ref()
     }
 }

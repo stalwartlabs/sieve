@@ -534,7 +534,7 @@ impl CompilerState<'_> {
                             continue;
                         }
                     };
-                    match fancy_regex::Regex::new(&expr) {
+                    match crate::regex::build(&expr) {
                         Ok(_) => keys.push(Value::Regex(Regex::new(expr))),
                         Err(err) => {
                             return Err(self

@@ -26,6 +26,14 @@ impl Arena {
         self.bump.reset();
     }
 
+    pub(crate) fn prepare(&mut self, limit: usize) {
+        self.bump.reset();
+        if self.bump.allocated_bytes() > limit {
+            self.bump = Bump::new();
+        }
+        self.bump.set_allocation_limit(Some(limit));
+    }
+
     pub fn allocated_bytes(&self) -> usize {
         self.bump.allocated_bytes()
     }
