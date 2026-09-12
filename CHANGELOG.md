@@ -1,3 +1,7 @@
+sieve-rs 1.0.1
+================================
+- Bump to `mail-builder` 1.0.0
+
 sieve-rs 1.0.0
 ================================
 - Scripts compile to a flat bytecode; `Sieve::from_bytes` is a zero-copy borrow of the stored bytes instead of a full deserialization.

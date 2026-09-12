@@ -238,8 +238,7 @@ impl<'x> Context<'x> {
 
         if !has_message_id {
             message.extend_from_slice(b"Message-ID: ");
-            generate_message_id_header(&mut message, &self.runtime.local_hostname)
-                .expect("writing to a Vec cannot fail");
+            generate_message_id_header(&mut message, &self.runtime.local_hostname);
             message.extend_from_slice(b"\r\n");
         }
 

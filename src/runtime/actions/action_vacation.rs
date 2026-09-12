@@ -272,8 +272,7 @@ impl<'x> Context<'x> {
         message.extend_from_slice(b"\r\n");
 
         message.extend_from_slice(b"Message-ID: ");
-        generate_message_id_header(&mut message, &self.runtime.local_hostname)
-            .expect("writing to a Vec cannot fail");
+        generate_message_id_header(&mut message, &self.runtime.local_hostname);
         message.extend_from_slice(b"\r\n");
 
         write_header(&mut message, "Auto-Submitted: ", "auto-replied");

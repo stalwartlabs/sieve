@@ -340,11 +340,9 @@ impl<'x> Context<'x> {
     fn generate_message_id(&self) -> String {
         #[cfg(not(test))]
         {
-            let mut header_value = Vec::with_capacity(20);
-            match generate_message_id_header(&mut header_value, &self.runtime.local_hostname) {
-                Ok(()) => String::from_utf8(header_value).unwrap_or_default(),
-                Err(_) => String::new(),
-            }
+            let mut header_value = Vec::with_capacity(self.runtime.local_hostname.len() + 64);
+            generate_message_id_header(&mut header_value, &self.runtime.local_hostname);
+            String::from_utf8(header_value).unwrap_or_default()
         }
         #[cfg(test)]
         {
