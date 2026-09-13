@@ -1,0 +1,55 @@
+[
+  {
+    "id": "welcome",
+    "title": "Welcome tour",
+    "description": "Duplicates, spam, lists, flags, MIME footers, vacation and expressions in one script.",
+    "scripts": [{ "name": "main", "file": "welcome.sieve" }],
+    "messages": [{ "name": "q3-report.eml", "file": "welcome.eml" }]
+  },
+  {
+    "id": "lists",
+    "title": "Mailing lists",
+    "description": "Regex captures, body tests and plus addressing.",
+    "scripts": [{ "name": "main", "file": "lists.sieve" }],
+    "messages": [{ "name": "announcement.eml", "file": "lists.eml" }]
+  },
+  {
+    "id": "spam",
+    "title": "Spam and viruses",
+    "description": "spamtest, virustest, reject and discard driven by the scores in Settings.",
+    "scripts": [{ "name": "main", "file": "spam.sieve" }],
+    "messages": [{ "name": "lottery.eml", "file": "spam.eml" }],
+    "settings": { "spamScore": 6 }
+  },
+  {
+    "id": "vacation",
+    "title": "Out of office",
+    "description": "Vacation replies with date windows and auto-reply safeguards.",
+    "scripts": [{ "name": "main", "file": "vacation.sieve" }],
+    "messages": [{ "name": "lunch.eml", "file": "vacation.eml" }]
+  },
+  {
+    "id": "forward",
+    "title": "Redirect and notify",
+    "description": "redirect :copy with DSN options, enotify and editheader.",
+    "scripts": [{ "name": "main", "file": "forward.sieve" }],
+    "messages": [{ "name": "invoice.eml", "file": "forward.eml" }]
+  },
+  {
+    "id": "include",
+    "title": "Includes",
+    "description": "Split a filter across scripts with include and global variables.",
+    "scripts": [
+      { "name": "main", "file": "include-main.sieve" },
+      { "name": "common", "file": "include-common.sieve" }
+    ],
+    "messages": [{ "name": "outage.eml", "file": "include.eml" }]
+  },
+  {
+    "id": "expressions",
+    "title": "Expressions and loops",
+    "description": "Stalwart's let, eval and while extensions with built-in functions.",
+    "scripts": [{ "name": "main", "file": "expressions.sieve" }],
+    "messages": [{ "name": "meeting.eml", "file": "expressions.eml" }]
+  }
+]

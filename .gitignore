@@ -5,3 +5,7 @@ Cargo.lock
 .DS_Store
 .ignore
 .claude
+!/web/Cargo.lock
+/web/dist/
+/web/target/
+/web/vendor/

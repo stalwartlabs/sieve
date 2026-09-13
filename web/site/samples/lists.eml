@@ -1,0 +1,16 @@
+From: Ferris <ferris@rust-lang.example>
+To: rust-users@lists.rust-lang.example
+Subject: [ANN] Release 1.99 is out
+Date: Mon, 7 Sep 2026 17:02:11 +0000
+Message-ID: <ann-199@rust-lang.example>
+In-Reply-To: <question-42@example.org>
+List-Id: Rust users <rust-users.lists.rust-lang.example>
+List-Unsubscribe: <mailto:rust-users-leave@lists.rust-lang.example>
+Content-Type: text/plain; charset="utf-8"
+
+Hello everyone,
+
+The new release is out. See the notes for the full list of changes,
+including a security advisory for older toolchains.
+
+The release team

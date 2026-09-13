@@ -5,6 +5,7 @@
  */
 
 use super::super::tests::TestResult;
+use crate::runtime::platform;
 use crate::{
     Context, Envelope, Sieve,
     bytecode::ops,
@@ -17,7 +18,7 @@ use crate::{
         handler::{Action, Handler, MessageSource, Recipient},
     },
 };
-use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
+use mail_builder::headers::date::Date;
 use mail_parser::{HeaderName, HeaderValue};
 use std::borrow::Cow;
 
@@ -268,11 +269,11 @@ impl<'x> Context<'x> {
             }
         }
         message.extend_from_slice(b"Date: ");
-        message.extend_from_slice(Date::now().to_rfc822().as_bytes());
+        message.extend_from_slice(Date::new(self.current_time).to_rfc822().as_bytes());
         message.extend_from_slice(b"\r\n");
 
         message.extend_from_slice(b"Message-ID: ");
-        generate_message_id_header(&mut message, &self.runtime.local_hostname);
+        platform::write_message_id(&mut message, &self.runtime.local_hostname);
         message.extend_from_slice(b"\r\n");
 
         write_header(&mut message, "Auto-Submitted: ", "auto-replied");

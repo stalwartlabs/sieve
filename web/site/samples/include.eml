@@ -1,0 +1,8 @@
+From: Ops Team <ops@example.org>
+To: jane@example.org
+Subject: [Apollo] Outage in the staging cluster
+Date: Fri, 11 Sep 2026 14:30:00 +0000
+Message-ID: <apollo-outage-77@example.org>
+Content-Type: text/plain; charset="utf-8"
+
+The staging cluster is down since 14:10 UTC. Investigating.

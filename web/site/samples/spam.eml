@@ -1,0 +1,8 @@
+From: "Prize Department" <winner@lottery.example>
+To: jane@example.org
+Subject: You have WON 1,000,000 dollars!!!
+Date: Sun, 6 Sep 2026 03:12:45 +0000
+Message-ID: <win-000001@lottery.example>
+Content-Type: text/html; charset="utf-8"
+
+<html><body><h1>Congratulations!</h1><p>Click <a href="http://lottery.example/claim">here</a> to claim your prize.</p></body></html>

@@ -1,0 +1,14 @@
+From: Billing <billing@supplier.example>
+To: jane@example.org
+Subject: Urgent: invoice 2026-0915 overdue
+Importance: high
+Date: Thu, 10 Sep 2026 08:00:00 +0000
+Message-ID: <inv-20260915@supplier.example>
+Content-Type: text/plain; charset="utf-8"
+
+Dear customer,
+
+Invoice 2026-0915 is now overdue. Please arrange payment at your
+earliest convenience.
+
+Supplier Accounts

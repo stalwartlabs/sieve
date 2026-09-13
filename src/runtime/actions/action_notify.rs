@@ -5,6 +5,7 @@
  */
 
 use super::action_vacation::MAX_SUBJECT_LEN;
+use crate::runtime::platform;
 use crate::{
     Context, Importance, Sieve,
     bytecode::ops,
@@ -14,7 +15,7 @@ use crate::{
         handler::{Action, MessageSource, Recipient},
     },
 };
-use mail_builder::headers::{date::Date, message_id::generate_message_id_header};
+use mail_builder::headers::date::Date;
 use mail_parser::{HeaderName, HeaderValue, decoders::quoted_printable::HEX_MAP};
 use std::borrow::Cow;
 
@@ -232,13 +233,13 @@ impl<'x> Context<'x> {
 
         if !has_date {
             message.extend_from_slice(b"Date: ");
-            message.extend_from_slice(Date::now().to_rfc822().as_bytes());
+            message.extend_from_slice(Date::new(self.current_time).to_rfc822().as_bytes());
             message.extend_from_slice(b"\r\n");
         }
 
         if !has_message_id {
             message.extend_from_slice(b"Message-ID: ");
-            generate_message_id_header(&mut message, &self.runtime.local_hostname);
+            platform::write_message_id(&mut message, &self.runtime.local_hostname);
             message.extend_from_slice(b"\r\n");
         }
 

@@ -10,6 +10,7 @@ pub mod context;
 pub mod eval;
 pub mod expression;
 pub mod handler;
+pub(crate) mod platform;
 pub mod tests;
 pub mod variable;
 pub mod variables;

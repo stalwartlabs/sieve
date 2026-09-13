@@ -1,0 +1,9 @@
+From: Team Lead <lead@example.org>
+To: jane@example.org, bob@example.net, carol@example.com
+Cc: dave@example.org
+Subject: MEETING MOVED TO FRIDAY
+Date: Sat, 12 Sep 2026 09:00:00 +0000
+Message-ID: <meeting-friday@example.org>
+Content-Type: text/plain; charset="utf-8"
+
+The weekly meeting moves to Friday 10:00.

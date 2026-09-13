@@ -1,0 +1,33 @@
+Return-Path: <boss@example.org>
+Received: from mail.example.com (mail.example.com [192.0.2.25])
+	by mx.example.org with ESMTPS id 4F2A1B3C
+	for <jane@example.org>; Tue, 8 Sep 2026 09:41:07 +0000
+From: Alice Martin <boss@example.org>
+To: Jane Doe <jane@example.org>
+Subject: Q3 report and team offsite
+Date: Tue, 8 Sep 2026 09:41:02 +0000
+Message-ID: <q3-report-7c1e@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="sievepad-boundary"
+
+--sievepad-boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hi Jane,
+
+The Q3 report is attached. Could you review the numbers before
+Thursday? We will go through them at the team offsite.
+
+Thanks,
+Alice
+
+--sievepad-boundary
+Content-Type: application/pdf; name="q3-report.pdf"
+Content-Disposition: attachment; filename="q3-report.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgPj4KZW5kb2Jq
+CnRyYWlsZXIKPDwgL1Jvb3QgMSAwIFIgPj4KJSVFT0YK
+
+--sievepad-boundary--

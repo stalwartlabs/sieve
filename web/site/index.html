@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sievepad: Sieve email filter playground</title>
+  <meta name="description"
+    content="Write, test and share Sieve email filters in your browser. Powered by the Sieve interpreter of Stalwart Mail Server." />
+  <meta name="theme-color" content="#1b1d24" />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="./vendor/monaco/vs/editor/editor.main.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Sievepad home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M5 7h22l-8 9v7l-6 3V16z" fill="currentColor" />
+      </svg>
+      <span class="brand-name">Sievepad</span>
+    </a>
+    <a class="brand-by" href="https://stalw.art" target="_blank" rel="noopener">by Stalwart Labs</a>
+
+    <div class="toolbar">
+      <div class="menu" id="workspace-menu">
+        <button class="btn ghost menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="menu-label" id="workspace-name">Workspace</span>
+          <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
+        </button>
+        <div class="menu-panel" role="menu" hidden>
+          <div class="menu-section">Workspaces</div>
+          <div class="menu-list" id="workspace-list"></div>
+          <div class="menu-sep"></div>
+          <button type="button" role="menuitem" data-action="new-workspace">New workspace</button>
+          <button type="button" role="menuitem" data-action="duplicate-workspace">Duplicate</button>
+          <button type="button" role="menuitem" data-action="rename-workspace">Rename…</button>
+          <button type="button" role="menuitem" data-action="delete-workspace">Delete…</button>
+          <div class="menu-sep"></div>
+          <button type="button" role="menuitem" data-action="export-workspace">Export to file</button>
+          <button type="button" role="menuitem" data-action="import-workspace">Import from file…</button>
+        </div>
+      </div>
+
+      <div class="menu" id="examples-menu">
+        <button class="btn ghost menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          Examples
+          <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
+        </button>
+        <div class="menu-panel wide" role="menu" hidden>
+          <div class="menu-section">Open an example as a new workspace</div>
+          <div id="examples-list"></div>
+        </div>
+      </div>
+
+      <span class="toolbar-gap"></span>
+
+      <button class="btn ghost" type="button" id="share-button" title="Share this workspace">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 9l4-2M6 7l4 2M4.5 10a2 2 0 100-4 2 2 0 000 4zM11.5 6a2 2 0 100-4 2 2 0 000 4zM11.5 14a2 2 0 100-4 2 2 0 000 4z" /></svg>
+        <span class="hide-narrow">Share</span>
+      </button>
+      <button class="btn ghost" type="button" id="settings-button" title="Settings">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10a2 2 0 100-4 2 2 0 000 4zM13 8a5 5 0 00-.1-1l1.4-1.1-1.4-2.4-1.7.6a5 5 0 00-1.7-1L9.2 1.3H6.8l-.3 1.8a5 5 0 00-1.7 1l-1.7-.6L1.7 5.9 3.1 7a5 5 0 000 2l-1.4 1.1 1.4 2.4 1.7-.6a5 5 0 001.7 1l.3 1.8h2.4l.3-1.8a5 5 0 001.7-1l1.7.6 1.4-2.4L12.9 9a5 5 0 00.1-1z" /></svg>
+        <span class="hide-narrow">Settings</span>
+      </button>
+      <button class="btn primary" type="button" id="run-button" title="Run (Ctrl+Enter)">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" /></svg>
+        Run
+      </button>
+    </div>
+  </header>
+
+  <nav class="mobile-tabs" aria-label="Panels">
+    <button type="button" data-panel="script" class="active">Script</button>
+    <button type="button" data-panel="message">Message</button>
+    <button type="button" data-panel="result">Result</button>
+  </nav>
+
+  <main class="workbench" id="workbench">
+    <section class="panel active" data-panel="script" aria-label="Sieve script">
+      <div class="panel-head">
+        <span class="panel-title"><span class="step">1</span>Script</span>
+        <div class="tabs" id="script-tabs" role="tablist"></div>
+        <button class="icon-btn" type="button" id="add-script" title="Add an include script">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
+        </button>
+      </div>
+      <div class="editor-host" id="script-editor"></div>
+      <div class="problems" id="problems" data-state="idle"></div>
+    </section>
+
+    <div class="gutter" data-gutter="0" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <section class="panel" data-panel="message" aria-label="Test message">
+      <div class="panel-head">
+        <span class="panel-title"><span class="step">2</span>Message</span>
+        <div class="tabs" id="message-tabs" role="tablist"></div>
+        <button class="icon-btn" type="button" id="add-message" title="Add a test message">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
+        </button>
+      </div>
+      <div class="editor-host drop-target" id="message-editor">
+        <div class="drop-hint">Drop an .eml or .sieve file</div>
+      </div>
+      <details class="envelope" id="envelope">
+        <summary>
+          <span>Envelope</span>
+          <span class="envelope-summary" id="envelope-summary"></span>
+        </summary>
+        <div class="envelope-grid">
+          <label for="envelope-from">MAIL FROM</label>
+          <input id="envelope-from" type="text" spellcheck="false" autocomplete="off" />
+          <label for="envelope-to">RCPT TO</label>
+          <input id="envelope-to" type="text" spellcheck="false" autocomplete="off" placeholder="comma separated" />
+        </div>
+      </details>
+    </section>
+
+    <div class="gutter" data-gutter="1" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <section class="panel" data-panel="result" aria-label="Result">
+      <div class="panel-head">
+        <span class="panel-title"><span class="step">3</span>Result</span>
+        <div class="tabs" role="tablist" id="result-tabs">
+          <button type="button" role="tab" class="tab active" data-view="actions">Actions</button>
+          <button type="button" role="tab" class="tab" data-view="messages">Messages <span class="count" id="messages-count"></span></button>
+          <button type="button" role="tab" class="tab" data-view="variables">Variables</button>
+        </div>
+      </div>
+      <div class="result-body" id="result-body">
+        <div class="result-view active" data-view="actions" id="actions-view"></div>
+        <div class="result-view" data-view="messages" id="messages-view"></div>
+        <div class="result-view" data-view="variables" id="variables-view"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="status-item" id="engine-status" data-state="loading">Loading engine…</span>
+    <span class="status-item" id="compile-status"></span>
+    <span class="status-item" id="run-stats"></span>
+    <button class="status-item status-link" type="button" id="privacy-link" title="How Sievepad handles your data">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 017 0v2M3.5 7h9v6.5h-9z" /></svg>
+      <span class="hide-narrow">Runs in your browser</span>
+    </button>
+    <span class="status-spacer"></span>
+    <a class="status-item engine-link" href="https://github.com/stalwartlabs/sieve" target="_blank" rel="noopener">sieve-rs <span id="engine-version"></span></a>
+    <a class="status-item stalwart" href="https://stalw.art" target="_blank" rel="noopener">
+      <span class="hide-narrow">Powered by Stalwart Mail Server ·</span> <strong>Try Stalwart</strong>
+    </a>
+  </footer>
+
+  <div class="drawer-backdrop" id="settings-backdrop" hidden></div>
+  <aside class="drawer" id="settings-drawer" aria-label="Settings" hidden>
+    <div class="drawer-head">
+      <h2>Settings</h2>
+      <span class="drawer-sub">Saved with this workspace</span>
+      <button class="icon-btn" type="button" data-close title="Close">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+      </button>
+    </div>
+    <div class="drawer-body" id="settings-body"></div>
+    <div class="drawer-foot">
+      <button class="btn ghost" type="button" id="settings-reset">Reset to defaults</button>
+      <button class="btn ghost" type="button" id="settings-json">Edit as JSON</button>
+      <span class="toolbar-gap"></span>
+      <button class="btn primary" type="button" data-close>Done</button>
+    </div>
+  </aside>
+
+  <dialog class="dialog" id="welcome-dialog" aria-labelledby="welcome-title">
+    <form method="dialog">
+      <h2 id="welcome-title">Welcome to Sievepad</h2>
+      <p class="dialog-text">
+        Write and test Sieve email filters against real messages, powered by the Sieve interpreter of
+        <a href="https://stalw.art" target="_blank" rel="noopener">Stalwart Mail Server</a>.
+      </p>
+      <ul class="welcome-points">
+        <li>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 017 0v2M3.5 7h9v6.5h-9z" /></svg>
+          <span><b>Everything runs in your browser.</b> Scripts are compiled and executed locally with WebAssembly.</span>
+        </li>
+        <li>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v8h-11zM5 4.5V3h6v1.5" /></svg>
+          <span><b>Nothing is stored on a server.</b> Your scripts, messages and settings are saved only in this browser.</span>
+        </li>
+        <li>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 9l4-2M6 7l4 2M4.5 10a2 2 0 100-4 2 2 0 000 4zM11.5 6a2 2 0 100-4 2 2 0 000 4zM11.5 14a2 2 0 100-4 2 2 0 000 4z" /></svg>
+          <span><b>Sharing is up to you.</b> A share link carries the workspace inside the link itself; nothing is uploaded.</span>
+        </li>
+      </ul>
+      <div class="dialog-foot">
+        <span class="toolbar-gap"></span>
+        <button class="btn primary" value="close" autofocus>Start filtering</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialog" id="share-dialog">
+    <form method="dialog">
+      <h2>Share workspace</h2>
+      <p class="dialog-text">
+        The workspace is compressed into the link itself. Nothing is uploaded: whoever opens the link gets their own copy.
+      </p>
+      <label class="check">
+        <input type="checkbox" id="share-messages" checked />
+        Include test messages
+      </label>
+      <p class="dialog-warning" id="share-privacy">Messages may contain personal information. Check them before sharing.</p>
+      <div class="share-row">
+        <input id="share-url" type="text" readonly spellcheck="false" />
+        <button class="btn primary" type="button" id="share-copy">Copy link</button>
+      </div>
+      <p class="dialog-note" id="share-size"></p>
+      <div class="dialog-foot">
+        <button class="btn ghost" type="button" data-action="export-workspace">Export to file instead</button>
+        <span class="toolbar-gap"></span>
+        <button class="btn" value="close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialog" id="prompt-dialog">
+    <form method="dialog">
+      <h2 id="prompt-title"></h2>
+      <p class="dialog-text" id="prompt-text"></p>
+      <input id="prompt-input" type="text" spellcheck="false" autocomplete="off" />
+      <div class="dialog-foot">
+        <span class="toolbar-gap"></span>
+        <button class="btn" value="cancel" formnovalidate>Cancel</button>
+        <button class="btn primary" value="ok" id="prompt-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="file-input" accept=".json,.eml,.sieve,.siv,.txt,message/rfc822" hidden />
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script>
+    self.MonacoEnvironment = {
+      getWorkerUrl: () => new URL("./vendor/monaco/vs/base/worker/workerMain.js", location.href).href,
+    };
+  </script>
+  <script src="./vendor/monaco/vs/loader.js"></script>
+  <script>
+    window.monacoReady = new Promise((resolve, reject) => {
+      require.config({ paths: { vs: "./vendor/monaco/vs" } });
+      require(["vs/editor/editor.main"], () => resolve(window.monaco), reject);
+    });
+  </script>
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>

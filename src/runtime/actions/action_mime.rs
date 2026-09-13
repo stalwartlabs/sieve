@@ -16,7 +16,9 @@ use mail_parser::{
 use std::cmp::Reverse;
 
 #[cfg(not(test))]
-use mail_builder::headers::message_id::generate_message_id_header;
+use crate::runtime::platform;
+#[cfg(not(test))]
+use mail_builder::headers::date::Date;
 
 impl<'x> Context<'x> {
     pub(crate) fn exec_replace(
@@ -117,7 +119,7 @@ impl<'x> Context<'x> {
 
             if add_date {
                 #[cfg(not(test))]
-                let header_value = mail_builder::headers::date::Date::now().to_rfc822();
+                let header_value = Date::new(self.current_time).to_rfc822();
                 #[cfg(test)]
                 let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
@@ -170,7 +172,7 @@ impl<'x> Context<'x> {
         #[cfg(test)]
         let boundary = make_test_boundary();
         #[cfg(not(test))]
-        let boundary = mail_builder::mime::make_boundary(".");
+        let boundary = platform::make_boundary();
 
         self.message_size += ((boundary.len() + 6) * 3) + body.len() + 2;
         self.part = 0;
@@ -279,7 +281,7 @@ impl<'x> Context<'x> {
 
         if add_date {
             #[cfg(not(test))]
-            let header_value = mail_builder::headers::date::Date::now().to_rfc822();
+            let header_value = Date::new(self.current_time).to_rfc822();
             #[cfg(test)]
             let header_value = "Tue, 20 Nov 2022 05:14:20 -0300".to_string();
 
@@ -341,7 +343,7 @@ impl<'x> Context<'x> {
         #[cfg(not(test))]
         {
             let mut header_value = Vec::with_capacity(self.runtime.local_hostname.len() + 64);
-            generate_message_id_header(&mut header_value, &self.runtime.local_hostname);
+            platform::write_message_id(&mut header_value, &self.runtime.local_hostname);
             String::from_utf8(header_value).unwrap_or_default()
         }
         #[cfg(test)]

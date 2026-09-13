@@ -25,7 +25,6 @@ use mail_parser::Message;
 use std::{
     borrow::Cow,
     cell::{Cell, RefCell},
-    time::SystemTime,
 };
 
 #[derive(Clone, Copy)]
@@ -94,10 +93,7 @@ impl<'x> Context<'x> {
             dynamic_regexes: RefCell::new(AHashMap::new()),
             user_address: "".into(),
             user_full_name: "".into(),
-            current_time: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0) as i64,
+            current_time: super::platform::unix_time(),
             num_redirects: 0,
             num_instructions: 0,
             num_out_messages: 0,
