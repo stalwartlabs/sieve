@@ -31,17 +31,35 @@ if [ ! -f "$MONACO_DIR/min/vs/loader.js" ]; then
   tar -xzf "$MONACO_TGZ" -C "$MONACO_DIR" --strip-components=1
 fi
 
+MONACO_PATH="vendor/monaco-$MONACO_VERSION"
+if ! grep -q "\./$MONACO_PATH/vs/loader.js" site/index.html; then
+  echo "site/index.html does not reference $MONACO_PATH; update it together with MONACO_VERSION." >&2
+  exit 1
+fi
+
+STAGE_DIR="target/site-stage"
+rm -rf "$STAGE_DIR"
+mkdir -p "$STAGE_DIR"
+
+wasm-pack build --release --target web --out-dir "$STAGE_DIR/pkg" --no-typescript
+rm -f "$STAGE_DIR/pkg/.gitignore" "$STAGE_DIR/pkg/package.json" "$STAGE_DIR/pkg/README.md"
+cp -r site/. "$STAGE_DIR/"
+rm "$STAGE_DIR/index.html" "$STAGE_DIR/CNAME"
+
+BUILD_ID="$(cd "$STAGE_DIR" && find . -type f | LC_ALL=C sort | xargs openssl dgst -sha256 | openssl dgst -sha256 | awk '{print $NF}' | cut -c1-16)"
+ASSETS="assets/$BUILD_ID"
+
 rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR/vendor/monaco/vs"
+mkdir -p "$OUT_DIR/$ASSETS" "$OUT_DIR/$MONACO_PATH/vs"
 
-wasm-pack build --release --target web --out-dir "$OUT_DIR/pkg" --no-typescript
-rm -f "$OUT_DIR/pkg/.gitignore" "$OUT_DIR/pkg/package.json" "$OUT_DIR/pkg/README.md"
+cp "$MONACO_DIR/min/vs/loader.js" "$OUT_DIR/$MONACO_PATH/vs/"
+cp -r "$MONACO_DIR/min/vs/base" "$MONACO_DIR/min/vs/editor" "$OUT_DIR/$MONACO_PATH/vs/"
+cp "$MONACO_DIR/LICENSE" "$OUT_DIR/$MONACO_PATH/LICENSE"
 
-cp "$MONACO_DIR/min/vs/loader.js" "$OUT_DIR/vendor/monaco/vs/"
-cp -r "$MONACO_DIR/min/vs/base" "$MONACO_DIR/min/vs/editor" "$OUT_DIR/vendor/monaco/vs/"
-cp "$MONACO_DIR/LICENSE" "$OUT_DIR/vendor/monaco/LICENSE"
+cp -r "$STAGE_DIR/." "$OUT_DIR/$ASSETS/"
+cp site/CNAME site/favicon.svg "$OUT_DIR/"
+sed "s#__ASSETS__#./$ASSETS#g" site/index.html > "$OUT_DIR/index.html"
+rm -rf "$STAGE_DIR"
 
-cp -r site/. "$OUT_DIR/"
-
-echo "Built static site in web/$OUT_DIR"
+echo "Built static site in web/$OUT_DIR (assets in $ASSETS)"
 echo "Serve locally with: python3 -m http.server --directory web/$OUT_DIR 8080"

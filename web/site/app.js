@@ -198,7 +198,7 @@ function markStale() {
 
 async function loadSamples() {
   try {
-    const response = await fetch("./samples/index.json");
+    const response = await fetch(new URL("./samples/index.json", import.meta.url));
     state.samples = await response.json();
   } catch (_) {
     state.samples = [];
@@ -207,7 +207,7 @@ async function loadSamples() {
 
 async function sampleWorkspace(sample) {
   const read = async (file) => {
-    const response = await fetch(`./samples/${file}`);
+    const response = await fetch(new URL(`./samples/${file}`, import.meta.url));
     if (!response.ok) throw new Error(`Could not load ${file}`);
     return response.text();
   };
@@ -901,7 +901,16 @@ async function initialWorkspace() {
   return makeWorkspace({ name: "Untitled", scripts: [], messages: [] });
 }
 
+function clearReloadFlag() {
+  try {
+    sessionStorage.removeItem("sievepad.reloaded");
+  } catch (_) {
+    return;
+  }
+}
+
 async function boot() {
+  clearReloadFlag();
   let monaco;
   try {
     monaco = await window.monacoReady;

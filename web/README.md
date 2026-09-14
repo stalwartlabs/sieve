@@ -37,7 +37,13 @@ python3 -m http.server --directory web/dist 8080
 ```
 
 `build.sh` downloads Monaco 0.52.2 from the npm registry into `web/vendor/` on
-the first run and copies only the editor core into `dist/`. Version 0.52.2 is
+the first run (verifying its SHA-512) and copies only the editor core into
+`dist/vendor/monaco-0.52.2/`. Everything else goes into
+`dist/assets/<content hash>/`, and `dist/index.html` is generated from
+`site/index.html` with `__ASSETS__` replaced by that path. A deploy therefore
+never mixes files from two builds, even when a CDN or browser caches old
+scripts. When bumping Monaco, update the version in both `build.sh` and
+`site/index.html`; the build fails if they disagree. Version 0.52.2 is
 the last release whose AMD build is supported and loads languages lazily, which
 matters because the site has no bundler.
 

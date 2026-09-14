@@ -9,8 +9,8 @@
     content="Write, test and share Sieve email filters in your browser. Powered by the Sieve interpreter of Stalwart Mail Server." />
   <meta name="theme-color" content="#1b1d24" />
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./style.css" />
-  <link rel="stylesheet" data-name="vs/editor/editor.main" href="./vendor/monaco/vs/editor/editor.main.css" />
+  <link rel="stylesheet" href="__ASSETS__/style.css" />
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="./vendor/monaco-0.52.2/vs/editor/editor.main.css" />
 </head>
 
 <body>
@@ -239,17 +239,17 @@
 
   <script>
     self.MonacoEnvironment = {
-      getWorkerUrl: () => new URL("./vendor/monaco/vs/base/worker/workerMain.js", location.href).href,
+      getWorkerUrl: () => new URL("./vendor/monaco-0.52.2/vs/base/worker/workerMain.js", location.href).href,
     };
   </script>
-  <script src="./vendor/monaco/vs/loader.js"></script>
+  <script src="./vendor/monaco-0.52.2/vs/loader.js"></script>
   <script>
     window.monacoReady = new Promise((resolve, reject) => {
-      require.config({ paths: { vs: "./vendor/monaco/vs" } });
+      require.config({ paths: { vs: "./vendor/monaco-0.52.2/vs" } });
       require(["vs/editor/editor.main"], () => resolve(window.monaco), reject);
     });
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="__ASSETS__/app.js" onerror="try { if (!sessionStorage.getItem('sievepad.reloaded')) { sessionStorage.setItem('sievepad.reloaded', '1'); location.reload(); } } catch (_) {}"></script>
 </body>
 
 </html>
