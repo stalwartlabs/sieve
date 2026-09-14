@@ -15,7 +15,7 @@ require ["envelope", "fileinto", "mailbox", "special-use", "imap4flags",
          "variables", "relational", "comparator-i;ascii-numeric",
          "spamtest", "spamtestplus", "date", "duplicate", "extlists",
          "editheader", "mime", "foreverypart", "extracttext", "replace",
-         "vacation", "vnd.stalwart.expressions"];
+         "vacation"];
 
 # Drop the message if the very same one was delivered in the last hour.
 # Press "Run again" to simulate a second delivery.
@@ -37,20 +37,20 @@ if header :matches "List-Id" "*<*.*>*" {
     stop;
 }
 
-# Capture a few details about the message with variables and expressions.
-# Variables first assigned inside a block only live in that block, so
-# declare the ones used later at the top level.
+# Capture a few details about the message with variables and wildcard
+# matches. Variables first assigned inside a block only live in that block,
+# so declare the ones used later at the top level.
 set "domain" "unknown";
 set "subject" "";
+set "sender" "there";
 if address :domain :matches "from" "*" {
     set :lower "domain" "${1}";
 }
 if header :matches "Subject" "*" {
     set "subject" "${1}";
 }
-let "sender" "header.from.name";
-if eval "is_empty(sender)" {
-    let "sender" "header.from.addr";
+if header :matches "From" "* <*>" {
+    set "sender" "${1}";
 }
 
 # People in your address book are flagged as important.

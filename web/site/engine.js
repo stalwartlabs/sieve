@@ -1,10 +1,17 @@
 const RUN_TIMEOUT_MS = 8000;
+const MAX_RESTARTS = 3;
+const RESTART_WINDOW_MS = 60000;
+const BASE_BACKOFF_MS = 500;
+
+export class EngineUnavailable extends Error {}
 
 export class Engine {
   constructor() {
     this.pending = new Map();
     this.nextId = 1;
     this.listeners = new Set();
+    this.restarts = [];
+    this.failed = null;
     this.spawn();
   }
 
@@ -17,23 +24,63 @@ export class Engine {
   }
 
   spawn() {
-    this.worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
-    this.worker.onmessage = (event) => this.settle(event.data);
-    this.worker.onerror = (event) => {
+    const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+    this.worker = worker;
+    this.ready = new Promise((resolve, reject) => {
+      this.resolveReady = resolve;
+      this.rejectReady = reject;
+    });
+    this.ready.catch(() => {});
+    worker.onmessage = (event) => {
+      if (worker !== this.worker) return;
+      const data = event.data;
+      if (data.type === "ready") {
+        this.resolveReady();
+      } else if (data.type === "init-error") {
+        this.crash(`Engine failed to load: ${data.error}`, { loadFailure: true });
+      } else {
+        this.settle(data);
+      }
+    };
+    worker.onerror = (event) => {
       event.preventDefault();
-      this.restart(`Engine failed to load: ${event.message || "unknown error"}`);
+      if (worker === this.worker) {
+        this.crash(`Engine failed to load: ${event.message || "the worker script could not be loaded"}`, { loadFailure: true });
+      }
     };
   }
 
-  restart(reason) {
+  crash(reason, { loadFailure = false } = {}) {
     this.worker.terminate();
+    this.rejectReady(new EngineUnavailable(reason));
     for (const { reject, timer } of this.pending.values()) {
       clearTimeout(timer);
-      reject(new Error(reason));
+      reject(new EngineUnavailable(reason));
     }
     this.pending.clear();
-    this.emit("restarted", reason);
-    this.spawn();
+
+    let delay = 0;
+    if (loadFailure) {
+      const now = Date.now();
+      this.restarts = this.restarts.filter((time) => now - time < RESTART_WINDOW_MS);
+      if (this.restarts.length >= MAX_RESTARTS) {
+        this.failed = reason;
+        this.emit("failed", reason);
+        return;
+      }
+      this.restarts.push(now);
+      delay = BASE_BACKOFF_MS * 2 ** (this.restarts.length - 1);
+    }
+    this.emit("restarting", reason);
+    const failedReady = this.ready;
+    this.ready = new Promise((resolve, reject) => {
+      setTimeout(() => {
+        this.spawn();
+        this.ready.then(resolve, reject);
+      }, delay);
+    });
+    this.ready.catch(() => {});
+    failedReady.catch(() => {});
   }
 
   settle({ id, result, error, fatal }) {
@@ -43,20 +90,24 @@ export class Engine {
     clearTimeout(entry.timer);
     if (error) {
       entry.reject(new Error(error));
-      if (fatal) this.restart(error);
+      if (fatal) this.crash(`The engine crashed: ${error}`);
     } else {
       entry.resolve(result);
     }
   }
 
-  call(op, payload, timeout = RUN_TIMEOUT_MS) {
+  async call(op, payload, timeout) {
+    if (this.failed) throw new EngineUnavailable(this.failed);
+    await this.ready;
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`The script did not finish within ${timeout / 1000} seconds and was stopped.`));
-        this.restart("timeout");
-      }, timeout);
+      const timer = timeout
+        ? setTimeout(() => {
+            this.pending.delete(id);
+            reject(new Error(`The script did not finish within ${timeout / 1000} seconds and was stopped.`));
+            this.crash("timeout");
+          }, timeout)
+        : null;
       this.pending.set(id, { resolve, reject, timer });
       this.worker.postMessage({ id, op, payload });
     });
@@ -75,10 +126,10 @@ export class Engine {
   }
 
   compile(request) {
-    return this.call("compile", request);
+    return this.call("compile", request, RUN_TIMEOUT_MS);
   }
 
   run(request) {
-    return this.call("run", request);
+    return this.call("run", request, RUN_TIMEOUT_MS);
   }
 }

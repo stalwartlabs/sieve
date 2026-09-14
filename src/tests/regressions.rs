@@ -577,3 +577,42 @@ fn send_message_carries_its_source() {
         ]
     );
 }
+
+#[test]
+fn unknown_command_reports_its_position() {
+    for (script, line, column) in [
+        ("foo;", 1, 1),
+        ("keep;\n\n  frobnicate \"x\";\n", 3, 3),
+        ("if true {\n  frob;\n}\n", 2, 3),
+    ] {
+        let err = crate::Compiler::new()
+            .compile(script.as_bytes())
+            .expect_err("unknown command must not compile");
+        assert_eq!(
+            (err.line_num(), err.line_pos()),
+            (line, column),
+            "{script:?}: {err}"
+        );
+    }
+}
+
+#[test]
+fn error_columns_are_one_based_on_every_line() {
+    for (script, line, column) in [
+        ("keep :bogustag;", 1, 6),
+        ("\nkeep :bogustag;", 2, 6),
+        ("require \"imap4flags\";\nkeep :flags \"a\" :bogus;", 2, 17),
+        ("keep; }", 1, 7),
+        ("\n  keep; }", 2, 9),
+        ("require \"fileinto\"; fileinto 12;", 1, 30),
+    ] {
+        let err = crate::Compiler::new()
+            .compile(script.as_bytes())
+            .expect_err("script must not compile");
+        assert_eq!(
+            (err.line_num(), err.line_pos()),
+            (line, column),
+            "{script:?}: {err}"
+        );
+    }
+}

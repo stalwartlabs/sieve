@@ -261,8 +261,11 @@ pub fn fn_split_n<'x>(_: &Context<'x>, args: &[Variable<'x>]) -> Variable<'x> {
         return Variable::empty();
     };
     let separator = separator.to_string();
-    let count = count.to_integer() as usize;
+    let count = usize::try_from(count.to_integer()).unwrap_or(usize::MAX);
     with_str(value, |s| {
+        if separator.is_empty() {
+            return vec![Variable::borrowed(s)].into();
+        }
         let mut rest = s;
         let mut result = Vec::with_capacity(count.min(s.len()) + 1);
         while result.len() < count {
@@ -463,6 +466,14 @@ mod tests {
         assert_eq!(
             call(fn_split_n, &[s("a,b"), s(","), Variable::Integer(0)]),
             list(&["a,b"])
+        );
+        assert_eq!(
+            call(fn_split_n, &[s("abc"), s(""), Variable::Integer(-1)]),
+            list(&["abc"])
+        );
+        assert_eq!(
+            call(fn_split_n, &[s("a,b,c"), s(","), Variable::Integer(-1)]),
+            list(&["a", "b", "c"])
         );
         assert_eq!(
             call(fn_split_once, &[s("a=b=c"), s("=")]),

@@ -11,6 +11,7 @@ if header :contains "Subject" "invoice" {
     redirect :copy :notify "failure,delay" :ret "hdrs" "accounting@example.org";
 }
 
+set "from" "";
 if anyof (header :is "Importance" "high", header :contains "Subject" "urgent") {
     if header :matches "From" "*" {
         set "from" "${1}";

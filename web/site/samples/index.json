@@ -2,7 +2,7 @@
   {
     "id": "welcome",
     "title": "Welcome tour",
-    "description": "Duplicates, spam, lists, flags, MIME footers, vacation and expressions in one script.",
+    "description": "Duplicates, spam, lists, flags, MIME footers and vacation in one script.",
     "scripts": [{ "name": "main", "file": "welcome.sieve" }],
     "messages": [{ "name": "q3-report.eml", "file": "welcome.eml" }]
   },
@@ -48,7 +48,7 @@
   {
     "id": "expressions",
     "title": "Expressions and loops",
-    "description": "Stalwart's let, eval and while extensions with built-in functions.",
+    "description": "Stalwart's vnd.stalwart.expressions and vnd.stalwart.while extensions: let, eval, loops and built-in functions.",
     "scripts": [{ "name": "main", "file": "expressions.sieve" }],
     "messages": [{ "name": "meeting.eml", "file": "expressions.eml" }]
   }

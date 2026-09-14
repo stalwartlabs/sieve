@@ -19,17 +19,19 @@ use crate::{
 
 pub struct Recorder<'s> {
     settings: &'s Settings,
-    pub seen_ids: BTreeSet<String>,
+    seen_ids: &'s [String],
+    pub new_ids: BTreeSet<String>,
     pub events: Vec<Event>,
     pub messages: Vec<OutputMessage>,
     pub after_error: bool,
 }
 
 impl<'s> Recorder<'s> {
-    pub fn new(settings: &'s Settings, seen_ids: impl IntoIterator<Item = String>) -> Self {
+    pub fn new(settings: &'s Settings, seen_ids: &'s [String]) -> Self {
         Recorder {
             settings,
-            seen_ids: seen_ids.into_iter().collect(),
+            seen_ids,
+            new_ids: BTreeSet::new(),
             events: Vec::new(),
             messages: Vec::new(),
             after_error: false,
@@ -122,7 +124,11 @@ impl<'x> Handler<'x> for Recorder<'_> {
     }
 
     fn duplicate_id(&mut self, _: &Context<'x>, id: &str, _: u64, _: bool) -> Reply<bool> {
-        Reply::Ready(!self.seen_ids.insert(id.to_string()))
+        let seen = self.seen_ids.iter().any(|seen| seen == id);
+        if !seen && !self.new_ids.contains(id) {
+            self.new_ids.insert(id.to_string());
+        }
+        Reply::Ready(seen)
     }
 
     fn action(&mut self, _: &Context<'x>, action: SieveAction<'x>) -> Reply<()> {

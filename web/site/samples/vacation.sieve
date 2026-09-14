@@ -7,6 +7,7 @@
 require ["vacation", "vacation-seconds", "date", "relational", "variables",
          "envelope"];
 
+set "subject" "";
 if currentdate :value "ge" "date" "2026-01-01" {
     if currentdate :value "le" "date" "2026-12-31" {
         if not anyof (exists "List-Id",

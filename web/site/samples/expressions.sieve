@@ -7,6 +7,14 @@
 require ["variables", "editheader", "fileinto", "mailbox", "imap4flags",
          "vnd.stalwart.expressions", "vnd.stalwart.while"];
 
+# Header fields are available as values: the display name of the sender,
+# falling back to the address when the name is empty.
+let "sender" "header.from.name";
+if eval "is_empty(sender)" {
+    let "sender" "header.from.addr";
+}
+addheader "X-Sender-Name" "${sender}";
+
 let "recipients" "header.to:cc[*].addr[*]";
 let "total" "count(recipients)";
 let "shouting" "is_uppercase(header.subject)";

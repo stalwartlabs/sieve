@@ -17,6 +17,7 @@ if spamtest :value "ge" :comparator "i;ascii-numeric" "8" {
     stop;
 }
 
+set "score" "";
 if spamtest :percent :value "ge" :comparator "i;ascii-numeric" "50" {
     if spamtest :percent :matches "*" {
         set "score" "${1}";

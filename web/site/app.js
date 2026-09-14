@@ -1,7 +1,7 @@
 import { Engine } from "./engine.js";
 import { EML_ID, defineThemes, registerEml } from "./eml-language.js";
 import { ResultView, h } from "./result.js";
-import { SettingsDrawer } from "./settings.js";
+import { SettingsDrawer, normalizeSettings } from "./settings.js";
 import { LONG_LINK, clearShareHash, decodeSharedWorkspace, encodeShareUrl, hasSharedWorkspace, portable, validatePortable } from "./share.js";
 import { LANGUAGE_ID, markersFor, registerSieve } from "./sieve-language.js";
 import { dismissWelcome, isWelcomeDismissed, loadPrefs, newId, openStore, savePrefs } from "./store.js";
@@ -44,10 +44,12 @@ const state = {
   workspace: null,
   workspaces: [],
   compileSeq: 0,
+  runSeq: 0,
   diagnostics: [],
   lastOutput: null,
   lastRunMessage: "",
   stale: true,
+  contentVersion: 0,
 };
 
 let scriptEditor;
@@ -66,6 +68,10 @@ function toast(message) {
 }
 
 document.addEventListener("toast", (event) => toast(event.detail));
+
+window.addEventListener("unhandledrejection", (event) => {
+  if (event.reason?.name === "Canceled" && event.reason?.message === "Canceled") event.preventDefault();
+});
 
 function setStatus(id, text, stateName) {
   const el = $(id);
@@ -92,6 +98,7 @@ function editorOptions(extra) {
     tabSize: 4,
     insertSpaces: true,
     fixedOverflowWidgets: true,
+    stickyScroll: { enabled: false },
     padding: { top: 8 },
     theme: theme(),
     ...extra,
@@ -100,11 +107,15 @@ function editorOptions(extra) {
 
 function modelFor(item, language) {
   if (!item.model || item.model.isDisposed()) {
-    Object.defineProperty(item, "model", { value: state.monaco.editor.createModel(item.source, language), writable: true, enumerable: false, configurable: true });
-    item.model.onDidChangeContent(() => {
-      item.source = item.model.getValue();
-      onContentChanged(language === LANGUAGE_ID);
+    const model = state.monaco.editor.createModel(item.source, language);
+    Object.defineProperty(item, "model", { value: model, writable: true, enumerable: false, configurable: true });
+    Object.defineProperty(item, "source", {
+      get: () => (model.isDisposed() ? "" : model.getValue()),
+      set: (value) => model.setValue(value),
+      enumerable: true,
+      configurable: true,
     });
+    model.onDidChangeContent(() => onContentChanged(language === LANGUAGE_ID));
   }
   return item.model;
 }
@@ -139,7 +150,7 @@ function makeWorkspace({ name, scripts, messages, settings: overrides }) {
     messages: messages.length ? messages : [{ name: "message.eml", source: BLANK_MESSAGE }],
     activeScript: 0,
     activeMessage: 0,
-    settings: { ...structuredClone(state.defaults), ...(overrides || {}) },
+    settings: normalizeSettings({ ...state.defaults, ...(overrides || {}) }, state.defaults),
   };
 }
 
@@ -174,6 +185,7 @@ function saveSoon() {
 }
 
 function onContentChanged(isScript) {
+  state.contentVersion++;
   saveSoon();
   markStale();
   if (isScript) compileSoon();
@@ -211,7 +223,7 @@ async function openWorkspace(data, { run = true } = {}) {
     ...data,
     scripts: data.scripts.map((s) => ({ ...s })),
     messages: data.messages.map((m) => ({ ...m })),
-    settings: { ...structuredClone(state.defaults), ...(data.settings || {}) },
+    settings: normalizeSettings({ ...state.defaults, ...(data.settings || {}) }, state.defaults),
   };
   ws.activeScript = Math.min(ws.activeScript || 0, ws.scripts.length - 1);
   ws.activeMessage = Math.min(ws.activeMessage || 0, ws.messages.length - 1);
@@ -228,8 +240,8 @@ async function openWorkspace(data, { run = true } = {}) {
   renderEnvelope();
   result.renderEmpty();
   await saveNow();
-  await compile();
-  if (run && state.diagnostics.length === 0) await runScript();
+  if (run) await runScript();
+  else await compile();
 }
 
 function renderWorkspaceMenu() {
@@ -327,6 +339,7 @@ function selectScript(index) {
 function selectMessage(index) {
   const ws = state.workspace;
   ws.activeMessage = index;
+  state.contentVersion++;
   messageEditor.setModel(modelFor(ws.messages[index], EML_ID));
   renderMessageTabs();
   markStale();
@@ -408,7 +421,8 @@ function renderEnvelope() {
 }
 
 function updateSettings(next) {
-  state.workspace.settings = next;
+  state.contentVersion++;
+  state.workspace.settings = normalizeSettings(next, state.defaults);
   renderEnvelope();
   saveSoon();
   markStale();
@@ -495,9 +509,12 @@ function revealLine(scriptIndex, line, column) {
 
 async function runScript({ redeliver = false } = {}) {
   if (!state.workspace) return;
-  await saveNow();
   const button = $("#run-button");
   button.disabled = true;
+  await saveNow();
+  const ws = state.workspace;
+  const version = state.contentVersion;
+  const seq = ++state.runSeq;
   setStatus("#engine-status", "Running…", "busy");
   const seenIds = redeliver && state.lastOutput ? state.lastOutput.duplicateIds : [];
   const req = request({ seenIds });
@@ -506,20 +523,28 @@ async function runScript({ redeliver = false } = {}) {
   try {
     output = await state.engine.run(req);
   } catch (err) {
-    result.renderFailure(err.message);
-    setStatus("#engine-status", "Engine ready", "ready");
+    if (seq !== state.runSeq) return;
     button.disabled = false;
+    if (ws !== state.workspace) return;
+    result.renderFailure(err.message);
+    setEngineStatus();
     return;
   }
+  if (seq !== state.runSeq) return;
   const elapsed = performance.now() - started;
   button.disabled = false;
-  button.classList.remove("stale");
-  state.stale = false;
-  setStatus("#engine-status", "Engine ready", "ready");
+  setEngineStatus();
+  if (ws !== state.workspace) return;
+  if (version === state.contentVersion) {
+    button.classList.remove("stale");
+    state.stale = false;
+  }
   applyDiagnostics(output.diagnostics);
 
-  const main = state.workspace.scripts[0];
-  state.monaco.editor.setModelMarkers(modelFor(main, LANGUAGE_ID), "sieve-runtime", output.error && output.error.line > 0 ? markersFor(state.monaco, main.model, [output.error]) : []);
+  ws.scripts.forEach((script, index) => {
+    const runtimeMarkers = output.error && output.error.line > 0 && output.error.script === index ? markersFor(state.monaco, modelFor(script, LANGUAGE_ID), [output.error]) : [];
+    state.monaco.editor.setModelMarkers(modelFor(script, LANGUAGE_ID), "sieve-runtime", runtimeMarkers);
+  });
 
   if (output.diagnostics.length) {
     state.lastOutput = null;
@@ -691,6 +716,11 @@ function setupFiles() {
   });
 }
 
+function setEngineStatus() {
+  if (state.engine.failed) setStatus("#engine-status", state.engine.failed, "error");
+  else setStatus("#engine-status", "Engine ready", "ready");
+}
+
 function promptText(title, text, value) {
   const dialog = $("#prompt-dialog");
   $("#prompt-title").textContent = title;
@@ -702,6 +732,12 @@ function promptText(title, text, value) {
     dialog.onclose = () => {
       const name = input.value.trim();
       resolve(dialog.returnValue === "ok" && name ? name.slice(0, 80) : null);
+    };
+    input.onkeydown = (event) => {
+      if (event.key === "Enter" && !event.isComposing) {
+        event.preventDefault();
+        dialog.close("ok");
+      }
     };
     dialog.returnValue = "";
     dialog.showModal();
@@ -879,12 +915,13 @@ async function boot() {
   registerEml(monaco);
   registerSieve(monaco, () => settings() || {});
 
-  scriptEditor = monaco.editor.create($("#script-editor"), editorOptions({ language: LANGUAGE_ID, ariaLabel: "Sieve script", "semanticHighlighting.enabled": false }));
+  scriptEditor = monaco.editor.create($("#script-editor"), editorOptions({ language: LANGUAGE_ID, ariaLabel: "Sieve script", wordBasedSuggestions: "off", "semanticHighlighting.enabled": false }));
   messageEditor = monaco.editor.create($("#message-editor"), editorOptions({ language: EML_ID, wordWrap: "on", ariaLabel: "Test message" }));
 
   state.engine = new Engine();
   state.engine.onStatus((kind, detail) => {
-    if (kind === "restarted" && detail !== "timeout") setStatus("#engine-status", "Engine restarted", "busy");
+    if (kind === "failed") setStatus("#engine-status", detail, "error");
+    else if (kind === "restarting" && detail !== "timeout") setStatus("#engine-status", "Restarting engine…", "busy");
   });
 
   try {

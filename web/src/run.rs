@@ -7,7 +7,7 @@
 use std::borrow::Cow;
 
 use serde::Deserialize;
-use sieve::{Arena, Compiler, Sieve, Status};
+use sieve::{Arena, Compiler, Sieve, Status, runtime::RuntimeError};
 
 use crate::{
     functions,
@@ -34,12 +34,7 @@ pub struct ScriptSource {
 }
 
 impl Request {
-    fn compiler(&self) -> Compiler {
-        self.settings.compiler(&mut functions::register())
-    }
-
-    fn compile_all(&self) -> (Vec<Sieve<'static>>, Vec<Diagnostic>) {
-        let compiler = self.compiler();
+    fn compile_all(&self, compiler: &Compiler) -> (Vec<Sieve<'static>>, Vec<Diagnostic>) {
         let mut compiled = Vec::with_capacity(self.scripts.len());
         let mut diagnostics = Vec::new();
         for (index, script) in self.scripts.iter().enumerate() {
@@ -52,13 +47,16 @@ impl Request {
     }
 
     pub fn compile(&self) -> CompileOutput {
+        let compiler = self.settings.compiler(&mut functions::register());
         CompileOutput {
-            diagnostics: self.compile_all().1,
+            diagnostics: self.compile_all(&compiler).1,
         }
     }
 
     pub fn run(&self) -> RunOutput {
-        let (compiled, diagnostics) = self.compile_all();
+        let mut functions = functions::register();
+        let compiler = self.settings.compiler(&mut functions);
+        let (compiled, diagnostics) = self.compile_all(&compiler);
         let mut compiled = compiled.into_iter();
         let Some(main) = compiled.next().filter(|_| diagnostics.is_empty()) else {
             return RunOutput {
@@ -67,7 +65,7 @@ impl Request {
             };
         };
 
-        let mut runtime = self.settings.runtime(&mut functions::register());
+        let mut runtime = self.settings.runtime(&mut functions);
         for (script, sieve) in self.scripts.iter().skip(1).zip(compiled) {
             runtime.set_include_script(script.name.trim(), sieve);
         }
@@ -77,7 +75,7 @@ impl Request {
         let mut ctx = runtime.filter(raw.as_bytes(), &main, &mut arena);
         self.settings.apply(&mut ctx, self.now);
 
-        let mut recorder = Recorder::new(&self.settings, self.seen_ids.iter().cloned());
+        let mut recorder = Recorder::new(&self.settings, &self.seen_ids);
         let mut error = None;
         loop {
             match ctx.run(&mut recorder) {
@@ -85,7 +83,7 @@ impl Request {
                 Ok(Status::Pending) => ctx.resume(false),
                 Err(err) if error.is_none() => {
                     recorder.after_error = true;
-                    error = Some(Diagnostic::runtime(&err));
+                    error = Some(self.runtime_diagnostic(&err));
                 }
                 Err(_) => break,
             }
@@ -102,6 +100,7 @@ impl Request {
             .collect();
         global_variables.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 
+        let error_free = error.is_none();
         RunOutput {
             diagnostics,
             error,
@@ -110,8 +109,43 @@ impl Request {
             global_variables,
             events: recorder.events,
             messages: recorder.messages,
-            duplicate_ids: recorder.seen_ids.into_iter().collect(),
+            duplicate_ids: if error_free {
+                let mut ids = self.seen_ids.clone();
+                ids.extend(recorder.new_ids);
+                ids.sort_unstable();
+                ids.dedup();
+                ids
+            } else {
+                self.seen_ids.clone()
+            },
         }
+    }
+
+    fn runtime_diagnostic(&self, err: &RuntimeError) -> Diagnostic {
+        let mut diagnostic = Diagnostic::runtime(err);
+        if let RuntimeError::InvalidInstruction { name, line_num, .. } = err {
+            let contains_instruction = |source: &str| {
+                source
+                    .lines()
+                    .nth((*line_num as usize).saturating_sub(1))
+                    .is_some_and(|line| {
+                        line.to_ascii_lowercase()
+                            .contains(&name.to_ascii_lowercase())
+                    })
+            };
+            match self
+                .scripts
+                .iter()
+                .position(|script| contains_instruction(&script.source))
+            {
+                Some(index) => diagnostic.script = index,
+                None => {
+                    diagnostic.line = 0;
+                    diagnostic.column = 0;
+                }
+            }
+        }
+        diagnostic
     }
 }
 

@@ -10,28 +10,84 @@ function pairs(text) {
   });
 }
 
+const USIZE_MAX = 4294967295;
+const RANGES = {
+  spamScore: [0, 10],
+  virusScore: [0, 5],
+  maxMatchVariables: [0, 63],
+  defaultVacationExpiry: [0, Number.MAX_SAFE_INTEGER],
+  defaultDuplicateExpiry: [0, Number.MAX_SAFE_INTEGER],
+};
+const NULLABLE_INTEGERS = new Set(["currentTime"]);
+const SHAPES = {
+  mailboxes: { name: "string", specialUse: "strings" },
+  lists: { name: "string", values: "strings" },
+  environment: { name: "string", value: "string" },
+  globalVariables: { name: "string", value: "string" },
+  metadata: { mailbox: "string", annotation: "string", value: "string" },
+};
+
+const toStrings = (value) => (Array.isArray(value) ? value.filter((item) => typeof item === "string") : []);
+
+function toInteger(value) {
+  const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  return typeof number === "number" && Number.isFinite(number) ? Math.trunc(number) : null;
+}
+
+function normalizeValue(key, value, fallback) {
+  if (NULLABLE_INTEGERS.has(key)) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = toInteger(value);
+    return number === null ? fallback : Math.min(Math.max(number, -8640000000000), 8640000000000);
+  }
+  if (value === undefined) return structuredClone(fallback);
+  if (typeof fallback === "number") {
+    const number = toInteger(value);
+    if (number === null) return fallback;
+    const [min, max] = RANGES[key] || [0, USIZE_MAX];
+    return Math.min(Math.max(number, min), max);
+  }
+  if (typeof fallback === "boolean") return typeof value === "boolean" ? value : fallback;
+  if (typeof fallback === "string") return typeof value === "string" ? value : fallback;
+  if (Array.isArray(fallback)) {
+    if (!Array.isArray(value)) return structuredClone(fallback);
+    const shape = SHAPES[key];
+    if (!shape) return toStrings(value);
+    return value
+      .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+      .map((item) => Object.fromEntries(Object.entries(shape).map(([field, type]) => [field, type === "strings" ? toStrings(item[field]) : typeof item[field] === "string" ? item[field] : ""])))
+      .filter((item) => Object.values(item).some((field) => (Array.isArray(field) ? field.length : field)));
+  }
+  return structuredClone(fallback);
+}
+
+export function normalizeSettings(settings, defaults) {
+  const source = settings && typeof settings === "object" && !Array.isArray(settings) ? settings : {};
+  return Object.fromEntries(Object.entries(defaults).map(([key, fallback]) => [key, normalizeValue(key, source[key], fallback)]));
+}
+
 const FORMATS = {
   text: { read: (v) => v ?? "", write: (v) => v },
   list: { read: (v) => (v || []).join(", "), write: list },
-  number: { read: (v) => String(v ?? ""), write: (v) => Math.max(0, Number.parseInt(v, 10) || 0) },
+  number: { read: (v) => String(v ?? ""), write: (v) => Math.min(Math.max(Number.parseInt(v, 10) || 0, 0), USIZE_MAX) },
   bool: { read: (v) => !!v, write: (v) => !!v },
-  pairs: { read: (v) => (v || []).map((p) => `${p.name} = ${p.value}`).join("\n"), write: pairs },
+  pairs: { read: (v) => (v || []).map((p) => `${p.name ?? ""} = ${p.value ?? ""}`).join("\n"), write: pairs },
   mailboxes: {
-    read: (v) => (v || []).map((m) => [m.name, ...(m.specialUse || [])].join(" ")).join("\n"),
+    read: (v) => (v || []).map((m) => [m.name ?? "", ...(m.specialUse || [])].join(" ")).join("\n"),
     write: (text) => lines(text).map((line) => {
       const parts = line.split(/\s+(?=\\)/);
       return { name: parts[0], specialUse: parts.slice(1) };
     }),
   },
   lists: {
-    read: (v) => (v || []).map((l) => `${l.name} = ${l.values.join(", ")}`).join("\n"),
+    read: (v) => (v || []).map((l) => `${l.name} = ${(l.values || []).join(", ")}`).join("\n"),
     write: (text) => pairs(text).map((p) => ({ name: p.name, values: list(p.value) })),
   },
   metadata: {
     read: (v) => (v || []).map((m) => `${m.mailbox ? `${m.mailbox} ` : ""}${m.annotation} = ${m.value}`).join("\n"),
     write: (text) => pairs(text).map((p) => {
-      const slash = p.name.indexOf("/");
-      return slash > 0 ? { mailbox: p.name.slice(0, slash).trim(), annotation: p.name.slice(slash).trim(), value: p.value } : { mailbox: "", annotation: p.name, value: p.value };
+      const split = /^(.*\S)\s+(\/\S*)$/.exec(p.name);
+      return split ? { mailbox: split[1], annotation: split[2], value: p.value } : { mailbox: "", annotation: p.name, value: p.value };
     }),
   },
   time: {
@@ -201,7 +257,7 @@ export class SettingsDrawer {
     try {
       const parsed = JSON.parse(this.jsonArea.value);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Settings must be a JSON object");
-      this.set({ ...this.defaults, ...parsed });
+      this.set(normalizeSettings({ ...this.defaults, ...parsed }, this.defaults));
       this.jsonError.hidden = true;
       return true;
     } catch (err) {
@@ -233,7 +289,10 @@ export class SettingsDrawer {
       input = h("input", { id, type: spec.type || (spec.format === "number" ? "number" : "text"), spellcheck: "false", autocomplete: "off", placeholder: spec.placeholder, min: spec.format === "number" ? 0 : undefined });
       input.value = value;
     }
-    input.addEventListener("change", () => this.update(spec.key, format.write(input.value)));
+    input.addEventListener("change", () => {
+      this.update(spec.key, format.write(input.value));
+      input.value = format.read(this.get()[spec.key]);
+    });
     return h("label", { class: "field", for: id }, h("span", {}, spec.label), input, spec.help ? h("small", {}, spec.help) : null);
   }
 

@@ -76,28 +76,105 @@ function docMarkdown(word, entry) {
   return parts.join("\n\n");
 }
 
-function textBefore(model, position, maxLines = 40) {
-  const startLine = Math.max(1, position.lineNumber - maxLines);
-  return model.getValueInRange({
-    startLineNumber: startLine,
-    startColumn: 1,
-    endLineNumber: position.lineNumber,
-    endColumn: position.column,
-  });
-}
+const isComment = (mode) => mode === "lineComment" || mode === "blockComment";
 
-function stripComments(text) {
-  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/#.*$/gm, "");
+export class SieveScanner {
+  constructor() {
+    this.mode = "code";
+    this.statement = "";
+    this.variableOpen = false;
+  }
+
+  feedLine(line, hasNewline = true) {
+    const startMode = this.mode;
+    let opens = 0;
+    let closes = 0;
+
+    if (this.mode === "heredoc" && /^\.\s*$/.test(line)) {
+      this.mode = "code";
+      this.variableOpen = false;
+      this.statement += line;
+    } else {
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        const start = i;
+        const mode = this.mode;
+        switch (this.mode) {
+          case "code":
+            if (ch === '"') {
+              this.mode = "string";
+              this.variableOpen = false;
+            } else if (ch === "#") {
+              this.mode = "lineComment";
+            } else if (ch === "/" && line[i + 1] === "*") {
+              this.mode = "blockComment";
+              i++;
+            } else if (ch === ";" || ch === "{" || ch === "}") {
+              this.statement = "";
+              if (ch === "{") opens++;
+              if (ch === "}") closes++;
+              continue;
+            } else if ((ch === "t" || ch === "T") && line.slice(i, i + 5).toLowerCase() === "text:" && !/[A-Za-z0-9_]/.test(line[i - 1] || "")) {
+              this.mode = "heredocHeader";
+              i += 4;
+            }
+            break;
+          case "string":
+          case "heredoc":
+            if (ch === "\\" && this.mode === "string") {
+              i++;
+            } else if (ch === '"' && this.mode === "string") {
+              this.mode = "code";
+              this.variableOpen = false;
+            } else if (ch === "$" && line[i + 1] === "{") {
+              this.variableOpen = true;
+              i++;
+            } else if (ch === "}") {
+              this.variableOpen = false;
+            }
+            break;
+          case "blockComment":
+            if (ch === "*" && line[i + 1] === "/") {
+              this.mode = "code";
+              i++;
+            }
+            break;
+          default:
+            break;
+        }
+        if (!isComment(mode) && !isComment(this.mode)) this.statement += line.slice(start, i + 1);
+      }
+      if (hasNewline) {
+        if (!isComment(this.mode)) this.statement += "\n";
+        if (this.mode === "lineComment") this.mode = "code";
+        if (this.mode === "heredocHeader") this.mode = "heredoc";
+      }
+    }
+
+    return { startMode, opens, closes };
+  }
 }
 
 function context(model, position) {
-  const before = stripComments(textBefore(model, position));
-  const statement = before.slice(Math.max(before.lastIndexOf(";"), before.lastIndexOf("{"), before.lastIndexOf("}")) + 1);
-  const quotes = (statement.match(/(?<!\\)"/g) || []).length;
-  const inString = quotes % 2 === 1;
+  const before = model.getValueInRange({ startLineNumber: 1, startColumn: 1, endLineNumber: position.lineNumber, endColumn: position.column });
+  const lines = before.split("\n");
+  const scanner = new SieveScanner();
+  lines.forEach((line, index) => scanner.feedLine(line, index < lines.length - 1));
+  const mode = isComment(scanner.mode) ? "comment" : scanner.mode;
+  const statement = scanner.statement;
+  const inString = mode === "string" || mode === "heredoc";
   const command = (statement.match(/^\s*([A-Za-z_]+)/) || [])[1]?.toLowerCase() || "";
   const line = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
-  return { statement, inString, command, line };
+  return { statement, inString, inComment: mode === "comment", inVariable: inString && scanner.variableOpen, command, line };
+}
+
+function variableNames(model) {
+  const names = new Set();
+  const pattern = /\b(?:set|let|global|extracttext)\s+(?::[A-Za-z]+\s+(?:\d+\s+)?)*(\[[^\]]*\]|"[^"]*")/gi;
+  for (const match of model.getValue().matchAll(pattern)) {
+    for (const name of match[1].matchAll(/"([^"]+)"/g)) names.add(name[1]);
+  }
+  return [...names];
 }
 
 function replaceRange(model, position) {
@@ -119,11 +196,19 @@ export function registerSieve(monaco, getSettings) {
 
   monaco.languages.registerCompletionItemProvider(LANGUAGE_ID, {
     triggerCharacters: [":", '"', "$", "{"],
-    provideCompletionItems(model, position) {
+    provideCompletionItems(model, position, completionContext) {
       const ctx = context(model, position);
       const range = replaceRange(model, position);
       const settings = getSettings();
       const items = [];
+
+      if (ctx.inComment) return { suggestions: [] };
+      if (ctx.inVariable) {
+        for (const name of variableNames(model)) items.push({ label: name, kind: Kind.Variable, insertText: name, range });
+        return { suggestions: items };
+      }
+      const trigger = completionContext?.triggerCharacter;
+      if ((trigger === "$" || trigger === "{") || (trigger === '"' && !ctx.inString)) return { suggestions: [] };
 
       if (ctx.inString) {
         if (ctx.command === "require" || /\bihave\b/.test(ctx.statement)) {
@@ -155,6 +240,7 @@ export function registerSieve(monaco, getSettings) {
         return { suggestions: items };
       }
 
+      if (trigger === ":" && !/:[A-Za-z_-]*$/.test(ctx.line)) return { suggestions: [] };
       if (/:[A-Za-z_-]*$/.test(ctx.line)) {
         for (const [tag, doc] of Object.entries(TAGS)) {
           items.push({ label: `:${tag}`, kind: Kind.Property, insertText: tag, documentation: { value: doc }, range });
@@ -232,27 +318,15 @@ export function registerSieve(monaco, getSettings) {
   monaco.languages.registerDocumentFormattingEditProvider(LANGUAGE_ID, {
     provideDocumentFormattingEdits(model, options) {
       const unit = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
+      const scanner = new SieveScanner();
       let depth = 0;
-      let inHeredoc = false;
-      let inComment = false;
       const lines = model.getLinesContent().map((raw) => {
-        if (inHeredoc) {
-          if (/^\.\s*$/.test(raw)) inHeredoc = false;
-          return raw;
-        }
         const trimmed = raw.trim();
-        const code = stripComments(trimmed.replace(/"(?:[^"\\]|\\.)*"/g, '""'));
-        if (inComment) {
-          if (trimmed.includes("*/")) inComment = false;
-          return raw;
-        }
-        const opens = (code.match(/\{/g) || []).length;
-        const closes = (code.match(/\}/g) || []).length;
-        const leadingCloses = (trimmed.match(/^\}+/) || [""])[0].length;
+        const leadingCloses = scanner.mode === "code" ? (trimmed.match(/^\}+/) || [""])[0].length : 0;
+        const { startMode, opens, closes } = scanner.feedLine(raw);
+        if (startMode !== "code") return raw;
         const indent = Math.max(0, depth - leadingCloses);
         depth = Math.max(0, depth + opens - closes);
-        if (/text:\s*(#.*)?$/.test(code)) inHeredoc = true;
-        if (trimmed.startsWith("/*") && !trimmed.includes("*/")) inComment = true;
         return trimmed === "" ? "" : unit.repeat(indent) + trimmed;
       });
       return [{ range: model.getFullModelRange(), text: lines.join(model.getEOL()) }];

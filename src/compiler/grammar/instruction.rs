@@ -712,8 +712,8 @@ impl Compiler {
                                 continue;
                             } else {
                                 return Err(CompileError {
-                                    line_num: state.block.line_num,
-                                    line_pos: state.block.line_pos,
+                                    line_num: token_info.line_num,
+                                    line_pos: token_info.line_pos,
                                     error_type: ErrorType::UnexpectedToken {
                                         expected: "command".into(),
                                         found: instruction.to_string(),
@@ -725,7 +725,7 @@ impl Compiler {
 
                     if let Some(mut new_block) = is_new_block {
                         new_block.line_num = state.tokens.line_num;
-                        new_block.line_pos = state.tokens.pos - state.tokens.line_start;
+                        new_block.line_pos = state.tokens.pos.wrapping_sub(state.tokens.line_start);
 
                         state.tokens.expect_token(Token::CurlyOpen)?;
                         if state.block_stack.len() < self.max_nested_blocks {
@@ -851,7 +851,7 @@ impl Compiler {
                             .push(Instruction::TestCmd(arguments.into_boxed_slice()));
                         let mut new_block = Block::new(Word::Else);
                         new_block.line_num = state.tokens.line_num;
-                        new_block.line_pos = state.tokens.pos - state.tokens.line_start;
+                        new_block.line_pos = state.tokens.pos.wrapping_sub(state.tokens.line_start);
                         state.tokens.expect_token(Token::CurlyOpen)?;
                         state.block.last_block_start = state.instructions.len() - 1;
                         state.block_stack.push(state.block);
@@ -895,8 +895,8 @@ impl Compiler {
                             })));
                     } else {
                         return Err(CompileError {
-                            line_num: state.block.line_num,
-                            line_pos: state.block.line_pos,
+                            line_num: token_info.line_num,
+                            line_pos: token_info.line_pos,
                             error_type: ErrorType::UnexpectedToken {
                                 expected: "command".into(),
                                 found: instruction,

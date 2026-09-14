@@ -156,7 +156,7 @@ export class ResultView {
       const where = output.error.line > 0 ? ` (line ${output.error.line})` : "";
       nodes.push(
         h("div", { class: "banner warn" }, h("span", {}, h("b", {}, "Runtime error: "), output.error.message, where),
-          output.error.line > 0 ? h("button", { type: "button", onclick: () => this.onRevealLine(0, output.error.line, output.error.column) }, "Go to line") : null),
+          output.error.line > 0 ? h("button", { type: "button", onclick: () => this.onRevealLine(output.error.script, output.error.line, output.error.column) }, "Go to line") : null),
       );
     }
 
@@ -384,6 +384,7 @@ function viewerOptions() {
   return {
     readOnly: true,
     automaticLayout: true,
+    stickyScroll: { enabled: false },
     minimap: { enabled: false },
     wordWrap: "on",
     scrollBeyondLastLine: false,

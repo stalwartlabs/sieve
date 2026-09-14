@@ -92,7 +92,7 @@ impl<'x> Tokenizer<'x> {
             buf: Vec::with_capacity(256),
             pos: usize::MAX,
             line_num: 1,
-            line_start: 0,
+            line_start: usize::MAX,
             text_line_num: 0,
             text_line_pos: 0,
             token_line_num: 0,
@@ -109,7 +109,6 @@ impl<'x> Tokenizer<'x> {
             let word = std::str::from_utf8(&self.buf).unwrap();
             let token = if let Some(word) = lookup_words(word) {
                 if self.token_is_tag {
-                    self.token_line_pos -= 1;
                     Token::Tag(word)
                 } else {
                     Token::Identifier(word)
@@ -141,12 +140,17 @@ impl<'x> Tokenizer<'x> {
                 Token::Unknown(word.to_string())
             };
 
+            let line_pos = if self.token_is_tag {
+                self.token_line_pos.saturating_sub(1)
+            } else {
+                self.token_line_pos
+            };
             self.reset_current_token();
 
             Some(TokenInfo {
                 token,
                 line_num: self.token_line_num,
-                line_pos: self.token_line_pos,
+                line_pos,
             })
         } else {
             None
@@ -168,7 +172,7 @@ impl<'x> Tokenizer<'x> {
         let next_token = TokenInfo {
             token,
             line_num: self.line_num,
-            line_pos: self.pos - self.line_start,
+            line_pos: self.pos.wrapping_sub(self.line_start),
         };
         if let Some(token) = self.get_current_token() {
             self.next_token.push(next_token);
@@ -230,7 +234,7 @@ impl<'x> Tokenizer<'x> {
     pub fn push_byte(&mut self, ch: u8) {
         if self.buf.is_empty() {
             self.token_line_num = self.line_num;
-            self.token_line_pos = self.pos - self.line_start;
+            self.token_line_pos = self.pos.wrapping_sub(self.line_start);
         }
         self.buf.push(ch);
     }
@@ -244,7 +248,7 @@ impl<'x> Tokenizer<'x> {
     #[inline(always)]
     pub fn text_start(&mut self) {
         self.text_line_num = self.line_num;
-        self.text_line_pos = self.pos - self.line_start;
+        self.text_line_pos = self.pos.wrapping_sub(self.line_start);
     }
 
     #[inline(always)]
@@ -320,7 +324,7 @@ impl<'x> Tokenizer<'x> {
         if len > 0 {
             if self.buf.is_empty() {
                 self.token_line_num = self.line_num;
-                self.token_line_pos = self.pos - self.line_start;
+                self.token_line_pos = self.pos.wrapping_sub(self.line_start);
             }
             self.buf.extend_from_slice(&rest[..len]);
             self.cursor += len;
@@ -335,7 +339,7 @@ impl<'x> Tokenizer<'x> {
         } else {
             Err(CompileError {
                 line_num: self.line_num,
-                line_pos: self.pos - self.line_start,
+                line_pos: self.pos.wrapping_sub(self.line_start),
                 error_type: ErrorType::UnexpectedEOF,
             })
         }
@@ -388,7 +392,7 @@ impl<'x> Tokenizer<'x> {
     pub fn invalid_character(&self) -> CompileError {
         CompileError {
             line_num: self.line_num,
-            line_pos: self.pos - self.line_start,
+            line_pos: self.pos.wrapping_sub(self.line_start),
             error_type: ErrorType::InvalidCharacter(self.last_ch),
         }
     }

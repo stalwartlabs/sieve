@@ -32,6 +32,8 @@ jobs:
 
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "v0.15.0"
 
       - uses: actions/cache@v4
         with:
@@ -40,7 +42,10 @@ jobs:
             ~/.cargo/git
             web/target
             web/vendor
-          key: ${{ runner.os }}-wasm-${{ hashFiles('web/Cargo.lock', 'Cargo.toml', 'web/build.sh') }}
+          key: ${{ runner.os }}-wasm-${{ hashFiles('web/Cargo.lock', 'Cargo.toml', 'web/build.sh') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-wasm-${{ hashFiles('web/Cargo.lock', 'Cargo.toml', 'web/build.sh') }}-
+            ${{ runner.os }}-wasm-
 
       - name: Test
         working-directory: web

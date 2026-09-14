@@ -1,9 +1,9 @@
-require ["include", "variables", "regex"];
+require ["include", "variables"];
 
 global ["priority", "project"];
 
 set "project" "general";
-if header :regex "Subject" "^\\[([A-Za-z0-9-]+)\\]" {
+if header :matches "Subject" "[*]*" {
     set :lower "project" "${1}";
 }
 
