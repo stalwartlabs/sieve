@@ -1,3 +1,7 @@
+sieve-rs 1.0.2
+================================
+- Line number error fixes.
+
 sieve-rs 1.0.1
 ================================
 - Bump to `mail-builder` 1.0.0
