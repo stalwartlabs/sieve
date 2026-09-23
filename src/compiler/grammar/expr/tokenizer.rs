@@ -291,9 +291,10 @@ where
 }
 
 fn lookup_boolean(input: &str) -> Option<i64> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), i64,
         "true" => 1,
         "false" => 0,
     )
+    .copied()
 }

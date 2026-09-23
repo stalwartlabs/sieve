@@ -17,18 +17,13 @@ doctest = false
 
 [dependencies]
 mail-parser = { version = "0.11", features = ["full_encoding"] }
-fancy-regex = "0.19.0"
+fancy-regex = "0.19.2"
 bumpalo = { version = "3.20", features = ["collections"] }
 memchr = "2.7"
 smallvec = "1.16"
 hashbrown = "0.17.1"
+hashify = "0.3"
 serde = { version = "1.0", features = ["derive", "rc"], optional = true }
-
-[target.'cfg(not(target_pointer_width = "32"))'.dependencies]
-hashify = { version = "0.2" }
-
-[target.'cfg(target_pointer_width = "32")'.dependencies]
-hashify = { version = "0.2", features = ["force-32bit"] }
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
 mail-builder = { version = "1.0" }

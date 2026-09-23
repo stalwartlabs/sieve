@@ -577,17 +577,19 @@ fn insert_address(params: &mut MailtoMessage, name: HeaderName, value: String) {
 }
 
 fn lookup_importance(input: &str) -> Option<Importance> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), Importance,
         "1" => Importance::High,
         "3" => Importance::Low,
     )
+    .copied()
 }
 
 fn lookup_importance_headers(input: &str) -> Option<(&'static str, &'static str)> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), (&'static str, &'static str),
         "1" => ("High", "1 (High)"),
         "3" => ("Low", "5 (Low)"),
     )
+    .copied()
 }

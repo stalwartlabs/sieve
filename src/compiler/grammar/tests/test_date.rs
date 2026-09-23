@@ -333,8 +333,8 @@ impl CompilerState<'_> {
 */
 
 fn lookup_date_part(input: &str) -> Option<DatePart> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), DatePart,
         "year" => DatePart::Year,
         "month" => DatePart::Month,
         "day" => DatePart::Day,
@@ -349,6 +349,7 @@ fn lookup_date_part(input: &str) -> Option<DatePart> {
         "zone" => DatePart::Zone,
         "weekday" => DatePart::Weekday,
     )
+    .copied()
 }
 
 impl DatePart {

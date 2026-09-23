@@ -615,8 +615,8 @@ impl TryFrom<&str> for AddressPart {
 }
 
 fn lookup_envelope(input: &str) -> Option<Envelope> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), Envelope,
         "from" => Envelope::From,
         "to" => Envelope::To,
         "by_time_absolute" => Envelope::ByTimeAbsolute,
@@ -628,29 +628,32 @@ fn lookup_envelope(input: &str) -> Option<Envelope> {
         "ret" => Envelope::Ret,
         "envid" => Envelope::Envid,
     )
+    .copied()
 }
 
 fn lookup_body_part(input: &str) -> Option<MessagePart> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), MessagePart,
         "text" => MessagePart::TextBody(false),
         "html" => MessagePart::HtmlBody(false),
         "to_text" => MessagePart::TextBody(true),
         "to_html" => MessagePart::HtmlBody(true),
     )
+    .copied()
 }
 
 fn lookup_message_part(input: &str) -> Option<MessagePart> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), MessagePart,
         "text" => MessagePart::Contents,
         "raw" => MessagePart::Raw,
     )
+    .copied()
 }
 
 fn lookup_received_part(input: &str) -> Option<ReceivedPart> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), ReceivedPart,
         "from" => ReceivedPart::From(ReceivedHostname::Any),
         "from.name" => ReceivedPart::From(ReceivedHostname::Name),
         "from.ip" => ReceivedPart::From(ReceivedHostname::Ip),
@@ -668,11 +671,12 @@ fn lookup_received_part(input: &str) -> Option<ReceivedPart> {
         "date" => ReceivedPart::Date,
         "date.raw" => ReceivedPart::DateRaw,
     )
+    .copied()
 }
 
 fn lookup_address_part(input: &str) -> Option<AddressPart> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), AddressPart,
         "name" => AddressPart::Name,
         "addr" => AddressPart::All,
         "all" => AddressPart::All,
@@ -681,6 +685,7 @@ fn lookup_address_part(input: &str) -> Option<AddressPart> {
         "addr.user" => AddressPart::User,
         "addr.detail" => AddressPart::Detail,
     )
+    .copied()
 }
 
 impl Display for VariableType {

@@ -216,8 +216,8 @@ impl<'x> TryFrom<&'x str> for Envelope {
 }
 
 fn lookup_envelope(input: &str) -> Option<Envelope> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), Envelope,
         "from" => Envelope::From,
         "to" => Envelope::To,
         "bytimeabsolute" => Envelope::ByTimeAbsolute,
@@ -229,4 +229,5 @@ fn lookup_envelope(input: &str) -> Option<Envelope> {
         "ret" => Envelope::Ret,
         "envid" => Envelope::Envid,
     )
+    .copied()
 }

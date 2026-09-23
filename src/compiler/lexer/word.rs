@@ -141,8 +141,8 @@ pub(crate) enum Word {
 }
 
 pub(crate) fn lookup_words(input: &str) -> Option<Word> {
-    hashify::tiny_map!(
-        input.as_bytes(),
+    hashify::map!(
+        input.as_bytes(), Word,
         "addflag" => Word::AddFlag,
         "addheader" => Word::AddHeader,
         "address" => Word::Address,
@@ -272,6 +272,7 @@ pub(crate) fn lookup_words(input: &str) -> Option<Word> {
         "let" => Word::Let,
         "continue" => Word::Continue,
     )
+    .copied()
 }
 
 impl Display for Word {

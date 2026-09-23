@@ -261,26 +261,29 @@ impl MapLocalVars for ByTime<Value> {
 }
 
 fn lookup_by_mode(input: &str) -> Option<ByMode> {
-    hashify::tiny_map_ignore_case!(
-        input.as_bytes(),
+    hashify::map_ignore_case!(
+        input.as_bytes(), ByMode,
         "notify" => ByMode::Notify,
         "return" => ByMode::Return,
     )
+    .copied()
 }
 
 fn lookup_ret(input: &str) -> Option<Ret> {
-    hashify::tiny_map_ignore_case!(
-        input.as_bytes(),
+    hashify::map_ignore_case!(
+        input.as_bytes(), Ret,
         "full" => Ret::Full,
         "hdrs" => Ret::Hdrs,
     )
+    .copied()
 }
 
 fn lookup_notify_item(input: &str) -> Option<NotifyItem> {
-    hashify::tiny_map_ignore_case!(
-        input.as_bytes(),
+    hashify::map_ignore_case!(
+        input.as_bytes(), NotifyItem,
         "success" => NotifyItem::Success,
         "failure" => NotifyItem::Failure,
         "delay" => NotifyItem::Delay,
     )
+    .copied()
 }
