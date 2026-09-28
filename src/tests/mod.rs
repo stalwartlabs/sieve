@@ -14,14 +14,13 @@ use crate::{
     },
 };
 use ahash::{AHashMap, AHashSet};
-use mail_parser::{
-    Encoding, HeaderValue, Message, MessageParser, MessagePart, PartType, parsers::MessageStream,
-};
+use mail_parser::{HeaderForm, Message, MessageParser};
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 
+mod mime_edits;
 mod regressions;
 
 impl Variable<'_> {
@@ -253,26 +252,14 @@ fn read_dir(path: PathBuf, files: &mut Vec<PathBuf>) {
     }
 }
 
-fn empty_message() -> Message<'static> {
-    Message {
-        parts: vec![MessagePart {
-            headers: vec![],
-            is_encoding_problem: false,
-            body: PartType::Text("".into()),
-            encoding: Encoding::None,
-            offset_header: 0,
-            offset_body: 0,
-            offset_end: 0,
-        }],
-        raw_message: b""[..].into(),
-        ..Default::default()
-    }
+fn empty_message() -> &'static Message<'static> {
+    Box::leak(Box::default())
 }
 
-fn parse_message(raw_message: &'static [u8]) -> Message<'static> {
-    MessageParser::new()
-        .parse(raw_message)
-        .unwrap_or_else(empty_message)
+fn parse_message(raw_message: &'static [u8]) -> &'static Message<'static> {
+    Box::leak(Box::new(
+        MessageParser::new().parse(raw_message).unwrap_or_default(),
+    ))
 }
 
 fn run_test(script_path: &Path) {
@@ -435,24 +422,20 @@ fn run_test(script_path: &Path) {
                     };
                     let raw_message: &'static [u8] = Box::leak(raw_message.into_boxed_slice());
                     let message = parse_message(raw_message);
-                    instance.set_message(message, raw_message.len());
+                    instance.set_message(message);
                     instance.clear_envelope();
-                    if let Some(addr) = instance
-                        .message
+                    if let Some(addr) = message
                         .from()
                         .and_then(|a| a.first())
-                        .and_then(|a| a.address.as_ref())
+                        .and_then(|a| a.address())
                     {
-                        let addr = addr.to_string();
                         instance.set_envelope(Envelope::From, addr);
                     }
-                    if let Some(addr) = instance
-                        .message
+                    if let Some(addr) = message
                         .to()
                         .and_then(|a| a.first())
-                        .and_then(|a| a.address.as_ref())
+                        .and_then(|a| a.address())
                     {
-                        let addr = addr.to_string();
                         instance.set_envelope(Envelope::To, addr);
                     }
                 } else if let Some(envelope) = target.strip_prefix("envelope.") {
@@ -461,7 +444,7 @@ fn run_test(script_path: &Path) {
                     instance.set_envelope(envelope, params.next().unwrap());
                 } else if target == "currentdate" {
                     let bytes = params.next().unwrap().into_bytes();
-                    if let HeaderValue::DateTime(dt) = MessageStream::new(&bytes).parse_date() {
+                    if let Some(dt) = HeaderForm::Date.parse(&bytes).value().as_datetime() {
                         instance.current_time = dt.to_timestamp();
                     } else {
                         panic!("Invalid currentdate");
@@ -794,8 +777,9 @@ fn run_crafted(bytes: &[u8]) -> Result<Status, crate::runtime::RuntimeError> {
         .with_cpu_limit(1000)
         .with_capability(Capability::Expressions);
     let sieve = unsafe { Sieve::from_bytes_unchecked(bytes) }.unwrap();
+    let message = Message::default();
     let mut arena = Arena::new();
-    let mut ctx = Context::new(&runtime, empty_message(), &sieve, &mut arena);
+    let mut ctx = Context::new(&runtime, &message, &sieve, &mut arena);
     ctx.run(&mut NullHandler)
 }
 

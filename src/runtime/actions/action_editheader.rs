@@ -10,8 +10,7 @@ use crate::{
     compiler::grammar::Comparator,
     runtime::{RuntimeError, tests::test_header::MimeOptsRef},
 };
-use mail_parser::{Header, HeaderName, HeaderValue};
-use std::borrow::Cow;
+use mail_parser::{HeaderName, PartId};
 
 impl<'x> Context<'x> {
     pub(crate) fn exec_addheader(
@@ -30,14 +29,15 @@ impl<'x> Context<'x> {
         }
 
         if !header_name.is_empty()
-            && let Some(header_name) = HeaderName::parse(header_name)
+            && let Some(header_name) = HeaderName::parse(self.alloc_string(header_name))
             && !self.runtime.protected_headers.contains(&header_name)
         {
-            let header_value = self
-                .eval_value(script, add.value)?
-                .to_string()
-                .as_ref()
-                .remove_crlf(self.runtime.max_header_size);
+            let header_value = self.alloc_string(
+                self.eval_value(script, add.value)?
+                    .to_string()
+                    .as_ref()
+                    .remove_crlf(self.runtime.max_header_size),
+            );
             self.has_changes = true;
             self.insert_header(self.part, header_name, header_value, add.last);
         }
@@ -70,7 +70,7 @@ impl<'x> Context<'x> {
             &[header_name],
             delete.index,
             delete.mime_anychild,
-            |header, part_id, header_pos| {
+            |header, part_id| {
                 if !value_patterns.is_empty() {
                     let did_match = self.find_header_values(header, &MimeOptsRef::None, |value| {
                         for key in &value_patterns {
@@ -101,12 +101,8 @@ impl<'x> Context<'x> {
                     }
                 }
 
-                if header.offset_end != 0 {
-                    deleted_bytes += (header.offset_end - header.offset_field) as usize;
-                } else {
-                    deleted_bytes += header.name.as_str().len() + header.value.len() + 4;
-                }
-                deleted_headers.push((part_id, header_pos));
+                deleted_bytes += header.len();
+                deleted_headers.push((part_id, header));
 
                 false
             },
@@ -118,40 +114,36 @@ impl<'x> Context<'x> {
 
         if !deleted_headers.is_empty() {
             self.has_changes = true;
-            for (part_id, header_pos) in deleted_headers.iter().rev() {
-                self.message.parts[*part_id as usize]
-                    .headers
-                    .remove(*header_pos);
+            for (part_id, deleted) in deleted_headers {
+                if let Some(part) = self.message.part(part_id) {
+                    self.edits
+                        .headers_mut(part)
+                        .retain(|header| !header.same(&deleted));
+                }
             }
         }
 
-        self.message_size -= deleted_bytes;
+        self.message_size = self.message_size.saturating_sub(deleted_bytes);
         Ok(())
     }
 
     pub(crate) fn insert_header(
         &mut self,
-        part_id: u32,
+        part_id: PartId,
         header_name: HeaderName<'x>,
-        header_value: impl Into<Cow<'static, str>>,
+        header_value: &'x str,
         last: bool,
     ) {
-        let header_value = header_value.into();
-        self.message_size += header_name.len() + header_value.len() + 4;
-        let header = Header {
-            name: header_name,
-            value: HeaderValue::Text(header_value),
-            offset_start: 0,
-            offset_end: 0,
-            offset_field: 0,
+        let Some(part) = self.message.part(part_id) else {
+            return;
         };
-
-        if !last {
-            self.message.parts[part_id as usize]
-                .headers
-                .insert(0, header);
+        let header = self.add_header(header_name, header_value);
+        self.message_size += header.len();
+        let headers = self.edits.headers_mut(part);
+        if last {
+            headers.push(header);
         } else {
-            self.message.parts[part_id as usize].headers.push(header);
+            headers.insert(0, header);
         }
     }
 }

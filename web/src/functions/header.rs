@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-use mail_parser::parsers::fields::thread::thread_name;
+use mail_parser::thread_name;
 use sieve::{Context, runtime::Variable};
 
 use super::transform;

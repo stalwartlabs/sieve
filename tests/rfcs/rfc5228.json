@@ -60,7 +60,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -95,10 +95,10 @@
         "Exists": {
           "header_names": [
             {
-              "Header": "from"
+              "Header": "From"
             },
             {
-              "Header": "date"
+              "Header": "Date"
             }
           ],
           "mime_anychild": false,
@@ -120,7 +120,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -155,7 +155,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -212,7 +212,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -253,7 +253,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -309,7 +309,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -361,7 +361,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -428,7 +428,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -525,7 +525,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -560,7 +560,7 @@
         "Address": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -627,10 +627,10 @@
         "Exists": {
           "header_names": [
             {
-              "Header": "from"
+              "Header": "From"
             },
             {
-              "Header": "date"
+              "Header": "Date"
             }
           ],
           "mime_anychild": false,
@@ -656,9 +656,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": {
-                "other": "X-Caffeine"
-              }
+              "Header": "X-Caffeine"
             }
           ],
           "key_list": [
@@ -689,9 +687,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": {
-                "other": "X-Caffeine"
-              }
+              "Header": "X-Caffeine"
             }
           ],
           "key_list": [
@@ -722,7 +718,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "cc"
+              "Header": "Cc"
             }
           ],
           "key_list": [
@@ -761,7 +757,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "sender"
+              "Header": "Sender"
             }
           ],
           "key_list": [
@@ -813,10 +809,10 @@
         "Address": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             },
             {
-              "Header": "to"
+              "Header": "To"
             }
           ],
           "key_list": [
@@ -861,13 +857,13 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             },
             {
-              "Header": "cc"
+              "Header": "Cc"
             },
             {
-              "Header": "bcc"
+              "Header": "Bcc"
             }
           ],
           "key_list": [
@@ -898,7 +894,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [

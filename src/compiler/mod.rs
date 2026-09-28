@@ -183,10 +183,22 @@ pub struct Transform {
     derive(serde::Serialize, serde::Deserialize)
 )]
 pub struct HeaderVariable<'x> {
+    #[cfg_attr(
+        any(test, feature = "serde"),
+        serde(deserialize_with = "deserialize_header_names")
+    )]
     pub name: Box<[HeaderName<'x>]>,
     pub part: HeaderPart,
     pub index_hdr: i32,
     pub index_part: i32,
+}
+
+#[cfg(any(test, feature = "serde"))]
+fn deserialize_header_names<'de, 'x, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Box<[HeaderName<'x>]>, D::Error> {
+    <Vec<HeaderName<'static>> as serde::Deserialize>::deserialize(deserializer)
+        .map(Vec::into_boxed_slice)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]

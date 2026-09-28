@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-use mail_parser::{Addr, Address, MessageParser, MimeHeaders};
+use mail_parser::{AddressList, MessageParser};
 use serde::Serialize;
 use sieve::{compiler::CompileError, runtime::RuntimeError};
 
@@ -155,32 +155,21 @@ impl OutputMessage {
             };
         };
 
-        let raw_bytes = message.raw_message();
         let headers = message
             .headers()
             .iter()
             .map(|header| KeyValue {
-                name: header.name.as_str().to_string(),
-                value: raw_bytes
-                    .get(header.offset_start as usize..header.offset_end as usize)
-                    .map(|value| {
-                        String::from_utf8_lossy(value)
-                            .split_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    })
-                    .unwrap_or_default(),
+                name: header.name().as_str().to_string(),
+                value: String::from_utf8_lossy(header.raw_value())
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" "),
             })
             .collect();
 
         let html = message
-            .html_body
-            .iter()
-            .any(|part| {
-                message
-                    .part(*part)
-                    .is_some_and(|part| part.is_content_type("text", "html"))
-            })
+            .html_body()
+            .any(|part| part.is_content_type("text", "html"))
             .then(|| message.body_html(0).map(|html| html.into_owned()))
             .flatten();
 
@@ -208,7 +197,7 @@ impl OutputMessage {
                             None => ct.ctype().to_string(),
                         })
                         .unwrap_or_else(|| "application/octet-stream".to_string()),
-                    size: part.len(),
+                    size: part.decoded_len(),
                 })
                 .collect(),
             raw,
@@ -216,10 +205,10 @@ impl OutputMessage {
     }
 }
 
-fn format_address(address: &Address<'_>) -> String {
+fn format_address(address: AddressList<'_>) -> String {
     address
-        .iter()
-        .map(|Addr { name, address }| match (name, address) {
+        .mailboxes()
+        .map(|mailbox| match (mailbox.name(), mailbox.address()) {
             (Some(name), Some(address)) => format!("{name} <{address}>"),
             (None, Some(address)) => address.to_string(),
             (Some(name), None) => name.to_string(),

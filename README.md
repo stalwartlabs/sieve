@@ -130,6 +130,13 @@ So if you could go ahead and try to remember to do that from now on, that'd be g
 }
 ```
 
+`Runtime::filter` parses a copy of the raw message. A message already parsed with
+`mail_parser::MessageParser` is passed by reference to `Runtime::filter_parsed`
+instead, and the context borrows it without copying. The parsed message is never
+modified: header edits, `replace` and `convert` are recorded by the context,
+`enclose` builds and parses a new message owned by the arena, and the edited
+message is delivered as `SieveAction::CreatedMessage`.
+
 Scripts compile to a compact bytecode. Store `script.to_bytes()` and load it again
 with `Sieve::from_bytes(&bytes)`, which borrows the buffer instead of copying it, so a
 script can be loaded on every delivery at almost no cost. Operations that need an

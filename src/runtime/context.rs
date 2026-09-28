@@ -5,6 +5,10 @@
  */
 
 use super::Arena;
+use super::message::{
+    edits::Edits,
+    parts::{PartCursor, ROOT_PART, Scope, empty_message},
+};
 use super::{
     RuntimeError, Variable,
     handler::{Action, Handler, Input, Reply, Script, Status},
@@ -21,7 +25,7 @@ use crate::{
     compiler::grammar::Capability,
 };
 use ahash::AHashMap;
-use mail_parser::Message;
+use mail_parser::{Message, PartId};
 use std::{
     borrow::Cow,
     cell::{Cell, RefCell},
@@ -49,12 +53,26 @@ pub(crate) enum Pending<'x> {
 impl<'x> Context<'x> {
     pub fn new(
         runtime: &'x Runtime,
-        message: Message<'x>,
+        message: &'x Message<'x>,
         script: &'x Sieve<'x>,
         arena: &'x mut Arena,
     ) -> Self {
         arena.prepare(runtime.memory_limit);
-        let message_size = message.raw_message.len();
+        Self::with_message(runtime, message, script, arena)
+    }
+
+    pub(crate) fn with_message(
+        runtime: &'x Runtime,
+        message: &'x Message<'x>,
+        script: &'x Sieve<'x>,
+        arena: &'x mut Arena,
+    ) -> Self {
+        let message_size = message.raw().len();
+        let message = if message.part(ROOT_PART).is_some() {
+            message
+        } else {
+            arena.keep_message(empty_message())
+        };
         Context {
             runtime,
             message,
@@ -62,9 +80,8 @@ impl<'x> Context<'x> {
             frames: Vec::with_capacity(2),
             local_base: 0,
             match_base: 0,
-            part: 0,
-            part_iter: Vec::new(),
-            part_iter_pos: 0,
+            part: ROOT_PART,
+            part_iter: PartCursor::default(),
             part_iter_stack: Vec::new(),
             pos: 0,
             test_result: false,
@@ -81,6 +98,8 @@ impl<'x> Context<'x> {
             envelope: Vec::new(),
             metadata: Vec::new(),
             message_size,
+            edits: Edits::default(),
+            body_cache: RefCell::new(Vec::new()),
             final_action: Some(Action::Keep {
                 flags: &[],
                 message_id: 0,
@@ -89,7 +108,6 @@ impl<'x> Context<'x> {
             actions: Vec::new(),
             has_changes: false,
             oom: Cell::new(false),
-            raw_message_copy: Cell::new(None),
             dynamic_regexes: RefCell::new(AHashMap::new()),
             user_address: "".into(),
             user_full_name: "".into(),
@@ -614,23 +632,25 @@ impl<'x> Context<'x> {
                 if let Some(next_part) = self.next_part() {
                     self.part = next_part;
                     Flow::Continue
-                } else if let Some((prev_part, prev_iter, prev_pos)) = self.part_iter_stack.pop() {
+                } else if let Some((prev_part, prev_iter)) = self.part_iter_stack.pop() {
                     self.part_iter = prev_iter;
-                    self.part_iter_pos = prev_pos;
                     self.part = prev_part;
                     Flow::Jump(fep.jz_pos.0 as usize)
                 } else {
-                    self.part = 0;
+                    self.part = ROOT_PART;
                     Flow::Continue
                 }
             }
             ops::ForEveryPartPush::OP => {
                 self.pos = cur.pos;
-                let part_iter = self.find_nested_parts_ids(self.part_iter_stack.is_empty());
+                let part_iter = self
+                    .current_part()
+                    .map(|part| {
+                        PartCursor::subtree(part, self.part_iter_stack.is_empty(), Scope::Message)
+                    })
+                    .unwrap_or_default();
                 let prev_iter = std::mem::replace(&mut self.part_iter, part_iter);
-                self.part_iter_stack
-                    .push((self.part, prev_iter, self.part_iter_pos));
-                self.part_iter_pos = 0;
+                self.part_iter_stack.push((self.part, prev_iter));
                 Flow::Continue
             }
             ops::ForEveryPartPop::OP => {
@@ -643,9 +663,8 @@ impl<'x> Context<'x> {
                     self.part_iter_stack.len()
                 );
                 for _ in 0..pop.num_pops {
-                    if let Some((prev_part, prev_iter, prev_pos)) = self.part_iter_stack.pop() {
+                    if let Some((prev_part, prev_iter)) = self.part_iter_stack.pop() {
                         self.part_iter = prev_iter;
-                        self.part_iter_pos = prev_pos;
                         self.part = prev_part;
                     } else {
                         break;
@@ -1014,10 +1033,11 @@ impl<'x> Context<'x> {
     }
 
     #[inline(always)]
-    fn next_part(&mut self) -> Option<u32> {
-        let part = self.part_iter.get(self.part_iter_pos).copied()?;
-        self.part_iter_pos += 1;
-        Some(part)
+    fn next_part(&mut self) -> Option<PartId> {
+        let mut cursor = self.part_iter;
+        let part = self.advance(&mut cursor);
+        self.part_iter = cursor;
+        part.map(|part| part.id())
     }
 
     pub fn set_envelope(
@@ -1164,11 +1184,6 @@ impl<'x> Context<'x> {
         self
     }
 
-    pub fn take_message(&mut self) -> Message<'x> {
-        self.raw_message_copy.set(None);
-        std::mem::take(&mut self.message)
-    }
-
     pub fn has_message_changed(&self) -> bool {
         self.main_message_id > 0
     }
@@ -1189,11 +1204,11 @@ impl<'x> Context<'x> {
         self.vars_global.get(name)
     }
 
-    pub fn message(&self) -> &Message<'x> {
-        &self.message
+    pub fn message(&self) -> &'x Message<'x> {
+        self.message
     }
 
-    pub fn part(&self) -> u32 {
+    pub fn part(&self) -> PartId {
         self.part
     }
 
@@ -1240,11 +1255,16 @@ impl<'x> Context<'x> {
         Context { runtime, ..self }
     }
 
-    pub(crate) fn set_message(&mut self, message: Message<'x>, size: usize) {
-        self.raw_message_copy.set(None);
-        self.message = message;
-        self.message_size = size;
-        self.part = 0;
+    pub(crate) fn set_message(&mut self, message: &'x Message<'x>) {
+        self.message_size = message.raw().len();
+        self.message = if message.part(ROOT_PART).is_some() {
+            message
+        } else {
+            self.arena.keep_message(empty_message())
+        };
+        self.edits = Edits::default();
+        self.reset_body_cache();
+        self.part = ROOT_PART;
     }
 
     pub(crate) fn exec_test_cmd<H: Handler<'x>>(

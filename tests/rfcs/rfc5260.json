@@ -20,7 +20,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -50,7 +50,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Header": "date"
+            "Header": "Date"
           },
           "key_list": [
             {
@@ -82,7 +82,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Header": "date"
+            "Header": "Date"
           },
           "key_list": [
             {
@@ -131,7 +131,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Header": "received"
+            "Header": "Received"
           },
           "key_list": [
             {
@@ -163,7 +163,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Header": "received"
+            "Header": "Received"
           },
           "key_list": [
             {
@@ -580,9 +580,7 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Header": {
-            "other": "Processing-date"
-          }
+          "Header": "Processing-date"
         },
         "value": {
           "Variable": {
@@ -598,7 +596,7 @@
       "Test": {
         "Date": {
           "header_name": {
-            "Header": "received"
+            "Header": "Received"
           },
           "key_list": [
             {

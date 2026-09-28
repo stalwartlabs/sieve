@@ -36,11 +36,8 @@ impl<'x> Context<'x> {
         if self.num_redirects >= self.runtime.max_redirects
             || self.num_out_messages >= self.runtime.max_out_messages
             || self
-                .message
-                .root_part()
-                .headers
-                .iter()
-                .filter(|h| matches!(&h.name, HeaderName::Received))
+                .root_headers()
+                .filter(|h| h.is_named(&HeaderName::Received))
                 .count()
                 >= self.runtime.max_received_headers
         {

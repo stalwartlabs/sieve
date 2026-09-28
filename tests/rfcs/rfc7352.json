@@ -45,7 +45,7 @@
           "handle": null,
           "dup_match": {
             "Header": {
-              "Header": "message_id"
+              "Header": "Message-ID"
             }
           },
           "seconds": null,
@@ -72,7 +72,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "message_id"
+              "Header": "Message-ID"
             }
           ],
           "key_list": [
@@ -172,7 +172,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -320,7 +320,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -487,7 +487,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -657,9 +657,7 @@
           },
           "dup_match": {
             "Header": {
-              "Header": {
-                "other": "X-Event-ID"
-              }
+              "Header": "X-Event-ID"
             }
           },
           "seconds": null,
@@ -689,9 +687,7 @@
           },
           "dup_match": {
             "Header": {
-              "Header": {
-                "other": "X-Ticket-ID"
-              }
+              "Header": "X-Ticket-ID"
             }
           },
           "seconds": null,
@@ -714,7 +710,7 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             }
           ],
           "key_list": [
@@ -745,7 +741,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [

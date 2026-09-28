@@ -299,7 +299,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [
@@ -360,7 +360,7 @@
         "Address": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [

@@ -14,9 +14,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": {
-                "other": "X-Sieve-Filtered"
-              }
+              "Header": "X-Sieve-Filtered"
             }
           ],
           "key_list": [
@@ -49,9 +47,7 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Header": {
-            "other": "X-Sieve-Filtered"
-          }
+          "Header": "X-Sieve-Filtered"
         },
         "value": {
           "Text": 0
@@ -82,7 +78,7 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Contains",
         "field_name": {
-          "Header": "delivered_to"
+          "Header": "Delivered-To"
         },
         "value_patterns": [
           {
@@ -99,9 +95,7 @@
       "AddHeader": {
         "last": false,
         "field_name": {
-          "Header": {
-            "other": "X-Hello"
-          }
+          "Header": "X-Hello"
         },
         "value": {
           "Text": 4
@@ -117,9 +111,7 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Header": {
-            "other": "X-Hello"
-          }
+          "Header": "X-Hello"
         },
         "value_patterns": [],
         "mime_anychild": false
@@ -136,9 +128,7 @@
           "Matches": 0
         },
         "field_name": {
-          "Header": {
-            "other": "X-Hello"
-          }
+          "Header": "X-Hello"
         },
         "value_patterns": [
           {
@@ -164,9 +154,7 @@
         "comparator": "AsciiCaseMap",
         "match_type": "Is",
         "field_name": {
-          "Header": {
-            "other": "X-By"
-          }
+          "Header": "X-By"
         },
         "value_patterns": [
           {

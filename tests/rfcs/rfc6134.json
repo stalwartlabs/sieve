@@ -368,7 +368,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -414,7 +414,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "received"
+              "Header": "Received"
             }
           ],
           "key_list": [
@@ -556,10 +556,10 @@
         "Header": {
           "header_list": [
             {
-              "Header": "content_type"
+              "Header": "Content-Type"
             },
             {
-              "Header": "content_disposition"
+              "Header": "Content-Disposition"
             }
           ],
           "key_list": [

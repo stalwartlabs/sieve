@@ -49,7 +49,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -194,7 +194,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "disposition_notification_to"
+              "Header": "Disposition-Notification-To"
             }
           ],
           "key_list": [
@@ -241,7 +241,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -465,7 +465,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -533,7 +533,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -604,7 +604,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "sender"
+              "Header": "Sender"
             }
           ],
           "key_list": [
@@ -669,10 +669,10 @@
         "Address": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             },
             {
-              "Header": "to"
+              "Header": "To"
             }
           ],
           "key_list": [
@@ -723,10 +723,10 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             },
             {
-              "Header": "cc"
+              "Header": "Cc"
             }
           ],
           "key_list": [
@@ -757,7 +757,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": "subject"
+              "Header": "Subject"
             }
           ],
           "key_list": [

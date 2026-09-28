@@ -16,7 +16,7 @@ use crate::{
     },
 };
 use mail_builder::headers::date::Date;
-use mail_parser::{HeaderName, HeaderValue, decoders::quoted_printable::HEX_MAP};
+use mail_parser::HeaderName;
 use std::borrow::Cow;
 
 const DEFAULT_IMPORTANCE_HEADERS: (&str, &str) = ("Normal", "3 (Normal)");
@@ -27,10 +27,10 @@ impl<'x> Context<'x> {
         script: &'x Sieve<'x>,
         notify: &ops::Notify,
     ) -> Result<(), RuntimeError> {
-        for header in &self.message.root_part().headers {
-            if header.name.as_str().eq_ignore_ascii_case("Auto-Submitted")
+        for header in self.root_headers() {
+            if header.is_named(&HeaderName::AutoSubmitted)
                 && header
-                    .value
+                    .value()
                     .as_text()
                     .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
             {
@@ -138,11 +138,7 @@ impl<'x> Context<'x> {
     }
 
     fn subject_str(&self) -> Option<&'x str> {
-        match self.message.header(HeaderName::Subject)? {
-            HeaderValue::Text(text) => Some(self.cow_str(text)),
-            HeaderValue::TextList(list) => list.last().map(|text| self.cow_str(text)),
-            _ => None,
-        }
+        self.root_text(&HeaderName::Subject)
     }
 
     fn notify_from<'a>(&self, from: Option<&'a Variable<'x>>) -> Cow<'a, str> {
@@ -174,7 +170,7 @@ impl<'x> Context<'x> {
             + params
                 .headers
                 .iter()
-                .map(|(h, v)| h.len() + v.len() + 4)
+                .map(|(h, v)| h.as_str().len() + v.len() + 4)
                 .sum::<usize>()
             + params.body.as_ref().map_or(0, |b| b.len())
             + notify_message.map_or(0, |b| b.len())
@@ -389,10 +385,10 @@ fn parse_mailto(uri: &str) -> Option<MailtoMessage> {
     while let Some(&ch) = iter.next() {
         match ch {
             b'%' => {
-                let hex1 = HEX_MAP[*iter.next()? as usize];
-                let hex2 = HEX_MAP[*iter.next()? as usize];
-                if hex1 != -1 && hex2 != -1 {
-                    let ch = ((hex1 as u8) << 4) | hex2 as u8;
+                let hex1 = hex_value(*iter.next()?);
+                let hex2 = hex_value(*iter.next()?);
+                if let (Some(hex1), Some(hex2)) = (hex1, hex2) {
+                    let ch = (hex1 << 4) | hex2;
 
                     match &state {
                         State::Address((header, has_at)) => match ch {
@@ -592,4 +588,13 @@ fn lookup_importance_headers(input: &str) -> Option<(&'static str, &'static str)
         "3" => ("Low", "5 (Low)"),
     )
     .copied()
+}
+
+fn hex_value(ch: u8) -> Option<u8> {
+    match ch {
+        b'0'..=b'9' => Some(ch - b'0'),
+        b'a'..=b'f' => Some(ch - b'a' + 10),
+        b'A'..=b'F' => Some(ch - b'A' + 10),
+        _ => None,
+    }
 }

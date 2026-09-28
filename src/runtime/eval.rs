@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use super::message::{body::TextForm, headers::HeaderRef};
 use super::{RuntimeError, Variable};
 use crate::{
     Context, Envelope, Sieve,
@@ -15,12 +16,10 @@ use crate::{
 };
 use bumpalo::Bump;
 use mail_parser::{
-    Addr, Header, HeaderName, HeaderValue, Host, PartType, Received,
-    decoders::html::{html_to_text, text_to_html},
-    parsers::MessageStream,
+    ContentType, HeaderForm, HeaderName, HeaderValue, Host, Mailbox, PartKind, Received,
 };
 use smallvec::SmallVec;
-use std::{borrow::Cow, cmp::Ordering};
+use std::cmp::Ordering;
 
 pub(crate) type Values<'x> = SmallVec<[Variable<'x>; 4]>;
 
@@ -132,6 +131,19 @@ impl<'x> ValueRef<'x> {
     }
 }
 
+impl ContentTypeRef<'_> {
+    fn select<'y>(&self, ct: ContentType<'y>) -> Option<&'y str> {
+        match self {
+            ContentTypeRef::Type => Some(ct.ctype()),
+            ContentTypeRef::Subtype => ct.subtype(),
+            ContentTypeRef::Attribute(attr) => ct
+                .attributes()
+                .find(|(name, _)| name.eq_ignore_ascii_case(attr))
+                .map(|(_, value)| value),
+        }
+    }
+}
+
 impl<'x> HeaderPartRef<'x> {
     fn decode(part: u8, sub: u16, attr: &'x str) -> Self {
         match part {
@@ -156,34 +168,6 @@ impl<'x> HeaderPartRef<'x> {
 }
 
 impl<'x> Context<'x> {
-    #[inline(always)]
-    pub(crate) fn cow_str(&self, s: &Cow<'x, str>) -> &'x str {
-        match s {
-            Cow::Borrowed(s) => s,
-            Cow::Owned(s) => self.alloc_str(s),
-        }
-    }
-
-    #[inline(always)]
-    pub(crate) fn raw_message(&self) -> Result<&'x [u8], RuntimeError> {
-        match &self.message.raw_message {
-            Cow::Borrowed(raw) => Ok(raw),
-            Cow::Owned(raw) => match self.raw_message_copy.get() {
-                Some(copy) => Ok(copy),
-                None => {
-                    let copy = self
-                        .arena
-                        .bump
-                        .try_alloc_slice_copy(raw)
-                        .map(|bytes| unsafe { super::context::extend(bytes) })
-                        .map_err(|_| RuntimeError::MemoryLimitReached)?;
-                    self.raw_message_copy.set(Some(copy));
-                    Ok(copy)
-                }
-            },
-        }
-    }
-
     #[inline(always)]
     pub(crate) fn eval_value(
         &self,
@@ -298,59 +282,38 @@ impl<'x> Context<'x> {
     }
 
     fn eval_part(&self, kind: u8, convert: bool) -> Option<Variable<'x>> {
-        match kind {
+        let text = match kind {
             0 => {
-                let part = self
-                    .message
-                    .parts
-                    .get(*self.message.text_body.first()? as usize)?;
-                match &part.body {
-                    PartType::Text(text) => Some(Variable::borrowed(self.cow_str(text))),
-                    PartType::Html(html) if convert => Some(Variable::borrowed(
-                        self.alloc_string(html_to_text(html.as_ref())),
-                    )),
+                let part = self.message.root().text_body().next()?;
+                match self.part_kind(part) {
+                    PartKind::Text => self.part_text(part, TextForm::Source),
+                    PartKind::Html if convert => self.part_text(part, TextForm::Plain),
                     _ => None,
                 }
             }
             1 => {
-                let part = self
-                    .message
-                    .parts
-                    .get(*self.message.html_body.first()? as usize)?;
-                match &part.body {
-                    PartType::Html(html) => Some(Variable::borrowed(self.cow_str(html))),
-                    PartType::Text(text) if convert => Some(Variable::borrowed(
-                        self.alloc_string(text_to_html(text.as_ref())),
-                    )),
+                let part = self.message.root().html_body().next()?;
+                match self.part_kind(part) {
+                    PartKind::Html => self.part_text(part, TextForm::Source),
+                    PartKind::Text if convert => self.part_text(part, TextForm::Html),
                     _ => None,
                 }
             }
-            2 => match &self.message.parts.get(self.part as usize)?.body {
-                PartType::Text(text) | PartType::Html(text) => {
-                    Some(Variable::borrowed(self.cow_str(text)))
+            2 => {
+                let part = self.current_part()?;
+                match self.part_kind(part) {
+                    PartKind::Text | PartKind::Html => self.part_text(part, TextForm::Source),
+                    PartKind::Binary | PartKind::InlineBinary => {
+                        self.part_text(part, TextForm::Decoded)
+                    }
+                    _ => None,
                 }
-                PartType::Binary(bin) | PartType::InlineBinary(bin) => Some(Variable::borrowed(
-                    self.alloc_str(&String::from_utf8_lossy(bin.as_ref())),
-                )),
-                _ => None,
-            },
-            _ => {
-                let part = self.message.parts.get(self.part as usize)?;
-                self.raw_message()
-                    .map_err(|_| self.note_oom())
-                    .ok()?
-                    .get(part.raw_body_offset() as usize..part.raw_end_offset() as usize)
-                    .map(|v| self.bytes_variable(v))
             }
-        }
-    }
-
-    #[inline(always)]
-    pub(crate) fn bytes_variable(&self, bytes: &'x [u8]) -> Variable<'x> {
-        match std::str::from_utf8(bytes) {
-            Ok(text) => Variable::borrowed(text),
-            Err(_) => Variable::borrowed(self.alloc_str(&String::from_utf8_lossy(bytes))),
-        }
+            _ => self
+                .current_part()
+                .and_then(|part| self.part_text(part, TextForm::Raw)),
+        };
+        text.map(Variable::borrowed)
     }
 
     pub(crate) fn eval_values(
@@ -419,73 +382,96 @@ impl<'x> Context<'x> {
         script: &'x Sieve<'x>,
         header: &HeaderVar<'x>,
     ) -> Result<Option<Variable<'x>>, RuntimeError> {
-        let mut result: SmallVec<[Variable<'x>; 4]> = SmallVec::new();
-        let Some(part) = self.message.part(self.part) else {
+        let mut result: Values<'x> = SmallVec::new();
+        let Some(part) = self.current_part() else {
             return Ok(None);
         };
-        let raw = self.raw_message()?;
         if !header.names.is_empty() {
             let mut names: SmallVec<[&HeaderName<'static>; 2]> = SmallVec::new();
             for rec in script.recs(header.names)? {
                 names.push(script.header_name(rec.c)?);
             }
-            let mut headers = part
-                .headers
-                .iter()
-                .filter(|h| names.iter().any(|n| **n == h.name));
-            match header.index_hdr.cmp(&0) {
-                Ordering::Greater => {
-                    if let Some(h) = headers.nth((header.index_hdr - 1) as usize) {
-                        self.eval_header_part(header, h, raw, &mut result);
+            match (header.index_hdr.cmp(&0), names.as_slice()) {
+                (Ordering::Less, [name]) if header.index_hdr == -1 => {
+                    if let Some(h) = self.last_header(part, name) {
+                        self.eval_header_part(header, h, &mut result);
                     }
                 }
-                Ordering::Less => {
-                    if let Some(h) = headers
+                (Ordering::Less, [name]) => {
+                    if let Some(h) = self
+                        .part_headers(part)
                         .rev()
+                        .filter(|h| h.is_named(name))
                         .nth((header.index_hdr.unsigned_abs() - 1) as usize)
                     {
-                        self.eval_header_part(header, h, raw, &mut result);
+                        self.eval_header_part(header, h, &mut result);
                     }
                 }
-                Ordering::Equal => {
-                    for h in headers {
-                        self.eval_header_part(header, h, raw, &mut result);
+                (Ordering::Greater, [name]) => {
+                    if let Some(h) = self
+                        .named_headers(part, name)
+                        .nth((header.index_hdr - 1) as usize)
+                    {
+                        self.eval_header_part(header, h, &mut result);
+                    }
+                }
+                (Ordering::Equal, [name]) => {
+                    for h in self.named_headers(part, name) {
+                        self.eval_header_part(header, h, &mut result);
+                    }
+                }
+                (index, names) => {
+                    let matching = self.matching_headers(part, names);
+                    let selected = match index {
+                        Ordering::Greater => matching.get((header.index_hdr - 1) as usize),
+                        Ordering::Less => matching
+                            .iter()
+                            .rev()
+                            .nth((header.index_hdr.unsigned_abs() - 1) as usize),
+                        Ordering::Equal => {
+                            for h in &matching {
+                                self.eval_header_part(header, *h, &mut result);
+                            }
+                            None
+                        }
+                    };
+                    if let Some(h) = selected {
+                        self.eval_header_part(header, *h, &mut result);
                     }
                 }
             }
         } else {
-            for h in &part.headers {
+            let source = part.message().source_bytes();
+            for h in self.part_headers(part) {
                 match &header.part {
                     HeaderPartRef::Raw => {
-                        if let Some(var) = raw
-                            .get(h.offset_field as usize..h.offset_end as usize)
-                            .map(sanitize_raw_header)
-                        {
-                            result.push(Variable::borrowed(self.alloc_string(var)));
-                        }
+                        let field = match h {
+                            HeaderRef::Added(_) => &[][..],
+                            h => raw_field(source, h),
+                        };
+                        result.push(Variable::borrowed(
+                            self.alloc_string(sanitize_raw_header(field)),
+                        ));
                     }
                     HeaderPartRef::Text => {
-                        if let HeaderValue::Text(text) = &h.value {
+                        let parsed;
+                        let text = match h.value() {
+                            HeaderValue::Text(text) => Some(text),
+                            _ => {
+                                parsed = h.parse_as(HeaderForm::Text);
+                                parsed.value().as_text()
+                            }
+                        };
+                        if let Some(text) = text {
                             result.push(Variable::borrowed(self.alloc_string(format!(
                                 "{}: {}",
-                                h.name.as_str(),
-                                text
-                            ))));
-                        } else if let HeaderValue::Text(text) = MessageStream::new(
-                            raw.get(h.offset_start as usize..h.offset_end as usize)
-                                .unwrap_or(b""),
-                        )
-                        .parse_unstructured()
-                        {
-                            result.push(Variable::borrowed(self.alloc_string(format!(
-                                "{}: {}",
-                                h.name.as_str(),
+                                h.name().as_str(),
                                 text
                             ))));
                         }
                     }
                     _ => {
-                        self.eval_header_part(header, h, raw, &mut result);
+                        self.eval_header_part(header, h, &mut result);
                     }
                 }
             }
@@ -500,192 +486,121 @@ impl<'x> Context<'x> {
         }
     }
 
-    fn eval_header_part(
-        &self,
-        header: &HeaderVar<'x>,
-        h: &Header<'x>,
-        raw: &'x [u8],
-        result: &mut SmallVec<[Variable<'x>; 4]>,
-    ) {
+    fn eval_header_part(&self, header: &HeaderVar<'x>, h: HeaderRef<'x>, result: &mut Values<'x>) {
         let index_part = header.index_part;
         let var = match &header.part {
-            HeaderPartRef::Text => match &h.value {
+            HeaderPartRef::Text => match h.value() {
                 HeaderValue::Text(v) if [-1, 0, 1].contains(&index_part) => {
-                    Some(Variable::borrowed(self.cow_str(v)))
+                    Some(Variable::borrowed(v))
                 }
-                HeaderValue::TextList(list) => match index_part.cmp(&0) {
-                    Ordering::Greater => list
-                        .get((index_part - 1) as usize)
-                        .map(|v| Variable::borrowed(self.cow_str(v))),
-                    Ordering::Less => list
-                        .iter()
-                        .rev()
-                        .nth((index_part.unsigned_abs() - 1) as usize)
-                        .map(|v| Variable::borrowed(self.cow_str(v))),
-                    Ordering::Equal => {
-                        for item in list {
-                            result.push(Variable::borrowed(self.cow_str(item)));
-                        }
-                        return;
+                HeaderValue::TextList(list) => {
+                    match pick(list.iter(), index_part, result, |item| {
+                        Some(Variable::borrowed(item))
+                    }) {
+                        Some(var) => var,
+                        None => return,
                     }
-                },
-                HeaderValue::ContentType(ct) => {
-                    Some(Variable::borrowed(if let Some(st) = &ct.c_subtype {
-                        self.alloc_string(format!("{}/{}", ct.c_type, st))
-                    } else {
-                        self.cow_str(&ct.c_type)
-                    }))
                 }
+                HeaderValue::ContentType(ct) => Some(Variable::borrowed(match ct.subtype() {
+                    Some(subtype) => self.alloc_string(format!("{}/{}", ct.ctype(), subtype)),
+                    None => ct.ctype(),
+                })),
                 HeaderValue::Address(list) => {
-                    let mut list = list.iter();
-                    match index_part.cmp(&0) {
-                        Ordering::Greater => list
-                            .nth((index_part - 1) as usize)
-                            .map(|a| self.addr_to_text(a)),
-                        Ordering::Less => list
-                            .rev()
-                            .nth((index_part.unsigned_abs() - 1) as usize)
-                            .map(|a| self.addr_to_text(a)),
-                        Ordering::Equal => {
-                            for item in list {
-                                result.push(self.addr_to_text(item));
-                            }
-                            return;
-                        }
+                    match pick(list.mailboxes(), index_part, result, |mailbox| {
+                        Some(self.addr_to_text(mailbox))
+                    }) {
+                        Some(var) => var,
+                        None => return,
                     }
                 }
-                HeaderValue::DateTime(_) => raw
-                    .get(h.offset_start as usize..h.offset_end as usize)
+                HeaderValue::DateTime(_) => h
+                    .raw_value()
                     .and_then(|bytes| std::str::from_utf8(bytes).ok())
                     .map(|s| Variable::borrowed(s.trim())),
                 _ => None,
             },
-            HeaderPartRef::Address(part) => match &h.value {
-                HeaderValue::Address(addr) => {
-                    let mut list = addr.iter();
-                    match index_part.cmp(&0) {
-                        Ordering::Greater => list
-                            .nth((index_part - 1) as usize)
-                            .and_then(|a| self.addr_part(part, a)),
-                        Ordering::Less => list
-                            .rev()
-                            .nth((index_part.unsigned_abs() - 1) as usize)
-                            .and_then(|a| self.addr_part(part, a)),
-                        Ordering::Equal => {
-                            for item in list {
-                                result.push(self.addr_part(part, item).unwrap_or_default());
-                            }
-                            return;
-                        }
+            HeaderPartRef::Address(part) => match h.value() {
+                HeaderValue::Address(list) => {
+                    match pick(list.mailboxes(), index_part, result, |mailbox| {
+                        self.addr_part(part, mailbox)
+                    }) {
+                        Some(var) => var,
+                        None => return,
                     }
                 }
                 HeaderValue::Text(_) => {
-                    let addr = raw
-                        .get(h.offset_start as usize..h.offset_end as usize)
-                        .and_then(|bytes| match MessageStream::new(bytes).parse_address() {
-                            HeaderValue::Address(addr) => addr.into(),
-                            _ => None,
-                        });
-                    if let Some(addr) = addr {
-                        let mut list = addr.iter();
-                        match index_part.cmp(&0) {
-                            Ordering::Greater => list
-                                .nth((index_part - 1) as usize)
-                                .and_then(|a| part.eval_strict(a))
-                                .map(|s| Variable::borrowed(self.alloc_str(s))),
-                            Ordering::Less => list
-                                .rev()
-                                .nth((index_part.unsigned_abs() - 1) as usize)
-                                .and_then(|a| part.eval_strict(a))
-                                .map(|s| Variable::borrowed(self.alloc_str(s))),
-                            Ordering::Equal => {
-                                for item in list {
-                                    result.push(
-                                        part.eval_strict(item)
-                                            .map(|s| Variable::borrowed(self.alloc_str(s)))
-                                            .unwrap_or_default(),
-                                    );
-                                }
-                                return;
-                            }
-                        }
-                    } else {
-                        None
+                    let parsed = h.parse_as(HeaderForm::Addresses);
+                    let Some(list) = parsed.value().as_address() else {
+                        result.push(Variable::default());
+                        return;
+                    };
+                    match pick(list.mailboxes(), index_part, result, |mailbox| {
+                        part.eval_strict(mailbox)
+                            .map(|s| Variable::borrowed(self.alloc_str(s)))
+                    }) {
+                        Some(var) => var,
+                        None => return,
                     }
                 }
                 _ => None,
             },
-            HeaderPartRef::Date => {
-                if let HeaderValue::DateTime(dt) = &h.value {
-                    Variable::from(dt.to_timestamp()).into()
-                } else {
-                    raw.get(h.offset_start as usize..h.offset_end as usize)
-                        .and_then(|bytes| match MessageStream::new(bytes).parse_date() {
-                            HeaderValue::DateTime(dt) => Variable::from(dt.to_timestamp()).into(),
-                            _ => None,
-                        })
-                }
-            }
-            HeaderPartRef::Id => match &h.name {
-                HeaderName::MessageId | HeaderName::ResentMessageId => match &h.value {
-                    HeaderValue::Text(id) => Variable::borrowed(self.cow_str(id)).into(),
-                    HeaderValue::TextList(ids) => {
-                        for id in ids {
-                            result.push(Variable::borrowed(self.cow_str(id)));
-                        }
-                        return;
-                    }
-                    _ => None,
-                },
-                HeaderName::Other(_) => {
-                    match MessageStream::new(
-                        raw.get(h.offset_start as usize..h.offset_end as usize)
-                            .unwrap_or(b""),
-                    )
-                    .parse_id()
-                    {
-                        HeaderValue::Text(id) => Variable::borrowed(self.cow_str(&id)).into(),
+            HeaderPartRef::Date => match h.value() {
+                HeaderValue::DateTime(dt) => Some(Variable::from(dt.to_timestamp())),
+                _ => h
+                    .parse_as(HeaderForm::Date)
+                    .value()
+                    .as_datetime()
+                    .map(|dt| Variable::from(dt.to_timestamp())),
+            },
+            HeaderPartRef::Id => {
+                let name = h.name();
+                if matches!(name, HeaderName::MessageId | HeaderName::ResentMessageId) {
+                    match h.value() {
+                        HeaderValue::Text(id) => Some(Variable::borrowed(id)),
                         HeaderValue::TextList(ids) => {
-                            for id in ids {
-                                result.push(Variable::borrowed(self.cow_str(&id)));
-                            }
+                            result.extend(ids.iter().map(Variable::borrowed));
+                            return;
+                        }
+                        _ => None,
+                    }
+                } else if name.is_structured() {
+                    None
+                } else {
+                    let parsed = h.parse_as(HeaderForm::MessageIds);
+                    match parsed.value() {
+                        HeaderValue::Text(id) => Some(Variable::borrowed(self.alloc_str(id))),
+                        HeaderValue::TextList(ids) if !ids.is_empty() => {
+                            result.extend(
+                                ids.iter().map(|id| Variable::borrowed(self.alloc_str(id))),
+                            );
                             return;
                         }
                         _ => None,
                     }
                 }
-                _ => None,
+            }
+            HeaderPartRef::Raw => Some(Variable::borrowed(
+                self.alloc_string(sanitize_raw_header(h.raw_value().unwrap_or_default())),
+            )),
+            HeaderPartRef::RawName => match h {
+                HeaderRef::Added(_) => None,
+                h => Some(Variable::borrowed(h.raw_name())),
             },
-            HeaderPartRef::Raw => raw
-                .get(h.offset_start as usize..h.offset_end as usize)
-                .map(sanitize_raw_header)
-                .map(|s| Variable::borrowed(self.alloc_string(s))),
-            HeaderPartRef::RawName => (h.offset_start as usize)
-                .checked_sub(1)
-                .and_then(|end| raw.get(h.offset_field as usize..end))
-                .map(|bytes| std::str::from_utf8(bytes).unwrap_or_default())
-                .map(Variable::borrowed),
-            HeaderPartRef::Exists => Variable::from(true).into(),
-            HeaderPartRef::ContentType(part) => match &h.value {
-                HeaderValue::ContentType(ct) => match part {
-                    ContentTypeRef::Type => Variable::borrowed(self.cow_str(&ct.c_type)).into(),
-                    ContentTypeRef::Subtype => ct
-                        .c_subtype
-                        .as_ref()
-                        .map(|s| Variable::borrowed(self.cow_str(s))),
-                    ContentTypeRef::Attribute(attr) => ct.attributes.as_ref().and_then(|attrs| {
-                        attrs.iter().find_map(|a| {
-                            if a.name.eq_ignore_ascii_case(attr) {
-                                Some(Variable::borrowed(self.cow_str(&a.value)))
-                            } else {
-                                None
-                            }
-                        })
-                    }),
-                },
-                _ => None,
+            HeaderPartRef::Exists => Some(Variable::from(true)),
+            HeaderPartRef::ContentType(part) => match h {
+                HeaderRef::Added(_) => h
+                    .parse_as(HeaderForm::ContentType)
+                    .value()
+                    .as_content_type()
+                    .and_then(|ct| part.select(ct))
+                    .map(|value| Variable::borrowed(self.alloc_str(value))),
+                h => h
+                    .value()
+                    .as_content_type()
+                    .and_then(|ct| part.select(ct))
+                    .map(Variable::borrowed),
             },
-            HeaderPartRef::Received(part) => match &h.value {
+            HeaderPartRef::Received(part) => match h.value() {
                 HeaderValue::Received(rcvd) => self.received_part(part, rcvd),
                 _ => None,
             },
@@ -694,58 +609,43 @@ impl<'x> Context<'x> {
         result.push(var.unwrap_or_default());
     }
 
-    fn addr_to_text(&self, addr: &Addr<'x>) -> Variable<'x> {
-        if let Some(name) = &addr.name {
-            if let Some(address) = &addr.address {
+    fn addr_to_text(&self, mailbox: Mailbox<'x>) -> Variable<'x> {
+        match (mailbox.name(), mailbox.address()) {
+            (Some(name), Some(address)) => {
                 Variable::borrowed(self.alloc_string(format!("{name} <{address}>")))
-            } else {
-                Variable::borrowed(self.cow_str(name))
             }
-        } else if let Some(address) = &addr.address {
-            Variable::borrowed(self.alloc_string(format!("<{address}>")))
-        } else {
-            Variable::default()
+            (Some(name), None) => Variable::borrowed(name),
+            (None, Some(address)) => Variable::borrowed(self.alloc_string(format!("<{address}>"))),
+            (None, None) => Variable::default(),
         }
     }
 
-    fn addr_part(&self, part: &AddressPart, addr: &Addr<'x>) -> Option<Variable<'x>> {
+    fn addr_part(&self, part: &AddressPart, mailbox: Mailbox<'x>) -> Option<Variable<'x>> {
         match part {
-            AddressPart::Name => addr
-                .name
-                .as_ref()
-                .map(|n| Variable::borrowed(self.cow_str(n))),
-            AddressPart::All => addr
-                .address
-                .as_ref()
-                .map(|a| Variable::borrowed(self.cow_str(a))),
-            _ => part
-                .eval_strict(addr)
-                .map(|s| Variable::borrowed(self.alloc_str(s))),
+            AddressPart::Name => mailbox.name().map(Variable::borrowed),
+            AddressPart::All => mailbox.address().map(Variable::borrowed),
+            _ => part.eval_strict(mailbox).map(Variable::borrowed),
         }
     }
 
-    pub fn received_part(&self, part: &ReceivedPart, rcvd: &Received<'x>) -> Option<Variable<'x>> {
+    pub fn received_part(&self, part: &ReceivedPart, rcvd: Received<'x>) -> Option<Variable<'x>> {
         match part {
             ReceivedPart::From(from) => rcvd
                 .from()
                 .or_else(|| rcvd.helo())
-                .and_then(|v| self.host_variable(from, v)),
+                .and_then(|host| self.host_variable(from, host)),
             ReceivedPart::FromIp => rcvd
                 .from_ip()
                 .map(|ip| Variable::borrowed(self.alloc_string(ip.to_string()))),
-            ReceivedPart::FromIpRev => rcvd
-                .from_iprev()
-                .map(|v| Variable::borrowed(self.alloc_str(v))),
-            ReceivedPart::By(by) => rcvd.by().and_then(|v: &Host<'_>| self.host_variable(by, v)),
-            ReceivedPart::For => rcvd.for_().map(|v| Variable::borrowed(self.alloc_str(v))),
+            ReceivedPart::FromIpRev => rcvd.from_iprev().map(Variable::borrowed),
+            ReceivedPart::By(by) => rcvd.by().and_then(|host| self.host_variable(by, host)),
+            ReceivedPart::For => rcvd.for_().map(Variable::borrowed),
             ReceivedPart::With => rcvd.with().map(|v| Variable::borrowed(v.as_str())),
             ReceivedPart::TlsVersion => rcvd.tls_version().map(|v| Variable::borrowed(v.as_str())),
-            ReceivedPart::TlsCipher => rcvd
-                .tls_cipher()
-                .map(|v| Variable::borrowed(self.alloc_str(v))),
-            ReceivedPart::Id => rcvd.id().map(|v| Variable::borrowed(self.alloc_str(v))),
-            ReceivedPart::Ident => rcvd.ident().map(|v| Variable::borrowed(self.alloc_str(v))),
-            ReceivedPart::Via => rcvd.via().map(|v| Variable::borrowed(self.alloc_str(v))),
+            ReceivedPart::TlsCipher => rcvd.tls_cipher().map(Variable::borrowed),
+            ReceivedPart::Id => rcvd.id().map(Variable::borrowed),
+            ReceivedPart::Ident => rcvd.ident().map(Variable::borrowed),
+            ReceivedPart::Via => rcvd.via().map(Variable::borrowed),
             ReceivedPart::Date => rcvd.date().map(|d| Variable::from(d.to_timestamp())),
             ReceivedPart::DateRaw => rcvd
                 .date()
@@ -753,18 +653,45 @@ impl<'x> Context<'x> {
         }
     }
 
-    fn host_variable(&self, hostname: &ReceivedHostname, host: &Host<'x>) -> Option<Variable<'x>> {
+    fn host_variable(&self, hostname: &ReceivedHostname, host: Host<'x>) -> Option<Variable<'x>> {
         match (hostname, host) {
-            (ReceivedHostname::Name, Host::Name(name)) => {
-                Variable::borrowed(self.cow_str(name)).into()
+            (ReceivedHostname::Name | ReceivedHostname::Any, Host::Name(name)) => {
+                Some(Variable::borrowed(name))
             }
-            (ReceivedHostname::Ip, Host::IpAddr(ip)) => {
-                Variable::borrowed(self.alloc_string(ip.to_string())).into()
-            }
-            (ReceivedHostname::Any, _) => {
-                Variable::borrowed(self.alloc_string(host.to_string())).into()
+            (ReceivedHostname::Ip | ReceivedHostname::Any, Host::IpAddr(ip)) => {
+                Some(Variable::borrowed(self.alloc_string(ip.to_string())))
             }
             _ => None,
+        }
+    }
+}
+
+fn raw_field<'x>(source: &'x [u8], header: HeaderRef<'x>) -> &'x [u8] {
+    match header {
+        HeaderRef::Parsed(header) | HeaderRef::Renamed(header, _) => source
+            .get(header.offset_field() as usize..header.offset_end() as usize)
+            .unwrap_or_default(),
+        HeaderRef::Added(_) => &[],
+    }
+}
+
+fn pick<'x, T>(
+    mut items: impl DoubleEndedIterator<Item = T>,
+    index: i32,
+    result: &mut Values<'x>,
+    mut map: impl FnMut(T) -> Option<Variable<'x>>,
+) -> Option<Option<Variable<'x>>> {
+    match index.cmp(&0) {
+        Ordering::Greater => Some(items.nth((index - 1) as usize).and_then(map)),
+        Ordering::Less => Some(
+            items
+                .rev()
+                .nth((index.unsigned_abs() - 1) as usize)
+                .and_then(map),
+        ),
+        Ordering::Equal => {
+            result.extend(items.map(|item| map(item).unwrap_or_default()));
+            None
         }
     }
 }

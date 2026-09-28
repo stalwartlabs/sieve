@@ -16,7 +16,7 @@ use crate::{
         handler::{Action, Handler, Input, MessageSource, Recipient, Reply, Script, Status},
     },
 };
-use mail_parser::{HeaderName, HeaderValue, MessageParser};
+use mail_parser::{HeaderName, MessageParser};
 
 fn compile(script: &str) -> Sieve<'static> {
     Compiler::new()
@@ -86,19 +86,10 @@ impl<'x> Handler<'x> for RecordingHandler {
 
 fn fn_received_from<'x>(ctx: &Context<'x>, _: &[Variable<'x>]) -> Variable<'x> {
     ctx.message()
-        .parts
-        .first()
-        .and_then(|part| {
-            part.headers
-                .iter()
-                .find(|header| header.name == HeaderName::Received)
-        })
-        .and_then(|header| match &header.value {
-            HeaderValue::Received(rcvd) => {
-                ctx.received_part(&ReceivedPart::From(ReceivedHostname::Name), rcvd)
-            }
-            _ => None,
-        })
+        .part(0)
+        .and_then(|part| part.headers().all(HeaderName::Received).next())
+        .and_then(|header| header.value().as_received())
+        .and_then(|rcvd| ctx.received_part(&ReceivedPart::From(ReceivedHostname::Name), rcvd))
         .unwrap_or_default()
 }
 
@@ -259,7 +250,7 @@ fn owned_raw_message_is_copied_once() {
     );
     let runtime = runtime().with_memory_limit(512 * 1024);
     let mut arena = Arena::new();
-    let mut ctx = Context::new(&runtime, message, &script, &mut arena);
+    let mut ctx = Context::new(&runtime, &message, &script, &mut arena);
     let mut handler = RecordingHandler::default();
     assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
     assert_eq!(handler.keeps, 1);
@@ -329,7 +320,7 @@ fn single_flag_variable_is_split_on_whitespace() {
     );
     let runtime = runtime();
     let mut arena = Arena::new();
-    let mut ctx = Context::new(&runtime, message, &script, &mut arena);
+    let mut ctx = Context::new(&runtime, &message, &script, &mut arena);
     let mut handler = RecordingHandler::default();
     assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
     assert_eq!(
@@ -541,7 +532,7 @@ fn received_part_from_a_registered_function() {
     let message = MessageParser::default().parse(&raw[..]).unwrap();
     let runtime = runtime().with_functions(&mut fnc_map);
     let mut arena = Arena::new();
-    let mut ctx = Context::new(&runtime, message, &script, &mut arena);
+    let mut ctx = Context::new(&runtime, &message, &script, &mut arena);
     let mut handler = RecordingHandler::default();
     assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
     assert_eq!((handler.keeps, handler.discards), (1, 0));
@@ -562,7 +553,7 @@ fn send_message_carries_its_source() {
         .with_valid_notification_uri("mailto")
         .with_max_out_messages(10);
     let mut arena = Arena::new();
-    let mut ctx = Context::new(&runtime, message, &script, &mut arena);
+    let mut ctx = Context::new(&runtime, &message, &script, &mut arena);
     ctx.set_user_address("john@example.org");
     ctx.set_envelope(Envelope::From, "sender@example.org");
     ctx.set_envelope(Envelope::To, "john@example.org");

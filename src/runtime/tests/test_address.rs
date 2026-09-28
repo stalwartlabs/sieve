@@ -5,6 +5,7 @@
  */
 
 use super::TestResult;
+use crate::runtime::message::headers::HeaderRef;
 use crate::{
     Context, Sieve,
     bytecode::ops,
@@ -15,14 +16,8 @@ use crate::{
     runtime::{RuntimeError, handler::Handler},
 };
 use mail_parser::{
-    Addr, Address, Header, HeaderValue,
-    parsers::{
-        MessageStream,
-        fields::address::{
-            parse_address_detail_part, parse_address_domain, parse_address_local_part,
-            parse_address_user_part,
-        },
-    },
+    AddressList, HeaderForm, HeaderValue, Mailbox, parse_address_detail_part, parse_address_domain,
+    parse_address_local_part, parse_address_user_part,
 };
 use smallvec::SmallVec;
 
@@ -40,11 +35,8 @@ impl<'x> Context<'x> {
         let match_type = test.match_type.match_type();
 
         let result = match &match_type {
-            MatchType::Is | MatchType::Contains | MatchType::Value(_) => self.find_headers(
-                &header_list,
-                test.index,
-                test.mime_anychild,
-                |header, _, _| {
+            MatchType::Is | MatchType::Contains | MatchType::Value(_) => {
+                self.find_headers(&header_list, test.index, test.mime_anychild, |header, _| {
                     self.find_addresses(header, &address_part, |value| {
                         key_list.iter().any(|key| match &match_type {
                             MatchType::Is => comparator.is(&value, &key.value),
@@ -57,18 +49,15 @@ impl<'x> Context<'x> {
                             _ => false,
                         })
                     })
-                },
-            ),
+                })
+            }
             MatchType::Matches(capture_positions) | MatchType::Regex(capture_positions) => {
                 let mut captured_values = Vec::new();
                 let is_matches = matches!(&match_type, MatchType::Matches(_));
                 let to_lower = comparator.is_casemap();
                 let mut error = None;
-                let result = self.find_headers(
-                    &header_list,
-                    test.index,
-                    test.mime_anychild,
-                    |header, _, _| {
+                let result =
+                    self.find_headers(&header_list, test.index, test.mime_anychild, |header, _| {
                         self.find_addresses(header, &address_part, |value| {
                             for key in &key_list {
                                 let matched = if is_matches {
@@ -100,8 +89,7 @@ impl<'x> Context<'x> {
                             }
                             false
                         })
-                    },
-                );
+                    });
                 if let Some(err) = error {
                     return Err(err);
                 }
@@ -112,19 +100,14 @@ impl<'x> Context<'x> {
             }
             MatchType::Count(rel_match) => {
                 let mut count: i64 = 0;
-                self.find_headers(
-                    &header_list,
-                    test.index,
-                    test.mime_anychild,
-                    |header, _, _| {
-                        self.find_addresses(header, &address_part, |value| {
-                            if !value.is_empty() {
-                                count += 1;
-                            }
-                            false
-                        })
-                    },
-                );
+                self.find_headers(&header_list, test.index, test.mime_anychild, |header, _| {
+                    self.find_addresses(header, &address_part, |value| {
+                        if !value.is_empty() {
+                            count += 1;
+                        }
+                        false
+                    })
+                });
 
                 key_list
                     .iter()
@@ -132,19 +115,14 @@ impl<'x> Context<'x> {
             }
             MatchType::List => {
                 let mut values: Vec<&str> = Vec::new();
-                self.find_headers(
-                    &header_list,
-                    test.index,
-                    test.mime_anychild,
-                    |header, _, _| {
-                        self.find_addresses(header, &address_part, |value| {
-                            if !value.is_empty() && !values.contains(&value) {
-                                values.push(self.alloc_str(value));
-                            }
-                            false
-                        })
-                    },
-                );
+                self.find_headers(&header_list, test.index, test.mime_anychild, |header, _| {
+                    self.find_addresses(header, &address_part, |value| {
+                        if !value.is_empty() && !values.contains(&value) {
+                            values.push(self.alloc_str(value));
+                        }
+                        false
+                    })
+                });
 
                 if !values.is_empty() {
                     let lists: SmallVec<[&str; 4]> = key_list
@@ -166,58 +144,32 @@ impl<'x> Context<'x> {
 
     pub(crate) fn find_addresses(
         &self,
-        header: &Header<'_>,
+        header: HeaderRef<'x>,
         part: &AddressPart,
         mut visitor_fnc: impl FnMut(&str) -> bool,
     ) -> bool {
-        match &header.value {
-            HeaderValue::Address(address) => visit_addresses(address, part, &mut visitor_fnc),
-            _ => {
-                let inserted_header;
-                let bytes: &[u8] = if header.offset_end > 0 {
-                    self.message
-                        .raw_message
-                        .get(header.offset_start as usize..header.offset_end as usize)
-                        .unwrap_or(b"")
-                } else if let HeaderValue::Text(text) = &header.value {
-                    inserted_header = format!("{text}\n").into_bytes();
-                    &inserted_header
-                } else {
-                    b""
-                };
-
-                match MessageStream::new(bytes).parse_address() {
-                    HeaderValue::Address(address) => {
-                        visit_addresses(&address, part, &mut visitor_fnc)
-                    }
-                    _ => visitor_fnc(""),
-                }
-            }
+        if let HeaderValue::Address(list) = header.value() {
+            return visit_addresses(list, part, &mut visitor_fnc);
+        }
+        match header.parse_as(HeaderForm::Addresses).value().as_address() {
+            Some(list) => visit_addresses(list, part, &mut visitor_fnc),
+            None => visitor_fnc(""),
         }
     }
 }
 
 fn visit_addresses(
-    address: &Address<'_>,
+    list: AddressList<'_>,
     part: &AddressPart,
     visitor_fnc: &mut impl FnMut(&str) -> bool,
 ) -> bool {
-    match address {
-        Address::List(addr_list) => addr_list
-            .iter()
-            .any(|addr| part.eval(addr).is_some_and(&mut *visitor_fnc)),
-        Address::Group(group_list) => group_list.iter().any(|group| {
-            group
-                .addresses
-                .iter()
-                .any(|addr| part.eval(addr).is_some_and(&mut *visitor_fnc))
-        }),
-    }
+    list.mailboxes()
+        .any(|mailbox| part.eval(mailbox).is_some_and(&mut *visitor_fnc))
 }
 
 impl AddressPart {
-    pub(crate) fn eval<'x>(&self, addr: &'x Addr<'x>) -> Option<&'x str> {
-        let email = addr.address.as_deref().or(addr.name.as_deref());
+    pub(crate) fn eval<'x>(&self, mailbox: Mailbox<'x>) -> Option<&'x str> {
+        let email = mailbox.address().or(mailbox.name());
         match (self, email) {
             (AddressPart::All, _) => email,
             (AddressPart::LocalPart, Some(email)) if !email.is_empty() => {
@@ -228,13 +180,13 @@ impl AddressPart {
             (AddressPart::Detail, Some(email)) if !email.is_empty() => {
                 parse_address_detail_part(email)
             }
-            (AddressPart::Name, _) => addr.name.as_deref(),
+            (AddressPart::Name, _) => mailbox.name(),
             _ => email,
         }
     }
 
-    pub(crate) fn eval_strict<'x>(&self, addr: &'x Addr<'x>) -> Option<&'x str> {
-        match (self, addr.address.as_deref()) {
+    pub(crate) fn eval_strict<'x>(&self, mailbox: Mailbox<'x>) -> Option<&'x str> {
+        match (self, mailbox.address()) {
             (AddressPart::All, Some(email)) => Some(email),
             (AddressPart::LocalPart, Some(email)) if !email.is_empty() => {
                 parse_address_local_part(email)
@@ -244,7 +196,7 @@ impl AddressPart {
             (AddressPart::Detail, Some(email)) if !email.is_empty() => {
                 parse_address_detail_part(email)
             }
-            (AddressPart::Name, _) => addr.name.as_deref(),
+            (AddressPart::Name, _) => mailbox.name(),
             (_, email) => email,
         }
     }

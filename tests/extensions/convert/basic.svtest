@@ -63,11 +63,11 @@ This is a multi-part message in MIME format.
 --BB
 Content-Type: text/html; charset=utf8
 
-<html><body>Hello &lt;world><br/></body></html>
+<html><body>Hello &lt;world&gt;<br/></body></html>
 --BB
 Content-Type: text/html; charset=utf8
 
-<html><body>Hello & again<br/></body></html>
+<html><body>Hello &amp; again<br/></body></html>
 --BB--
 This is the end of MIME multipart.
 

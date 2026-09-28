@@ -261,13 +261,7 @@ impl Settings {
     pub fn apply<'x>(&'x self, ctx: &mut Context<'x>, now: i64) {
         if !self.envelope_from.is_empty() {
             ctx.set_envelope("from", self.envelope_from.as_str());
-        } else if let Some(sender) = ctx
-            .message()
-            .parts
-            .first()
-            .and_then(|_| ctx.message().return_address())
-            .map(str::to_string)
-        {
+        } else if let Some(sender) = ctx.message().return_address().map(str::to_string) {
             ctx.set_envelope("from", sender);
         }
         let mut recipients = self

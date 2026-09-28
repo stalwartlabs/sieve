@@ -19,7 +19,7 @@ use crate::{
     },
 };
 use mail_builder::headers::date::Date;
-use mail_parser::{HeaderName, HeaderValue};
+use mail_parser::HeaderName;
 use std::borrow::Cow;
 
 pub(crate) const MAX_SUBJECT_LEN: usize = 256;
@@ -80,8 +80,8 @@ impl<'x> Context<'x> {
 
         let mut found_rcpt = false;
         let mut received_count = 0;
-        for header in &self.message.root_part().headers {
-            match &header.name {
+        for header in self.root_headers() {
+            match header.name() {
                 HeaderName::To
                 | HeaderName::Cc
                 | HeaderName::Bcc
@@ -108,30 +108,32 @@ impl<'x> Context<'x> {
                 }
                 HeaderName::AutoSubmitted => {
                     if header
-                        .value
+                        .value()
                         .as_text()
                         .is_none_or(|v| !v.eq_ignore_ascii_case("no"))
                     {
                         return Ok(TestResult::Bool(false));
                     }
                 }
-                HeaderName::Other(header_name) => {
-                    if header_name.eq_ignore_ascii_case("X-Auto-Response-Suppress") {
-                        if header.value.as_text().is_some_and(|v| {
-                            v.to_ascii_lowercase()
-                                .split(',')
-                                .any(|v| ["all", "oof"].contains(&v.trim()))
-                        }) {
-                            return Ok(TestResult::Bool(false));
-                        }
-                    } else if header_name.eq_ignore_ascii_case("Precedence")
-                        && header
-                            .value
-                            .as_text()
-                            .is_some_and(|v| v.eq_ignore_ascii_case("bulk"))
-                    {
+                name if name
+                    .as_str()
+                    .eq_ignore_ascii_case("X-Auto-Response-Suppress") =>
+                {
+                    if header.value().as_text().is_some_and(|v| {
+                        v.to_ascii_lowercase()
+                            .split(',')
+                            .any(|v| ["all", "oof"].contains(&v.trim()))
+                    }) {
                         return Ok(TestResult::Bool(false));
                     }
+                }
+                name if name.as_str().eq_ignore_ascii_case("Precedence")
+                    && header
+                        .value()
+                        .as_text()
+                        .is_some_and(|v| v.eq_ignore_ascii_case("bulk")) =>
+                {
+                    return Ok(TestResult::Bool(false));
                 }
                 _ => (),
             }
@@ -172,10 +174,10 @@ impl<'x> Context<'x> {
         let mut message_id = None;
         let mut vacation_to_full = None;
         let mut references = None;
-        for header in &self.message.root_part().headers {
-            match &header.name {
+        for header in self.root_headers() {
+            match header.name() {
                 HeaderName::Subject if vacation_subject.is_empty() => {
-                    if let Some(subject) = header.value.as_text() {
+                    if let Some(subject) = header.value().as_text() {
                         let mut vacation_subject_ = String::with_capacity(MAX_SUBJECT_LEN);
                         let mut iter = self
                             .runtime
@@ -199,22 +201,22 @@ impl<'x> Context<'x> {
                     }
                 }
                 HeaderName::MessageId => {
-                    message_id = header.value.as_text();
+                    message_id = header.value().as_text();
                 }
-                HeaderName::References if header.offset_start > 0 => {
-                    references = self
-                        .message
-                        .raw_message
-                        .get(header.offset_start as usize..header.offset_end as usize);
+                HeaderName::References => {
+                    if let Some(raw) = header.raw_value() {
+                        references = Some(raw);
+                    }
                 }
                 HeaderName::From | HeaderName::Sender
-                    if matches!(&header.value, HeaderValue::Address(address) if address.contains(vacation_to.as_ref()))
-                        && header.offset_start > 0 =>
+                    if header
+                        .value()
+                        .as_address()
+                        .is_some_and(|address| address.contains(vacation_to.as_ref())) =>
                 {
-                    vacation_to_full = self
-                        .message
-                        .raw_message
-                        .get(header.offset_start as usize..header.offset_end as usize);
+                    if let Some(raw) = header.raw_value() {
+                        vacation_to_full = Some(raw);
+                    }
                 }
                 _ => (),
             }

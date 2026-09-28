@@ -4,8 +4,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use super::{TestResult, mime::SubpartIterator};
-use crate::{Context, Sieve, bytecode::ops, runtime::RuntimeError};
+use super::TestResult;
+use crate::{
+    Context, Sieve,
+    bytecode::ops,
+    runtime::{
+        RuntimeError,
+        message::parts::{PartCursor, Scope},
+        tests::test_header::HeaderKeys,
+    },
+};
+use mail_parser::HeaderName;
 use smallvec::{SmallVec, smallvec};
 
 impl<'x> Context<'x> {
@@ -15,14 +24,28 @@ impl<'x> Context<'x> {
         test: &ops::TestExists,
     ) -> Result<TestResult, RuntimeError> {
         let header_names = self.parse_header_names(script, test.header_names)?;
+        let Some(part) = self.current_part() else {
+            return Ok(TestResult::Bool(test.is_not));
+        };
+        if !test.mime_anychild {
+            let result = self.edits.hidden_end(part.id()).is_none()
+                && header_names
+                    .iter()
+                    .all(|name| self.named_headers(part, name).next().is_some());
+            return Ok(TestResult::Bool(result ^ test.is_not));
+        }
+        let keys: HeaderKeys<'_> = header_names.iter().map(HeaderName::key).collect();
         let mut header_exists: SmallVec<[bool; 8]> = smallvec![false; header_names.len()];
-        let parts = [self.part];
-        let mut part_iter = SubpartIterator::new(self, &parts, test.mime_anychild);
         let mut result = false;
+        let mut parts = PartCursor::subtree(part, true, Scope::Message);
 
-        while let Some((_, message_part)) = part_iter.next() {
-            for (exists, header_name) in header_exists.iter_mut().zip(header_names.iter()) {
-                if !*exists && message_part.headers.iter().any(|h| &h.name == header_name) {
+        while let Some(part) = self.advance(&mut parts) {
+            for ((exists, header_name), key) in header_exists
+                .iter_mut()
+                .zip(header_names.iter())
+                .zip(keys.iter())
+            {
+                if !*exists && self.keyed_headers(part, header_name, *key).next().is_some() {
                     *exists = true;
                 }
             }

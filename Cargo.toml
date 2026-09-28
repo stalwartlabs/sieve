@@ -8,7 +8,7 @@ license = "AGPL-3.0-only"
 keywords = ["sieve", "interpreter", "compiler", "email", "mail"]
 categories = ["email", "compilers"]
 readme = "README.md"
-version = "1.0.2"
+version = "2.0.0"
 edition = "2024"
 
 [lib]
@@ -16,7 +16,7 @@ name = "sieve"
 doctest = false
 
 [dependencies]
-mail-parser = { version = "0.11", features = ["full_encoding"] }
+mail-parser = { version = "1.0", features = ["full_encoding"] }
 fancy-regex = "0.19.2"
 bumpalo = { version = "3.20", features = ["collections"] }
 memchr = "2.7"
@@ -34,7 +34,7 @@ mail-builder = { version = "1.0", default-features = false }
 ahash = { version = "0.8.0", default-features = false, features = ["std", "compile-time-rng"] }
 
 [dev-dependencies]
-mail-parser = { version = "0.11", features = ["full_encoding", "serde"] }
+mail-parser = { version = "1.0", features = ["full_encoding", "serde"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 evalexpr = "13.1.0"
@@ -42,3 +42,6 @@ evalexpr = "13.1.0"
 [features]
 default = []
 serde = ["dep:serde", "mail-parser/serde"]
+
+[patch.crates-io]
+mail-parser = { path = "../mail-parser" }

@@ -8,11 +8,12 @@
 
 use ahash::{AHashMap, AHashSet};
 use compiler::grammar::Capability;
-use mail_parser::{HeaderName, Message};
+use mail_parser::{HeaderName, Message, PartId};
 use runtime::{
     RuntimeError, Variable,
     context::{Frame, Pending},
     handler::Action,
+    message::{body::BodyCache, edits::Edits, parts::PartCursor},
 };
 use std::{
     borrow::Cow,
@@ -92,15 +93,16 @@ pub struct Context<'x> {
     pub(crate) user_full_name: Cow<'x, str>,
     pub(crate) current_time: i64,
 
-    pub(crate) message: Message<'x>,
+    pub(crate) message: &'x Message<'x>,
     pub(crate) message_size: usize,
+    pub(crate) edits: Edits<'x>,
+    pub(crate) body_cache: RefCell<BodyCache<'x>>,
     pub(crate) envelope: Vec<(Envelope, Variable<'x>)>,
     pub(crate) metadata: Vec<(Metadata<String>, Cow<'x, str>)>,
 
-    pub(crate) part: u32,
-    pub(crate) part_iter: Vec<u32>,
-    pub(crate) part_iter_pos: usize,
-    pub(crate) part_iter_stack: Vec<(u32, Vec<u32>, usize)>,
+    pub(crate) part: PartId,
+    pub(crate) part_iter: PartCursor,
+    pub(crate) part_iter_stack: Vec<(PartId, PartCursor)>,
 
     pub(crate) spam_status: SpamStatus,
     pub(crate) virus_status: VirusStatus,
@@ -130,7 +132,6 @@ pub struct Context<'x> {
 
     pub(crate) has_changes: bool,
     pub(crate) oom: Cell<bool>,
-    pub(crate) raw_message_copy: Cell<Option<&'x [u8]>>,
     pub(crate) dynamic_regexes: RefCell<AHashMap<&'x str, Option<fancy_regex::Regex>>>,
     pub(crate) num_redirects: usize,
     pub(crate) num_instructions: usize,

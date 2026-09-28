@@ -18,9 +18,7 @@
         "Header": {
           "header_list": [
             {
-              "Header": {
-                "other": "x-priority"
-              }
+              "Header": "X-Priority"
             }
           ],
           "key_list": [
@@ -76,7 +74,7 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             }
           ],
           "key_list": [
@@ -132,7 +130,7 @@
         "Address": {
           "header_list": [
             {
-              "Header": "from"
+              "Header": "From"
             }
           ],
           "key_list": [
@@ -201,10 +199,10 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             },
             {
-              "Header": "cc"
+              "Header": "Cc"
             }
           ],
           "key_list": [
@@ -239,10 +237,10 @@
         "Address": {
           "header_list": [
             {
-              "Header": "to"
+              "Header": "To"
             },
             {
-              "Header": "cc"
+              "Header": "Cc"
             }
           ],
           "key_list": [

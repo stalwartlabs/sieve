@@ -5,11 +5,19 @@
  */
 
 use super::super::tests::TestResult;
-use crate::{Context, Sieve, bytecode::ops, runtime::RuntimeError};
-use mail_parser::{
-    Encoding, Header, HeaderName, HeaderValue, MimeHeaders, PartType,
-    decoders::html::{html_to_text, text_to_html},
+use crate::{
+    Context, Sieve,
+    bytecode::ops,
+    runtime::{
+        RuntimeError,
+        message::{
+            body::TextForm,
+            edits::{BodyEdit, BodyKind},
+            parts::{PartCursor, Scope},
+        },
+    },
 };
+use mail_parser::{HeaderName, PartKind};
 
 #[derive(Clone, Copy)]
 enum Conversion {
@@ -51,47 +59,55 @@ impl<'x> Context<'x> {
             return Ok(TestResult::Bool(false ^ convert.is_not));
         };
         let mut did_convert = false;
-        for part in self.message.parts.iter_mut() {
-            let (new_body, ct) = match (&part.body, conversion) {
-                (PartType::Html(html), Conversion::HtmlToText) => (
-                    PartType::Text(html_to_text(html.as_ref()).into()),
+        let mut parts = match self.root_part() {
+            Some(root) => PartCursor::subtree(root, true, Scope::Message),
+            None => PartCursor::default(),
+        };
+        while let Some(part) = self.advance(&mut parts) {
+            let (text, kind, content_type) = match (self.part_kind(part), conversion) {
+                (PartKind::Html, Conversion::HtmlToText) => (
+                    self.part_text(part, TextForm::Plain),
+                    BodyKind::Text,
                     "text/plain; charset=utf8",
                 ),
-                (PartType::Text(text), Conversion::TextToHtml) => (
-                    PartType::Html(text_to_html(text.as_ref()).into()),
+                (PartKind::Text, Conversion::TextToHtml) => (
+                    self.part_text(part, TextForm::Html),
+                    BodyKind::Html,
                     "text/html; charset=utf8",
                 ),
-                (PartType::Text(text), Conversion::TextPlainToHtml)
-                    if part
-                        .content_type()
-                        .and_then(|ct| ct.c_subtype.as_ref())
-                        .is_some_and(|st| st.eq_ignore_ascii_case("plain")) =>
+                (PartKind::Text, Conversion::TextPlainToHtml)
+                    if self
+                        .part_content_type(part)
+                        .is_some_and(|(_, subtype)| subtype.eq_ignore_ascii_case("plain")) =>
                 {
                     (
-                        PartType::Html(text_to_html(text.as_ref()).into()),
+                        self.part_text(part, TextForm::Html),
+                        BodyKind::Html,
                         "text/html; charset=utf8",
                     )
                 }
-                _ => {
-                    continue;
-                }
+                _ => continue,
             };
-            part.headers = vec![Header {
-                name: HeaderName::Other("Content-Type".into()),
-                value: HeaderValue::Text(ct.into()),
-                offset_start: 0,
-                offset_end: 0,
-                offset_field: 0,
-            }];
-            self.message_size = self.message_size + ct.len() + new_body.len() + 16
-                - (if part.offset_body != 0 {
-                    (part.offset_end - part.offset_header) as usize
-                } else {
-                    part.body.len()
-                });
-            part.offset_body = 0;
-            part.body = new_body;
-            part.encoding = Encoding::QuotedPrintable;
+            let Some(text) = text else {
+                continue;
+            };
+            let part_id = part.id();
+            let previous_size = match self.edits.body(part_id) {
+                Some(edited) => edited.text.len(),
+                None => part.raw().len(),
+            };
+            self.message_size = (self.message_size + content_type.len() + text.len() + 16)
+                .saturating_sub(previous_size);
+            let content_type = self.add_header(HeaderName::ContentType, content_type);
+            self.edits.set_headers(part_id, vec![content_type]);
+            self.set_part_body(
+                part_id,
+                BodyEdit {
+                    text,
+                    kind,
+                    mime: false,
+                },
+            );
             did_convert = true;
         }
 

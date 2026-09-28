@@ -10,7 +10,7 @@ use crate::{
     bytecode::{ops, rec::Rec},
     runtime::{RuntimeError, handler::Handler},
 };
-use mail_parser::{HeaderValue, parsers::MessageStream};
+use mail_parser::{HeaderForm, HeaderName};
 use std::borrow::Cow;
 
 impl<'x> Context<'x> {
@@ -23,7 +23,10 @@ impl<'x> Context<'x> {
         let id = match test.dup_match.kind {
             0 => self.duplicate_header_id(script, test.dup_match.value)?,
             1 => self.eval_value(script, test.dup_match.value)?.into_string(),
-            _ => self.message.message_id().unwrap_or("").into(),
+            _ => self
+                .root_text(&HeaderName::MessageId)
+                .unwrap_or_default()
+                .into(),
         };
 
         if id.is_empty() {
@@ -52,29 +55,17 @@ impl<'x> Context<'x> {
         &self,
         script: &'x Sieve<'x>,
         header_name: Rec,
-    ) -> Result<Cow<'_, str>, RuntimeError> {
+    ) -> Result<Cow<'x, str>, RuntimeError> {
         let mut value = Cow::Borrowed("");
         if let Some(header_name) = self.parse_header_name(script, header_name)? {
-            self.find_headers(&[header_name], None, true, |header, _, _| {
-                if header.offset_end > 0 {
-                    if let Some(bytes) = self
-                        .message
-                        .raw_message
-                        .get(header.offset_start as usize..header.offset_end as usize)
-                        && let HeaderValue::Text(id) = MessageStream::new(bytes).parse_id()
-                        && !id.is_empty()
-                    {
-                        value = id;
-                        return true;
-                    }
-                } else if let HeaderValue::Text(text) = &header.value {
-                    let bytes = format!("{text}\n").into_bytes();
-                    if let HeaderValue::Text(id) = MessageStream::new(&bytes).parse_id()
-                        && !id.is_empty()
-                    {
-                        value = Cow::Owned(id.into_owned());
-                        return true;
-                    }
+            self.find_headers(&[header_name], None, true, |header, _| {
+                let parsed = header.parse_as(HeaderForm::MessageIds);
+                if let Some(ids) = parsed.value().as_text_list()
+                    && ids.len() == 1
+                    && let Some(id) = ids.first().filter(|id| !id.is_empty())
+                {
+                    value = Cow::Owned(id.to_string());
+                    return true;
                 }
                 false
             });

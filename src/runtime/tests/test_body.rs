@@ -5,6 +5,7 @@
  */
 
 use super::{TestResult, matching::Key, mime::ContentTypeFilter};
+use crate::runtime::message::{body::TextForm, headers::HeaderRef};
 use crate::{
     Context, Sieve,
     bytecode::ops,
@@ -14,7 +15,8 @@ use crate::{
     },
     runtime::RuntimeError,
 };
-use mail_parser::{MimeHeaders, PartType, decoders::html::html_to_text};
+use mail_parser::MessagePart;
+use mail_parser::{HeaderName, PartKind};
 use smallvec::SmallVec;
 use std::borrow::Cow;
 
@@ -35,9 +37,18 @@ impl<'x> Context<'x> {
 
         if test.include_subject && !matches!(&match_type, MatchType::Count(_) | MatchType::List) {
             let subject = if transform != TRANSFORM_RAW {
-                self.message.subject().unwrap_or_default()
+                self.root_text(&HeaderName::Subject).unwrap_or_default()
             } else {
-                self.message.header_raw("Subject").unwrap_or_default()
+                self.root_part()
+                    .and_then(|part| self.last_header(part, &HeaderName::Subject))
+                    .map(|header| match header {
+                        HeaderRef::Added(added) => added.value,
+                        header => header
+                            .raw_value()
+                            .and_then(|raw| std::str::from_utf8(raw).ok())
+                            .unwrap_or_default(),
+                    })
+                    .unwrap_or_default()
             };
 
             for key in &key_list {
@@ -62,7 +73,7 @@ impl<'x> Context<'x> {
 
         let result = if let MatchType::Count(rel_match) = &match_type {
             let mut count: i64 = 0;
-            self.find_nested_parts(&self.message, &ct_filter, &mut |_part, _raw_message| {
+            self.find_nested_parts(&ct_filter, &mut |_| {
                 count += 1;
                 false
             });
@@ -72,111 +83,24 @@ impl<'x> Context<'x> {
                 .any(|key| rel_match.cmp(&Number::from(count), &key.value.to_number()))
         } else {
             let mut error = None;
-            let result =
-                self.find_nested_parts(&self.message, &ct_filter, &mut |part, raw_message| {
-                    let text: Cow<str> = match (transform, &part.body) {
-                        (TRANSFORM_CONTENT, PartType::Message(message)) => {
-                            if let Some(part) = message.parts.first() {
-                                String::from_utf8_lossy(
-                                    raw_message
-                                        .get(
-                                            part.raw_header_offset() as usize
-                                                ..part.raw_body_offset() as usize,
-                                        )
-                                        .unwrap_or(b""),
-                                )
-                            } else {
-                                return false;
-                            }
-                        }
-                        (TRANSFORM_CONTENT, PartType::Multipart(_)) => {
-                            if let Some(boundary) =
-                                part.content_type().and_then(|ct| ct.attribute("boundary"))
-                            {
-                                let mime_body = std::str::from_utf8(
-                                    raw_message
-                                        .get(
-                                            part.raw_body_offset() as usize
-                                                ..part.raw_end_offset() as usize,
-                                        )
-                                        .unwrap_or(b""),
-                                )
-                                .unwrap_or("");
-                                let mut mime_part = String::with_capacity(64);
-                                if let Some((prologue, epilogue)) =
-                                    mime_body.split_once(&format!("\n--{boundary}"))
-                                {
-                                    mime_part.push_str(prologue);
-                                    if let Some((_, epilogue)) =
-                                        epilogue.rsplit_once(&format!("\n--{boundary}--"))
-                                    {
-                                        mime_part.push_str(epilogue);
-                                    }
-                                }
-                                mime_part.into()
-                            } else {
-                                String::from_utf8_lossy(
-                                    raw_message
-                                        .get(
-                                            part.raw_body_offset() as usize
-                                                ..part.raw_end_offset() as usize,
-                                        )
-                                        .unwrap_or(b""),
-                                )
-                            }
-                        }
-                        (TRANSFORM_RAW, _) => match &part.body {
-                            PartType::Text(text) if part.raw_body_offset() == 0 => {
-                                text.as_ref().into()
-                            }
-                            _ if part.raw_end_offset() > part.raw_body_offset() => {
-                                String::from_utf8_lossy(
-                                    raw_message
-                                        .get(
-                                            part.raw_body_offset() as usize
-                                                ..part.raw_end_offset() as usize,
-                                        )
-                                        .unwrap_or(b""),
-                                )
-                            }
-                            _ => return false,
-                        },
-                        (_, PartType::Text(text)) | (TRANSFORM_CONTENT, PartType::Html(text)) => {
-                            text.as_ref().into()
-                        }
-                        (_, PartType::Html(html)) => html_to_text(html.as_ref()).into(),
-                        (
-                            TRANSFORM_TEXT,
-                            PartType::Binary(bytes) | PartType::InlineBinary(bytes),
-                        ) if part.content_type().is_some_and(|ct| {
-                            ct.c_type.eq_ignore_ascii_case("application")
-                                && ct.c_subtype.as_ref().is_some_and(|st| st.contains("xml"))
-                        }) =>
-                        {
-                            html_to_text(std::str::from_utf8(bytes.as_ref()).unwrap_or("")).into()
-                        }
-                        (
-                            TRANSFORM_CONTENT,
-                            PartType::Binary(bytes) | PartType::InlineBinary(bytes),
-                        ) => String::from_utf8_lossy(bytes.as_ref()),
-                        _ => {
-                            return false;
-                        }
-                    };
+            let result = self.find_nested_parts(&ct_filter, &mut |part| {
+                let Some(text) = self.body_text(part, transform) else {
+                    return false;
+                };
 
-                    for key in &key_list {
-                        match self.body_key_matches(script, &comparator, &match_type, key, &text) {
-                            Ok(true) => return true,
-                            Ok(false) => (),
-                            Err(err) => {
-                                error = Some(err);
-                                return true;
-                            }
+                for key in &key_list {
+                    match self.body_key_matches(script, &comparator, &match_type, key, &text) {
+                        Ok(true) => return true,
+                        Ok(false) => (),
+                        Err(err) => {
+                            error = Some(err);
+                            return true;
                         }
                     }
+                }
 
-                    false
-                });
+                false
+            });
             if let Some(err) = error {
                 return Err(err);
             }
@@ -184,6 +108,42 @@ impl<'x> Context<'x> {
         };
 
         Ok(TestResult::Bool(result ^ test.is_not))
+    }
+
+    fn body_text(&self, part: MessagePart<'x>, transform: u8) -> Option<Cow<'x, str>> {
+        let text = match (transform, self.part_kind(part)) {
+            (TRANSFORM_CONTENT, PartKind::Message(nested)) => {
+                return Some(String::from_utf8_lossy(nested.root_part().raw_headers()));
+            }
+            (TRANSFORM_CONTENT, PartKind::Multipart) => {
+                return Some(match part.boundary() {
+                    Some(boundary) => multipart_text(part.raw_body(), boundary).into(),
+                    None => String::from_utf8_lossy(part.raw_body()),
+                });
+            }
+            (TRANSFORM_RAW, _) if self.edits.body(part.id()).is_some() => {
+                self.part_text(part, TextForm::Raw)
+            }
+            (TRANSFORM_RAW, _) => self
+                .part_text(part, TextForm::Raw)
+                .filter(|raw| !raw.is_empty()),
+            (_, PartKind::Text) | (TRANSFORM_CONTENT, PartKind::Html) => {
+                self.part_text(part, TextForm::Source)
+            }
+            (_, PartKind::Html) => self.part_text(part, TextForm::Plain),
+            (TRANSFORM_TEXT, PartKind::Binary | PartKind::InlineBinary)
+                if self.part_content_type(part).is_some_and(|(ct, st)| {
+                    ct.eq_ignore_ascii_case("application") && st.contains("xml")
+                }) =>
+            {
+                self.part_text(part, TextForm::Markup)
+            }
+            (TRANSFORM_CONTENT, PartKind::Binary | PartKind::InlineBinary) => {
+                self.part_text(part, TextForm::Decoded)
+            }
+            _ => None,
+        };
+        text.map(Cow::Borrowed)
     }
 
     fn body_key_matches(
@@ -210,4 +170,16 @@ impl<'x> Context<'x> {
             MatchType::Count(_) | MatchType::List => false,
         })
     }
+}
+
+fn multipart_text(raw_body: &[u8], boundary: &str) -> String {
+    let mime_body = std::str::from_utf8(raw_body).unwrap_or_default();
+    let mut mime_part = String::with_capacity(64);
+    if let Some((prologue, epilogue)) = mime_body.split_once(&format!("\n--{boundary}")) {
+        mime_part.push_str(prologue);
+        if let Some((_, epilogue)) = epilogue.rsplit_once(&format!("\n--{boundary}--")) {
+            mime_part.push_str(epilogue);
+        }
+    }
+    mime_part
 }
