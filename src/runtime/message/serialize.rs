@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use super::parts::subtree_end;
+use super::{
+    headers::HeaderRef,
+    parts::{ROOT_PART, subtree_end},
+};
 use crate::Context;
 use mail_parser::MessagePart;
 
@@ -35,7 +38,33 @@ impl<'x> Context<'x> {
         let body = self.edits.body(id);
         match self.edits.headers(id) {
             Some(headers) => {
+                let (mut count_left, mut size_left) =
+                    if id == ROOT_PART && self.runtime.has_header_block_limits() {
+                        headers
+                            .iter()
+                            .filter(|header| !matches!(header, HeaderRef::Added(_)))
+                            .fold(
+                                (
+                                    self.runtime.max_header_count,
+                                    self.runtime.max_header_block_size,
+                                ),
+                                |(count, size), header| {
+                                    (count.saturating_sub(1), size.saturating_sub(header.len()))
+                                },
+                            )
+                    } else {
+                        (usize::MAX, usize::MAX)
+                    };
                 for header in headers {
+                    if matches!(header, HeaderRef::Added(_)) {
+                        let len = header.len();
+                        if count_left == 0 || size_left < len {
+                            count_left = 0;
+                            continue;
+                        }
+                        count_left -= 1;
+                        size_left -= len;
+                    }
                     header.write(source, out);
                 }
                 if !body.is_some_and(|body| body.mime) {

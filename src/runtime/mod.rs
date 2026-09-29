@@ -190,6 +190,8 @@ impl Runtime {
             vacation_default_subject: "Automated reply".into(),
             vacation_subject_prefix: "Auto: ".into(),
             max_header_size: 1024,
+            max_header_count: usize::MAX,
+            max_header_block_size: usize::MAX,
             max_out_messages: 3,
             default_vacation_expiry: 30 * 86400,
             default_duplicate_expiry: 7 * 86400,
@@ -268,6 +270,29 @@ impl Runtime {
     pub fn with_max_header_size(mut self, size: usize) -> Self {
         self.max_header_size = size;
         self
+    }
+
+    pub fn set_max_header_count(&mut self, count: usize) {
+        self.max_header_count = count;
+    }
+
+    pub fn with_max_header_count(mut self, count: usize) -> Self {
+        self.max_header_count = count;
+        self
+    }
+
+    pub fn set_max_header_block_size(&mut self, size: usize) {
+        self.max_header_block_size = size;
+    }
+
+    pub fn with_max_header_block_size(mut self, size: usize) -> Self {
+        self.max_header_block_size = size;
+        self
+    }
+
+    #[inline(always)]
+    pub(crate) fn has_header_block_limits(&self) -> bool {
+        self.max_header_count != usize::MAX || self.max_header_block_size != usize::MAX
     }
 
     pub fn set_default_vacation_expiry(&mut self, expiry: u64) {

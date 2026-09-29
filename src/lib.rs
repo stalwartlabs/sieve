@@ -77,6 +77,8 @@ pub struct Runtime {
     pub(crate) max_redirects: usize,
     pub(crate) max_received_headers: usize,
     pub(crate) max_header_size: usize,
+    pub(crate) max_header_count: usize,
+    pub(crate) max_header_block_size: usize,
     pub(crate) max_out_messages: usize,
 
     pub(crate) default_vacation_expiry: u64,

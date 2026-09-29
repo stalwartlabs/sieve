@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [2.0.0] - 2026-09-XX
 
+### Added
+- `Runtime::with_max_header_count` and `Runtime::with_max_header_block_size` (and their `set_` forms) limit the number of fields and the size in bytes of the root message's top-level header section in the edited message.
+
 ### Changed
 - Bump to `mail-parser` 1.0, whose parsed messages are read-only.
 - `Context::new` and `Runtime::filter_parsed` borrow the parsed message (`&'x Message<'x>`) instead of taking ownership, and `Context::message` returns that reference, without the edits made by the script so far. Header values and body text are borrowed from the message rather than copied into the arena.

@@ -38,6 +38,7 @@ struct RecordingHandler {
     sends: Vec<(MessageSource, bool)>,
     empty_recipients: usize,
     fileinto_flags: Vec<Vec<String>>,
+    created: Vec<Vec<u8>>,
     reject_fileinto: bool,
     park_includes: bool,
 }
@@ -78,6 +79,7 @@ impl<'x> Handler<'x> for RecordingHandler {
             Action::FileInto { flags, .. } => self
                 .fileinto_flags
                 .push(flags.iter().map(|flag| flag.to_string()).collect()),
+            Action::CreatedMessage { message, .. } => self.created.push(message),
             _ => (),
         }
         Reply::Ready(())
@@ -606,4 +608,169 @@ fn error_columns_are_one_based_on_every_line() {
             "{script:?}: {err}"
         );
     }
+}
+
+const LIMITED_MESSAGE: &str =
+    "From: a@example.org\r\nTo: b@example.org\r\nSubject: limits\r\n\r\nbody\r\n";
+
+fn run_header_edits(script: &Sieve<'_>, runtime: &Runtime) -> Vec<Vec<u8>> {
+    let message = MessageParser::default()
+        .parse(LIMITED_MESSAGE.as_bytes())
+        .unwrap();
+    let mut arena = Arena::new();
+    let mut ctx = Context::new(runtime, &message, script, &mut arena);
+    let mut handler = RecordingHandler::default();
+    assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
+    assert_eq!(handler.fileinto_flags.len(), 1);
+    handler.created
+}
+
+#[test]
+fn header_block_limits_match_the_built_message() {
+    let script = compile(
+        "require [\"editheader\", \"fileinto\"];\n\
+         addheader \"X-First\" \"one\";\n\
+         addheader :last \"X-Second\" \"two\";\n\
+         fileinto \"after\";\n",
+    );
+    let unlimited = runtime();
+    assert!(!unlimited.has_header_block_limits());
+    let [edited]: [Vec<u8>; 1] = run_header_edits(&script, &unlimited)
+        .try_into()
+        .expect("one created message");
+    let edited = String::from_utf8(edited).unwrap();
+    let (fields, _) = edited.split_once("\r\n\r\n").unwrap();
+    let block_size = fields.len() + 2;
+    let count = fields.split("\r\n").count();
+    assert_eq!(count, 5);
+
+    let exact = runtime()
+        .with_max_header_count(count)
+        .with_max_header_block_size(block_size);
+    assert_eq!(
+        run_header_edits(&script, &exact),
+        [edited.as_bytes().to_vec()]
+    );
+
+    let without_second = edited.replacen("X-Second: two\r\n", "", 1);
+    assert_ne!(without_second, edited);
+    for limited in [
+        runtime().with_max_header_block_size(block_size - 1),
+        runtime().with_max_header_count(count - 1),
+    ] {
+        assert_eq!(
+            run_header_edits(&script, &limited),
+            [without_second.as_bytes().to_vec()]
+        );
+    }
+
+    let (original, _) = LIMITED_MESSAGE.split_once("\r\n\r\n").unwrap();
+    for at_limit in [
+        runtime().with_max_header_count(3),
+        runtime().with_max_header_block_size(original.len() + 2),
+    ] {
+        assert_eq!(
+            run_header_edits(&script, &at_limit),
+            [LIMITED_MESSAGE.as_bytes().to_vec()]
+        );
+    }
+}
+
+fn header_fields(message: &[u8]) -> Vec<String> {
+    let message = std::str::from_utf8(message).unwrap();
+    let (fields, _) = message.split_once("\r\n\r\n").unwrap();
+    fields.split("\r\n").map(str::to_string).collect()
+}
+
+#[test]
+fn header_block_limits_drop_added_fields_from_the_bottom() {
+    let script = compile(
+        "require [\"editheader\", \"fileinto\"];\n\
+         addheader \"X-Top\" \"1\";\n\
+         addheader :last \"X-Bottom-A\" \"2\";\n\
+         addheader :last \"X-Bottom-B\" \"3\";\n\
+         fileinto \"after\";\n",
+    );
+    let [edited]: [Vec<u8>; 1] = run_header_edits(&script, &runtime().with_max_header_count(5))
+        .try_into()
+        .expect("one created message");
+    assert_eq!(
+        header_fields(&edited),
+        [
+            "X-Top: 1",
+            "From: a@example.org",
+            "To: b@example.org",
+            "Subject: limits",
+            "X-Bottom-A: 2"
+        ]
+    );
+
+    let [edited]: [Vec<u8>; 1] = run_header_edits(&script, &runtime().with_max_header_count(4))
+        .try_into()
+        .expect("one created message");
+    assert_eq!(
+        header_fields(&edited),
+        [
+            "X-Top: 1",
+            "From: a@example.org",
+            "To: b@example.org",
+            "Subject: limits"
+        ]
+    );
+}
+
+#[test]
+fn header_block_limits_count_deletions() {
+    let script = compile(
+        "require [\"editheader\", \"fileinto\"];\n\
+         deleteheader \"Subject\";\n\
+         addheader :last \"X-Added\" \"1\";\n\
+         fileinto \"after\";\n",
+    );
+    let [edited]: [Vec<u8>; 1] = run_header_edits(&script, &runtime().with_max_header_count(3))
+        .try_into()
+        .expect("one created message");
+    assert_eq!(
+        header_fields(&edited),
+        ["From: a@example.org", "To: b@example.org", "X-Added: 1"]
+    );
+}
+
+#[test]
+fn header_block_limits_ignore_body_parts() {
+    let script = compile(
+        "require [\"editheader\", \"foreverypart\", \"fileinto\"];\n\
+         foreverypart {\n\
+           addheader :last \"X-Part\" \"1\";\n\
+         }\n\
+         fileinto \"after\";\n",
+    );
+    let raw = "From: a@example.org\r\nContent-Type: multipart/mixed; boundary=\"b\"\r\n\r\n\
+               --b\r\nContent-Type: text/plain\r\n\r\none\r\n--b--\r\n";
+    let message = MessageParser::default().parse(raw.as_bytes()).unwrap();
+    let limited = runtime().with_max_header_count(2);
+    let mut arena = Arena::new();
+    let mut ctx = Context::new(&limited, &message, &script, &mut arena);
+    let mut handler = RecordingHandler::default();
+    assert!(matches!(ctx.run(&mut handler), Ok(Status::Finished)));
+    let [edited]: [Vec<u8>; 1] = handler.created.try_into().expect("one created message");
+    let edited = String::from_utf8(edited).unwrap();
+    assert_eq!(edited.matches("X-Part: 1").count(), 1);
+    assert!(edited.contains("Content-Type: text/plain\r\nX-Part: 1\r\n"));
+}
+
+#[test]
+fn header_block_limits_keep_no_field_below_a_dropped_one() {
+    let script = compile(
+        "require [\"editheader\", \"fileinto\"];\n\
+         addheader :last \"X-Long\" \"0123456789\";\n\
+         addheader :last \"X-Short\" \"1\";\n\
+         fileinto \"after\";\n",
+    );
+    let (original, _) = LIMITED_MESSAGE.split_once("\r\n\r\n").unwrap();
+    let limited = runtime().with_max_header_block_size(original.len() + 2 + "X-Short: 1\r\n".len());
+    assert_eq!(
+        run_header_edits(&script, &limited),
+        [LIMITED_MESSAGE.as_bytes().to_vec()]
+    );
 }
