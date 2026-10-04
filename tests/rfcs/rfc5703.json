@@ -1009,7 +1009,7 @@
   [
     117,
     {
-      "Jz": 134
+      "Jz": 132
     }
   ],
   [
@@ -1044,7 +1044,7 @@
   [
     119,
     {
-      "Jz": 122
+      "Jz": 121
     }
   ],
   [
@@ -1065,28 +1065,18 @@
   ],
   [
     121,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    122,
     "ForEveryPartPush"
   ],
   [
-    123,
+    122,
     {
       "ForEveryPart": {
-        "jz_pos": 131
+        "jz_pos": 129
       }
     }
   ],
   [
-    124,
+    123,
     {
       "Test": {
         "Header": {
@@ -1111,53 +1101,43 @@
     }
   ],
   [
-    125,
+    124,
     {
-      "Jz": 130
+      "Jz": 128
     }
   ],
   [
-    126,
+    125,
     {
       "ExtractText": {
         "modifiers": [],
         "first": 100,
         "name": {
-          "Local": 0
+          "Local": 1
         }
       }
     }
   ],
   [
-    127,
+    126,
     {
       "ForEveryPartPop": 1
     }
   ],
   [
+    127,
+    {
+      "Jmp": 129
+    }
+  ],
+  [
     128,
     {
-      "Jmp": 131
+      "Jmp": 122
     }
   ],
   [
     129,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    130,
-    {
-      "Jmp": 123
-    }
-  ],
-  [
-    131,
     {
       "Test": {
         "Header": {
@@ -1182,13 +1162,13 @@
     }
   ],
   [
-    132,
+    130,
     {
-      "Jz": 133
+      "Jz": 131
     }
   ],
   [
-    133,
+    131,
     {
       "Clear": {
         "local_vars_idx": 0,

@@ -167,7 +167,7 @@
   [
     12,
     {
-      "Jz": 15
+      "Jz": 14
     }
   ],
   [
@@ -189,28 +189,20 @@
   [
     14,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    15,
-    {
       "Test": {
         "String": {
           "match_type": "Is",
           "comparator": "AsciiCaseMap",
           "source": [
             {
-              "Text": 7
+              "Variable": {
+                "Local": 0
+              }
             }
           ],
           "key_list": [
             {
-              "Text": 8
+              "Text": 7
             }
           ],
           "is_not": true
@@ -219,13 +211,13 @@
     }
   ],
   [
-    16,
+    15,
     {
-      "Jz": 31
+      "Jz": 27
     }
   ],
   [
-    17,
+    16,
     {
       "Test": {
         "Envelope": {
@@ -251,23 +243,23 @@
     }
   ],
   [
-    18,
+    17,
     {
-      "Jz": 21
+      "Jz": 19
     }
   ],
   [
-    19,
+    18,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 1
         },
         "value": {
           "List": [
             {
-              "Text": 9
+              "Text": 8
             },
             {
               "Variable": {
@@ -275,7 +267,7 @@
               }
             },
             {
-              "Text": 10
+              "Text": 9
             }
           ]
         }
@@ -283,17 +275,7 @@
     }
   ],
   [
-    20,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    21,
+    19,
     {
       "Test": {
         "Header": {
@@ -322,18 +304,18 @@
     }
   ],
   [
-    22,
+    20,
     {
-      "Jz": 25
+      "Jz": 22
     }
   ],
   [
-    23,
+    21,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 2
         },
         "value": {
           "Variable": {
@@ -344,17 +326,7 @@
     }
   ],
   [
-    24,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    25,
+    22,
     {
       "Test": {
         "Address": {
@@ -383,18 +355,18 @@
     }
   ],
   [
-    26,
+    23,
     {
-      "Jz": 29
+      "Jz": 25
     }
   ],
   [
-    27,
+    24,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 3
         },
         "value": {
           "Variable": {
@@ -405,34 +377,45 @@
     }
   ],
   [
-    28,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    29,
+    25,
     {
       "Notify": {
         "from": null,
         "importance": null,
         "options": [],
         "message": {
-          "Text": 11
+          "List": [
+            {
+              "Variable": {
+                "Local": 3
+              }
+            },
+            {
+              "Variable": {
+                "Local": 1
+              }
+            },
+            {
+              "Text": 10
+            },
+            {
+              "Variable": {
+                "Local": 2
+              }
+            }
+          ]
         },
         "fcc": null,
         "method": {
-          "Text": 7
+          "Variable": {
+            "Local": 0
+          }
         }
       }
     }
   ],
   [
-    30,
+    26,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -442,17 +425,17 @@
     }
   ],
   [
-    31,
+    27,
     {
       "Test": {
         "MetadataExists": {
           "mailbox": null,
           "annotation_names": [
             {
-              "Text": 12
+              "Text": 11
             },
             {
-              "Text": 13
+              "Text": 12
             }
           ],
           "is_not": false
@@ -461,17 +444,17 @@
     }
   ],
   [
-    32,
+    28,
     {
-      "Jz": 34
+      "Jz": 30
     }
   ],
   [
-    33,
+    29,
     "Stop"
   ],
   [
-    34,
+    30,
     {
       "Test": {
         "MetadataExists": {
@@ -480,10 +463,10 @@
           },
           "annotation_names": [
             {
-              "Text": 14
+              "Text": 13
             },
             {
-              "Text": 15
+              "Text": 14
             }
           ],
           "is_not": false
@@ -492,13 +475,13 @@
     }
   ],
   [
-    35,
+    31,
     {
-      "Jz": 37
+      "Jz": 33
     }
   ],
   [
-    36,
+    32,
     "Discard"
   ]
 ]

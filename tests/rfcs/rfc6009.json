@@ -225,7 +225,7 @@
   [
     14,
     {
-      "Jz": 19
+      "Jz": 18
     }
   ],
   [
@@ -279,16 +279,6 @@
   [
     18,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    19,
-    {
       "Test": {
         "Envelope": {
           "envelope_list": [
@@ -313,18 +303,18 @@
     }
   ],
   [
-    20,
+    19,
     {
-      "Jz": 27
+      "Jz": 25
     }
   ],
   [
-    21,
+    20,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 1
         },
         "value": {
           "Variable": {
@@ -335,12 +325,12 @@
     }
   ],
   [
-    22,
+    21,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 1
+          "Local": 2
         },
         "value": {
           "Variable": {
@@ -351,7 +341,7 @@
     }
   ],
   [
-    23,
+    22,
     {
       "Test": {
         "CurrentDate": {
@@ -364,7 +354,7 @@
           "key_list": [
             {
               "Variable": {
-                "Local": 0
+                "Local": 1
               }
             }
           ],
@@ -374,13 +364,13 @@
     }
   ],
   [
-    24,
+    23,
     {
-      "Jz": 26
+      "Jz": 25
     }
   ],
   [
-    25,
+    24,
     {
       "FileInto": {
         "copy": false,
@@ -392,7 +382,7 @@
             },
             {
               "Variable": {
-                "Local": 1
+                "Local": 2
               }
             }
           ]
@@ -404,17 +394,7 @@
     }
   ],
   [
-    26,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 2,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    27,
+    25,
     {
       "Test": {
         "Address": {
@@ -439,13 +419,13 @@
     }
   ],
   [
-    28,
+    26,
     {
-      "Jz": 30
+      "Jz": 28
     }
   ],
   [
-    29,
+    27,
     {
       "Redirect": {
         "copy": true,
@@ -460,7 +440,7 @@
     }
   ],
   [
-    30,
+    28,
     {
       "Test": {
         "Address": {
@@ -485,13 +465,13 @@
     }
   ],
   [
-    31,
+    29,
     {
-      "Jz": 33
+      "Jz": 31
     }
   ],
   [
-    32,
+    30,
     {
       "Redirect": {
         "copy": true,
@@ -512,7 +492,7 @@
     }
   ],
   [
-    33,
+    31,
     {
       "Test": {
         "CurrentDate": {
@@ -535,13 +515,13 @@
     }
   ],
   [
-    34,
+    32,
     {
-      "Jz": 45
+      "Jz": 41
     }
   ],
   [
-    35,
+    33,
     {
       "Test": {
         "CurrentDate": {
@@ -564,18 +544,18 @@
     }
   ],
   [
-    36,
+    34,
     {
-      "Jz": 39
+      "Jz": 36
     }
   ],
   [
-    37,
+    35,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 3
         },
         "value": {
           "Variable": {
@@ -586,17 +566,7 @@
     }
   ],
   [
-    38,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    39,
+    36,
     {
       "Test": {
         "CurrentDate": {
@@ -619,18 +589,18 @@
     }
   ],
   [
-    40,
+    37,
     {
-      "Jz": 43
+      "Jz": 39
     }
   ],
   [
-    41,
+    38,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 4
         },
         "value": {
           "Variable": {
@@ -641,17 +611,7 @@
     }
   ],
   [
-    42,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    43,
+    39,
     {
       "Redirect": {
         "copy": true,
@@ -663,7 +623,21 @@
         "by_time": {
           "Absolute": {
             "alimit": {
-              "Text": 7
+              "List": [
+                {
+                  "Variable": {
+                    "Local": 3
+                  }
+                },
+                {
+                  "Text": 7
+                },
+                {
+                  "Variable": {
+                    "Local": 4
+                  }
+                }
+              ]
             },
             "mode": "Return",
             "trace": false
@@ -674,7 +648,7 @@
     }
   ],
   [
-    44,
+    40,
     {
       "Clear": {
         "local_vars_idx": 0,

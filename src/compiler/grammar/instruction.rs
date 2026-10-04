@@ -959,7 +959,11 @@ impl CompilerState<'_> {
             var_id
         } else if !register_as_local || self.block_stack.is_empty() {
             let var_id = self.vars_num as u16;
-            self.block.vars_local.insert(name, var_id);
+            self.block_stack
+                .first_mut()
+                .unwrap_or(&mut self.block)
+                .vars_local
+                .insert(name, var_id);
             self.vars_num += 1;
             var_id
         } else {

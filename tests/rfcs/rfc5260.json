@@ -446,7 +446,7 @@
   [
     30,
     {
-      "Jz": 33
+      "Jz": 32
     }
   ],
   [
@@ -467,16 +467,6 @@
   ],
   [
     32,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    33,
     {
       "Test": {
         "CurrentDate": {
@@ -499,18 +489,18 @@
     }
   ],
   [
-    34,
+    33,
     {
-      "Jz": 37
+      "Jz": 35
     }
   ],
   [
-    35,
+    34,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 1
         },
         "value": {
           "Variable": {
@@ -521,23 +511,27 @@
     }
   ],
   [
-    36,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    37,
+    35,
     {
       "FileInto": {
         "copy": false,
         "create": false,
         "folder": {
-          "Text": 8
+          "List": [
+            {
+              "Variable": {
+                "Local": 0
+              }
+            },
+            {
+              "Text": 8
+            },
+            {
+              "Variable": {
+                "Local": 1
+              }
+            }
+          ]
         },
         "flags": [],
         "mailbox_id": null,
@@ -546,7 +540,7 @@
     }
   ],
   [
-    38,
+    36,
     {
       "Test": {
         "CurrentDate": {
@@ -569,13 +563,13 @@
     }
   ],
   [
-    39,
+    37,
     {
-      "Jz": 41
+      "Jz": 39
     }
   ],
   [
-    40,
+    38,
     {
       "AddHeader": {
         "last": false,
@@ -591,7 +585,7 @@
     }
   ],
   [
-    41,
+    39,
     {
       "Test": {
         "Date": {
@@ -619,13 +613,13 @@
     }
   ],
   [
-    42,
+    40,
     {
-      "Jz": 44
+      "Jz": 42
     }
   ],
   [
-    43,
+    41,
     {
       "Redirect": {
         "copy": false,

@@ -89,7 +89,7 @@
   [
     5,
     {
-      "Jz": 8
+      "Jz": 7
     }
   ],
   [
@@ -108,16 +108,6 @@
   ],
   [
     7,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    8,
     {
       "Test": {
         "Environment": {
@@ -141,18 +131,20 @@
     }
   ],
   [
-    9,
+    8,
     {
-      "Jz": 11
+      "Jz": 10
     }
   ],
   [
-    10,
+    9,
     {
       "Test": {
         "SpecialUseExists": {
           "mailbox": {
-            "Text": 5
+            "Variable": {
+              "Local": 0
+            }
           },
           "attributes": [
             {
@@ -165,13 +157,13 @@
     }
   ],
   [
-    11,
+    10,
     {
-      "Jz": 13
+      "Jz": 12
     }
   ],
   [
-    12,
+    11,
     {
       "Redirect": {
         "copy": false,

@@ -101,8 +101,8 @@ test "Variable scopes" {
 		test_fail "failed to match deep inner scope variable = '${deep_inner_scope}'";
 	}
 
-	if not string :is "${local_scope}" "" {
-		test_fail "matched out of scope variable = '${local_scope}'";
+	if not string :is "${local_scope}" "xyz" {
+		test_fail "variable was cleared at block end = '${local_scope}'";
 	}
 
 	# Names captures

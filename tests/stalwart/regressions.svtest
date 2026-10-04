@@ -56,3 +56,23 @@ test "Glob with more wildcards than match variables" {
 		test_fail "glob did not match";
 	}
 }
+
+test "Variables set inside a block outlive the block" {
+	if address :domain :matches "To" "*" { set "domain_to" "${1}"; }
+	if not string :is "${domain_to}" "example.org" {
+		test_fail "domain_to was cleared at block end = '${domain_to}'";
+	}
+	if string :matches "${domain_to}" "*.*" { set "label" "${1}"; }
+	if not string :is "${label}" "example" {
+		test_fail "label was cleared at block end = '${label}'";
+	}
+	if false { set "lim" "8"; } else { set "lim" "3"; }
+	if not string :is "${lim}" "3" {
+		test_fail "else branch variable was cleared = '${lim}'";
+	}
+	if true { set "first" "1"; }
+	if true { set "second" "2"; }
+	if not string :is "${first}${second}" "12" {
+		test_fail "sibling blocks clobbered each other = '${first}${second}'";
+	}
+}

@@ -193,7 +193,7 @@
   [
     14,
     {
-      "Jz": 18
+      "Jz": 17
     }
   ],
   [
@@ -215,21 +215,11 @@
   [
     16,
     {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
+      "Jmp": 18
     }
   ],
   [
     17,
-    {
-      "Jmp": 20
-    }
-  ],
-  [
-    18,
     {
       "Set": {
         "modifiers": [],
@@ -245,22 +235,14 @@
     }
   ],
   [
-    19,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    20,
+    18,
     {
       "Test": {
         "SpamTest": {
           "value": {
-            "Text": 3
+            "Variable": {
+              "Local": 0
+            }
           },
           "match_type": {
             "Value": "Ge"
@@ -273,13 +255,13 @@
     }
   ],
   [
-    21,
+    19,
     {
-      "Jz": 23
+      "Jz": 21
     }
   ],
   [
-    22,
+    20,
     {
       "FileInto": {
         "copy": false,
@@ -294,7 +276,7 @@
     }
   ],
   [
-    23,
+    21,
     {
       "Test": {
         "CurrentDate": {
@@ -304,7 +286,7 @@
           "date_part": "Date",
           "key_list": [
             {
-              "Text": 4
+              "Text": 3
             }
           ],
           "is_not": false
@@ -313,13 +295,13 @@
     }
   ],
   [
-    24,
+    22,
     {
-      "Jz": 26
+      "Jz": 24
     }
   ],
   [
-    25,
+    23,
     {
       "Notify": {
         "from": null,
@@ -328,13 +310,13 @@
         "message": null,
         "fcc": null,
         "method": {
-          "Text": 5
+          "Text": 4
         }
       }
     }
   ],
   [
-    26,
+    24,
     {
       "Test": {
         "Envelope": {
@@ -343,13 +325,44 @@
           ],
           "key_list": [
             {
-              "Text": 6
+              "Text": 5
             }
           ],
           "address_part": "Detail",
           "match_type": "Is",
           "comparator": "AsciiCaseMap",
           "zone": null,
+          "is_not": false
+        }
+      }
+    }
+  ],
+  [
+    25,
+    {
+      "Jz": 27
+    }
+  ],
+  [
+    26,
+    {
+      "Test": {
+        "Header": {
+          "header_list": [
+            {
+              "Header": "From"
+            }
+          ],
+          "key_list": [
+            {
+              "Text": 6
+            }
+          ],
+          "match_type": "List",
+          "comparator": "AsciiCaseMap",
+          "index": null,
+          "mime_opts": "None",
+          "mime_anychild": false,
           "is_not": false
         }
       }
@@ -364,41 +377,10 @@
   [
     28,
     {
-      "Test": {
-        "Header": {
-          "header_list": [
-            {
-              "Header": "From"
-            }
-          ],
-          "key_list": [
-            {
-              "Text": 7
-            }
-          ],
-          "match_type": "List",
-          "comparator": "AsciiCaseMap",
-          "index": null,
-          "mime_opts": "None",
-          "mime_anychild": false,
-          "is_not": false
-        }
-      }
-    }
-  ],
-  [
-    29,
-    {
-      "Jz": 31
-    }
-  ],
-  [
-    30,
-    {
       "Redirect": {
         "copy": false,
         "address": {
-          "Text": 7
+          "Text": 6
         },
         "notify": "Default",
         "return_of_content": "Default",
@@ -408,7 +390,7 @@
     }
   ],
   [
-    31,
+    29,
     {
       "Test": {
         "Header": {
@@ -437,18 +419,18 @@
     }
   ],
   [
-    32,
+    30,
     {
-      "Jz": 38
+      "Jz": 35
     }
   ],
   [
-    33,
+    31,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 1
         },
         "value": {
           "List": [
@@ -458,7 +440,7 @@
               }
             },
             {
-              "Text": 8
+              "Text": 7
             },
             {
               "Variable": {
@@ -466,7 +448,7 @@
               }
             },
             {
-              "Text": 8
+              "Text": 7
             },
             {
               "Variable": {
@@ -474,7 +456,7 @@
               }
             },
             {
-              "Text": 8
+              "Text": 7
             },
             {
               "Variable": {
@@ -487,7 +469,7 @@
     }
   ],
   [
-    34,
+    32,
     {
       "Test": {
         "String": {
@@ -496,13 +478,13 @@
           "source": [
             {
               "Variable": {
-                "Local": 0
+                "Local": 1
               }
             }
           ],
           "key_list": [
             {
-              "Text": 9
+              "Text": 8
             }
           ],
           "is_not": false
@@ -511,46 +493,36 @@
     }
   ],
   [
-    35,
+    33,
     {
-      "Jz": 37
+      "Jz": 35
     }
   ],
   [
-    36,
+    34,
     {
       "Reject": {
         "ereject": false,
         "reason": {
-          "Text": 10
+          "Text": 9
         }
       }
     }
   ],
   [
-    37,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    38,
+    35,
     "ForEveryPartPush"
   ],
   [
-    39,
+    36,
     {
       "ForEveryPart": {
-        "jz_pos": 46
+        "jz_pos": 43
       }
     }
   ],
   [
-    40,
+    37,
     {
       "Test": {
         "Header": {
@@ -564,7 +536,7 @@
           ],
           "key_list": [
             {
-              "Text": 12
+              "Text": 11
             }
           ],
           "match_type": "List",
@@ -573,7 +545,7 @@
           "mime_opts": {
             "Param": [
               {
-                "Text": 11
+                "Text": 10
               }
             ]
           },
@@ -584,41 +556,41 @@
     }
   ],
   [
-    41,
+    38,
     {
-      "Jz": 45
+      "Jz": 42
     }
   ],
   [
-    42,
+    39,
     {
       "Enclose": {
         "subject": {
-          "Text": 13
+          "Text": 12
         },
         "headers": [],
         "value": {
-          "Text": 14
+          "Text": 13
         }
       }
     }
   ],
   [
-    43,
+    40,
     {
       "ForEveryPartPop": 1
     }
   ],
   [
-    44,
+    41,
     {
-      "Jmp": 46
+      "Jmp": 43
     }
   ],
   [
-    45,
+    42,
     {
-      "Jmp": 39
+      "Jmp": 36
     }
   ]
 ]

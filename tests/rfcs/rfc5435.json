@@ -195,7 +195,7 @@
   [
     14,
     {
-      "Jz": 26
+      "Jz": 24
     }
   ],
   [
@@ -230,7 +230,7 @@
   [
     16,
     {
-      "Jz": 19
+      "Jz": 18
     }
   ],
   [
@@ -251,16 +251,6 @@
   ],
   [
     18,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    19,
     {
       "Test": {
         "Header": {
@@ -289,18 +279,18 @@
     }
   ],
   [
-    20,
+    19,
     {
-      "Jz": 23
+      "Jz": 21
     }
   ],
   [
-    21,
+    20,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 1
         },
         "value": {
           "Variable": {
@@ -311,17 +301,7 @@
     }
   ],
   [
-    22,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    23,
+    21,
     {
       "Notify": {
         "from": null,
@@ -337,7 +317,17 @@
               "Text": 11
             },
             {
+              "Variable": {
+                "Local": 1
+              }
+            },
+            {
               "Text": 12
+            },
+            {
+              "Variable": {
+                "Local": 0
+              }
             }
           ]
         },
@@ -349,7 +339,7 @@
     }
   ],
   [
-    24,
+    22,
     {
       "FileInto": {
         "copy": false,
@@ -364,7 +354,7 @@
     }
   ],
   [
-    25,
+    23,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -374,7 +364,7 @@
     }
   ],
   [
-    26,
+    24,
     {
       "Test": {
         "Header": {
@@ -403,13 +393,13 @@
     }
   ],
   [
-    27,
+    25,
     {
-      "Jz": 42
+      "Jz": 37
     }
   ],
   [
-    28,
+    26,
     {
       "Test": {
         "Envelope": {
@@ -435,18 +425,18 @@
     }
   ],
   [
-    29,
+    27,
     {
-      "Jz": 32
+      "Jz": 29
     }
   ],
   [
-    30,
+    28,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 2
         },
         "value": {
           "List": [
@@ -467,17 +457,7 @@
     }
   ],
   [
-    31,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    32,
+    29,
     {
       "Test": {
         "Header": {
@@ -506,13 +486,13 @@
     }
   ],
   [
-    33,
+    30,
     {
-      "Jz": 36
+      "Jz": 32
     }
   ],
   [
-    34,
+    31,
     {
       "Set": {
         "modifiers": [],
@@ -528,17 +508,7 @@
     }
   ],
   [
-    35,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    36,
+    32,
     {
       "Test": {
         "Address": {
@@ -567,18 +537,18 @@
     }
   ],
   [
-    37,
+    33,
     {
-      "Jz": 40
+      "Jz": 35
     }
   ],
   [
-    38,
+    34,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 3
         },
         "value": {
           "Variable": {
@@ -589,24 +559,33 @@
     }
   ],
   [
-    39,
-    {
-      "Clear": {
-        "local_vars_idx": 0,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    40,
+    35,
     {
       "Notify": {
         "from": null,
         "importance": null,
         "options": [],
         "message": {
-          "Text": 12
+          "List": [
+            {
+              "Variable": {
+                "Local": 3
+              }
+            },
+            {
+              "Variable": {
+                "Local": 2
+              }
+            },
+            {
+              "Text": 12
+            },
+            {
+              "Variable": {
+                "Local": 0
+              }
+            }
+          ]
         },
         "fcc": null,
         "method": {
@@ -616,7 +595,7 @@
     }
   ],
   [
-    41,
+    36,
     {
       "Clear": {
         "local_vars_idx": 0,
@@ -626,12 +605,12 @@
     }
   ],
   [
-    42,
+    37,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 4
         },
         "value": {
           "Text": 16
@@ -640,7 +619,7 @@
     }
   ],
   [
-    43,
+    38,
     {
       "Test": {
         "Header": {
@@ -665,18 +644,18 @@
     }
   ],
   [
-    44,
+    39,
     {
-      "Jz": 46
+      "Jz": 41
     }
   ],
   [
-    45,
+    40,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 4
         },
         "value": {
           "Text": 6
@@ -685,7 +664,7 @@
     }
   ],
   [
-    46,
+    41,
     {
       "Test": {
         "Header": {
@@ -710,18 +689,18 @@
     }
   ],
   [
-    47,
+    42,
     {
-      "Jz": 49
+      "Jz": 44
     }
   ],
   [
-    48,
+    43,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 0
+          "Local": 4
         },
         "value": {
           "Text": 18
@@ -730,7 +709,7 @@
     }
   ],
   [
-    49,
+    44,
     {
       "Test": {
         "String": {
@@ -739,7 +718,7 @@
           "source": [
             {
               "Variable": {
-                "Local": 0
+                "Local": 4
               }
             }
           ],
@@ -754,13 +733,13 @@
     }
   ],
   [
-    50,
+    45,
     {
-      "Jz": 52
+      "Jz": 47
     }
   ],
   [
-    51,
+    46,
     {
       "Notify": {
         "from": null,
@@ -770,14 +749,14 @@
         "fcc": null,
         "method": {
           "Variable": {
-            "Local": 0
+            "Local": 4
           }
         }
       }
     }
   ],
   [
-    52,
+    47,
     {
       "Test": {
         "Header": {
@@ -802,13 +781,13 @@
     }
   ],
   [
-    53,
+    48,
     {
-      "Jz": 62
+      "Jz": 56
     }
   ],
   [
-    54,
+    49,
     {
       "Test": {
         "Header": {
@@ -837,18 +816,18 @@
     }
   ],
   [
-    55,
+    50,
     {
-      "Jz": 58
+      "Jz": 52
     }
   ],
   [
-    56,
+    51,
     {
       "Set": {
         "modifiers": [],
         "name": {
-          "Local": 1
+          "Local": 0
         },
         "value": {
           "Variable": {
@@ -859,17 +838,7 @@
     }
   ],
   [
-    57,
-    {
-      "Clear": {
-        "local_vars_idx": 1,
-        "local_vars_num": 1,
-        "match_vars": 0
-      }
-    }
-  ],
-  [
-    58,
+    52,
     {
       "Test": {
         "Header": {
@@ -894,13 +863,13 @@
     }
   ],
   [
-    59,
+    53,
     {
-      "Jz": 61
+      "Jz": 55
     }
   ],
   [
-    60,
+    54,
     {
       "Notify": {
         "from": null,
@@ -911,7 +880,16 @@
         },
         "options": [],
         "message": {
-          "Text": 20
+          "List": [
+            {
+              "Text": 20
+            },
+            {
+              "Variable": {
+                "Local": 0
+              }
+            }
+          ]
         },
         "fcc": null,
         "method": {
@@ -921,7 +899,7 @@
     }
   ],
   [
-    61,
+    55,
     {
       "Clear": {
         "local_vars_idx": 0,
