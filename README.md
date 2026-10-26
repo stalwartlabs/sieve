@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **This repository is archived.** Development of the Sieve interpreter has moved to the [Stalwart repository](https://github.com/stalwartlabs/stalwart), where it is maintained as part of Stalwart. This repository is read-only and kept for reference; `sieve-rs` 0.7.3 is the last version published from here.
+
 # sieve
 
 [![crates.io](https://img.shields.io/crates/v/sieve-rs)](https://crates.io/crates/sieve-rs)
